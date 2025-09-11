@@ -68,11 +68,14 @@
             font-style: italic;
             margin-left: 10px;
         }
-        .discount-applied-note {
-            color: green;
-            font-style: italic;
-            margin-left: 10px;
+        .discount-applied {
+            color: orange;
             font-weight: normal;
+            margin-left: 10px;
+        }
+        .strike-through {
+            text-decoration: line-through;
+            color: #999;
         }
     </style>
 </head>
@@ -193,6 +196,11 @@
             categoryDiv.innerHTML = `<h3>${category.category}</h3>`;
             
             category.items.forEach(service => {
+                // 排除組合促銷選項，因為它會由 JS 動態顯示
+                if (service.groupItems) {
+                    return;
+                }
+                
                 const div = document.createElement('div');
                 div.className = 'service-item';
                 
@@ -234,93 +242,103 @@
         // 檢查組合促銷條件是否達成
         const isPrivateArmpitCombo = selectedIds.includes('private_full') && selectedIds.includes('armpit');
         
-        // 2. 處理單項原價與促銷價
-        selectedIds.forEach(id => {
-            const service = allServices.find(s => s.id === id);
-            if (!service) return;
+        // 處理組合優惠的項目清單
+        const comboItems = [];
+        const nonComboItems = [];
 
-            // 如果是組合促銷的單獨項目，且組合條件已達成，則不計算單獨價格
-            if (isPrivateArmpitCombo && (service.id === 'private_full' || service.id === 'armpit')) {
-                // 不做任何事，因為它們會被組合價取代
+        selectedIds.forEach(id => {
+            if (isPrivateArmpitCombo && (id === 'private_full' || id === 'armpit')) {
+                comboItems.push(allServices.find(s => s.id === id));
             } else {
-                finalOriginal += service.originalPrice;
-                finalDiscount += (service.promotionPrice || service.originalPrice);
+                nonComboItems.push(allServices.find(s => s.id === id));
             }
         });
 
-        // 3. 計算組合促銷的價格並加到總價中
+        // 計算組合優惠的價格
         if (isPrivateArmpitCombo) {
             finalOriginal += 2500;
             finalDiscount += 2200;
         }
 
-        // 4. 處理身份折扣，取促銷價和身分折扣價中較低者
+        // 計算其他單項服務的價格
+        nonComboItems.forEach(service => {
+            if (service) {
+                finalOriginal += service.originalPrice;
+                finalDiscount += (service.promotionPrice || service.originalPrice);
+            }
+        });
+        
+        // 處理身份折扣，取促銷價和身分折扣價中較低者
         const studentDiscount = finalOriginal * 0.8;
         const birthdayDiscount = finalOriginal * 0.5;
 
         let finalDisplayDiscount = finalDiscount;
-        let isIdentityDiscountApplied = false;
 
+        // 壽星和學生折扣不累加，取最優
+        let identityDiscountApplied = false;
+        let identityDiscountType = '';
         if (isBirthdayPerson.checked && isStudent.checked) {
-             finalDisplayDiscount = Math.min(finalDiscount, birthdayDiscount, studentDiscount);
-             isIdentityDiscountApplied = true;
+             const bestDiscount = Math.min(finalDiscount, birthdayDiscount, studentDiscount);
+             if (bestDiscount === birthdayDiscount || bestDiscount === studentDiscount) {
+                 identityDiscountApplied = true;
+                 identityDiscountType = '壽星/學生';
+             }
+             finalDisplayDiscount = bestDiscount;
         } else if (isBirthdayPerson.checked) {
-             finalDisplayDiscount = Math.min(finalDiscount, birthdayDiscount);
-             isIdentityDiscountApplied = true;
+             const bestDiscount = Math.min(finalDiscount, birthdayDiscount);
+             if (bestDiscount === birthdayDiscount) {
+                 identityDiscountApplied = true;
+                 identityDiscountType = '壽星';
+             }
+             finalDisplayDiscount = bestDiscount;
         } else if (isStudent.checked) {
-             finalDisplayDiscount = Math.min(finalDiscount, studentDiscount);
-             isIdentityDiscountApplied = true;
+             const bestDiscount = Math.min(finalDiscount, studentDiscount);
+             if (bestDiscount === studentDiscount) {
+                 identityDiscountApplied = true;
+                 identityDiscountType = '學生';
+             }
+             finalDisplayDiscount = bestDiscount;
         }
         
-        // 5. 列出已勾選項目的清單
-        
-        // 組合優惠項目清單
+        // 列出已勾選項目的清單
+        // 先處理組合項目
         if (isPrivateArmpitCombo) {
-            const privateFull = allServices.find(s => s.id === 'private_full');
-            const armpit = allServices.find(s => s.id === 'armpit');
-            
-            const li1 = document.createElement('li');
-            li1.innerHTML = `${privateFull.name}：$${privateFull.originalPrice.toLocaleString()} <span class="combo-note">(組合優惠，原價 ${privateFull.originalPrice.toLocaleString()} + ${armpit.originalPrice.toLocaleString()})</span>`;
-            selectedItemsList.appendChild(li1);
-            
-            const li2 = document.createElement('li');
-            li2.innerHTML = `${armpit.name}：$${armpit.originalPrice.toLocaleString()} <span class="combo-note">(組合優惠，合併價格 $2,200)</span>`;
-            selectedItemsList.appendChild(li2);
+            const li = document.createElement('li');
+            li.innerHTML = `
+                ${comboItems[0].name} & <br>${comboItems[1].name}：
+                <span class="item-price">原價：$${comboItems[0].originalPrice.toLocaleString()} + $${comboItems[1].originalPrice.toLocaleString()}</span>
+                <span class="combo-note"> (組合優惠：$2,200)</span>`;
+            selectedItemsList.appendChild(li);
         }
 
-        // 其他單項服務清單
-        selectedIds.forEach(id => {
-            const service = allServices.find(s => s.id === id);
-
-            // 如果是組合優惠項目，則跳過，因為上面已經處理過
-            if (isPrivateArmpitCombo && (service.id === 'private_full' || service.id === 'armpit')) {
-                return;
-            }
-            
+        // 再處理其他單項
+        nonComboItems.forEach(service => {
             if (service) {
                 const li = document.createElement('li');
-                let displayHtml = `${service.name}：`;
+                let priceHtml = '';
                 
-                // 如果有促銷價
-                if (service.promotionPrice !== null && service.promotionPrice !== undefined) {
-                    if (isIdentityDiscountApplied) {
-                        displayHtml += `<span class="original-price">$${service.originalPrice.toLocaleString()}</span> <span class="discount-applied-note">已套用(學生/壽星)優惠以原價計算</span>`;
-                    } else {
-                        displayHtml += `<span class="original-price">$${service.originalPrice.toLocaleString()}</span> <span class="item-price">特價：$${service.promotionPrice.toLocaleString()}</span>`;
-                    }
+                if (service.promotionPrice && identityDiscountApplied) {
+                    // 特價項目，但身份折扣更優惠
+                    priceHtml = `
+                        <span class="item-price">原價：$${service.originalPrice.toLocaleString()}</span>
+                        <span class="item-price strike-through">特價：$${service.promotionPrice.toLocaleString()}</span>
+                        <span class="discount-applied">(已套用${identityDiscountType}優惠)</span>`;
+                } else if (service.promotionPrice) {
+                    // 一般特價
+                    priceHtml = `
+                        <span class="item-price">原價：$${service.originalPrice.toLocaleString()}</span>
+                        <span class="item-price">特價：$${service.promotionPrice.toLocaleString()}</span>`;
                 } else {
-                    displayHtml += `<span class="item-price">原價：$${service.originalPrice.toLocaleString()}</span>`;
-                    if (isIdentityDiscountApplied) {
-                        displayHtml += `<span class="discount-applied-note">已套用(學生/壽星)優惠</span>`;
-                    }
+                    // 非特價項目
+                    priceHtml = `<span class="item-price">原價：$${service.originalPrice.toLocaleString()}</span>`;
                 }
-                
-                li.innerHTML = displayHtml;
+
+                li.innerHTML = `${service.name}：${priceHtml}`;
                 selectedItemsList.appendChild(li);
             }
         });
 
-        // 更新頁面上的金額
+        // 最終金額顯示
         originalTotalSpan.textContent = finalOriginal.toLocaleString();
         discountedTotalSpan.textContent = finalDisplayDiscount.toLocaleString();
     }
