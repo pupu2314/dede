@@ -254,10 +254,14 @@
             }
         });
 
+        // 身份折扣判斷
+        const isIdentityDiscount = isBirthdayPerson.checked || isStudent.checked;
+        
         // 計算組合優惠的價格
         if (isPrivateArmpitCombo) {
             finalOriginal += 2500;
-            finalDiscount += 2200;
+            // 如果有身份折扣，則組合優惠不適用，改以原價計算
+            finalDiscount += isIdentityDiscount ? 2500 : 2200;
         }
 
         // 計算其他單項服務的價格
@@ -277,6 +281,7 @@
         // 壽星和學生折扣不累加，取最優
         let identityDiscountApplied = false;
         let identityDiscountType = '';
+        
         if (isBirthdayPerson.checked && isStudent.checked) {
              const bestDiscount = Math.min(finalDiscount, birthdayDiscount, studentDiscount);
              if (bestDiscount === birthdayDiscount || bestDiscount === studentDiscount) {
@@ -304,10 +309,11 @@
         // 先處理組合項目
         if (isPrivateArmpitCombo) {
             const li = document.createElement('li');
+            let comboNoteHtml = isIdentityDiscount ? `<span class="discount-applied">(已套用身份優惠)</span>` : `<span class="combo-note"> (組合優惠：$2,200)</span>`;
             li.innerHTML = `
                 ${comboItems[0].name} & <br>${comboItems[1].name}：
                 <span class="item-price">原價：$${comboItems[0].originalPrice.toLocaleString()} + $${comboItems[1].originalPrice.toLocaleString()}</span>
-                <span class="combo-note"> (組合優惠：$2,200)</span>`;
+                ${comboNoteHtml}`;
             selectedItemsList.appendChild(li);
         }
 
