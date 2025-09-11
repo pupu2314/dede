@@ -68,6 +68,12 @@
             font-style: italic;
             margin-left: 10px;
         }
+        .discount-applied-note {
+            color: green;
+            font-style: italic;
+            margin-left: 10px;
+            font-weight: normal;
+        }
     </style>
 </head>
 <body>
@@ -170,16 +176,6 @@
 
     // 將所有服務項目攤平為一個陣列，方便查找
     const allServices = serviceData.flatMap(cat => cat.items);
-    
-    // 組合優惠的資訊
-    const comboPromos = [
-        { 
-            items: ['private_full', 'armpit'], 
-            name: '私密處除毛 (全除) 搭配 腋下毛', 
-            originalPrice: 2500, 
-            promotionPrice: 2200 
-        }
-    ];
 
     // 取得 HTML 元素
     const serviceList = document.querySelector('.service-list');
@@ -197,11 +193,6 @@
             categoryDiv.innerHTML = `<h3>${category.category}</h3>`;
             
             category.items.forEach(service => {
-                // 排除組合促銷選項，因為它會由 JS 動態顯示
-                if (service.groupItems) {
-                    return;
-                }
-                
                 const div = document.createElement('div');
                 div.className = 'service-item';
                 
@@ -268,38 +259,68 @@
         const birthdayDiscount = finalOriginal * 0.5;
 
         let finalDisplayDiscount = finalDiscount;
+        let isIdentityDiscountApplied = false;
 
-        // 壽星和學生折扣不累加，取最優
         if (isBirthdayPerson.checked && isStudent.checked) {
              finalDisplayDiscount = Math.min(finalDiscount, birthdayDiscount, studentDiscount);
+             isIdentityDiscountApplied = true;
         } else if (isBirthdayPerson.checked) {
              finalDisplayDiscount = Math.min(finalDiscount, birthdayDiscount);
+             isIdentityDiscountApplied = true;
         } else if (isStudent.checked) {
              finalDisplayDiscount = Math.min(finalDiscount, studentDiscount);
+             isIdentityDiscountApplied = true;
         }
         
         // 5. 列出已勾選項目的清單
+        
+        // 組合優惠項目清單
+        if (isPrivateArmpitCombo) {
+            const privateFull = allServices.find(s => s.id === 'private_full');
+            const armpit = allServices.find(s => s.id === 'armpit');
+            
+            const li1 = document.createElement('li');
+            li1.innerHTML = `${privateFull.name}：$${privateFull.originalPrice.toLocaleString()} <span class="combo-note">(組合優惠，原價 ${privateFull.originalPrice.toLocaleString()} + ${armpit.originalPrice.toLocaleString()})</span>`;
+            selectedItemsList.appendChild(li1);
+            
+            const li2 = document.createElement('li');
+            li2.innerHTML = `${armpit.name}：$${armpit.originalPrice.toLocaleString()} <span class="combo-note">(組合優惠，合併價格 $2,200)</span>`;
+            selectedItemsList.appendChild(li2);
+        }
+
+        // 其他單項服務清單
         selectedIds.forEach(id => {
             const service = allServices.find(s => s.id === id);
+
+            // 如果是組合優惠項目，則跳過，因為上面已經處理過
+            if (isPrivateArmpitCombo && (service.id === 'private_full' || service.id === 'armpit')) {
+                return;
+            }
+            
             if (service) {
-                // 如果是組合促銷的單獨項目，且組合條件已達成，則不顯示單獨項目
-                if (isPrivateArmpitCombo && (service.id === 'private_full' || service.id === 'armpit')) {
-                    const li = document.createElement('li');
-                    li.innerHTML = `${service.name}：
-                                    <span class="item-price">原價：$${service.originalPrice.toLocaleString()}</span>
-                                    <span class="combo-note"> (組合優惠 $2,200)</span>`;
-                    selectedItemsList.appendChild(li);
+                const li = document.createElement('li');
+                let displayHtml = `${service.name}：`;
+                
+                // 如果有促銷價
+                if (service.promotionPrice !== null && service.promotionPrice !== undefined) {
+                    if (isIdentityDiscountApplied) {
+                        displayHtml += `<span class="original-price">$${service.originalPrice.toLocaleString()}</span> <span class="discount-applied-note">已套用(學生/壽星)優惠以原價計算</span>`;
+                    } else {
+                        displayHtml += `<span class="original-price">$${service.originalPrice.toLocaleString()}</span> <span class="item-price">特價：$${service.promotionPrice.toLocaleString()}</span>`;
+                    }
                 } else {
-                    const li = document.createElement('li');
-                    li.innerHTML = `${service.name}：
-                                    <span class="item-price">原價：$${service.originalPrice.toLocaleString()}</span>
-                                    ${service.promotionPrice !== null && service.promotionPrice !== undefined ? `<span class="item-price">特價：$${service.promotionPrice.toLocaleString()}</span>` : ''}`;
-                    selectedItemsList.appendChild(li);
+                    displayHtml += `<span class="item-price">原價：$${service.originalPrice.toLocaleString()}</span>`;
+                    if (isIdentityDiscountApplied) {
+                        displayHtml += `<span class="discount-applied-note">已套用(學生/壽星)優惠</span>`;
+                    }
                 }
+                
+                li.innerHTML = displayHtml;
+                selectedItemsList.appendChild(li);
             }
         });
 
-        // 最終金額顯示
+        // 更新頁面上的金額
         originalTotalSpan.textContent = finalOriginal.toLocaleString();
         discountedTotalSpan.textContent = finalDisplayDiscount.toLocaleString();
     }
@@ -317,5 +338,4 @@
 
 </script>
 </body>
-
 </html>
