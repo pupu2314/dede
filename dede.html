@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>男士服務消費計算器</title>
+    <title>男士服務消費計算</title>
     <style>
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
@@ -162,7 +162,7 @@
 <body>
 
 <div class="container">
-    <h2>男士服務消費計算</h2>
+    <h2>消費計算</h2>
 
     <div id="service-list"></div>
     
@@ -489,171 +489,3 @@ document.addEventListener('DOMContentLoaded', () => {
 </script>
 </body>
 </html>
-              div.appendChild(checkbox);
-                div.appendChild(label);
-                div.appendChild(priceDiv);
-                fieldset.appendChild(div);
-            });
-            serviceListContainer.appendChild(fieldset);
-        });
-    }
-
-    function calculatePrices() {
-        const selectedIds = new Set(Array.from(document.querySelectorAll('#service-list input:checked')).map(cb => cb.value));
-        
-        let originalTotal = 0;
-        let promoTotal = 0;
-        const processedIds = new Set();
-        const displayItems = [];
-
-        // 1. 處理組合優惠
-        serviceData.combos.forEach(combo => {
-            const isComboMatch = combo.itemIds.every(id => selectedIds.has(id));
-            if (isComboMatch) {
-                const comboOriginalPrice = combo.itemIds.reduce((sum, id) => sum + allServices.get(id).price, 0);
-                originalTotal += comboOriginalPrice;
-                promoTotal += combo.price;
-                displayItems.push({
-                    type: 'combo',
-                    comboInfo: combo,
-                    originalPrice: comboOriginalPrice
-                });
-                combo.itemIds.forEach(id => processedIds.add(id));
-            }
-        });
-
-        // 2. 處理剩餘的單項
-        selectedIds.forEach(id => {
-            if (!processedIds.has(id)) {
-                const service = allServices.get(id);
-                if (service) {
-                    originalTotal += service.price;
-                    promoTotal += service.promoPrice ?? service.price;
-                    displayItems.push({
-                        type: 'service',
-                        serviceInfo: service
-                    });
-                }
-            }
-        });
-
-        // 3. 計算並決定最終折扣
-        let finalPrice = promoTotal;
-        let discountType = '促銷/組合價';
-        if (displayItems.length === 0) discountType = '無';
-
-        const birthdayDiscount = originalTotal * 0.5;
-        const studentDiscount = originalTotal * 0.8;
-
-        if (isBirthdayPerson.checked && birthdayDiscount < finalPrice) {
-            finalPrice = birthdayDiscount;
-            discountType = '壽星原價 5 折';
-        }
-        
-        if (isStudent.checked && studentDiscount < finalPrice) {
-            finalPrice = studentDiscount;
-            discountType = '學生原價 8 折';
-        }
-
-        return {
-            originalTotal: Math.round(originalTotal),
-            finalTotal: Math.round(finalPrice),
-            appliedDiscount: discountType,
-            displayItems: displayItems
-        };
-    }
-    
-    function updateDisplay(result) {
-        originalTotalSpan.textContent = result.originalTotal.toLocaleString();
-        discountedTotalSpan.textContent = result.finalTotal.toLocaleString();
-        
-        if (result.appliedDiscount !== '無' && result.finalTotal < result.originalTotal) {
-            discountNoteSpan.textContent = `已套用最優惠折扣: ${result.appliedDiscount}`;
-            discountNoteContainer.style.display = 'block';
-        } else {
-            discountNoteContainer.style.display = 'none';
-        }
-        
-        selectedItemsListUl.innerHTML = '';
-        const isIdentityDiscount = result.appliedDiscount === '壽星原價 5 折' || result.appliedDiscount === '學生原價 8 折';
-
-        result.displayItems.forEach(item => {
-            // 規則 2: 如果是組合優惠，且沒有套用身份折扣，則合併顯示
-            if (item.type === 'combo' && !isIdentityDiscount) {
-                const li = document.createElement('li');
-                
-                const nameSpan = document.createElement('span');
-                nameSpan.className = 'item-name';
-                nameSpan.textContent = item.comboInfo.name;
-
-                const priceSpan = document.createElement('span');
-                priceSpan.className = 'item-price-detail';
-                priceSpan.innerHTML = `<span class="promotion-price">$${item.comboInfo.price.toLocaleString()}</span> <span class="original-price">$${item.originalPrice.toLocaleString()}</span>`;
-
-                li.appendChild(nameSpan);
-                li.appendChild(priceSpan);
-                selectedItemsListUl.appendChild(li);
-            } else {
-                // 此區塊處理單項服務，以及被拆分的組合服務
-                let servicesToRender = [];
-                if (item.type === 'service') {
-                    servicesToRender.push(item.serviceInfo);
-                } else { // 解構組合
-                    servicesToRender = item.comboInfo.itemIds.map(id => allServices.get(id));
-                }
-
-                servicesToRender.forEach(service => {
-                    const li = document.createElement('li');
-                    
-                    const nameSpan = document.createElement('span');
-                    nameSpan.className = 'item-name';
-                    nameSpan.textContent = service.name;
-
-                    const priceSpan = document.createElement('span');
-                    priceSpan.className = 'item-price-detail';
-
-                    // 規則 1: 若套用身份折扣，明細只顯示原價
-                    if (isIdentityDiscount) {
-                        priceSpan.innerHTML = `<span>$${service.price.toLocaleString()}</span>`;
-                    } else {
-                        // 維持原有的促銷價顯示邏輯
-                        if (service.promoPrice !== undefined) {
-                            priceSpan.innerHTML = `<span class="promotion-price">$${service.promoPrice.toLocaleString()}</span> <span class="original-price">$${service.price.toLocaleString()}</span>`;
-                        } else {
-                            priceSpan.innerHTML = `<span>$${service.price.toLocaleString()}</span>`;
-                        }
-                    }
-                    
-                    li.appendChild(nameSpan);
-                    li.appendChild(priceSpan);
-                    selectedItemsListUl.appendChild(li);
-                });
-            }
-        });
-    }
-
-    function handleInteraction() {
-        const result = calculatePrices();
-        updateDisplay(result);
-    }
-    
-    function clearSelections() {
-        document.querySelectorAll('input[type="checkbox"]').forEach(cb => cb.checked = false);
-        handleInteraction();
-    }
-
-    // 事件監聽
-    serviceListContainer.addEventListener('change', handleInteraction);
-    isBirthdayPerson.addEventListener('change', handleInteraction);
-    isStudent.addEventListener('change', handleInteraction);
-    clearBtn.addEventListener('click', clearSelections);
-
-    // 初始載入
-    renderServices();
-    handleInteraction();
-});
-</script>
-</body>
-</html>
-
-
