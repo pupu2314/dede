@@ -120,7 +120,7 @@
         .header-actions { display: flex; gap: 8px; }
         .header-actions button {
             background: #e9ecef; border: 1px solid #ced4da; border-radius: 5px; cursor: pointer;
-            padding: 0; width: 32px; height: 32px; font-size: 16px; line-height: 32px;
+            padding: 0; width: 64px; height: 32px; font-size: 16px; line-height: 32px;
             text-align: center; color: #495057;
         }
         .header-actions button:hover { background: #dee2e6; }
@@ -148,6 +148,16 @@
 
 <div class="container">
     <h2>德德美體美容中心<small>(114年9月版)</small></h2>
+
+    <fieldset>
+        <legend>快速操作</legend>
+        <div class="header-actions">
+             <button id="save-btn" title="儲存當前選擇">💾 儲存</button>
+             <button id="load-btn" title="載入上次選擇">📂 讀取</button>
+             <button id="clear-btn" title="清除所有選項">🗑️ 清除</button>
+             <button id="share-btn" title="輸出為圖片">📷 截圖</button>
+           </div>
+    </fieldset>
 
     <div class="search-container">
         <label for="search-input" class="sr-only">搜尋服務項目</label>
@@ -190,12 +200,6 @@
         <div class="details-content">
             <div class="details-header">
                 <h3>消費明細</h3>
-                <div class="header-actions">
-                    <button id="save-btn" title="儲存當前選擇">💾</button>
-                    <button id="load-btn" title="載入上次選擇">📂</button>
-                    <button id="clear-btn" title="清除所有選項">🗑️</button>
-                    <button id="share-btn" title="輸出為圖片">📷</button>
-                </div>
             </div>
             <div id="floating-selected-items-list">
                 <ul></ul>
