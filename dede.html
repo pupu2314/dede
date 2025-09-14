@@ -176,13 +176,13 @@
             <span class="arrow" aria-hidden="true">▲</span>
         </div>
         <div class="final-totals">
+            <p>原始總金額：<span id="floating-original-total">0</span> 元</p>
             <div id="discount-note-container" style="display: none;">
                 <span class="discount-note"></span>
             </div>
             <div id="savings-container" style="display: none;">
                 <p class="savings-note">共節省：<span id="floating-savings">0</span> 元</p>
             </div>
-            <p>原始總金額：<span id="floating-original-total">0</span> 元</p>
             <p>折扣後總金額：<span id="floating-discounted-total">0</span> 元</p>
         </div>
     </div>
@@ -383,7 +383,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         discountNoteContainer.style.display = (result.appliedDiscount !== '無' && result.finalTotal < result.originalTotal) ? 'block' : 'none';
         if (discountNoteContainer.style.display === 'block') {
-            discountNoteSpan.textContent = `已套用最優惠折扣: ${result.appliedDiscount}`;
+            discountNoteSpan.textContent = `套用最優惠折扣： ${result.appliedDiscount}`;
         }
 
         selectedItemsListUl.innerHTML = '';
@@ -457,9 +457,9 @@ document.addEventListener('DOMContentLoaded', () => {
             <h3 style="color: #0056b3; border-bottom: 2px solid #007bff; padding-bottom: 10px; margin: 0 0 15px 0;">德德美體美容中心 - 消費明細</h3>
             <div style="margin-bottom: 20px;">${itemsHtml}</div>
             <div style="text-align: right;">
-                ${(result.appliedDiscount !== '無' && result.finalTotal < result.originalTotal) ? `<p style="margin: 4px 0; font-size: 0.9em; color: #28a745;"><strong>已套用最優惠折扣: ${result.appliedDiscount}</strong></p>` : ''}
-                ${result.savedAmount > 0 ? `<p style="margin: 4px 0; font-size: 1.1em; color: #28a745;"><strong>共節省: ${result.savedAmount.toLocaleString()} 元</strong></p>` : ''}
                 <p style="margin: 4px 0;">原始總金額: ${result.originalTotal.toLocaleString()} 元</p>
+                ${(result.appliedDiscount !== '無' && result.finalTotal < result.originalTotal) ? `<p style="margin: 4px 0; font-size: 0.9em; color: #28a745;"><strong>套用最優惠折扣： ${result.appliedDiscount}</strong></p>` : ''}
+                ${result.savedAmount > 0 ? `<p style="margin: 4px 0; font-size: 1.1em; color: #28a745;"><strong>共節省: ${result.savedAmount.toLocaleString()} 元</strong></p>` : ''}
                 <p style="margin: 10px 0 0 0; font-size: 1.3em;"><strong>折扣後總金額: <span style="color: #dc3545;">${result.finalTotal.toLocaleString()}</span> 元</strong></p>
             </div>
             <p style="text-align: center; font-size: 0.7em; color: #999; margin-top: 20px;">價格版本: 114年9月版</p>
