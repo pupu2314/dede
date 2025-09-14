@@ -137,7 +137,7 @@
         .item-price-detail { white-space: nowrap; margin-left: 15px; }
         .final-totals { text-align: right; }
         .final-totals p { font-size: 0.9em; font-weight: bold; margin: 2px 0; }
-        .final-totals #floating-discounted-total { color: #dc3545; font-size: 1.2em; }
+        .final-totals #floating-discounted-total, .final-totals #floating-total { color: #dc3545; font-size: 1.2em; }
         .discount-note { color: #28a745; font-weight: bold; font-size: 0.8em; }
         .savings-note { color: #28a745; font-weight: bold; font-size: 1em; margin: 2px 0; }
     </style>
@@ -176,14 +176,14 @@
             <span class="arrow" aria-hidden="true">▲</span>
         </div>
         <div class="final-totals">
-            <p>原始總金額：<span id="floating-original-total">0</span> 元</p>
-            <div id="discount-note-container" style="display: none;">
+            <p id="original-total-p">原始總金額：<span id="floating-original-total">0</span> 元</p>
+            <div id="discount-note-container">
                 <span class="discount-note"></span>
             </div>
-            <div id="savings-container" style="display: none;">
+            <div id="savings-container">
                 <p class="savings-note">共節省：<span id="floating-savings">0</span> 元</p>
             </div>
-            <p>折扣後總金額：<span id="floating-discounted-total">0</span> 元</p>
+            <p id="discounted-total-p">折扣後總金額：<span id="floating-discounted-total">0</span> 元</p>
         </div>
     </div>
     <div id="summary-details" aria-hidden="true">
@@ -296,6 +296,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const clearBtn = document.getElementById('clear-btn');
     const shareBtn = document.getElementById('share-btn');
 
+    const originalTotalP = document.getElementById('original-total-p');
+    const discountedTotalP = document.getElementById('discounted-total-p');
     const originalTotalSpan = document.getElementById('floating-original-total');
     const discountedTotalSpan = document.getElementById('floating-discounted-total');
     const savingsContainer = document.getElementById('savings-container');
@@ -305,7 +307,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const discountNoteSpan = discountNoteContainer.querySelector('.discount-note');
 
     function renderServices() {
-        serviceListContainer.innerHTML = ''; // Clear existing list
+        serviceListContainer.innerHTML = '';
         serviceData.categories.forEach(category => {
             const fieldset = document.createElement('fieldset');
             const legend = document.createElement('legend');
@@ -351,7 +353,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             }
         });
-        let finalPrice = promoTotal, discountType = displayItems.length > 0 ? '促銷/組合價' : '無';
+        let finalPrice = promoTotal, discountType = displayItems.length > 0 ? '本月活動優惠' : '無';
         const birthdayDiscount = originalTotal * 0.5;
         const studentDiscount = originalTotal * 0.8;
         if (isBirthdayPerson.checked && birthdayDiscount < finalPrice) {
@@ -371,19 +373,27 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function updateDisplay(result) {
-        originalTotalSpan.textContent = result.originalTotal.toLocaleString();
-        discountedTotalSpan.textContent = result.finalTotal.toLocaleString();
-
         if (result.savedAmount > 0) {
-            savingsSpan.textContent = result.savedAmount.toLocaleString();
+            originalTotalP.style.display = 'block';
+            discountedTotalP.style.display = 'block';
             savingsContainer.style.display = 'block';
-        } else {
-            savingsContainer.style.display = 'none';
-        }
+            discountNoteContainer.style.display = 'block';
 
-        discountNoteContainer.style.display = (result.appliedDiscount !== '無' && result.finalTotal < result.originalTotal) ? 'block' : 'none';
-        if (discountNoteContainer.style.display === 'block') {
-            discountNoteSpan.textContent = `套用最優惠折扣： ${result.appliedDiscount}`;
+            originalTotalP.firstChild.nodeValue = '原始總金額：';
+            discountedTotalP.firstChild.nodeValue = '折扣後總金額：';
+
+            originalTotalSpan.textContent = result.originalTotal.toLocaleString();
+            savingsSpan.textContent = result.savedAmount.toLocaleString();
+            discountedTotalSpan.textContent = result.finalTotal.toLocaleString();
+            discountNoteSpan.textContent = `套用最佳優惠方案： ${result.appliedDiscount}`;
+        } else {
+            originalTotalP.style.display = 'none';
+            savingsContainer.style.display = 'none';
+            discountNoteContainer.style.display = 'none';
+            
+            discountedTotalP.style.display = 'block';
+            discountedTotalP.firstChild.nodeValue = '總金額：';
+            discountedTotalSpan.textContent = result.finalTotal.toLocaleString();
         }
 
         selectedItemsListUl.innerHTML = '';
@@ -416,14 +426,13 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         const imageSource = document.createElement('div');
-        // --- Styling for the output image ---
         imageSource.style.width = '450px';
         imageSource.style.padding = '25px';
         imageSource.style.backgroundColor = '#ffffff';
         imageSource.style.fontFamily = 'sans-serif';
         imageSource.style.color = '#333';
         imageSource.style.position = 'absolute';
-        imageSource.style.left = '-9999px'; // Position off-screen
+        imageSource.style.left = '-9999px';
         imageSource.style.border = '1px solid #ddd';
 
         let itemsHtml = result.displayItems.map(item => {
@@ -453,15 +462,24 @@ document.addEventListener('DOMContentLoaded', () => {
             return itemHtml;
         }).join('');
 
+        let totalsHtml = '';
+        if (result.savedAmount > 0) {
+            totalsHtml = `
+                <p style="margin: 4px 0;">原始總金額: ${result.originalTotal.toLocaleString()} 元</p>
+                <p style="margin: 4px 0; font-size: 0.9em; color: #28a745;"><strong>套用最佳優惠方案： ${result.appliedDiscount}</strong></p>
+                <p style="margin: 4px 0; font-size: 1.1em; color: #28a745;"><strong>共節省: ${result.savedAmount.toLocaleString()} 元</strong></p>
+                <p style="margin: 10px 0 0 0; font-size: 1.3em;"><strong>折扣後總金額: <span style="color: #dc3545;">${result.finalTotal.toLocaleString()}</span> 元</strong></p>
+            `;
+        } else {
+            totalsHtml = `
+                <p style="margin: 10px 0 0 0; font-size: 1.3em;"><strong>總金額: <span style="color: #dc3545;">${result.finalTotal.toLocaleString()}</span> 元</strong></p>
+            `;
+        }
+
         imageSource.innerHTML = `
             <h3 style="color: #0056b3; border-bottom: 2px solid #007bff; padding-bottom: 10px; margin: 0 0 15px 0;">德德美體美容中心 - 消費明細</h3>
             <div style="margin-bottom: 20px;">${itemsHtml}</div>
-            <div style="text-align: right;">
-                <p style="margin: 4px 0;">原始總金額: ${result.originalTotal.toLocaleString()} 元</p>
-                ${(result.appliedDiscount !== '無' && result.finalTotal < result.originalTotal) ? `<p style="margin: 4px 0; font-size: 0.9em; color: #28a745;"><strong>套用最優惠折扣： ${result.appliedDiscount}</strong></p>` : ''}
-                ${result.savedAmount > 0 ? `<p style="margin: 4px 0; font-size: 1.1em; color: #28a745;"><strong>共節省: ${result.savedAmount.toLocaleString()} 元</strong></p>` : ''}
-                <p style="margin: 10px 0 0 0; font-size: 1.3em;"><strong>折扣後總金額: <span style="color: #dc3545;">${result.finalTotal.toLocaleString()}</span> 元</strong></p>
-            </div>
+            <div style="text-align: right;">${totalsHtml}</div>
             <p style="text-align: center; font-size: 0.7em; color: #999; margin-top: 20px;">價格版本: 114年9月版</p>
         `;
 
@@ -470,8 +488,6 @@ document.addEventListener('DOMContentLoaded', () => {
         html2canvas(imageSource, { scale: 2 }).then(canvas => {
             const link = document.createElement('a');
             link.href = canvas.toDataURL('image/png');
-
-            // --- Generate filename with ROC date and time ---
             const now = new Date();
             const rocYear = now.getFullYear() - 1911;
             const month = String(now.getMonth() + 1).padStart(2, '0');
@@ -480,7 +496,6 @@ document.addEventListener('DOMContentLoaded', () => {
             const minutes = String(now.getMinutes()).padStart(2, '0');
             const seconds = String(now.getSeconds()).padStart(2, '0');
             link.download = `德德美體-${rocYear}${month}${day}${hours}${minutes}${seconds}.png`;
-            
             link.click();
             document.body.removeChild(imageSource);
             showToast('圖片已開始下載！');
@@ -557,7 +572,6 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // --- 動態 Padding ---
     const observer = new ResizeObserver(entries => {
         for (let entry of entries) {
             const height = entry.contentRect.height;
@@ -566,7 +580,6 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     observer.observe(floatingSummary);
 
-    // --- 事件監聽 ---
     serviceListContainer.addEventListener('change', handleInteraction);
     isBirthdayPerson.addEventListener('change', handleInteraction);
     isStudent.addEventListener('change', handleInteraction);
@@ -592,7 +605,6 @@ document.addEventListener('DOMContentLoaded', () => {
     clearBtn.addEventListener('click', () => clearSelections(true));
     shareBtn.addEventListener('click', exportAsPNG);
 
-    // --- 初始載入 ---
     renderServices();
     handleInteraction();
 });
