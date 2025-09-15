@@ -1,5 +1,6 @@
 document.addEventListener('DOMContentLoaded', () => {
 
+    // --- 資料結構 ---
     const serviceData = {
         categories: [
             {
@@ -21,41 +22,47 @@ document.addEventListener('DOMContentLoaded', () => {
                     { id: 'foot_back', name: '腳背', price: 300 },
                     { id: 'leg_calf', name: '小腿', price: 1900 },
                     { id: 'leg_thigh', name: '大腿', price: 1900 },
-                    { id: 'leg_full', name: '全腿', price: 3500, promoPrice: 3000 },
+                    { id: 'leg_full', name: '全腿', price: 3500, promotions: [
+                        { price: 3000, label: '9月優惠', start: '2025-09-01', end: '2025-09-30' }
+                    ]},
                     { id: 'nipple', name: '奶頭毛', price: 200 },
                     { id: 'chest', name: '胸毛', price: 600 },
                     { id: 'private_area', name: '區域單獨除毛', price: 600 },
-                    { id: 'beard', name: '鬍子熱蠟除毛(八字鬍與下巴)', price: 1000, promoPrice: 900 },
-                    { id: 'private_combo_part', name: '私密處單一區域任選2部位', price: 1200, promoPrice: 1000 }
+                    { id: 'beard', name: '鬍子熱蠟除毛(八字鬍與下巴)', price: 1000, promotions: [
+                        { price: 900, label: '9月優惠', start: '2025-09-01', end: '2025-09-30' }
+                    ]},
+                    { id: 'private_combo_part', name: '私密處單一區域任選2部位', price: 1200, promotions: [
+                        { price: 1000, label: '9月優惠', start: '2025-09-01', end: '2025-09-30' }
+                    ]}
                 ]
             },
             {
                 name: '男士專屬油壓',
                 items: [
                     { id: 'oil_massage_1hr', name: '[油推]能量精油 健康調理 /1hr(含機能保養)', price: 1200 },
-                    { id: 'oil_massage_1.5hr', name: '[油推]能量精油健康調理 /1.5hr(含機能保養)', price: 1800, promoPrice: 1500 }
+                    { id: 'oil_massage_1.5hr', name: '[油推]能量精油健康調理 /1.5hr(含機能保養)', price: 1800, promotions: [
+                         { price: 1500, label: '9月優惠', start: '2025-09-01', end: '2025-09-30' }
+                    ]}
                 ]
             },
-            {
-                name: '男士專屬指壓',
-                items: [
+            { name: '男士專屬指壓', items: [
                     { id: 'acupressure_1hr', name: '[指壓]能量健康調理 /1hr', price: 1000 },
                     { id: 'acupressure_1.5hr', name: '[指壓]能量健康調理 /1.5hr', price: 1500 }
-                ]
-            },
-            {
-                name: '男士專屬筋膜刀體雕',
-                items: [
+            ]},
+            { name: '男士專屬筋膜刀體雕', items: [
                     { id: 'fascia_knife_1hr', name: '筋膜刀體雕 氣脈健康調理 /1hr', price: 1600 },
                     { id: 'fascia_knife_1.5hr', name: '筋膜刀體雕 氣脈健康調理 /1.5hr', price: 2200 }
-                ]
-            },
+            ]},
             {
                 name: '男士專屬SPA',
                 items: [
                     { id: 'spa_face', name: '【臉部】更新油美白煥膚萬年礦泥臉部肌膚調理 /1hr', price: 1800 },
-                    { id: 'spa_private', name: '【私密處】更新油美白換膚萬年礦泥 屁股+私密處 肌膚調理 /1hr', price: 2200, promoPrice: 1800 },
-                    { id: 'spa_body', name: '【全身】更新油全身深層敷體淨化 /1.5hr', price: 3000, promoPrice: 2600 }
+                    { id: 'spa_private', name: '【私密處】更新油美白換膚萬年礦泥 屁股+私密處 肌膚調理 /1hr', price: 2200, promotions: [
+                        { price: 1800, label: '9月優惠', start: '2025-09-01', end: '2025-09-30' }
+                    ]},
+                    { id: 'spa_body', name: '【全身】更新油全身深層敷體淨化 /1.5hr', price: 3000, promotions: [
+                        { price: 2600, label: '9月優惠', start: '2025-09-01', end: '2025-09-30' }
+                    ]}
                 ]
             }
         ],
@@ -64,7 +71,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 id: 'combo_private_armpit',
                 name: '私密處全除 + 腋下毛 組合優惠',
                 itemIds: ['private_full', 'armpit'],
-                price: 2200
+                price: 2500,
+                promotions: [
+                    { price: 2200, label: '9月組合優惠', start: '2025-09-01', end: '2025-09-30' }
+                ]
             }
         ]
     };
@@ -78,8 +88,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const isBirthdayPerson = document.getElementById('isBirthdayPerson');
     const isStudent = document.getElementById('isStudent');
     const toast = document.getElementById('toast-notification');
+    const priceVersionSpan = document.getElementById('price-version');
 
-    // 懸浮視窗內的元素
     const floatingSummary = document.getElementById('floating-summary');
     const toggleDetailsBtn = document.getElementById('toggle-details');
     const summaryDetails = document.getElementById('summary-details');
@@ -98,6 +108,34 @@ document.addEventListener('DOMContentLoaded', () => {
     const discountNoteContainer = document.getElementById('discount-note-container');
     const discountNoteSpan = discountNoteContainer.querySelector('.discount-note');
 
+    function getTaipeiDateString() {
+        const now = new Date();
+        return new Intl.DateTimeFormat('en-CA', {
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit',
+            timeZone: 'Asia/Taipei'
+        }).format(now);
+    }
+    
+    // --- 核心日期判斷函式 (已修改) ---
+    // 使用 getTaipeiDateString() 進行日期比較，確保時區正確
+    function getActivePromotion(item) {
+        if (!item.promotions || item.promotions.length === 0) {
+            return null;
+        }
+        const todayString = getTaipeiDateString();
+
+        for (const promo of item.promotions) {
+            // 直接比較 YYYY-MM-DD 格式的字串，簡單且可靠
+            if (todayString >= promo.start && todayString <= promo.end) {
+                return promo;
+            }
+        }
+        return null;
+    }
+
+    // --- 服務渲染函式 (無變更) ---
     function renderServices() {
         serviceListContainer.innerHTML = '';
         serviceData.categories.forEach(category => {
@@ -114,9 +152,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 label.htmlFor = service.id; label.textContent = service.name;
                 const priceDiv = document.createElement('div');
                 priceDiv.className = 'price-info';
-                priceDiv.innerHTML = (service.promoPrice !== undefined) ?
-                    `<span class="promotion-price">$${service.promoPrice.toLocaleString()}</span> <span class="original-price">$${service.price.toLocaleString()}</span>` :
+                
+                const activePromo = getActivePromotion(service);
+                priceDiv.innerHTML = (activePromo) ?
+                    `<span class="promotion-price">$${activePromo.price.toLocaleString()}</span> <span class="original-price">$${service.price.toLocaleString()}</span>` :
                     `<span>$${service.price.toLocaleString()}</span>`;
+
                 div.appendChild(checkbox); div.appendChild(label); div.appendChild(priceDiv);
                 fieldset.appendChild(div);
             });
@@ -124,36 +165,72 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    // --- 價格計算函式 (已修改) ---
     function calculatePrices() {
         const selectedIds = new Set(Array.from(document.querySelectorAll('#service-list input:checked')).map(cb => cb.value));
         let originalTotal = 0, promoTotal = 0;
-        const processedIds = new Set(), displayItems = [];
+        const processedIds = new Set(), displayItems = [], appliedPromoLabels = new Set();
+
+        // --- 修正 2：組合優惠顯示問題 ---
+        // 先檢查組合優惠本身是否在檔期內，若不在，則不將其視為組合
         serviceData.combos.forEach(combo => {
-            if (combo.itemIds.every(id => selectedIds.has(id))) {
+            const activeComboPromo = getActivePromotion(combo);
+            // 必須同時滿足：1. 組合優惠在檔期內 2. 所有組合內項目都被選取
+            if (activeComboPromo && combo.itemIds.every(id => selectedIds.has(id))) {
                 const comboOriginalPrice = combo.itemIds.reduce((sum, id) => sum + allServices.get(id).price, 0);
-                originalTotal += comboOriginalPrice; promoTotal += combo.price;
-                displayItems.push({ type: 'combo', comboInfo: combo, originalPrice: comboOriginalPrice });
+                
+                originalTotal += comboOriginalPrice;
+                promoTotal += activeComboPromo.price;
+                
+                displayItems.push({ 
+                    type: 'combo', 
+                    comboInfo: combo, 
+                    originalPrice: comboOriginalPrice, 
+                    finalPrice: activeComboPromo.price,
+                    promo: activeComboPromo
+                });
+                appliedPromoLabels.add(activeComboPromo.label);
                 combo.itemIds.forEach(id => processedIds.add(id));
             }
         });
+
+        // 處理剩餘的、未被組合的項目
         selectedIds.forEach(id => {
             if (!processedIds.has(id)) {
                 const service = allServices.get(id);
                 if (service) {
-                    originalTotal += service.price; promoTotal += service.promoPrice ?? service.price;
-                    displayItems.push({ type: 'service', serviceInfo: service });
+                    const activeServicePromo = getActivePromotion(service);
+                    const servicePrice = activeServicePromo ? activeServicePromo.price : service.price;
+
+                    originalTotal += service.price;
+                    promoTotal += servicePrice;
+                    displayItems.push({ 
+                        type: 'service', 
+                        serviceInfo: service, 
+                        originalPrice: service.price,
+                        finalPrice: servicePrice,
+                        promo: activeServicePromo
+                    });
+                    if(activeServicePromo) appliedPromoLabels.add(activeServicePromo.label);
                 }
             }
         });
-        let finalPrice = promoTotal, discountType = displayItems.length > 0 ? '本月活動優惠' : '無';
+
+        let finalPrice = promoTotal;
+        let discountType = appliedPromoLabels.size > 0 ? [...appliedPromoLabels].join(', ') : '無';
+
         const birthdayDiscount = originalTotal * 0.5;
         const studentDiscount = originalTotal * 0.8;
+
         if (isBirthdayPerson.checked && birthdayDiscount < finalPrice) {
-            finalPrice = birthdayDiscount; discountType = '壽星原價 5 折';
+            finalPrice = birthdayDiscount;
+            discountType = '壽星原價 5 折';
         }
         if (isStudent.checked && studentDiscount < finalPrice) {
-            finalPrice = studentDiscount; discountType = '學生原價 8 折';
+            finalPrice = studentDiscount;
+            discountType = '學生原價 8 折';
         }
+
         const savedAmount = originalTotal - finalPrice;
         return {
             originalTotal: Math.round(originalTotal),
@@ -164,16 +241,15 @@ document.addEventListener('DOMContentLoaded', () => {
         };
     }
 
+    // --- 更新顯示函式 (無變更) ---
     function updateDisplay(result) {
         if (result.savedAmount > 0) {
             originalTotalP.style.display = 'block';
             discountedTotalP.style.display = 'block';
             savingsContainer.style.display = 'block';
             discountNoteContainer.style.display = 'block';
-
             originalTotalP.firstChild.nodeValue = '原始總金額：';
             discountedTotalP.firstChild.nodeValue = '折扣後總金額：';
-
             originalTotalSpan.textContent = result.originalTotal.toLocaleString();
             savingsSpan.textContent = result.savedAmount.toLocaleString();
             discountedTotalSpan.textContent = result.finalTotal.toLocaleString();
@@ -182,7 +258,6 @@ document.addEventListener('DOMContentLoaded', () => {
             originalTotalP.style.display = 'none';
             savingsContainer.style.display = 'none';
             discountNoteContainer.style.display = 'none';
-            
             discountedTotalP.style.display = 'block';
             discountedTotalP.firstChild.nodeValue = '總金額：';
             discountedTotalSpan.textContent = result.finalTotal.toLocaleString();
@@ -190,26 +265,38 @@ document.addEventListener('DOMContentLoaded', () => {
 
         selectedItemsListUl.innerHTML = '';
         const isIdentityDiscount = result.appliedDiscount.includes('壽星') || result.appliedDiscount.includes('學生');
+        
         result.displayItems.forEach(item => {
-            if (item.type === 'combo' && !isIdentityDiscount) {
-                const li = document.createElement('li');
-                li.innerHTML = `<span class="item-name">${item.comboInfo.name}</span><span class="item-price-detail"><span class="promotion-price">$${item.comboInfo.price.toLocaleString()}</span> <span class="original-price">$${item.originalPrice.toLocaleString()}</span></span>`;
-                selectedItemsListUl.appendChild(li);
-            } else {
-                const servicesToRender = (item.type === 'service') ? [item.serviceInfo] : item.comboInfo.itemIds.map(id => allServices.get(id));
+            const li = document.createElement('li');
+            let name, priceHtml;
+
+            if (isIdentityDiscount) {
+                const servicesToRender = item.type === 'service' ? [item.serviceInfo] : item.comboInfo.itemIds.map(id => allServices.get(id));
                 servicesToRender.forEach(service => {
-                    const li = document.createElement('li');
-                    const priceHtml = isIdentityDiscount ? `<span>$${service.price.toLocaleString()}</span>` :
-                        (service.promoPrice !== undefined ?
-                        `<span class="promotion-price">$${service.promoPrice.toLocaleString()}</span> <span class="original-price">$${service.price.toLocaleString()}</span>` :
-                        `<span>$${service.price.toLocaleString()}</span>`);
-                    li.innerHTML = `<span class="item-name">${service.name}</span><span class="item-price-detail">${priceHtml}</span>`;
-                    selectedItemsListUl.appendChild(li);
+                    const li_item = document.createElement('li');
+                    li_item.innerHTML = `<span class="item-name">${service.name}</span><span class="item-price-detail"><span>$${service.price.toLocaleString()}</span></span>`;
+                    selectedItemsListUl.appendChild(li_item);
                 });
+                return;
             }
+            
+            if (item.type === 'combo') {
+                name = item.comboInfo.name;
+                priceHtml = item.promo ? 
+                    `<span class="promotion-price">$${item.finalPrice.toLocaleString()}</span> <span class="original-price">$${item.originalPrice.toLocaleString()}</span>` : 
+                    `<span>$${item.originalPrice.toLocaleString()}</span>`;
+            } else {
+                name = item.serviceInfo.name;
+                priceHtml = item.promo ?
+                    `<span class="promotion-price">$${item.finalPrice.toLocaleString()}</span> <span class="original-price">$${item.originalPrice.toLocaleString()}</span>` :
+                    `<span>$${item.originalPrice.toLocaleString()}</span>`;
+            }
+            li.innerHTML = `<span class="item-name">${name}</span><span class="item-price-detail">${priceHtml}</span>`;
+            selectedItemsListUl.appendChild(li);
         });
     }
     
+    // --- 匯出圖片函式 (無變更) ---
     function exportAsPNG() {
         const result = calculatePrices();
         if (result.displayItems.length === 0) {
@@ -227,32 +314,36 @@ document.addEventListener('DOMContentLoaded', () => {
         imageSource.style.left = '-9999px';
         imageSource.style.border = '1px solid #ddd';
 
+        const isIdentityDiscount = result.appliedDiscount.includes('壽星') || result.appliedDiscount.includes('學生');
+
         let itemsHtml = result.displayItems.map(item => {
-            const isIdentityDiscount = result.appliedDiscount.includes('壽星') || result.appliedDiscount.includes('學生');
             let itemHtml = '';
-            if (item.type === 'combo' && !isIdentityDiscount) {
-                itemHtml = `<div style="display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px dotted #eee;">
-                                <span>${item.comboInfo.name}</span>
-                                <span style="white-space: nowrap; margin-left: 15px;">
-                                    <strong style="color: #dc3545;">$${item.comboInfo.price.toLocaleString()}</strong>
-                                    <span style="text-decoration: line-through; color: #999; font-size: 0.9em; margin-left: 5px;">$${item.originalPrice.toLocaleString()}</span>
-                                </span>
-                            </div>`;
-            } else {
-                const servicesToRender = (item.type === 'service') ? [item.serviceInfo] : item.comboInfo.itemIds.map(id => allServices.get(id));
-                servicesToRender.forEach(service => {
-                    const priceHtml = isIdentityDiscount ? `<span>$${service.price.toLocaleString()}</span>` :
-                        (service.promoPrice !== undefined ?
-                        `<strong style="color: #dc3545;">$${service.promoPrice.toLocaleString()}</strong> <span style="text-decoration: line-through; color: #999; font-size: 0.9em; margin-left: 5px;">$${service.price.toLocaleString()}</span>` :
-                        `<span>$${service.price.toLocaleString()}</span>`);
-                    itemHtml += `<div style="display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px dotted #eee;">
-                                    <span>${service.name}</span>
-                                    <span style="white-space: nowrap; margin-left: 15px;">${priceHtml}</span>
-                                 </div>`;
-                });
+            
+            if (item.type === 'combo' && !isIdentityDiscount && item.promo) {
+                 return `<div style="display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px dotted #eee;">
+                            <span>${item.comboInfo.name}</span>
+                            <span style="white-space: nowrap; margin-left: 15px;">
+                                <strong style="color: #dc3545;">$${item.finalPrice.toLocaleString()}</strong>
+                                <span style="text-decoration: line-through; color: #999; font-size: 0.9em; margin-left: 5px;">$${item.originalPrice.toLocaleString()}</span>
+                            </span>
+                        </div>`;
             }
+
+            const servicesToRender = (item.type === 'service') ? [item.serviceInfo] : item.comboInfo.itemIds.map(id => allServices.get(id));
+            servicesToRender.forEach(service => {
+                const activePromo = getActivePromotion(service);
+                const priceHtml = isIdentityDiscount ? `<span>$${service.price.toLocaleString()}</span>` :
+                    (activePromo && !isIdentityDiscount ?
+                    `<strong style="color: #dc3545;">$${activePromo.price.toLocaleString()}</strong> <span style="text-decoration: line-through; color: #999; font-size: 0.9em; margin-left: 5px;">$${service.price.toLocaleString()}</span>` :
+                    `<span>$${service.price.toLocaleString()}</span>`);
+                itemHtml += `<div style="display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px dotted #eee;">
+                                <span>${service.name}</span>
+                                <span style="white-space: nowrap; margin-left: 15px;">${priceHtml}</span>
+                             </div>`;
+            });
             return itemHtml;
         }).join('');
+
 
         let totalsHtml = '';
         if (result.savedAmount > 0) {
@@ -263,16 +354,15 @@ document.addEventListener('DOMContentLoaded', () => {
                 <p style="margin: 10px 0 0 0; font-size: 1.3em;"><strong>折扣後總金額: <span style="color: #dc3545;">${result.finalTotal.toLocaleString()}</span> 元</strong></p>
             `;
         } else {
-            totalsHtml = `
-                <p style="margin: 10px 0 0 0; font-size: 1.3em;"><strong>總金額: <span style="color: #dc3545;">${result.finalTotal.toLocaleString()}</span> 元</strong></p>
-            `;
+            totalsHtml = `<p style="margin: 10px 0 0 0; font-size: 1.3em;"><strong>總金額: <span style="color: #dc3545;">${result.finalTotal.toLocaleString()}</span> 元</strong></p>`;
         }
-
+        
+        const versionText = getVersionText();
         imageSource.innerHTML = `
             <h3 style="color: #0056b3; border-bottom: 2px solid #007bff; padding-bottom: 10px; margin: 0 0 15px 0;">德德美體美容中心 - 消費明細</h3>
             <div style="margin-bottom: 20px;">${itemsHtml}</div>
             <div style="text-align: right;">${totalsHtml}</div>
-            <p style="text-align: center; font-size: 0.7em; color: #999; margin-top: 20px;">價格版本: 114年9月版</p>
+            <p style="text-align: center; font-size: 0.7em; color: #999; margin-top: 20px;">價格版本: ${versionText}</p>
         `;
 
         document.body.appendChild(imageSource);
@@ -298,6 +388,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    // --- 其餘輔助函式 (無變更) ---
     function showToast(message) {
         toast.textContent = message;
         toast.classList.add('show');
@@ -346,7 +437,6 @@ document.addEventListener('DOMContentLoaded', () => {
     function filterServices() {
         const query = searchInput.value.toLowerCase().trim();
         const allFieldsets = serviceListContainer.querySelectorAll('fieldset');
-
         allFieldsets.forEach(fieldset => {
             let categoryHasVisibleItem = false;
             const items = fieldset.querySelectorAll('.service-item');
@@ -363,7 +453,19 @@ document.addEventListener('DOMContentLoaded', () => {
             fieldset.style.display = categoryHasVisibleItem ? 'block' : 'none';
         });
     }
+    
+    function getVersionText() {
+        const now = new Date();
+        const rocYear = now.getFullYear() - 1911;
+        const month = now.getMonth() + 1;
+        return `${rocYear}年${month}月版`;
+    }
 
+    function setVersion() {
+        priceVersionSpan.textContent = `(${getVersionText()})`;
+    }
+
+    // --- 事件監聽與初始化 (無變更) ---
     const observer = new ResizeObserver(entries => {
         for (let entry of entries) {
             const height = entry.contentRect.height;
@@ -396,7 +498,9 @@ document.addEventListener('DOMContentLoaded', () => {
     loadBtn.addEventListener('click', loadState);
     clearBtn.addEventListener('click', () => clearSelections(true));
     shareBtn.addEventListener('click', exportAsPNG);
-
+    
+    // --- 初始化頁面 ---
     renderServices();
     handleInteraction();
+    setVersion();
 });
