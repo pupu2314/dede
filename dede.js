@@ -73,7 +73,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 itemIds: ['private_full', 'armpit'],
                 price: 2500,
                 promotions: [
-                    { price: 2200, label: '9月組合優惠', start: '2025-09-01', end: '2025-09-30' }
+                    { price: 2200, label: '9月優惠', start: '2025-09-01', end: '2025-09-30' }
                 ]
             }
         ]
@@ -503,4 +503,5 @@ document.addEventListener('DOMContentLoaded', () => {
     renderServices();
     handleInteraction();
     setVersion();
+
 });
