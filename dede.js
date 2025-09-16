@@ -1,7 +1,6 @@
-document.addEventListener('DOMContentLoaded', () => {
-
-    // --- 資料結構 ---
-    const serviceData = {
+// --- 修正：將 serviceData 和 allServices 移至最外層 ---
+// 這樣它們才會成為全域變數，讓 check_promotions.html 可以讀取到。
+const serviceData = {
         categories: [
             {
                 name: '男士專屬除毛',
@@ -61,7 +60,8 @@ document.addEventListener('DOMContentLoaded', () => {
                         { price: 1800, label: '9月優惠', start: '2025-09-01', end: '2025-09-30' }
                     ]},
                     { id: 'spa_body', name: '【全身】更新油全身深層敷體淨化 /1.5hr', price: 3000, promotions: [
-                        { price: 2600, label: '9月優惠', start: '2025-09-01', end: '2025-09-30' }
+                        { price: 2600, label: '9月優惠', start: '2025-09-01', end: '2025-09-30' },
+                        { price: 2999, label: '優惠預排測試', start: '2025-10-01', end: '2025-10-15' }
                     ]}
                 ]
             }
@@ -79,7 +79,12 @@ document.addEventListener('DOMContentLoaded', () => {
         ]
     };
 
-    const allServices = new Map(serviceData.categories.flatMap(cat => cat.items).map(item => [item.id, item]));
+const allServices = new Map(serviceData.categories.flatMap(cat => cat.items).map(item => [item.id, item]));
+
+
+// 主要的應用程式邏輯仍然放在 DOMContentLoaded 中，確保頁面元素都已載入
+document.addEventListener('DOMContentLoaded', () => {
+
     const STORAGE_KEY = 'serviceCalculatorState_v3';
 
     // DOM 元素
@@ -118,8 +123,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }).format(now);
     }
     
-    // --- 核心日期判斷函式 (已修改) ---
-    // 使用 getTaipeiDateString() 進行日期比較，確保時區正確
     function getActivePromotion(item) {
         if (!item.promotions || item.promotions.length === 0) {
             return null;
@@ -127,7 +130,6 @@ document.addEventListener('DOMContentLoaded', () => {
         const todayString = getTaipeiDateString();
 
         for (const promo of item.promotions) {
-            // 直接比較 YYYY-MM-DD 格式的字串，簡單且可靠
             if (todayString >= promo.start && todayString <= promo.end) {
                 return promo;
             }
@@ -135,8 +137,10 @@ document.addEventListener('DOMContentLoaded', () => {
         return null;
     }
 
-    // --- 服務渲染函式 (無變更) ---
     function renderServices() {
+        // 檢查 serviceListContainer 是否存在，避免在 check_promotions.html 中報錯
+        if (!serviceListContainer) return;
+        
         serviceListContainer.innerHTML = '';
         serviceData.categories.forEach(category => {
             const fieldset = document.createElement('fieldset');
@@ -165,17 +169,13 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // --- 價格計算函式 (已修改) ---
     function calculatePrices() {
         const selectedIds = new Set(Array.from(document.querySelectorAll('#service-list input:checked')).map(cb => cb.value));
         let originalTotal = 0, promoTotal = 0;
         const processedIds = new Set(), displayItems = [], appliedPromoLabels = new Set();
 
-        // --- 修正 2：組合優惠顯示問題 ---
-        // 先檢查組合優惠本身是否在檔期內，若不在，則不將其視為組合
         serviceData.combos.forEach(combo => {
             const activeComboPromo = getActivePromotion(combo);
-            // 必須同時滿足：1. 組合優惠在檔期內 2. 所有組合內項目都被選取
             if (activeComboPromo && combo.itemIds.every(id => selectedIds.has(id))) {
                 const comboOriginalPrice = combo.itemIds.reduce((sum, id) => sum + allServices.get(id).price, 0);
                 
@@ -194,7 +194,6 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
 
-        // 處理剩餘的、未被組合的項目
         selectedIds.forEach(id => {
             if (!processedIds.has(id)) {
                 const service = allServices.get(id);
@@ -241,7 +240,6 @@ document.addEventListener('DOMContentLoaded', () => {
         };
     }
 
-    // --- 更新顯示函式 (無變更) ---
     function updateDisplay(result) {
         if (result.savedAmount > 0) {
             originalTotalP.style.display = 'block';
@@ -296,7 +294,6 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
     
-    // --- 匯出圖片函式 (無變更) ---
     function exportAsPNG() {
         const result = calculatePrices();
         if (result.displayItems.length === 0) {
@@ -388,7 +385,6 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // --- 其餘輔助函式 (無變更) ---
     function showToast(message) {
         toast.textContent = message;
         toast.classList.add('show');
@@ -424,8 +420,11 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function handleInteraction() {
-        const result = calculatePrices();
-        updateDisplay(result);
+        // 只有在主計算器頁面才執行
+        if (document.getElementById('floating-summary')) {
+            const result = calculatePrices();
+            updateDisplay(result);
+        }
     }
 
     function clearSelections(showMsg = true) {
@@ -462,46 +461,50 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function setVersion() {
-        priceVersionSpan.textContent = `(${getVersionText()})`;
+        // 檢查 priceVersionSpan 是否存在
+        if (priceVersionSpan) {
+            priceVersionSpan.textContent = `(${getVersionText()})`;
+        }
     }
 
-    // --- 事件監聽與初始化 (無變更) ---
-    const observer = new ResizeObserver(entries => {
-        for (let entry of entries) {
-            const height = entry.contentRect.height;
-            document.body.style.paddingBottom = `${height}px`;
-        }
-    });
-    observer.observe(floatingSummary);
+    // --- 事件監聽與初始化 ---
+    // 透過檢查特定元素是否存在，來決定是否要綁定事件
+    if (document.getElementById('floating-summary')) {
+        const observer = new ResizeObserver(entries => {
+            for (let entry of entries) {
+                const height = entry.contentRect.height;
+                document.body.style.paddingBottom = `${height}px`;
+            }
+        });
+        observer.observe(floatingSummary);
 
-    serviceListContainer.addEventListener('change', handleInteraction);
-    isBirthdayPerson.addEventListener('change', handleInteraction);
-    isStudent.addEventListener('change', handleInteraction);
-    searchInput.addEventListener('input', filterServices);
+        serviceListContainer.addEventListener('change', handleInteraction);
+        isBirthdayPerson.addEventListener('change', handleInteraction);
+        isStudent.addEventListener('change', handleInteraction);
+        searchInput.addEventListener('input', filterServices);
 
-    const togglePanel = () => {
-        floatingSummary.classList.toggle('partial-expand');
-        const isExpanded = floatingSummary.classList.contains('partial-expand');
-        toggleDetailsBtn.setAttribute('aria-expanded', isExpanded);
-        summaryDetails.setAttribute('aria-hidden', !isExpanded);
-    };
+        const togglePanel = () => {
+            floatingSummary.classList.toggle('partial-expand');
+            const isExpanded = floatingSummary.classList.contains('partial-expand');
+            toggleDetailsBtn.setAttribute('aria-expanded', isExpanded);
+            summaryDetails.setAttribute('aria-hidden', !isExpanded);
+        };
 
-    toggleDetailsBtn.addEventListener('click', togglePanel);
-    toggleDetailsBtn.addEventListener('keydown', (event) => {
-        if (event.key === 'Enter' || event.key === ' ') {
-            event.preventDefault();
-            togglePanel();
-        }
-    });
+        toggleDetailsBtn.addEventListener('click', togglePanel);
+        toggleDetailsBtn.addEventListener('keydown', (event) => {
+            if (event.key === 'Enter' || event.key === ' ') {
+                event.preventDefault();
+                togglePanel();
+            }
+        });
 
-    saveBtn.addEventListener('click', saveState);
-    loadBtn.addEventListener('click', loadState);
-    clearBtn.addEventListener('click', () => clearSelections(true));
-    shareBtn.addEventListener('click', exportAsPNG);
-    
-    // --- 初始化頁面 ---
-    renderServices();
-    handleInteraction();
-    setVersion();
-
+        saveBtn.addEventListener('click', saveState);
+        loadBtn.addEventListener('click', loadState);
+        clearBtn.addEventListener('click', () => clearSelections(true));
+        shareBtn.addEventListener('click', exportAsPNG);
+        
+        renderServices();
+        handleInteraction();
+        setVersion();
+    }
 });
