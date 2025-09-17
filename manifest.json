@@ -1,0 +1,21 @@
+{
+"name": "加班費計算機 PWA",
+"short_name": "加班計算",
+"start_url": "./work.html",
+"display": "standalone",
+"background_color": "#f8f9fa",
+"theme_color": "#007bff",
+"description": "一個強大的加班費計算與紀錄工具。",
+"icons": [
+{
+"src": "https://www.google.com/search?q=https://placehold.co/192x192/007bff/ffffff%3Ftext%3DCalc",
+"sizes": "192x192",
+"type": "image/png"
+},
+{
+"src": "https://www.google.com/search?q=https://placehold.co/512x512/007bff/ffffff%3Ftext%3DCalc",
+"sizes": "512x512",
+"type": "image/png"
+}
+]
+}
