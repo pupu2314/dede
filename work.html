@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>加班費計算機 v9.0 (最終版)</title>
+    <title>加班費計算機</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <style>
         :root {
@@ -41,6 +41,9 @@
         .daily-group-header { background-color: #f2f2f2; font-weight: bold; }
         .record-detail-row td, .formula-detail-row td { padding-left: 2rem; font-size: 0.9rem; color: #555; border-top: 1px dotted #ccc; }
         .formula-detail-row td { background-color: #f9f9f9; padding: 1rem; font-family: monospace; color: #0056b3; }
+        /* FIX 3: 修正版面跳動問題 */
+        .actions-container { display: flex; justify-content: flex-end; align-items: center; gap: 0.5rem; min-width: 140px; }
+
 
         /* Styles FOR EXPORT ONLY */
         #export-container { position: absolute; left: -9999px; top: auto; width: 1000px; background: white; padding: 2rem; box-sizing: border-box; font-family: var(--font-family); color: var(--text-color); }
@@ -50,6 +53,12 @@
         #export-container th { background-color: #f2f2f2; }
         #export-container .summary { margin-top: 2rem; text-align: right; background: #e9f5ff; border: 1px solid #b3d7ff; padding: 1.5rem; border-radius: 8px; }
         #export-container .summary-value { font-size: 1.8rem; color: var(--success-color); }
+        /* FIX 2: 修正匯出圖片功能 */
+        #export-container thead { display: table-header-group !important; }
+        #export-container tr { display: table-row !important; }
+        #export-container td { display: table-cell !important; }
+        #export-container td::before { content: none !important; }
+
 
         @media (max-width: 768px) {
             thead { display: none; }
@@ -66,7 +75,7 @@
 <body>
 
     <div class="container">
-        <h1>加班費計算機 v9.0 (最終版)</h1>
+        <h1>加班費計算機</h1>
         
         <div class="grid-container">
             <div class="card">
@@ -174,20 +183,31 @@ document.addEventListener('DOMContentLoaded', () => {
     function loadSettings() {
         const savedSettings = JSON.parse(localStorage.getItem('overtimeSettingsV9'));
         settings = { salaryType: 'monthly', salary: 0, workStart: "09:00", workEnd: "18:00", breakStart: "12:00", breakEnd: "13:00", ...savedSettings };
+        
         salaryInput.value = settings.salary || '';
         document.querySelector(`input[name="salaryType"][value="${settings.salaryType}"]`).checked = true;
-        Object.keys(settings).forEach(key => { if(document.getElementById(key)) document.getElementById(key).value = settings[key]; });
+
+        // FIX 1: 修正設定儲存問題
+        document.getElementById('work-start').value = settings.workStart;
+        document.getElementById('work-end').value = settings.workEnd;
+        document.getElementById('break-start').value = settings.breakStart;
+        document.getElementById('break-end').value = settings.breakEnd;
+        
         calculateHourlyRate();
     }
     function saveSettings() {
         settings = {
             salaryType: document.querySelector('input[name="salaryType"]:checked').value,
             salary: parseFloat(salaryInput.value) || 0,
-            workStart: document.getElementById('work-start').value, workEnd: document.getElementById('work-end').value,
-            breakStart: document.getElementById('break-start').value, breakEnd: document.getElementById('break-end').value,
+            workStart: document.getElementById('work-start').value, 
+            workEnd: document.getElementById('work-end').value,
+            breakStart: document.getElementById('break-start').value, 
+            breakEnd: document.getElementById('break-end').value,
         };
         localStorage.setItem('overtimeSettingsV9', JSON.stringify(settings));
-        calculateHourlyRate(); render(); alert('設定已儲存！');
+        calculateHourlyRate(); 
+        render(); 
+        alert('設定已儲存！');
     }
     function calculateHourlyRate() {
         settings.hourlyRate = (settings.salaryType === 'monthly') ? Math.round((settings.salary / 240) * 100) / 100 : (parseFloat(settings.salary) || 0);
@@ -351,7 +371,8 @@ document.addEventListener('DOMContentLoaded', () => {
             
             const headerRow = tbody.insertRow();
             headerRow.className = 'daily-group-header';
-            headerRow.innerHTML = `<td data-label="日期">${dateStr}</td><td data-label="類型">${typeText}</td><td data-label="總時長(H)">${group.totalHours.toFixed(2)}</td><td data-label="加班費($)">${group.pay}</td><td data-label="操作"><button class="btn-small btn-secondary" onclick="app.toggleDetails(this)">展開</button></td>`;
+            // FIX 3: 修正版面跳動問題 - 將按鈕放入容器
+            headerRow.innerHTML = `<td data-label="日期">${dateStr}</td><td data-label="類型">${typeText}</td><td data-label="總時長(H)">${group.totalHours.toFixed(2)}</td><td data-label="加班費($)">${group.pay}</td><td data-label="操作"><div class="actions-container"><button class="btn-small btn-secondary" onclick="app.toggleDetails(this)">展開</button></div></td>`;
 
             group.records.sort((a,b) => new Date(a.start) - new Date(b.start)).forEach(rec => {
                 const detailRow = tbody.insertRow();
@@ -364,7 +385,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 let reasonText = `${rec.reason || '-'}`;
                 if (rec.forceFullCalculation) reasonText += ' <strong style="color:var(--danger-color);">(強制計算)</strong>';
                 
-                detailRow.innerHTML = `<td data-label="時間" colspan="3">${startTime} - ${endTime} (${reasonText})</td><td data-label="時長">${calculateNetOvertimeHours(rec).toFixed(2)} H</td><td data-label="操作"><button class="btn-small" onclick="app.editRecord('${rec.id}')">編輯</button> <button class="btn-small btn-danger" onclick="app.deleteRecord('${rec.id}')">刪除</button></td>`;
+                // FIX 3: 修正版面跳動問題 - 將按鈕放入容器
+                detailRow.innerHTML = `<td data-label="時間" colspan="3">${startTime} - ${endTime} (${reasonText})</td><td data--label="時長">${calculateNetOvertimeHours(rec).toFixed(2)} H</td><td data-label="操作"><div class="actions-container"><button class="btn-small" onclick="app.editRecord('${rec.id}')">編輯</button> <button class="btn-small btn-danger" onclick="app.deleteRecord('${rec.id}')">刪除</button></div></td>`;
             });
             
             const formulaRow = tbody.insertRow();
@@ -390,7 +412,7 @@ document.addEventListener('DOMContentLoaded', () => {
         document.querySelectorAll(`tr[data-group-date="${date}"]`).forEach(row => { row.style.display = isExpanding ? '' : 'none'; });
     }
     
-    // --- [REBUILT] IMPORT/EXPORT & EVENTS ---
+    // --- IMPORT/EXPORT & EVENTS ---
     function generateExportHTML(dailyGroups, title) {
         let tableHTML = `
             <h2>${title}</h2>
@@ -401,28 +423,35 @@ document.addEventListener('DOMContentLoaded', () => {
                         <th>類型</th>
                         <th>總時長(H)</th>
                         <th>加班費($)</th>
+                        <th>詳細資料</th>
                     </tr>
                 </thead>
                 <tbody>
         `;
 
         if (dailyGroups.length === 0) {
-            tableHTML += `<tr><td colspan="4" style="text-align:center;">該月份尚無紀錄</td></tr>`;
+            tableHTML += `<tr><td colspan="5" style="text-align:center;">該月份尚無紀錄</td></tr>`;
         } else {
-            dailyGroups.forEach(group => {
+             dailyGroups.forEach(group => {
                 const typeText = { weekday: '平日', restday: '休息日', holiday: '國定假日' }[group.type];
-                // Header Row
-                tableHTML += `<tr class="daily-group-header"><td>${group.date.toLocaleDateString()}</td><td>${typeText}</td><td>${group.totalHours.toFixed(2)}</td><td>${group.pay}</td></tr>`;
-                // Detail Rows
-                group.records.sort((a,b) => new Date(a.start) - new Date(b.start)).forEach(rec => {
-                    const startTime = new Date(rec.start).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-                    const endTime = new Date(rec.end).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-                    let reasonText = `${rec.reason || '-'}`;
-                    if (rec.forceFullCalculation) reasonText += ' <strong style="color:var(--danger-color);">(強制計算)</strong>';
-                    tableHTML += `<tr class="record-detail-row"><td colspan="3">${startTime} - ${endTime} (${reasonText})</td><td>${calculateNetOvertimeHours(rec).toFixed(2)} H</td></tr>`;
-                });
-                // Formula Row
-                tableHTML += `<tr class="formula-detail-row"><td colspan="4"><strong>計算式:</strong> ${group.formula}</td></tr>`;
+                const recordDetails = group.records
+                    .sort((a,b) => new Date(a.start) - new Date(b.start))
+                    .map(rec => {
+                        const startTime = new Date(rec.start).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                        const endTime = new Date(rec.end).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                        let reasonText = `${rec.reason || '-'}`;
+                        if (rec.forceFullCalculation) reasonText += ' <strong style="color:var(--danger-color);">(強制計算)</strong>';
+                        return `${startTime} - ${endTime}: ${calculateNetOvertimeHours(rec).toFixed(2)}H (${reasonText})`;
+                    }).join('<br>');
+
+                tableHTML += `
+                    <tr>
+                        <td>${group.date.toLocaleDateString()}</td>
+                        <td>${typeText}</td>
+                        <td>${group.totalHours.toFixed(2)}</td>
+                        <td>${group.pay}</td>
+                        <td style="font-size: 0.9em;">${recordDetails}<br><hr style="border-top: 1px dotted #ccc; margin: 4px 0;"><strong>計算式:</strong> ${group.formula}</td>
+                    </tr>`;
             });
         }
         
@@ -435,7 +464,6 @@ document.addEventListener('DOMContentLoaded', () => {
         const dailyGroups = groupRecordsByDay(filterRecords(monthFilter.value));
         const totalPay = dailyGroups.reduce((sum, group) => sum + group.pay, 0);
 
-        // Create a dedicated off-screen container for the export content
         const exportContainer = document.createElement('div');
         exportContainer.id = 'export-container';
         
@@ -447,7 +475,7 @@ document.addEventListener('DOMContentLoaded', () => {
         document.body.appendChild(exportContainer);
 
         try {
-            const canvas = await html2canvas(exportContainer, { scale: 2, useCORS: true });
+            const canvas = await html2canvas(exportContainer, { scale: 2, useCORS: true, windowWidth: 1000 });
             const link = document.createElement('a');
             link.download = `加班紀錄-${year}-${month}.png`;
             link.href = canvas.toDataURL("image/png");
@@ -456,7 +484,7 @@ document.addEventListener('DOMContentLoaded', () => {
             console.error('匯出圖片失敗:', error);
             alert('匯出圖片時發生錯誤。');
         } finally {
-            document.body.removeChild(exportContainer); // Clean up
+            document.body.removeChild(exportContainer);
         }
     }
 
