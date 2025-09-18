@@ -2,7 +2,7 @@
     "name": "德德美體美容中心 - 價格計算器",
     "short_name": "價格計算",
     "description": "一個用於計算服務項目總價與優惠的工具",
-    "start_url": "dede/Pwa/index.html",
+    "start_url": "/index.html",
     "display": "standalone",
     "background_color": "#ffffff",
     "theme_color": "#007bff",
