@@ -1,0 +1,77 @@
+{
+    "categories": [
+        {
+            "name": "男士專屬除毛",
+            "items": [
+                { "id": "private_full", "name": "私密處除毛 (全除)", "price": 1900 },
+                { "id": "nose", "name": "鼻毛", "price": 200 },
+                { "id": "private_shape", "name": "私密處除毛 (局部/造型)", "price": 1900 },
+                { "id": "private_trim", "name": "私密處毛修剪-一般修剪無痛(修剪+沐浴)", "price": 300 },
+                { "id": "belly_lower", "name": "三角處(下腹毛以下,根部以上)", "price": 800 },
+                { "id": "armpit", "name": "腋下毛", "price": 600 },
+                { "id": "belly_upper", "name": "上腹部毛(肚臍以上胸部以下)", "price": 600 },
+                { "id": "belly_middle", "name": "下腹部毛(肚臍以下陰毛以上)", "price": 600 },
+                { "id": "arm_half", "name": "半手臂", "price": 1600 },
+                { "id": "arm_full", "name": "全手臂", "price": 3000 },
+                { "id": "finger", "name": "手指", "price": 300 },
+                { "id": "hand_back", "name": "手背", "price": 300 },
+                { "id": "toe", "name": "腳趾", "price": 300 },
+                { "id": "foot_back", "name": "腳背", "price": 300 },
+                { "id": "leg_calf", "name": "小腿", "price": 1900 },
+                { "id": "leg_thigh", "name": "大腿", "price": 1900 },
+                { "id": "leg_full", "name": "全腿", "price": 3500, "promotions": [
+                    { "price": 3000, "label": "9月優惠", "start": "2025-09-01", "end": "2025-09-30" }
+                ]},
+                { "id": "nipple", "name": "奶頭毛", "price": 200 },
+                { "id": "chest", "name": "胸毛", "price": 600 },
+                { "id": "private_area", "name": "區域單獨除毛", "price": 600 },
+                { "id": "beard", "name": "鬍子熱蠟除毛(八字鬍與下巴)", "price": 1000, "promotions": [
+                    { "price": 900, "label": "9月優惠", "start": "2025-09-01", "end": "2025-09-30" }
+                ]},
+                { "id": "private_combo_part", "name": "私密處單一區域任選2部位", "price": 1200, "promotions": [
+                    { "price": 1000, "label": "9月優惠", "start": "2025-09-01", "end": "2025-09-30" }
+                ]}
+            ]
+        },
+        {
+            "name": "男士專屬油壓",
+            "items": [
+                { "id": "oil_massage_1hr", "name": "[油推]能量精油 健康調理 /1hr(含機能保養)", "price": 1200 },
+                { "id": "oil_massage_1.5hr", "name": "[油推]能量精油健康調理 /1.5hr(含機能保養)", "price": 1800, "promotions": [
+                     { "price": 1500, "label": "9月優惠", "start": "2025-09-01", "end": "2025-09-30" }
+                ]}
+            ]
+        },
+        { "name": "男士專屬指壓", "items": [
+                { "id": "acupressure_1hr", "name": "[指壓]能量健康調理 /1hr", "price": 1000 },
+                { "id": "acupressure_1.5hr", "name": "[指壓]能量健康調理 /1.5hr", "price": 1500 }
+        ]},
+        { "name": "男士專屬筋膜刀體雕", "items": [
+                { "id": "fascia_knife_1hr", "name": "筋膜刀體雕 氣脈健康調理 /1hr", "price": 1600 },
+                { "id": "fascia_knife_1.5hr", "name": "筋膜刀體雕 氣脈健康調理 /1.5hr", "price": 2200 }
+        ]},
+        {
+            "name": "男士專屬SPA",
+            "items": [
+                { "id": "spa_face", "name": "【臉部】更新油美白煥膚萬年礦泥臉部肌膚調理 /1hr", "price": 1800 },
+                { "id": "spa_private", "name": "【私密處】更新油美白換膚萬年礦泥 屁股+私密處 肌膚調理 /1hr", "price": 2200, "promotions": [
+                    { "price": 1800, "label": "9月優惠", "start": "2025-09-01", "end": "2025-09-30" }
+                ]},
+                { "id": "spa_body", "name": "【全身】更新油全身深層敷體淨化 /1.5hr", "price": 3000, "promotions": [
+                    { "price": 2600, "label": "9月優惠", "start": "2025-09-01", "end": "2025-09-30" },
+                    { "price": 2999, "label": "優惠預排測試", "start": "2025-10-01", "end": "2025-10-15" }
+                ]}
+            ]
+        }
+    ],
+    "combos": [
+        {
+            "id": "combo_private_armpit",
+            "name": "私密處全除 + 腋下毛 組合優惠",
+            "itemIds": ["private_full", "armpit"],
+            "promotions": [
+                { "price": 2200, "label": "9月優惠", "start": "2025-09-01", "end": "2025-09-30" }
+            ]
+        }
+    ]
+}

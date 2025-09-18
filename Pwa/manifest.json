@@ -1,0 +1,21 @@
+{
+    "name": "德德美體美容中心 - 價格計算器",
+    "short_name": "價格計算",
+    "description": "一個用於計算服務項目總價與優惠的工具",
+    "start_url": "/dede.html",
+    "display": "standalone",
+    "background_color": "#ffffff",
+    "theme_color": "#007bff",
+    "icons": [
+        {
+            "src": "https://placehold.co/192x192/007bff/ffffff?text=Calc",
+            "sizes": "192x192",
+            "type": "image/png"
+        },
+        {
+            "src": "https://placehold.co/512x512/007bff/ffffff?text=Calc",
+            "sizes": "512x512",
+            "type": "image/png"
+        }
+    ]
+} 
