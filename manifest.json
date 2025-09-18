@@ -1,7 +1,7 @@
 {
 "name": "加班費計算機 PWA",
 "short_name": "加班計算",
-"start_url": "./work.html",
+"start_url": "/dede/work.html",
 "display": "standalone",
 "background_color": "#f8f9fa",
 "theme_color": "#007bff",
