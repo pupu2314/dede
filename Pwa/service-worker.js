@@ -3,11 +3,11 @@ const CACHE_NAME = 'price-calculator-v2'; // 建議更新快取版本名稱
 const urlsToCache = [
     '/dede/Pwa/index.html',
     '/dede/Pwa/check.html',
-    '/dede/Pwa/cdede.css',
-    '/dede/Pwa/capp.js',
-    '/dede/Pwa/cservices.json',
-    '/dede/Pwa/clogo_192.png',
-    '/dede/Pwa/clogo_512.png'
+    '/dede/Pwa/dede.css',
+    '/dede/Pwa/app.js',
+    '/dede/Pwa/services.json',
+    '/dede/Pwa/logo_192.png',
+    '/dede/Pwa/logo_512.png'
 ];
 
 // 1. 安裝 Service Worker
