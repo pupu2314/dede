@@ -1,13 +1,13 @@
 const CACHE_NAME = 'price-calculator-v2'; // 建議更新快取版本名稱
-// 需要被快取的檔案清單 (全部使用相對路徑)
+// 需要被快取的檔案清單 (
 const urlsToCache = [
-    'index.html',
-    'check.html',
-    'dede.css',
-    'app.js',
-    'services.json',
-    'logo_192.png',
-    'logo_512.png'
+    '/dede/Pwa/index.html',
+    '/dede/Pwa/check.html',
+    '/dede/Pwa/cdede.css',
+    '/dede/Pwa/capp.js',
+    '/dede/Pwa/cservices.json',
+    '/dede/Pwa/clogo_192.png',
+    '/dede/Pwa/clogo_512.png'
 ];
 
 // 1. 安裝 Service Worker
