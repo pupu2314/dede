@@ -1,32 +1,44 @@
-const CACHE_NAME = 'overtime-calculator-v1';
-// 我們需要快取的檔案列表
+const CACHE_NAME = 'overtime-calculator-v2'; // 更新版本號以觸發更新
+
+// FIX: 使用絕對路徑來快取檔案
 const urlsToCache = [
-  './work.html',
+  '/dede/work.html',
+  '/dede/manifest.json', // 也將 manifest 加入快取
   'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js'
 ];
 
-// 安裝 Service Worker 並快取應用程式外殼 (App Shell)
 self.addEventListener('install', event => {
   event.waitUntil(
     caches.open(CACHE_NAME)
       .then(cache => {
-        console.log('Opened cache');
+        console.log('Opened cache and caching files');
         return cache.addAll(urlsToCache);
       })
   );
+  self.skipWaiting(); // 強制新的 Service Worker 立即啟用
 });
 
-// 攔截網路請求，並從快取或網路提供回應
+self.addEventListener('activate', event => {
+  // 刪除舊的快取
+  event.waitUntil(
+    caches.keys().then(cacheNames => {
+      return Promise.all(
+        cacheNames.filter(cacheName => {
+          return cacheName.startsWith('overtime-calculator-') && cacheName !== CACHE_NAME;
+        }).map(cacheName => {
+          return caches.delete(cacheName);
+        })
+      );
+    })
+  );
+});
+
 self.addEventListener('fetch', event => {
   event.respondWith(
     caches.match(event.request)
       .then(response => {
-        // 如果快取中有符合的回應，就直接回傳
-        if (response) {
-          return response;
-        }
-        // 如果快取中沒有，則從網路擷取
-        return fetch(event.request);
+        // Cache-first strategy
+        return response || fetch(event.request);
       }
     )
   );
