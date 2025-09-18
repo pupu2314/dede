@@ -376,4 +376,41 @@ function initCheckPage() {
     serviceData.categories.forEach(category => {
         let tableHtml = `<h2>${category.name}</h2><table><thead><tr><th>服務項目</th><th>原價</th><th>促銷活動</th><th>促銷價</th><th>折扣</th><th>開始日期</th><th>結束日期</th><th>狀態</th></tr></thead><tbody>`;
         category.items.forEach(item => {
-            if (!item.promotions 
+            if (!item.promotions || item.promotions.length === 0) {
+                tableHtml += `<tr><td data-label="服務項目">${item.name}</td><td data-label="原價" style="text-align: right;">${item.price.toLocaleString()}</td><td colspan="6" class="no-promo">無</td></tr>`;
+            } else {
+                item.promotions.forEach((promo, index) => {
+                    const status = getPromoStatus(promo, today);
+                    const discountAmount = item.price - promo.price;
+                    const discountPercentage = (discountAmount / item.price) * 100;
+                    const discountText = `省 ${discountAmount.toLocaleString()} (${discountPercentage.toFixed(1)}%)`;
+                    tableHtml += `<tr>
+                        ${index === 0 ? `<td data-label="服務項目" rowspan="${item.promotions.length}">${item.name}</td><td data-label="原價" rowspan="${item.promotions.length}" style="text-align: right;">${item.price.toLocaleString()}</td>` : ''}
+                        <td data-label="促銷活動">${promo.label}</td><td data-label="促銷價" style="text-align: right;">${promo.price.toLocaleString()}</td><td data-label="折扣" class="discount-info">${discountText}</td><td data-label="開始日期">${promo.start}</td><td data-label="結束日期">${promo.end}</td><td data-label="狀態"><span class="status ${status.class}">${status.text}</span></td>
+                    </tr>`;
+                });
+            }
+        });
+        tableHtml += '</tbody></table>';
+        container.innerHTML += tableHtml;
+    });
+    let comboTableHtml = `<h2>組合優惠</h2><table><thead><tr><th>組合名稱</th><th>包含項目</th><th>原價</th><th>促銷活動</th><th>促銷價</th><th>折扣</th><th>開始日期</th><th>結束日期</th><th>狀態</th></tr></thead><tbody>`;
+    serviceData.combos.forEach(combo => {
+         if (combo.promotions && combo.promotions.length > 0) {
+            const itemNames = combo.itemIds.map(id => allServices.get(id)?.name || '<span style="color:red;">錯誤ID</span>').join('<br>');
+            const comboOriginalPrice = combo.itemIds.reduce((sum, id) => sum + (allServices.get(id)?.price || 0), 0);
+            combo.promotions.forEach((promo, index) => {
+                const status = getPromoStatus(promo, today);
+                const discountAmount = comboOriginalPrice - promo.price;
+                const discountPercentage = comboOriginalPrice > 0 ? (discountAmount / comboOriginalPrice) * 100 : 0;
+                const discountText = `省 ${discountAmount.toLocaleString()} (${discountPercentage.toFixed(1)}%)`;
+                comboTableHtml += `<tr>
+                    ${index === 0 ? `<td data-label="組合名稱" rowspan="${combo.promotions.length}">${combo.name}</td><td data-label="包含項目" rowspan="${combo.promotions.length}">${itemNames}</td><td data-label="原價" rowspan="${combo.promotions.length}" style="text-align: right;">${comboOriginalPrice.toLocaleString()}</td>` : ''}
+                    <td data-label="促銷活動">${promo.label}</td><td data-label="促銷價" style="text-align: right;">${promo.price.toLocaleString()}</td><td data-label="折扣" class="discount-info">${discountText}</td><td data-label="開始日期">${promo.start}</td><td data-label="結束日期">${promo.end}</td><td data-label="狀態"><span class="status ${status.class}">${status.text}</span></td>
+                </tr>`;
+            });
+         }
+    });
+    comboTableHtml += '</tbody></table>';
+    container.innerHTML += comboTableHtml;
+}
