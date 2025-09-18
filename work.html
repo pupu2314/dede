@@ -6,7 +6,8 @@
     <title>加班費計算機</title>
     <!-- PWA-related tags -->
     <meta name="theme-color" content="#007bff"/>
-    <link rel="manifest" href="manifest.json">
+    <!-- FIX: Use absolute path for manifest -->
+    <link rel="manifest" href="/dede/manifest.json">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <style>
         :root {
@@ -21,7 +22,6 @@
         details > div { margin-top: 1rem; }
         .grid-container { display: grid; grid-template-columns: 1fr; gap: 2rem; }
         @media (min-width: 768px) { .grid-container { grid-template-columns: repeat(2, 1fr); } }
-        /* FIX 2: 取消特定區塊的兩欄顯示 */
         @media (min-width: 768px) { .grid-container.single-column-grid { grid-template-columns: 1fr; } }
         .card { background: #fff; padding: 1.5rem; border: 1px solid var(--border-color); border-radius: 8px; }
         .form-group { margin-bottom: 1rem; }
@@ -49,7 +49,6 @@
         .actions-container { display: flex; justify-content: flex-end; align-items: center; gap: 0.5rem; min-width: 140px; }
 
 
-        /* Styles FOR EXPORT ONLY */
         #export-container { position: absolute; left: -9999px; top: auto; width: 1000px; background: white; padding: 2rem; box-sizing: border-box; font-family: var(--font-family); color: var(--text-color); }
         #export-container h2, #export-container h3 { color: var(--primary-color); border-bottom: 2px solid var(--border-color); padding-bottom: 0.5rem; margin-top: 0; }
         #export-container table { width: 100%; border-collapse: collapse; }
@@ -80,10 +79,8 @@
     <div class="container">
         <h1>加班費計算機</h1>
         
-        <!-- FIX 2: 添加 single-column-grid class -->
         <div class="grid-container single-column-grid">
             <div class="card">
-                <!-- FIX 1: 移除 open 屬性，由 JS 控制 -->
                 <details id="settings-details">
                     <summary>1. 基本設定</summary>
                     <div>
@@ -189,7 +186,6 @@ document.addEventListener('DOMContentLoaded', () => {
         const savedSettings = JSON.parse(localStorage.getItem('overtimeSettingsV9'));
         settings = { salaryType: 'monthly', salary: 0, workStart: "09:00", workEnd: "18:00", breakStart: "12:00", breakEnd: "13:00", ...savedSettings };
         
-        // FIX 1: 如果已有設定，則預設摺疊
         const settingsDetails = document.getElementById('settings-details');
         if (savedSettings && savedSettings.salary > 0) {
             settingsDetails.open = false;
@@ -219,7 +215,6 @@ document.addEventListener('DOMContentLoaded', () => {
         calculateHourlyRate(); 
         render(); 
         alert('設定已儲存！');
-        // 自動摺疊設定區塊
         document.getElementById('settings-details').open = false;
     }
     function calculateHourlyRate() {
@@ -539,6 +534,18 @@ document.addEventListener('DOMContentLoaded', () => {
     window.app = { deleteRecord, editRecord, toggleDetails };
     init();
 });
+
+// PWA Service Worker Registration
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    // FIX: Use absolute path for service worker
+    navigator.serviceWorker.register('/dede/sw.js').then(registration => {
+      console.log('ServiceWorker registration successful with scope: ', registration.scope);
+    }).catch(err => {
+      console.log('ServiceWorker registration failed: ', err);
+    });
+  });
+}
 </script>
 
 </body>
