@@ -2,7 +2,7 @@ const CACHE_NAME = 'price-calculator-v1';
 // 需要被快取的檔案清單
 const urlsToCache = [
     '/',
-    '/dede.html',
+    '/index.html',
     '/dede.css',
     '/app.js',
     '/services.json'
