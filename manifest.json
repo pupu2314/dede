@@ -8,15 +8,11 @@
 "description": "一個強大的加班費計算與紀錄工具。",
 "icons": [
 {
-"src": "/dede/logo_192.ico",
-"sizes": "192x192",
-"type": "image/png"
-},
-{
-"src": "/dede/logo_500.ico",
-"sizes": "500x500",
+"src": "/dede/work.png",
+"sizes": "512x512",
 "type": "image/png"
 }
 ]
 }
+
 
