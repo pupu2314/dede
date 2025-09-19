@@ -6,8 +6,11 @@ const urlsToCache = [
     'dede.css',
     'app.js',
     'services.json',
-    'logo_192.ico',
-    'logo_500.ico'
+    'logo_64.png',
+    'logo_128.png',
+    'logo_192.png',
+    'logo_256.png',
+    'logo_512.png'
 ];
 
 // 1. 安裝 Service Worker
