@@ -1,12 +1,11 @@
 const CACHE_NAME = 'overtime-calculator-v4'; // 更新版本號以觸發更新
 
-// FIX: 使用絕對路徑來快取檔案
 const urlsToCache = [
-  '/work/index.html',
-  '/work/work.css',
-  '/work/manifest.json', // 也將 manifest 加入快取
-  '/work/work_512.png',
-  '/work/work_192.png',
+  'index.html',
+  'work.css',
+  'manifest.json', // 也將 manifest 加入快取
+  'work_512.png',
+  'work_192.png',
   'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js'
 ];
 
@@ -46,4 +45,5 @@ self.addEventListener('fetch', event => {
     )
   );
 });
+
 
