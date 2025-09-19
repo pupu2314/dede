@@ -2,27 +2,46 @@
 let serviceData = null;
 let allServices = new Map();
 
+// app.js
 document.addEventListener('DOMContentLoaded', async () => {
     try {
-        // 使用 cache-busting 參數確保總是能獲取最新的 services.json
-        const response = await fetch(`services.json?v=${new Date().getTime()}`);
-        if (!response.ok) {
-            throw new Error(`讀取 services.json 失敗: ${response.statusText}`);
+        // 1. 先從網路嘗試獲取
+        const networkResponse = await fetch(`services.json?v=${new Date().getTime()}`);
+        if (!networkResponse.ok) {
+            throw new Error('無法從網路載入');
         }
-        serviceData = await response.json();
-        // 將所有服務項目扁平化存入 Map，方便快速查找
-        allServices = new Map(serviceData.categories.flatMap(cat => cat.items).map(item => [item.id, item]));
+        serviceData = await networkResponse.json();
 
-        // 根據目前在哪個頁面，執行不同的初始化函式
-        if (document.getElementById('promo-container')) {
-            initCheckPage();
+        // 2. 網路成功時，也更新快取
+        if ('caches' in window) {
+            const cache = await caches.open('price-calculator-v5.1'); // 使用你的快取名稱
+            cache.put('services.json', networkResponse.clone());
         }
-        if (document.getElementById('service-list')) {
-            initCalculatorPage();
+
+    } catch (networkError) {
+        console.error('網路請求失敗，嘗試從快取載入:', networkError);
+        try {
+            // 3. 網路失敗時，從快取中讀取
+            const cache = await caches.open('price-calculator-v5.1');
+            const cachedResponse = await cache.match('services.json');
+            if (!cachedResponse) {
+                throw new Error('快取中沒有 services.json');
+            }
+            serviceData = await cachedResponse.json();
+        } catch (cacheError) {
+            console.error('從快取載入失敗:', cacheError);
+            document.body.innerHTML = `<div style="padding: 20px; text-align: center;"><h1>錯誤</h1><p>無法載入必要的服務資料，請檢查 services.json 檔案是否存在且格式正確。</p><p><em>${cacheError.message}</em></p></div>`;
+            return; // 避免繼續執行後續程式碼
         }
-    } catch (error) {
-        console.error('初始化應用程式失敗:', error);
-        document.body.innerHTML = `<div style="padding: 20px; text-align: center;"><h1>錯誤</h1><p>無法載入必要的服務資料，請檢查 services.json 檔案是否存在且格式正確。</p><p><em>${error.message}</em></p></div>`;
+    }
+
+    // 4. 正常執行後續邏輯
+    allServices = new Map(serviceData.categories.flatMap(cat => cat.items).map(item => [item.id, item]));
+    if (document.getElementById('promo-container')) {
+        initCheckPage();
+    }
+    if (document.getElementById('service-list')) {
+        initCalculatorPage();
     }
 });
 
