@@ -5,43 +5,47 @@ let allServices = new Map();
 // app.js
 document.addEventListener('DOMContentLoaded', async () => {
     try {
-        // 1. 先從網路嘗試獲取
-        const networkResponse = await fetch(`services.json?v=${new Date().getTime()}`);
-        if (!networkResponse.ok) {
-            throw new Error('無法從網路載入');
+        // 使用 cache-busting 參數確保總是能獲取最新的 services.json
+        const response = await fetch(`services.json?v=${new Date().getTime()}`);
+        if (!response.ok) {
+            throw new Error(`讀取 services.json 失敗: ${response.statusText}`);
         }
-        serviceData = await networkResponse.json();
+        serviceData = await response.json();
+        // 將所有服務項目扁平化存入 Map，方便快速查找
+        allServices = new Map(serviceData.categories.flatMap(cat => cat.items).map(item => [item.id, item]));
 
-        // 2. 網路成功時，也更新快取
-        if ('caches' in window) {
-            const cache = await caches.open('price-calculator-v5.1'); // 使用你的快取名稱
-            cache.put('services.json', networkResponse.clone());
+        // 根據目前在哪個頁面，執行不同的初始化函式
+        if (document.getElementById('promo-container')) {
+            initCheckPage();
         }
-
-    } catch (networkError) {
-        console.error('網路請求失敗，嘗試從快取載入:', networkError);
+        if (document.getElementById('service-list')) {
+            initCalculatorPage();
+        }
+    } catch (error) {
+        // 如果網路載入失敗，才嘗試從快取讀取
+        console.error('網路載入 services.json 失敗，嘗試從快取讀取:', error);
         try {
-            // 3. 網路失敗時，從快取中讀取
             const cache = await caches.open('price-calculator-v5.1');
             const cachedResponse = await cache.match('services.json');
             if (!cachedResponse) {
-                throw new Error('快取中沒有 services.json');
+                // 如果快取中也沒有，才顯示錯誤
+                throw new Error('快取中沒有 services.json，請檢查網路連線。');
             }
             serviceData = await cachedResponse.json();
+            allServices = new Map(serviceData.categories.flatMap(cat => cat.items).map(item => [item.id, item]));
+            
+            if (document.getElementById('promo-container')) {
+                initCheckPage();
+            }
+            if (document.getElementById('service-list')) {
+                initCalculatorPage();
+            }
+
         } catch (cacheError) {
             console.error('從快取載入失敗:', cacheError);
             document.body.innerHTML = `<div style="padding: 20px; text-align: center;"><h1>錯誤</h1><p>無法載入必要的服務資料，請檢查 services.json 檔案是否存在且格式正確。</p><p><em>${cacheError.message}</em></p></div>`;
             return; // 避免繼續執行後續程式碼
         }
-    }
-
-    // 4. 正常執行後續邏輯
-    allServices = new Map(serviceData.categories.flatMap(cat => cat.items).map(item => [item.id, item]));
-    if (document.getElementById('promo-container')) {
-        initCheckPage();
-    }
-    if (document.getElementById('service-list')) {
-        initCalculatorPage();
     }
 });
 
@@ -61,8 +65,8 @@ function initCalculatorPage() {
         saveBtn: document.getElementById('save-btn'),
         loadBtn: document.getElementById('load-btn'),
         clearBtn: document.getElementById('clear-btn'),
-        shareLinkBtn: document.getElementById('share-link-btn'), // 新增
-        screenshotBtn: document.getElementById('screenshot-btn'), // 修改 ID
+        shareLinkBtn: document.getElementById('share-link-btn'),
+        screenshotBtn: document.getElementById('screenshot-btn'),
         originalTotalP: document.getElementById('original-total-p'),
         discountedTotalP: document.getElementById('discounted-total-p'),
         originalTotalSpan: document.getElementById('floating-original-total'),
@@ -129,7 +133,6 @@ function initCalculatorPage() {
     }
 
     function calculatePrices() {
-        // ... 此函式內容不變，為求簡潔省略 ...
         const selectedIds = new Set(Array.from(document.querySelectorAll('#service-list input:checked')).map(cb => cb.value));
         const today = getTaipeiDate();
         let originalTotal = 0, promoTotal = 0;
@@ -176,8 +179,7 @@ function initCalculatorPage() {
     }
 
     function updateDisplay(result) {
-        // ... 此函式內容不變，為求簡潔省略 ...
-         if (result.savedAmount > 0) {
+        if (result.savedAmount > 0) {
             dom.originalTotalP.style.display = 'block';
             dom.savingsContainer.style.display = 'block';
             dom.discountNoteContainer.style.display = 'block';
@@ -220,7 +222,6 @@ function initCalculatorPage() {
     }
     
     function saveState() {
-        // ... 此函式內容不變 ...
         const state = {
             services: Array.from(document.querySelectorAll('#service-list input:checked')).map(cb => cb.id),
             isBirthday: dom.isBirthdayPerson.checked,
@@ -231,7 +232,6 @@ function initCalculatorPage() {
     }
 
     function loadState() {
-        // ... 此函式內容不變 ...
         const savedState = localStorage.getItem(STORAGE_KEY);
         if (savedState) {
             clearSelections(false);
@@ -244,14 +244,12 @@ function initCalculatorPage() {
     }
 
     function clearSelections(showMsg = true) {
-        // ... 此函式內容不變 ...
         document.querySelectorAll('input[type="checkbox"]').forEach(cb => cb.checked = false);
         handleInteraction();
         if (showMsg) showToast('已清除所有選項。');
     }
 
     function filterServices() {
-        // ... 此函式內容不變 ...
         const query = dom.searchInput.value.toLowerCase().trim();
         dom.serviceListContainer.querySelectorAll('fieldset').forEach(fieldset => {
             let hasVisibleItem = false;
@@ -288,7 +286,6 @@ function initCalculatorPage() {
         }
 
         const imageSource = document.createElement('div');
-        // ... 此處的截圖樣式與邏輯與原版相同，為求簡潔省略 ...
         imageSource.style.cssText = 'width: 450px; padding: 25px; background-color: #ffffff; font-family: sans-serif; color: #333; position: absolute; left: -9999px; border: 1px solid #ddd;';
         const isIdentityDiscount = result.appliedDiscount.includes('壽星') || result.appliedDiscount.includes('學生');
         let itemsHtml = result.displayItems.map(item => {
@@ -376,13 +373,12 @@ function initCalculatorPage() {
     dom.saveBtn.addEventListener('click', saveState);
     dom.loadBtn.addEventListener('click', loadState);
     dom.clearBtn.addEventListener('click', () => clearSelections(true));
-    dom.shareLinkBtn.addEventListener('click', generateShareableLink); // 綁定分享網址
-    dom.screenshotBtn.addEventListener('click', exportAsPNG); // 綁定截圖
+    dom.shareLinkBtn.addEventListener('click', generateShareableLink);
+    dom.screenshotBtn.addEventListener('click', exportAsPNG);
 }
 
 // --- 促銷檢查頁面 (check.html) 的邏輯 ---
 function initCheckPage() {
-    // ... 此頁面邏輯不變，為求簡潔省略 ...
     const container = document.getElementById('promo-container');
     function getTaipeiDateString() { return new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Taipei' }).format(new Date()); }
     function getPromoStatus(promo, todayString) {
@@ -432,4 +428,6 @@ function initCheckPage() {
     });
     comboTableHtml += '</tbody></table>';
     container.innerHTML += comboTableHtml;
+}
+
 }
