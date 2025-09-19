@@ -49,5 +49,22 @@
 "categories": [
 "business"
 ]
+   "shortcuts": [
+    {
+      "name": "服務計算器",
+      "short_name": "計算器",
+      "description": "快速計算服務價格。",
+      "url": "/dede/Pwa/dede.html",
+      "icons": [{ "src": "/dede/Pwa/logo_128.png", "sizes": "128x128", "type": "image/png" }]
+    },
+    {
+      "name": "促銷檢查",
+      "short_name": "檢查",
+      "description": "快速檢查促銷活動狀態。",
+      "url": "/dede/Pwa/check.html",
+      "icons": [{ "src": "/dede/Pwa/logo_128.png", "sizes": "128x128", "type": "image/png" }]
+    }
+  ]
+}
 }
 
