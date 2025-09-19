@@ -4,6 +4,9 @@ let allServices = new Map();
 
 // app.js
 document.addEventListener('DOMContentLoaded', async () => {
+    // 顯示載入畫面
+    showLoadingOverlay();
+
     try {
         // 使用 cache-busting 參數確保總是能獲取最新的 services.json
         const response = await fetch(`services.json?v=${new Date().getTime()}`);
@@ -13,6 +16,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         serviceData = await response.json();
         // 將所有服務項目扁平化存入 Map，方便快速查找
         allServices = new Map(serviceData.categories.flatMap(cat => cat.items).map(item => [item.id, item]));
+        
+        // 載入成功，移除載入畫面
+        removeLoadingOverlay();
 
         // 根據目前在哪個頁面，執行不同的初始化函式
         if (document.getElementById('promo-container')) {
@@ -34,6 +40,9 @@ document.addEventListener('DOMContentLoaded', async () => {
             serviceData = await cachedResponse.json();
             allServices = new Map(serviceData.categories.flatMap(cat => cat.items).map(item => [item.id, item]));
             
+            // 從快取載入成功，移除載入畫面
+            removeLoadingOverlay();
+
             if (document.getElementById('promo-container')) {
                 initCheckPage();
             }
@@ -48,6 +57,21 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     }
 });
+
+function showLoadingOverlay() {
+    const overlay = document.createElement('div');
+    overlay.id = 'loading-overlay';
+    overlay.style.cssText = 'position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255, 255, 255, 0.9); display: flex; justify-content: center; align-items: center; z-index: 1000;';
+    overlay.innerHTML = '<div style="text-align: center;"><p style="font-size: 1.2em; color: #333;">正在載入服務項目...</p></div>';
+    document.body.appendChild(overlay);
+}
+
+function removeLoadingOverlay() {
+    const overlay = document.getElementById('loading-overlay');
+    if (overlay) {
+        overlay.remove();
+    }
+}
 
 // --- 價格計算器頁面 (dede.html) 的邏輯 ---
 function initCalculatorPage() {
@@ -428,6 +452,4 @@ function initCheckPage() {
     });
     comboTableHtml += '</tbody></table>';
     container.innerHTML += comboTableHtml;
-}
-
 }
