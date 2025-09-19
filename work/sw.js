@@ -1,4 +1,4 @@
-const CACHE_NAME = 'overtime-calculator-v3'; // 更新版本號以觸發更新
+const CACHE_NAME = 'overtime-calculator-v4'; // 更新版本號以觸發更新
 
 // FIX: 使用絕對路徑來快取檔案
 const urlsToCache = [
