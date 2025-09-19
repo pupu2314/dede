@@ -1,4 +1,4 @@
-const CACHE_NAME = 'price-calculator-v5'; // 建議更新快取版本名稱
+const CACHE_NAME = 'price-calculator-v5.1'; // 建議更新快取版本名稱
 // 需要被快取的檔案清單
 const urlsToCache = [
     '/dede/Pwa/index.html',
@@ -25,23 +25,24 @@ self.addEventListener('install', event => {
     );
 });
 
-// 2. 攔截網路請求 (策略改為：網路優先，失敗才讀快取)
-// 這對 services.json 的更新比較友善
+// 新的 Service Worker fetch 邏輯 (快取優先)
 self.addEventListener('fetch', event => {
     event.respondWith(
-        fetch(event.request).then(networkResponse => {
-            // 如果成功從網路取得，就存入快取並回傳
-            return caches.open(CACHE_NAME).then(cache => {
-                cache.put(event.request, networkResponse.clone());
-                return networkResponse;
+        caches.match(event.request).then(response => {
+            // 如果快取中有找到資源，直接回傳
+            if (response) {
+                return response;
+            }
+            // 如果快取中沒有，就從網路下載並存入快取
+            return fetch(event.request).then(networkResponse => {
+                return caches.open(CACHE_NAME).then(cache => {
+                    cache.put(event.request, networkResponse.clone());
+                    return networkResponse;
+                });
             });
-        }).catch(() => {
-            // 如果網路請求失敗 (例如離線)，就從快取中尋找
-            return caches.match(event.request);
         })
     );
 });
-
 
 // 3. 啟用 Service Worker 與管理舊快取
 self.addEventListener('activate', event => {
