@@ -1,0 +1,62 @@
+        :root {
+            --primary-color: #007bff; --secondary-color: #6c757d; --bg-color: #f8f9fa;
+            --text-color: #333; --border-color: #dee2e6; --success-color: #28a745;
+            --danger-color: #dc3545; --white-color: #fff; --font-family: 'Segoe UI', 'Microsoft JhengHei', sans-serif;
+        }
+        body { font-family: var(--font-family); background-color: var(--bg-color); color: var(--text-color); margin: 0; padding: 1rem; line-height: 1.6; }
+        .container { max-width: 1000px; margin: auto; background: var(--white-color); padding: 1.5rem; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+        h1, h2 { color: var(--primary-color); border-bottom: 2px solid var(--border-color); padding-bottom: 0.5rem; margin-top: 0; }
+        summary { font-size: 1.5rem; font-weight: bold; cursor: pointer; }
+        details > div { margin-top: 1rem; }
+        .grid-container { display: grid; grid-template-columns: 1fr; gap: 2rem; }
+        @media (min-width: 768px) { .grid-container { grid-template-columns: repeat(2, 1fr); } }
+        @media (min-width: 768px) { .grid-container.single-column-grid { grid-template-columns: 1fr; } }
+        .card { background: #fff; padding: 1.5rem; border: 1px solid var(--border-color); border-radius: 8px; }
+        .form-group { margin-bottom: 1rem; }
+        .time-input-group { display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.5rem; align-items: center; }
+        label { display: block; margin-bottom: 0.5rem; font-weight: bold; }
+        input[type="number"], input[type="datetime-local"], input[type="text"], input[type="time"], textarea { width: 100%; padding: 0.75rem; border: 1px solid var(--border-color); border-radius: 4px; box-sizing: border-box; font-size: 1rem; }
+        .radio-group label, .checkbox-group label { display: inline-flex; align-items: center; margin-right: 1rem; font-weight: normal; cursor: pointer; }
+        .checkbox-group input { margin-right: 0.5rem; }
+        button { background-color: var(--primary-color); color: var(--white-color); border: none; padding: 0.75rem 1.5rem; border-radius: 4px; cursor: pointer; font-size: 1rem; transition: background-color 0.3s; }
+        button:hover { background-color: #0056b3; }
+        .btn-secondary { background-color: var(--secondary-color); }
+        .btn-secondary:hover { background-color: #545b62; }
+        table { width: 100%; border-collapse: collapse; margin-top: 1rem; }
+        th, td { border-bottom: 1px solid var(--border-color); padding: 0.75rem; text-align: left; word-break: break-word; }
+        th { background-color: #f2f2f2; }
+        .summary { background: #e9f5ff; border: 1px solid #b3d7ff; padding: 1.5rem; margin-top: 1rem; border-radius: 8px; }
+        .summary-value { font-size: 1.5rem; font-weight: bold; color: var(--success-color); }
+        .error-message { margin-top: 0.5rem; font-weight: bold; padding: 0.75rem; border-radius: 4px; color: var(--danger-color); background-color: #f8d7da; border: 1px solid #f5c6cb;}
+        .mode-switcher { display: flex; gap: 0.5rem; margin-bottom: 1rem; border-bottom: 1px solid var(--border-color); padding-bottom: 1rem; }
+        .mode-switcher button { flex: 1; }
+        .mode-switcher button.active { background-color: #0056b3; font-weight: bold; }
+        .daily-group-header { background-color: #f2f2f2; font-weight: bold; }
+        .record-detail-row td, .formula-detail-row td { padding-left: 2rem; font-size: 0.9rem; color: #555; border-top: 1px dotted #ccc; }
+        .formula-detail-row td { background-color: #f9f9f9; padding: 1rem; font-family: monospace; color: #0056b3; }
+        .actions-container { display: flex; justify-content: flex-end; align-items: center; gap: 0.5rem; min-width: 140px; }
+
+
+        #export-container { position: absolute; left: -9999px; top: auto; width: 1000px; background: white; padding: 2rem; box-sizing: border-box; font-family: var(--font-family); color: var(--text-color); }
+        #export-container h2, #export-container h3 { color: var(--primary-color); border-bottom: 2px solid var(--border-color); padding-bottom: 0.5rem; margin-top: 0; }
+        #export-container table { width: 100%; border-collapse: collapse; }
+        #export-container th, #export-container td { border: 1px solid var(--border-color); padding: 0.75rem; text-align: left; }
+        #export-container th { background-color: #f2f2f2; }
+        #export-container .summary { margin-top: 2rem; text-align: right; background: #e9f5ff; border: 1px solid #b3d7ff; padding: 1.5rem; border-radius: 8px; }
+        #export-container .summary-value { font-size: 1.8rem; color: var(--success-color); }
+        #export-container thead { display: table-header-group !important; }
+        #export-container tr { display: table-row !important; }
+        #export-container td { display: table-cell !important; }
+        #export-container td::before { content: none !important; }
+
+
+        @media (max-width: 768px) {
+            thead { display: none; }
+            tr:not(.formula-detail-row) { display: block; border: 1px solid var(--border-color); border-radius: 8px; margin-bottom: 1rem; padding: 1rem; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+            tr.daily-group-header { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; padding: 0.5rem; margin-bottom: 0.5rem; background-color: #e9f5ff; }
+            td { display: flex; justify-content: space-between; align-items: center; padding: 0.5rem 0; border-bottom: 1px dotted var(--border-color); text-align: right; }
+            td:last-child { border-bottom: none; }
+            td::before { content: attr(data-label); font-weight: bold; text-align: left; margin-right: 1rem; }
+            .formula-detail-row { display: block; }
+            .formula-detail-row td { display: block; text-align: left; }
+        }
