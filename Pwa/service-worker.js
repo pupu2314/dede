@@ -1,16 +1,5 @@
 const CACHE_NAME = 'price-calculator-v4'; // 建議更新快取版本名稱
 // 需要被快取的檔案清單
-/*
-const urlsToCache = [
-    '/dede/Pwa/index.html',
-    '/dede/Pwa/check.html',
-    '/dede/Pwa/dede.css',
-    '/dede/Pwa/app.js',
-    '/dede/Pwa/services.json',
-    '/dede/Pwa/logo_192.ico',
-    '/dede/Pwa/logo_500.ico'
-];
-*/
 const urlsToCache = [
     'index.html',
     'check.html',
