@@ -1,22 +1,53 @@
 {
-  "name": "德德美體美容中心 - 價格計算器",
-  "short_name": "德德美體美容中心",
-  "description": "一個用於計算服務項目總價與優惠的工具",
-  "start_url": "./index.html",
-  "scope": "./",
-  "display": "standalone",
-  "background_color": "#ffffff",
-  "theme_color": "#007bff",
-  "icons": [
-    {
-      "src": "/dede/Pwa/logo_192.png",
-      "sizes": "192x192",
-      "type": "image/png"
-    },
-    {
-      "src": "/dede/Pwa/logo_512.png",
-      "sizes": "512x512",
-      "type": "image/png"
-    }
-  ]
+"name": "德德美體美容中心 - 價格計算器",
+"short_name": "德德美體美容中心",
+"description": "一個用於計算服務項目總價與優惠的工具",
+"start_url": "/dede/Pwa/index.html",
+"scope": ".",
+"display": "standalone",
+"background_color": "#ffffff",
+"theme_color": "#007bff",
+"icons": [
+{
+"src": "/dede/Pwa/logo_64.png",
+"sizes": "64x64",
+"type": "image/png"
+},
+{
+"src": "/dede/Pwa/logo_128.png",
+"sizes": "128x128",
+"type": "image/png"
+},
+{
+"src": "/dede/Pwa/logo_192.png",
+"sizes": "192x192",
+"type": "image/png"
+},
+{
+"src": "/dede/Pwa/logo_256.png",
+"sizes": "256x256",
+"type": "image/png"
+},
+{
+"src": "/dede/Pwa/logo_512.png",
+"sizes": "512x512",
+"type": "image/png"
 }
+],
+"screenshots": [
+{
+"src": "/dede/Pwa/Screenshot_20250919-102241.png",
+"sizes": "2403x1440",
+"type": "image/png",
+"purpose": "any"
+}
+],
+"id": "DedeKeelung",
+"dir": "auto",
+"lang": "zh",
+"orientation": "any",
+"categories": [
+"business"
+]
+}
+
