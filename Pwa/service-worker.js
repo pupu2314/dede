@@ -10,7 +10,8 @@ const urlsToCache = [
     'logo_128.png',
     'logo_192.png',
     'logo_256.png',
-    'logo_512.png'
+    'logo_512.png',
+    'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js'
 ];
 
 // 1. 安裝 Service Worker
