@@ -9,27 +9,33 @@
   "theme_color": "#007bff",
   "icons": [
     {
-      "src": "/dede/Pwa/Logo_128.ico",
+      "src": "/dede/Pwa/logo_64.png",
+      "sizes": "64x64",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/dede/Pwa/logo_128.png",
       "sizes": "128x128",
-      "type": "image/ico",
+      "type": "image/png",
       "purpose": "any maskable"
     },
     {
-      "src": "/dede/Pwa/Logo_192.ico",
+      "src": "/dede/Pwa/logo_192.png",
       "sizes": "192x192",
-      "type": "image/ico",
+      "type": "image/png",
       "purpose": "any maskable"
     },
     {
-      "src": "/dede/Pwa/Logo_256.ico",
+      "src": "/dede/Pwa/logo_256.png",
       "sizes": "256x256",
-      "type": "image/ico",
+      "type": "image/png",
       "purpose": "any maskable"
     },
     {
-      "src": "/dede/Pwa/Logo_512.ico",
+      "src": "/dede/Pwa/logo_512.png",
       "sizes": "512x512",
-      "type": "image/ico",
+      "type": "image/png",
       "purpose": "any maskable"
     }
   ],
