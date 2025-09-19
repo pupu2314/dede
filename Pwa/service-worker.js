@@ -1,16 +1,16 @@
 const CACHE_NAME = 'price-calculator-v5.1'; // 建議更新快取版本名稱
 // 需要被快取的檔案清單
 const urlsToCache = [
-    '/index.html',
-    '/check.html',
-    '/dede.css',
-    '/app.js',
-    '/services.json',
-    '/logo_64.png',
-    '/logo_128.png',
-    '/logo_192.png',
-    '/logo_256.png',
-    '/logo_512.png'
+    'index.html',
+    'check.html',
+    'dede.css',
+    'app.js',
+    'services.json',
+    'logo_64.png',
+    'logo_128.png',
+    'logo_192.png',
+    'logo_256.png',
+    'logo_512.png'
 ];
 
 // 1. 安裝 Service Worker
