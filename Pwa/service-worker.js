@@ -3,6 +3,7 @@ const CACHE_NAME = 'price-calculator-v5.1'; // 建議更新快取版本名稱
 const urlsToCache = [
     'index.html',
     'check.html',
+    'services_editor.html',
     'dede.css',
     'app.js',
     'services.json',
