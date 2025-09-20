@@ -114,24 +114,20 @@
 
         <div id="editor-app">
             <div class="space-y-8">
-                <!-- 載入狀態 -->
                 <div id="loading-message" class="text-center text-xl text-gray-500">
                     載入中... 請確保已連線至網路
                 </div>
 
-                <!-- 髒資料提示 -->
                 <div id="dirty-warning" class="dirty-warning">
                     資料已更新，請按「產生 JSON」按鈕匯出
                 </div>
 
-                <!-- 類別編輯區 -->
                 <div id="categories-section" class="hidden">
                     <h2 class="text-2xl font-semibold mb-4">服務項目</h2>
                     <div id="categories-container" class="space-y-6"></div>
                     <button onclick="app.addCategory()" class="btn btn-secondary w-full mt-4">新增類別</button>
                 </div>
 
-                <!-- 組合編輯區 -->
                 <div id="combos-section" class="hidden">
                     <h2 class="text-2xl font-semibold mt-8 mb-4">組合優惠</h2>
                     <div id="combos-container" class="space-y-6"></div>
@@ -204,11 +200,11 @@
                         const categoryEl = document.createElement('div');
                         categoryEl.className = 'p-6 bg-white border border-gray-200 rounded-lg shadow-sm';
                         categoryEl.innerHTML = `
-                            <div class="flex items-center space-x-4 mb-4">
-                                <label class="block w-1/3 font-medium">類別名稱</label>
+                            <div class="mb-4">
+                                <label class="block font-medium mb-2">類別名稱</label>
                                 <input type="text" value="${category.name}" onblur="app.updateCategoryName(${catIndex}, this.value)">
-                                <button onclick="app.removeCategory(${catIndex})" class="btn btn-danger">移除類別</button>
                             </div>
+                            <button onclick="app.removeCategory(${catIndex})" class="btn btn-danger w-full mb-4">移除類別</button>
                             <h3 class="text-lg font-semibold mt-4 mb-2">服務項目</h3>
                             <div class="space-y-4" id="items-container-${catIndex}"></div>
                             <button onclick="app.addServiceItem(${catIndex})" class="btn btn-secondary w-full mt-4">新增服務項目</button>
@@ -343,6 +339,7 @@
                 
                 updateJsonOutput: function() {
                     this.generatedJson = JSON.stringify(this.data, null, 2);
+                    this.elements.generateBtn.classList.add('hidden');
                     this.elements.copyBtn.classList.remove('hidden');
                     this.isDataDirty = false;
                     this.updateDirtyMessage();
@@ -350,6 +347,8 @@
 
                 setDirty: function() {
                     this.isDataDirty = true;
+                    this.elements.copyBtn.classList.add('hidden');
+                    this.elements.generateBtn.classList.remove('hidden');
                     this.updateDirtyMessage();
                 },
 
@@ -551,3 +550,4 @@
     </script>
 </body>
 </html>
+```eof
