@@ -1,0 +1,468 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>服務資料編輯器</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f3f4f6;
+            color: #333;
+        }
+        .container {
+            max-width: 1000px;
+            margin: 2rem auto;
+            padding: 2rem;
+            background: #fff;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+        input, select {
+            border: 1px solid #d1d5db;
+            padding: 0.5rem;
+            border-radius: 6px;
+            width: 100%;
+        }
+        .btn {
+            padding: 0.75rem 1.5rem;
+            border-radius: 8px;
+            font-weight: 600;
+            transition: all 0.2s;
+            cursor: pointer;
+        }
+        .btn-primary {
+            background-color: #007bff;
+            color: #fff;
+        }
+        .btn-primary:hover {
+            background-color: #0056b3;
+        }
+        .btn-danger {
+            background-color: #dc3545;
+            color: #fff;
+        }
+        .btn-danger:hover {
+            background-color: #c82333;
+        }
+        .btn-secondary {
+            background-color: #e2e8f0;
+            color: #333;
+        }
+        .btn-secondary:hover {
+            background-color: #cbd5e1;
+        }
+        .promo-item {
+            border: 1px solid #e5e7eb;
+            padding: 1rem;
+            margin-top: 0.5rem;
+            border-radius: 8px;
+            background-color: #fafafa;
+        }
+        .json-output {
+            background-color: #1f2937;
+            color: #e5e7eb;
+            padding: 1rem;
+            border-radius: 8px;
+            font-family: 'Courier New', Courier, monospace;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            min-height: 200px;
+            overflow-y: auto;
+        }
+        .select-multiple {
+            height: 150px;
+        }
+        .dirty-warning {
+            color: #b91c1c;
+            background-color: #fee2e2;
+            padding: 0.75rem;
+            border-radius: 8px;
+            text-align: center;
+            font-weight: 600;
+            margin-bottom: 1.5rem;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1 class="text-3xl font-bold text-center text-blue-800 mb-6">服務資料編輯器</h1>
+        <p class="text-center text-gray-600 mb-8">在這裡編輯服務項目與促銷內容，完成後請複製下方生成的 JSON 內容。</p>
+
+        <div id="editor-app">
+            <div class="space-y-8">
+                <!-- 載入狀態 -->
+                <div id="loading-message" class="text-center text-xl text-gray-500">
+                    載入中... 請確保已連線至網路
+                </div>
+
+                <!-- 髒資料提示 -->
+                <div id="dirty-warning" class="dirty-warning">
+                    資料已更新，請按「產生 JSON」按鈕匯出
+                </div>
+
+                <!-- 類別編輯區 -->
+                <div id="categories-section" class="hidden">
+                    <h2 class="text-2xl font-semibold mb-4">服務項目</h2>
+                    <div id="categories-container" class="space-y-6"></div>
+                    <button onclick="app.addCategory()" class="btn btn-secondary w-full mt-4">新增類別</button>
+                </div>
+
+                <!-- 組合編輯區 -->
+                <div id="combos-section" class="hidden">
+                    <h2 class="text-2xl font-semibold mt-8 mb-4">組合優惠</h2>
+                    <div id="combos-container" class="space-y-6"></div>
+                    <button onclick="app.addCombo()" class="btn btn-secondary w-full mt-4">新增組合</button>
+                </div>
+
+                <!-- JSON 匯出區 -->
+                <div id="json-output-section" class="mt-8 hidden">
+                    <h2 class="text-2xl font-semibold mb-4">JSON 輸出</h2>
+                    <div class="flex space-x-4">
+                        <button id="generate-json-btn" class="btn btn-primary flex-1">產生 JSON</button>
+                        <button id="copy-json-btn" class="btn btn-secondary flex-1">複製 JSON</button>
+                    </div>
+                    <textarea id="json-output" class="json-output w-full mt-4 resize-none"></textarea>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const app = {
+                data: {
+                    categories: [],
+                    combos: []
+                },
+                allServiceItems: [],
+                isDataDirty: false,
+                elements: {
+                    loadingMessage: document.getElementById('loading-message'),
+                    dirtyWarning: document.getElementById('dirty-warning'),
+                    categoriesSection: document.getElementById('categories-section'),
+                    combosSection: document.getElementById('combos-section'),
+                    categoriesContainer: document.getElementById('categories-container'),
+                    combosContainer: document.getElementById('combos-container'),
+                    jsonOutputSection: document.getElementById('json-output-section'),
+                    jsonOutput: document.getElementById('json-output'),
+                    generateBtn: document.getElementById('generate-json-btn'),
+                    copyBtn: document.getElementById('copy-json-btn')
+                },
+
+                init: async function() {
+                    try {
+                        const response = await fetch('https://pupu2314.github.io/dede/Pwa/services.json');
+                        if (!response.ok) {
+                            throw new Error('無法載入 services.json 檔案。請確認網路連線或路徑是否正確。');
+                        }
+                        this.data = await response.json();
+                        this.allServiceItems = this.data.categories.flatMap(cat => cat.items);
+                        this.render();
+                        this.elements.loadingMessage.classList.add('hidden');
+                        this.elements.categoriesSection.classList.remove('hidden');
+                        this.elements.combosSection.classList.remove('hidden');
+                        this.elements.jsonOutputSection.classList.remove('hidden');
+                        this.updateJsonOutput(); // 初始載入時產生一次
+                    } catch (error) {
+                        this.elements.loadingMessage.textContent = `載入失敗：${error.message}`;
+                        console.error('載入 services.json 失敗:', error);
+                    }
+                },
+
+                render: function() {
+                    this.renderCategories();
+                    this.renderCombos();
+                },
+
+                renderCategories: function() {
+                    this.elements.categoriesContainer.innerHTML = '';
+                    this.data.categories.forEach((category, catIndex) => {
+                        const categoryEl = document.createElement('div');
+                        categoryEl.className = 'p-6 bg-white border border-gray-200 rounded-lg shadow-sm';
+                        categoryEl.innerHTML = `
+                            <div class="flex items-center space-x-4 mb-4">
+                                <label class="block w-1/3 font-medium">類別名稱</label>
+                                <input type="text" value="${category.name}" oninput="app.updateCategoryName(${catIndex}, this.value)" class="flex-grow">
+                                <button onclick="app.removeCategory(${catIndex})" class="btn btn-danger">移除類別</button>
+                            </div>
+                            <h3 class="text-lg font-semibold mt-4 mb-2">服務項目</h3>
+                            <div class="space-y-4" id="items-container-${catIndex}"></div>
+                            <button onclick="app.addServiceItem(${catIndex})" class="btn btn-secondary w-full mt-4">新增服務項目</button>
+                        `;
+                        const itemsContainer = categoryEl.querySelector(`#items-container-${catIndex}`);
+                        category.items.forEach((item, itemIndex) => {
+                            itemsContainer.appendChild(this.createServiceItemElement(item, catIndex, itemIndex));
+                        });
+                        this.elements.categoriesContainer.appendChild(categoryEl);
+                    });
+                },
+
+                createServiceItemElement: function(item, catIndex, itemIndex) {
+                    const itemEl = document.createElement('div');
+                    itemEl.className = 'p-4 border border-gray-300 rounded-lg bg-gray-50 space-y-2';
+                    itemEl.innerHTML = `
+                        <div class="flex space-x-4 items-center">
+                            <div class="w-1/4"><label>ID</label><input type="text" value="${item.id}" oninput="app.updateServiceItem(${catIndex}, ${itemIndex}, 'id', this.value)"></div>
+                            <div class="w-1/2"><label>名稱</label><input type="text" value="${item.name}" oninput="app.updateServiceItem(${catIndex}, ${itemIndex}, 'name', this.value)"></div>
+                            <div class="w-1/4"><label>價格</label><input type="number" value="${item.price}" oninput="app.updateServiceItem(${catIndex}, ${itemIndex}, 'price', parseInt(this.value))"></div>
+                            <button onclick="app.removeServiceItem(${catIndex}, ${itemIndex})" class="btn btn-danger self-end ml-auto">移除</button>
+                        </div>
+                        <h4 class="font-medium text-gray-600 mt-4 mb-2">促銷活動</h4>
+                        <div class="space-y-2" id="promos-container-${catIndex}-${itemIndex}"></div>
+                        <button onclick="app.addPromo(${catIndex}, ${itemIndex}, 'service')" class="btn btn-secondary btn-sm mt-2">新增促銷</button>
+                    `;
+                    const promosContainer = itemEl.querySelector(`#promos-container-${catIndex}-${itemIndex}`);
+                    (item.promotions || []).forEach((promo, promoIndex) => {
+                        promosContainer.appendChild(this.createPromoElement(promo, catIndex, itemIndex, promoIndex, 'service'));
+                    });
+                    return itemEl;
+                },
+
+                renderCombos: function() {
+                    this.elements.combosContainer.innerHTML = '';
+                    this.data.combos.forEach((combo, comboIndex) => {
+                        this.elements.combosContainer.appendChild(this.createComboElement(combo, comboIndex));
+                    });
+                },
+
+                createComboElement: function(combo, comboIndex) {
+                    const comboEl = document.createElement('div');
+                    comboEl.className = 'p-6 bg-white border border-gray-200 rounded-lg shadow-sm';
+                    
+                    const optionsHtml = this.allServiceItems.map(item => {
+                        const isSelected = combo.itemIds.includes(item.id);
+                        return `<option value="${item.id}" ${isSelected ? 'selected' : ''}>${item.name} (${item.id})</option>`;
+                    }).join('');
+
+                    comboEl.innerHTML = `
+                        <div class="flex items-center space-x-4 mb-4">
+                            <div class="w-1/2"><label>組合名稱</label><input type="text" value="${combo.name}" oninput="app.updateCombo(${comboIndex}, 'name', this.value)"></div>
+                            <button onclick="app.removeCombo(${comboIndex})" class="btn btn-danger self-end ml-auto">移除組合</button>
+                        </div>
+                        <div class="mt-4">
+                            <label>包含項目</label>
+                            <select multiple class="select-multiple w-full border border-gray-300 rounded-md p-2" onchange="app.updateComboItemIds(${comboIndex}, this)">
+                                ${optionsHtml}
+                            </select>
+                        </div>
+                        <h3 class="text-lg font-semibold mt-4 mb-2">促銷活動</h3>
+                        <div class="space-y-2" id="combo-promos-container-${comboIndex}"></div>
+                        <button onclick="app.addPromo(${comboIndex}, null, 'combo')" class="btn btn-secondary btn-sm mt-2">新增促銷</button>
+                    `;
+                    const promosContainer = comboEl.querySelector(`#combo-promos-container-${comboIndex}`);
+                    (combo.promotions || []).forEach((promo, promoIndex) => {
+                        promosContainer.appendChild(this.createPromoElement(promo, comboIndex, null, promoIndex, 'combo'));
+                    });
+                    return comboEl;
+                },
+                
+                createPromoElement: function(promo, parentIndex, itemIndex, promoIndex, type) {
+                    const promoEl = document.createElement('div');
+                    promoEl.className = 'promo-item';
+                    const onclickArgs = type === 'service' ? `${parentIndex}, ${itemIndex}, ${promoIndex}, '${type}'` : `${parentIndex}, null, ${promoIndex}, '${type}'`;
+                    
+                    const priceValue = promo.price !== undefined && promo.price !== null ? promo.price : '';
+
+                    // 計算折扣資訊
+                    let originalPrice = 0;
+                    if (type === 'service') {
+                        originalPrice = this.data.categories[parentIndex].items[itemIndex].price || 0;
+                    } else if (type === 'combo') {
+                        const combo = this.data.combos[parentIndex];
+                        originalPrice = combo.itemIds.reduce((sum, id) => {
+                            const service = this.allServiceItems.find(s => s.id === id);
+                            return sum + (service ? service.price : 0);
+                        }, 0);
+                    }
+                    const discountAmount = originalPrice - promo.price;
+                    const discountPercentage = originalPrice > 0 ? (discountAmount / originalPrice * 100).toFixed(1) : 0;
+
+                    const discountInfo = promo.price !== undefined ? `
+                        <p class="text-sm text-gray-500 mt-2">
+                            折扣金額： <span class="text-blue-600 font-semibold">${discountAmount.toLocaleString()}</span> 元 | 
+                            折扣比例： <span class="text-blue-600 font-semibold">${discountPercentage}%</span>
+                        </p>
+                    ` : '';
+
+
+                    promoEl.innerHTML = `
+                        <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                            <div><label>名稱</label><input type="text" value="${promo.label}" oninput="app.updatePromo(${onclickArgs}, 'label', this.value)"></div>
+                            <div><label>價格</label><input type="number" value="${priceValue}" oninput="app.updatePromo(${onclickArgs}, 'price', parseFloat(this.value))"></div>
+                            <div><label>開始日期</label><input type="date" value="${promo.start}" oninput="app.updatePromo(${onclickArgs}, 'start', this.value)"></div>
+                            <div><label>結束日期</label><input type="date" value="${promo.end}" oninput="app.updatePromo(${onclickArgs}, 'end', this.value)"></div>
+                        </div>
+                        ${discountInfo}
+                        <button onclick="app.removePromo(${onclickArgs})" class="btn btn-danger mt-2">移除促銷</button>
+                    `;
+                    return promoEl;
+                },
+                
+                updateJsonOutput: function() {
+                    this.elements.jsonOutput.value = JSON.stringify(this.data, null, 2);
+                    this.isDataDirty = false;
+                    this.updateDirtyMessage();
+                },
+
+                updateDirtyMessage: function() {
+                    this.elements.dirtyWarning.style.display = this.isDataDirty ? 'block' : 'none';
+                },
+
+                // 驗證所有欄位
+                validateData: function() {
+                    for (const category of this.data.categories) {
+                        for (const item of category.items) {
+                            if (!item.id || !item.name) {
+                                alert(`錯誤：服務項目 [${item.name}] 的 ID 或名稱不能為空。`);
+                                return false;
+                            }
+                            for (const promo of (item.promotions || [])) {
+                                if (!promo.label || promo.price === undefined || promo.price < 0 || !promo.start || !promo.end) {
+                                    alert(`錯誤：服務項目 [${item.name}] 的促銷活動有空欄位或無效價格。`);
+                                    return false;
+                                }
+                            }
+                        }
+                    }
+
+                    for (const combo of this.data.combos) {
+                        if (!combo.name) {
+                            alert(`錯誤：組合 [${combo.name}] 的名稱不能為空。`);
+                            return false;
+                        }
+                        for (const promo of (combo.promotions || [])) {
+                            if (!promo.label || promo.price === undefined || promo.price < 0 || !promo.start || !promo.end) {
+                                alert(`錯誤：組合 [${combo.name}] 的促銷活動有空欄位或無效價格。`);
+                                return false;
+                            }
+                        }
+                    }
+                    return true;
+                },
+                
+                // 事件處理方法
+                addCategory: function() {
+                    this.data.categories.push({ name: "新類別", items: [] });
+                    this.render();
+                    this.isDataDirty = true;
+                    this.updateDirtyMessage();
+                },
+                removeCategory: function(index) {
+                    this.data.categories.splice(index, 1);
+                    this.render();
+                    this.isDataDirty = true;
+                    this.updateDirtyMessage();
+                },
+                updateCategoryName: function(index, value) {
+                    this.data.categories[index].name = value;
+                    this.isDataDirty = true;
+                    this.updateDirtyMessage();
+                },
+                addServiceItem: function(catIndex) {
+                    const newItem = { id: "", name: "新服務", price: 0, promotions: [] };
+                    this.data.categories[catIndex].items.push(newItem);
+                    this.render();
+                    this.isDataDirty = true;
+                    this.updateDirtyMessage();
+                },
+                removeServiceItem: function(catIndex, itemIndex) {
+                    this.data.categories[catIndex].items.splice(itemIndex, 1);
+                    this.render();
+                    this.isDataDirty = true;
+                    this.updateDirtyMessage();
+                },
+                updateServiceItem: function(catIndex, itemIndex, key, value) {
+                    this.data.categories[catIndex].items[itemIndex][key] = value;
+                    this.isDataDirty = true;
+                    this.updateDirtyMessage();
+                },
+                addPromo: function(parentIndex, itemIndex, type) {
+                    const newPromo = { label: "新促銷", price: 0, start: "", end: "" };
+                    if (type === 'service') {
+                        if (!this.data.categories[parentIndex].items[itemIndex].promotions) {
+                            this.data.categories[parentIndex].items[itemIndex].promotions = [];
+                        }
+                        this.data.categories[parentIndex].items[itemIndex].promotions.push(newPromo);
+                    } else if (type === 'combo') {
+                        if (!this.data.combos[parentIndex].promotions) {
+                            this.data.combos[parentIndex].promotions = [];
+                        }
+                        this.data.combos[parentIndex].promotions.push(newPromo);
+                    }
+                    this.render();
+                    this.isDataDirty = true;
+                    this.updateDirtyMessage();
+                },
+                removePromo: function(parentIndex, itemIndex, promoIndex, type) {
+                    if (type === 'service') {
+                        this.data.categories[parentIndex].items[itemIndex].promotions.splice(promoIndex, 1);
+                    } else if (type === 'combo') {
+                        this.data.combos[parentIndex].promotions.splice(promoIndex, 1);
+                    }
+                    this.render();
+                    this.isDataDirty = true;
+                    this.updateDirtyMessage();
+                },
+                updatePromo: function(parentIndex, itemIndex, promoIndex, type, key, value) {
+                    let promo;
+                    if (type === 'service') {
+                        promo = this.data.categories[parentIndex].items[itemIndex].promotions[promoIndex];
+                    } else if (type === 'combo') {
+                        promo = this.data.combos[parentIndex].promotions[promoIndex];
+                    }
+                    if (promo) {
+                        promo[key] = value;
+                        this.render(); // 重新渲染以更新折扣資訊
+                        this.isDataDirty = true;
+                        this.updateDirtyMessage();
+                    }
+                },
+                addCombo: function() {
+                    this.data.combos.push({ name: "新組合", itemIds: [], promotions: [] });
+                    this.render();
+                    this.isDataDirty = true;
+                    this.updateDirtyMessage();
+                },
+                removeCombo: function(index) {
+                    this.data.combos.splice(index, 1);
+                    this.render();
+                    this.isDataDirty = true;
+                    this.updateDirtyMessage();
+                },
+                updateCombo: function(index, key, value) {
+                    this.data.combos[index][key] = value;
+                    this.isDataDirty = true;
+                    this.updateDirtyMessage();
+                },
+                updateComboItemIds: function(index, selectEl) {
+                    const selectedOptions = Array.from(selectEl.selectedOptions).map(option => option.value);
+                    this.data.combos[index].itemIds = selectedOptions;
+                    this.isDataDirty = true;
+                    this.updateDirtyMessage();
+                },
+                
+                // 初始化
+                setupEventListeners: function() {
+                    this.elements.generateBtn.addEventListener('click', () => {
+                        if (this.validateData()) {
+                            this.updateJsonOutput();
+                        }
+                    });
+
+                    this.elements.copyBtn.addEventListener('click', () => {
+                        this.elements.jsonOutput.select();
+                        document.execCommand('copy');
+                        alert('JSON 已複製到剪貼簿！');
+                    });
+                }
+            };
+            window.app = app;
+            app.init();
+            app.setupEventListeners();
+        });
+    </script>
+</body>
+</html>
