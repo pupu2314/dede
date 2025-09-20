@@ -143,7 +143,6 @@
             <button id="generate-json-btn" class="btn btn-primary flex-1">產生 JSON</button>
             <button id="copy-json-btn" class="btn btn-secondary flex-1 hidden">複製 JSON</button>
         </div>
-        <textarea id="json-output" class="json-output w-full mt-4 resize-none hidden"></textarea>
     </div>
 
     <script>
@@ -162,11 +161,11 @@
                     combosSection: document.getElementById('combos-section'),
                     categoriesContainer: document.getElementById('categories-container'),
                     combosContainer: document.getElementById('combos-container'),
-                    jsonOutput: document.getElementById('json-output'),
                     generateBtn: document.getElementById('generate-json-btn'),
                     copyBtn: document.getElementById('copy-json-btn'),
                     validationMessage: document.getElementById('validation-message'),
                 },
+                generatedJson: '',
 
                 init: async function() {
                     try {
@@ -321,8 +320,7 @@
                 },
                 
                 updateJsonOutput: function() {
-                    this.elements.jsonOutput.value = JSON.stringify(this.data, null, 2);
-                    this.elements.jsonOutput.classList.remove('hidden');
+                    this.generatedJson = JSON.stringify(this.data, null, 2);
                     this.elements.copyBtn.classList.remove('hidden');
                     this.isDataDirty = false;
                     this.updateDirtyMessage();
@@ -350,8 +348,19 @@
                             break;
                         }
                         for (const promo of (item.promotions || [])) {
+                             // Get original price for this specific item
+                            const originalPrice = this.data.categories.find(cat => cat.items.includes(item)).items.find(i => i.id === item.id).price;
+
                             if (!promo.label || promo.price === undefined || promo.price === null || isNaN(promo.price) || !promo.start || !promo.end) {
                                 errorMessage = `錯誤：服務項目 [${item.name}] 的促銷活動有空欄位或無效價格。`;
+                                break;
+                            }
+                            if (new Date(promo.start) >= new Date(promo.end)) {
+                                errorMessage = `錯誤：服務項目 [${item.name}] 的促銷開始日期必須早於結束日期。`;
+                                break;
+                            }
+                            if (parseFloat(promo.price) >= parseFloat(originalPrice)) {
+                                errorMessage = `錯誤：服務項目 [${item.name}] 的促銷價格必須低於原價。`;
                                 break;
                             }
                         }
@@ -369,8 +378,21 @@
                                 break;
                             }
                             for (const promo of (combo.promotions || [])) {
+                                const originalPrice = combo.itemIds.reduce((sum, id) => {
+                                    const service = this.allServiceItems.find(s => s.id === id);
+                                    return sum + (service ? service.price : 0);
+                                }, 0);
+
                                 if (!promo.label || promo.price === undefined || promo.price === null || isNaN(promo.price) || !promo.start || !promo.end) {
                                     errorMessage = `錯誤：組合 [${combo.name}] 的促銷活動有空欄位或無效價格。`;
+                                    break;
+                                }
+                                if (new Date(promo.start) >= new Date(promo.end)) {
+                                    errorMessage = `錯誤：組合 [${combo.name}] 的促銷開始日期必須早於結束日期。`;
+                                    break;
+                                }
+                                if (parseFloat(promo.price) >= parseFloat(originalPrice)) {
+                                    errorMessage = `錯誤：組合 [${combo.name}] 的促銷價格必須低於原價。`;
                                     break;
                                 }
                             }
@@ -478,13 +500,20 @@
                     this.elements.generateBtn.addEventListener('click', () => {
                         if (this.validateData()) {
                             this.updateJsonOutput();
+                            this.elements.validationMessage.textContent = ''; // 清空錯誤訊息
                         }
                     });
 
                     this.elements.copyBtn.addEventListener('click', () => {
-                        this.elements.jsonOutput.select();
-                        document.execCommand('copy');
-                        alert('JSON 已複製到剪貼簿！');
+                        if (this.generatedJson) {
+                            const tempTextarea = document.createElement('textarea');
+                            tempTextarea.value = this.generatedJson;
+                            document.body.appendChild(tempTextarea);
+                            tempTextarea.select();
+                            document.execCommand('copy');
+                            document.body.removeChild(tempTextarea);
+                            alert('JSON 已複製到剪貼簿！');
+                        }
                     });
                 }
             };
@@ -494,4 +523,4 @@
         });
     </script>
 </body>
-</html
+</html>
