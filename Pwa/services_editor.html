@@ -84,6 +84,10 @@
             margin-bottom: 1.5rem;
             display: none;
         }
+        .disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
     </style>
 </head>
 <body>
@@ -93,36 +97,31 @@
 
         <div id="editor-app">
             <div class="space-y-8">
-                <!-- 載入狀態 -->
                 <div id="loading-message" class="text-center text-xl text-gray-500">
                     載入中... 請確保已連線至網路
                 </div>
 
-                <!-- 髒資料提示 -->
                 <div id="dirty-warning" class="dirty-warning">
                     資料已更新，請按「產生 JSON」按鈕匯出
                 </div>
 
-                <!-- 類別編輯區 -->
                 <div id="categories-section" class="hidden">
                     <h2 class="text-2xl font-semibold mb-4">服務項目</h2>
                     <div id="categories-container" class="space-y-6"></div>
                     <button onclick="app.addCategory()" class="btn btn-secondary w-full mt-4">新增類別</button>
                 </div>
 
-                <!-- 組合編輯區 -->
                 <div id="combos-section" class="hidden">
                     <h2 class="text-2xl font-semibold mt-8 mb-4">組合優惠</h2>
                     <div id="combos-container" class="space-y-6"></div>
                     <button onclick="app.addCombo()" class="btn btn-secondary w-full mt-4">新增組合</button>
                 </div>
 
-                <!-- JSON 匯出區 -->
                 <div id="json-output-section" class="mt-8 hidden">
                     <h2 class="text-2xl font-semibold mb-4">JSON 輸出</h2>
                     <div class="flex space-x-4">
                         <button id="generate-json-btn" class="btn btn-primary flex-1">產生 JSON</button>
-                        <button id="copy-json-btn" class="btn btn-secondary flex-1">複製 JSON</button>
+                        <button id="copy-json-btn" class="btn btn-secondary flex-1 disabled" disabled>複製 JSON</button>
                     </div>
                     <textarea id="json-output" class="json-output w-full mt-4 resize-none"></textarea>
                 </div>
@@ -175,6 +174,7 @@
                 render: function() {
                     this.renderCategories();
                     this.renderCombos();
+                    this.updateDirtyMessage();
                 },
 
                 renderCategories: function() {
@@ -185,7 +185,7 @@
                         categoryEl.innerHTML = `
                             <div class="flex items-center space-x-4 mb-4">
                                 <label class="block w-1/3 font-medium">類別名稱</label>
-                                <input type="text" value="${category.name}" oninput="app.updateCategoryName(${catIndex}, this.value)" class="flex-grow">
+                                <input type="text" value="${category.name}" oninput="app.updateData()" class="flex-grow">
                                 <button onclick="app.removeCategory(${catIndex})" class="btn btn-danger">移除類別</button>
                             </div>
                             <h3 class="text-lg font-semibold mt-4 mb-2">服務項目</h3>
@@ -305,6 +305,8 @@
                     this.elements.jsonOutput.value = JSON.stringify(this.data, null, 2);
                     this.isDataDirty = false;
                     this.updateDirtyMessage();
+                    this.elements.copyBtn.classList.remove('disabled');
+                    this.elements.copyBtn.disabled = false;
                 },
 
                 updateDirtyMessage: function() {
@@ -316,7 +318,7 @@
                     for (const category of this.data.categories) {
                         for (const item of category.items) {
                             if (!item.id || !item.name) {
-                                alert(`錯誤：服務項目 [${item.name}] 的 ID 或名稱不能為空。`);
+                                alert(`錯誤：服務項目 [${item.name || '新服務'}] 的 ID 或名稱不能為空。`);
                                 return false;
                             }
                             for (const promo of (item.promotions || [])) {
@@ -329,8 +331,8 @@
                     }
 
                     for (const combo of this.data.combos) {
-                        if (!combo.name) {
-                            alert(`錯誤：組合 [${combo.name}] 的名稱不能為空。`);
+                        if (!combo.name || combo.itemIds.length === 0) {
+                            alert(`錯誤：組合 [${combo.name || '新組合'}] 的名稱或包含項目不能為空。`);
                             return false;
                         }
                         for (const promo of (combo.promotions || [])) {
@@ -344,40 +346,40 @@
                 },
                 
                 // 事件處理方法
+                updateData: function() {
+                    this.isDataDirty = true;
+                    this.updateDirtyMessage();
+                    this.elements.copyBtn.classList.add('disabled');
+                    this.elements.copyBtn.disabled = true;
+                },
                 addCategory: function() {
                     this.data.categories.push({ name: "新類別", items: [] });
                     this.render();
-                    this.isDataDirty = true;
-                    this.updateDirtyMessage();
+                    this.updateData();
                 },
                 removeCategory: function(index) {
                     this.data.categories.splice(index, 1);
                     this.render();
-                    this.isDataDirty = true;
-                    this.updateDirtyMessage();
+                    this.updateData();
                 },
                 updateCategoryName: function(index, value) {
                     this.data.categories[index].name = value;
-                    this.isDataDirty = true;
-                    this.updateDirtyMessage();
+                    this.updateData();
                 },
                 addServiceItem: function(catIndex) {
                     const newItem = { id: "", name: "新服務", price: 0, promotions: [] };
                     this.data.categories[catIndex].items.push(newItem);
                     this.render();
-                    this.isDataDirty = true;
-                    this.updateDirtyMessage();
+                    this.updateData();
                 },
                 removeServiceItem: function(catIndex, itemIndex) {
                     this.data.categories[catIndex].items.splice(itemIndex, 1);
                     this.render();
-                    this.isDataDirty = true;
-                    this.updateDirtyMessage();
+                    this.updateData();
                 },
                 updateServiceItem: function(catIndex, itemIndex, key, value) {
                     this.data.categories[catIndex].items[itemIndex][key] = value;
-                    this.isDataDirty = true;
-                    this.updateDirtyMessage();
+                    this.updateData();
                 },
                 addPromo: function(parentIndex, itemIndex, type) {
                     const newPromo = { label: "新促銷", price: 0, start: "", end: "" };
@@ -393,8 +395,7 @@
                         this.data.combos[parentIndex].promotions.push(newPromo);
                     }
                     this.render();
-                    this.isDataDirty = true;
-                    this.updateDirtyMessage();
+                    this.updateData();
                 },
                 removePromo: function(parentIndex, itemIndex, promoIndex, type) {
                     if (type === 'service') {
@@ -403,8 +404,7 @@
                         this.data.combos[parentIndex].promotions.splice(promoIndex, 1);
                     }
                     this.render();
-                    this.isDataDirty = true;
-                    this.updateDirtyMessage();
+                    this.updateData();
                 },
                 updatePromo: function(parentIndex, itemIndex, promoIndex, type, key, value) {
                     let promo;
@@ -415,33 +415,28 @@
                     }
                     if (promo) {
                         promo[key] = value;
-                        this.render(); // 重新渲染以更新折扣資訊
-                        this.isDataDirty = true;
-                        this.updateDirtyMessage();
+                        this.render(); // Re-render to update the calculated discount
+                        this.updateData();
                     }
                 },
                 addCombo: function() {
                     this.data.combos.push({ name: "新組合", itemIds: [], promotions: [] });
                     this.render();
-                    this.isDataDirty = true;
-                    this.updateDirtyMessage();
+                    this.updateData();
                 },
                 removeCombo: function(index) {
                     this.data.combos.splice(index, 1);
                     this.render();
-                    this.isDataDirty = true;
-                    this.updateDirtyMessage();
+                    this.updateData();
                 },
                 updateCombo: function(index, key, value) {
                     this.data.combos[index][key] = value;
-                    this.isDataDirty = true;
-                    this.updateDirtyMessage();
+                    this.updateData();
                 },
                 updateComboItemIds: function(index, selectEl) {
                     const selectedOptions = Array.from(selectEl.selectedOptions).map(option => option.value);
                     this.data.combos[index].itemIds = selectedOptions;
-                    this.isDataDirty = true;
-                    this.updateDirtyMessage();
+                    this.updateData();
                 },
                 
                 // 初始化
