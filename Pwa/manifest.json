@@ -75,6 +75,19 @@
           "type": "image/png"
         }
       ]
+    },
+    {
+      "name": "價格產生器",
+      "short_name": "價格",
+      "description": "快速產生價格及促銷活動設定。",
+      "url": "/dede/Pwa/services_editor.html",
+      "icons": [
+        {
+          "src": "/dede/Pwa/logo_128.png",
+          "sizes": "128x128",
+          "type": "image/png"
+        }
+      ]
     }
   ]
 }
