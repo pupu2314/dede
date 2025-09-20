@@ -75,6 +75,19 @@
           "type": "image/png"
         }
       ]
+    },
+    {
+      "name": "調整價格",
+      "short_name": "調整",
+      "description": "快速產生促銷活動設定檔案。",
+      "url": "/dede/Pwa/services_editor.html",
+      "icons": [
+        {
+          "src": "/dede/Pwa/logo_128.png",
+          "sizes": "128x128",
+          "type": "image/png"
+        }
+      ]
     }
   ]
 }
