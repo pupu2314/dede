@@ -114,20 +114,24 @@
 
         <div id="editor-app">
             <div class="space-y-8">
+                <!-- 載入狀態 -->
                 <div id="loading-message" class="text-center text-xl text-gray-500">
                     載入中... 請確保已連線至網路
                 </div>
 
+                <!-- 髒資料提示 -->
                 <div id="dirty-warning" class="dirty-warning">
                     資料已更新，請按「產生 JSON」按鈕匯出
                 </div>
 
+                <!-- 類別編輯區 -->
                 <div id="categories-section" class="hidden">
                     <h2 class="text-2xl font-semibold mb-4">服務項目</h2>
                     <div id="categories-container" class="space-y-6"></div>
                     <button onclick="app.addCategory()" class="btn btn-secondary w-full mt-4">新增類別</button>
                 </div>
 
+                <!-- 組合編輯區 -->
                 <div id="combos-section" class="hidden">
                     <h2 class="text-2xl font-semibold mt-8 mb-4">組合優惠</h2>
                     <div id="combos-container" class="space-y-6"></div>
@@ -338,7 +342,25 @@
                 },
                 
                 updateJsonOutput: function() {
-                    this.generatedJson = JSON.stringify(this.data, null, 2);
+                    // 深度複製資料，避免修改原始的應用程式狀態
+                    const clonedData = JSON.parse(JSON.stringify(this.data));
+
+                    // 檢查並移除空的 promotions 陣列
+                    clonedData.categories.forEach(category => {
+                        category.items.forEach(item => {
+                            if (item.promotions && item.promotions.length === 0) {
+                                delete item.promotions;
+                            }
+                        });
+                    });
+
+                    clonedData.combos.forEach(combo => {
+                        if (combo.promotions && combo.promotions.length === 0) {
+                            delete combo.promotions;
+                        }
+                    });
+
+                    this.generatedJson = JSON.stringify(clonedData, null, 2);
                     this.elements.generateBtn.classList.add('hidden');
                     this.elements.copyBtn.classList.remove('hidden');
                     this.isDataDirty = false;
@@ -550,4 +572,4 @@
     </script>
 </body>
 </html>
-```eof
+
