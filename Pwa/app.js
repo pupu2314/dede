@@ -2,61 +2,90 @@
 let serviceData = null;
 let allServices = new Map();
 
-// app.js
-document.addEventListener('DOMContentLoaded', async () => {
-    // 顯示載入畫面
-    showLoadingOverlay();
-
+/**
+ * 載入服務資料的核心函式
+ * 採用網路優先，若失敗則讀取 PWA 快取的策略 (Network-first, cache fallback)
+ * @returns {Promise<object|null>} 成功時回傳服務資料物件，全部失敗時回傳 null
+ */
+async function loadServiceData() {
+    // 策略1：網路優先 (Network First)
     try {
-        // 使用 cache-busting 參數確保總是能獲取最新的 services.json
-        const response = await fetch(`services.json?v=${new Date().getTime()}`);
+        // 使用 'reload' 選項繞過瀏覽器 HTTP 快取，確保向網路發送請求。
+        // 這能讓 Service Worker 有機會攔截並提供最新的快取或更新快取。
+        const response = await fetch('services.json', { cache: 'reload' });
         if (!response.ok) {
-            throw new Error(`讀取 services.json 失敗: ${response.statusText}`);
+            // 如果伺服器回傳錯誤 (如 404, 500)，也應視為網路失敗，轉而嘗試快取
+            throw new Error(`伺服器回應錯誤: ${response.status} ${response.statusText}`);
         }
-        serviceData = await response.json();
-        // 將所有服務項目扁平化存入 Map，方便快速查找
-        allServices = new Map(serviceData.categories.flatMap(cat => cat.items).map(item => [item.id, item]));
-        
-        // 載入成功，移除載入畫面
-        removeLoadingOverlay();
+        const data = await response.json();
+        console.log('成功從網路載入 services.json');
+        return data;
+    } catch (networkError) {
+        console.warn('網路請求 services.json 失敗:', networkError.message);
+        console.log('嘗試從 PWA 快取中讀取...');
 
-        // 根據目前在哪個頁面，執行不同的初始化函式
-        if (document.getElementById('promo-container')) {
-            initCheckPage();
-        }
-        if (document.getElementById('service-list')) {
-            initCalculatorPage();
-        }
-    } catch (error) {
-        // 如果網路載入失敗，才嘗試從快取讀取
-        console.error('網路載入 services.json 失敗，嘗試從快取讀取:', error);
+        // 策略2：讀取快取 (Cache Fallback)
         try {
+            // 確保 Service Worker 使用的快取名稱與這裡一致
             const cache = await caches.open('price-calculator-v5.1');
+            // 查詢沒有 cache-busting 參數的原始 URL，這才是 Service Worker 快取的鍵
             const cachedResponse = await cache.match('services.json');
-            if (!cachedResponse) {
-                // 如果快取中也沒有，才顯示錯誤
-                throw new Error('快取中沒有 services.json，請檢查網路連線。');
+            if (cachedResponse) {
+                console.log('成功從 PWA 快取載入 services.json');
+                return await cachedResponse.json();
+            } else {
+                console.error('PWA 快取中也找不到 services.json');
+                return null; // 快取中也沒有資料
             }
-            serviceData = await cachedResponse.json();
-            allServices = new Map(serviceData.categories.flatMap(cat => cat.items).map(item => [item.id, item]));
-            
-            // 從快取載入成功，移除載入畫面
-            removeLoadingOverlay();
-
-            if (document.getElementById('promo-container')) {
-                initCheckPage();
-            }
-            if (document.getElementById('service-list')) {
-                initCalculatorPage();
-            }
-
         } catch (cacheError) {
-            console.error('從快取載入失敗:', cacheError);
-            document.body.innerHTML = `<div style="padding: 20px; text-align: center;"><h1>錯誤</h1><p>無法載入必要的服務資料，請檢查 services.json 檔案是否存在且格式正確。</p><p><em>${cacheError.message}</em></p></div>`;
-            return; // 避免繼續執行後續程式碼
+            console.error('讀取 PWA 快取時發生錯誤:', cacheError);
+            return null; // 讀取快取也失敗
         }
     }
+}
+
+/**
+ * 根據載入的資料初始化頁面通用邏輯
+ */
+function initializePage() {
+    // 將所有服務項目扁平化存入 Map，方便快速查找
+    allServices = new Map(serviceData.categories.flatMap(cat => cat.items).map(item => [item.id, item]));
+
+    // 根據目前在哪個頁面，執行不同的初始化函式
+    if (document.getElementById('promo-container')) {
+        initCheckPage();
+    }
+    if (document.getElementById('service-list')) {
+        initCalculatorPage();
+    }
+}
+
+/**
+ * 應用程式進入點 (DOM 載入完成後執行)
+ */
+document.addEventListener('DOMContentLoaded', async () => {
+    showLoadingOverlay();
+    try {
+        serviceData = await loadServiceData();
+
+        if (serviceData) {
+            initializePage();
+        } else {
+            // 網路和快取都載入失敗，才顯示最終錯誤
+            throw new Error('無法從網路或快取載入服務資料，請檢查您的網路連線後再試。');
+        }
+    } catch (error) {
+        console.error('初始化應用程式失敗:', error);
+        // 顯示最終的錯誤訊息給使用者
+        document.body.innerHTML = `<div style="padding: 20px; text-align: center;"><h1>載入錯誤</h1><p>無法載入必要的服務資料。</p><p><em>${error.message}</em></p></div>`;
+    } finally {
+        // 無論成功或失敗，最後都必須移除載入畫面，避免卡住
+        removeLoadingOverlay();
+    }
 });
+
+
+// --- 以下為原有函式，保持不變 ---
 
 function showLoadingOverlay() {
     const overlay = document.createElement('div');
