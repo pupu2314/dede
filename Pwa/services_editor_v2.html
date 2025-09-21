@@ -110,6 +110,14 @@
                 },
 
                 render: function() {
+                    // Save UI state to prevent page jumps on re-render
+                    const state = {
+                        scroll: window.scrollY,
+                        activePath: document.activeElement ? document.activeElement.dataset.path : null,
+                        selectionStart: document.activeElement ? document.activeElement.selectionStart : null,
+                        selectionEnd: document.activeElement ? document.activeElement.selectionEnd : null,
+                    };
+
                     let html = `
                         <h2>服務類別</h2>
                         <button type="button" class="btn" id="add-category-btn" style="width: auto; margin-bottom: 20px;">＋ 新增服務類別</button>
@@ -126,6 +134,18 @@
 
                     this.elements.mainContainer.innerHTML = html;
                     this.updateAllUIDisplays();
+
+                    // Restore UI state
+                    if (state.activePath) {
+                        const newActiveElement = document.querySelector(`[data-path="${state.activePath}"]`);
+                        if (newActiveElement) {
+                            newActiveElement.focus();
+                            try {
+                               newActiveElement.setSelectionRange(state.selectionStart, state.selectionEnd);
+                            } catch (e) { /* Some input types don't support this */ }
+                        }
+                    }
+                    window.scrollTo(0, state.scroll);
                 },
                 
                 renderCategory: function(category, catIndex) {
@@ -176,7 +196,7 @@
                             <label>設定期間</label>
                             <div class="date-shortcuts">
                                 <button type="button" class="date-shortcut-btn" data-type="this-month" data-path-prefix="${pathPrefix}">本月</button>
-                                <button type="button" class="date-shortcut-btn" data-type="next-month" data-path-prefix="${pathPrefix}">下月</button>
+                                <button type="button" class="date-shortcut-btn" data-type="next-month" data-path-prefix="${pathPrefix}">次月</button>
                             </div>
                             <label>開始日期 (YYYY-MM-DD)</label>
                             <input type="date" value="${promo.start || ''}" data-path="${pathPrefix}.start">
@@ -222,7 +242,7 @@
                             <label>設定期間</label>
                             <div class="date-shortcuts">
                                 <button type="button" class="date-shortcut-btn" data-type="this-month" data-path-prefix="${pathPrefix}">本月</button>
-                                <button type="button" class="date-shortcut-btn" data-type="next-month" data-path-prefix="${pathPrefix}">下月</button>
+                                <button type="button" class="date-shortcut-btn" data-type="next-month" data-path-prefix="${pathPrefix}">次月</button>
                             </div>
                             <label>開始日期 (YYYY-MM-DD)</label>
                             <input type="date" value="${promo.start || ''}" data-path="${pathPrefix}.start">
@@ -323,7 +343,13 @@
                     const firstDay = new Date(targetYear, targetMonth, 1);
                     const lastDay = new Date(targetYear, targetMonth + 1, 0);
 
-                    const formatDate = (date) => date.toISOString().split('T')[0];
+                    const formatDate = (date) => {
+                        // Timezone-safe date formatting
+                        const y = date.getFullYear();
+                        const m = (date.getMonth() + 1).toString().padStart(2, '0');
+                        const d = date.getDate().toString().padStart(2, '0');
+                        return `${y}-${m}-${d}`;
+                    };
 
                     this.updateDataFromInput(`${pathPrefix}.start`, formatDate(firstDay));
                     this.updateDataFromInput(`${pathPrefix}.end`, formatDate(lastDay));
@@ -459,4 +485,3 @@
     </script>
 </body>
 </html>
-
