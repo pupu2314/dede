@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>加班費計算機 v9.9 (流程修正)</title>
+    <title>加班費計算機</title>
     <!-- PWA-related tags -->
     <meta name="theme-color" content="#007bff"/>
     <link rel="manifest" href="/dede/manifest.json">
@@ -79,7 +79,7 @@
 <body>
 
     <div class="container">
-        <h1>加班費計算機 v9.9 (流程修正)</h1>
+        <h1>加班費計算機</h1>
         
         <div class="grid-container single-column-grid">
             <div class="card">
@@ -476,7 +476,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const recordDetails = group.records.sort((a,b) => new Date(a.start) - new Date(b.start)).map(rec => {
                     const startTime = new Date(rec.start).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
                     const endTime = new Date(rec.end).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-                    let reasonText = `${rec.reason || '-'}`; if (rec.forceFullCalculation) reasonText += ' (強制計算)';
+                    let reasonText = `${rec.reason || '-'}`; if (rec.forceFullCalculation) reasonText += ' <strong style="color:var(--danger-color);">(強制計算)</strong>';
                     return `${startTime} - ${endTime}: ${calculateNetOvertimeHours(rec).toFixed(2)}H (${reasonText})`;
                 }).join('<br>');
                 tableHTML += `<tr><td>${group.date.toLocaleDateString()}</td><td>${typeText}</td><td>${group.totalHours.toFixed(2)}</td><td>${group.pay}</td><td style="font-size: 0.9em;">${recordDetails}<br><hr style="border-top: 1px dotted #ccc; margin: 4px 0;"><strong>計算式:</strong> ${group.formula}</td></tr>`;
