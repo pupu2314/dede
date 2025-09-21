@@ -44,6 +44,10 @@
         /* New styles for edit mode and highlighting */
         .editable-details { display: none; }
         body.detail-edit-mode .editable-details { display: block; }
+        .readonly-details p { margin: 0 0 8px 0; color: #555; }
+        .readonly-details p strong { color: #333; min-width: 70px; display: inline-block; }
+        body.detail-edit-mode .readonly-details { display: none; }
+
         .modified-block { background-color: #fffbe6 !important; border-color: #ffe58f; }
         .edit-marker { color: #faad14; font-size: 0.8em; margin-left: 8px; font-weight: normal; }
     </style>
@@ -129,7 +133,6 @@
                 
                 markAsModified: function(path) {
                     if (!path) return;
-                    // Regex to find the root block path (e.g., categories[0].items[1] or combos[0])
                     const blockPathMatch = path.match(/^(categories\[\d+\]\.items\[\d+\]|categories\[\d+\]|combos\[\d+\])/);
                     if (blockPathMatch) {
                         this.modifiedPaths.add(blockPathMatch[0]);
@@ -151,7 +154,7 @@
                             const savedState = JSON.parse(savedStateJSON);
                             this.data = savedState.data;
                             this.modifiedPaths = new Set(savedState.modifiedPaths);
-                            this.setDirty(); // Show the generate button
+                            this.setDirty();
                             return true;
                         } else {
                             this.clearStorage();
@@ -194,6 +197,9 @@
                     return `
                         <div class="category-block ${modifiedClass}">
                             <h3>類別 ${catIndex + 1}${modifiedMarker}</h3>
+                            <div class="readonly-details">
+                                <p><strong>類別名稱:</strong> ${this.escapeHtml(category.name)}</p>
+                            </div>
                             <div class="editable-details">
                                 <label>類別名稱</label>
                                 <input type="text" value="${this.escapeHtml(category.name)}" data-path="${path}.name">
@@ -213,6 +219,11 @@
                     return `
                         <div class="item-block ${modifiedClass}">
                             <h5>項目 ${itemIndex + 1}${modifiedMarker}</h5>
+                             <div class="readonly-details">
+                                <p><strong>名稱:</strong> ${this.escapeHtml(item.name)}</p>
+                                <p><strong>ID:</strong> ${this.escapeHtml(item.id)}</p>
+                                <p><strong>價格:</strong> ${item.price.toLocaleString()} 元</p>
+                            </div>
                             <div class="editable-details">
                                 <label>ID (英文/數字/底線/點)</label>
                                 <input type="text" value="${this.escapeHtml(item.id)}" data-path="${path}.id">
@@ -258,6 +269,10 @@
                     return `
                         <div class="combo-block ${modifiedClass}">
                              <h3>組合 ${comboIndex + 1}${modifiedMarker}</h3>
+                             <div class="readonly-details">
+                                <p><strong>組合名稱:</strong> ${this.escapeHtml(combo.name)}</p>
+                                <p><strong>組合 ID:</strong> ${this.escapeHtml(combo.id)}</p>
+                             </div>
                              <div class="editable-details">
                                  <label>組合 ID (英文/數字/底線/點)</label>
                                  <input type="text" value="${this.escapeHtml(combo.id)}" data-path="${path}.id">
@@ -311,7 +326,7 @@
                 // --- Data Manipulation ---
                 updateAndMark: function(path, action) { action(); this.markAsModified(path); this.setDirty(); this.render(); },
                 addCategory: function() { this.data.categories.push({ name: '新類別', items: [] }); this.setDirty(); this.render(); },
-                removeCategory: function(index) { this.data.categories.splice(index, 1); this.setDirty(); this.render(); }, // Note: removing doesn't mark, it's just gone
+                removeCategory: function(index) { this.data.categories.splice(index, 1); this.setDirty(); this.render(); },
                 addItem: function(catIndex) { const path = `categories[${catIndex}]`; this.updateAndMark(path, () => this.data.categories[catIndex].items.push({ id: `new_item_${Date.now()}`, name: '新服務項目', price: 0, promotions: [] })); },
                 removeItem: function(catIndex, itemIndex) { const path = `categories[${catIndex}]`; this.updateAndMark(path, () => this.data.categories[catIndex].items.splice(itemIndex, 1)); },
                 addPromotion: function(catIndex, itemIndex) { const path = `categories[${catIndex}].items[${itemIndex}]`; this.updateAndMark(path, () => { if (!this.data.categories[catIndex].items[itemIndex].promotions) this.data.categories[catIndex].items[itemIndex].promotions = []; this.data.categories[catIndex].items[itemIndex].promotions.push({ label: '新促銷', price: 0, start: '', end: '' }); }); },
@@ -335,8 +350,18 @@
                 },
 
                 // --- Validation & Output ---
-                validateData: function() { /* ... unchanged validation logic ... */ return { isValid: true, errors: '', warnings: '' }; },
-                updateJsonOutput: function() { /* ... unchanged output logic ... */ },
+                validateData: function() {
+                    const errors = [], warnings = [], ids = new Set(), idRegex = /^[a-zA-Z0-9_.]+$/;
+                    const checkId = (id, context) => { if (!id) { errors.push(`錯誤: ${context} 的 ID 不可為空。`); return; } if (!idRegex.test(id)) { errors.push(`錯誤: ${context} 的 ID "${id}" 格式不正確 (只能使用英文、數字、底線、點)。`); return; } if (ids.has(id)) { errors.push(`錯誤: ID "${id}" (${context}) 重複了，每個ID必須是唯一的。`); return; } ids.add(id); };
+                    this.data.categories.forEach((cat, ci) => { if (!cat.name) errors.push(`錯誤: 類別 ${ci + 1} 缺少名稱。`); cat.items.forEach((item, ii) => { const itemContext = `類別 '${cat.name || `未命名${ci+1}`}' > 項目 '${item.name || `未命名${ii+1}`}'`; if (!item.name) errors.push(`錯誤: ${itemContext} 缺少名稱。`); if (item.price <= 0) errors.push(`錯誤: ${itemContext} 的價格必須大於 0。`); checkId(item.id, itemContext); (item.promotions || []).forEach((promo, pi) => { const promoContext = `${itemContext} > 促銷 '${promo.label || `未命名${pi+1}`}'`; if (!promo.label) errors.push(`錯誤: ${promoContext} 缺少標籤。`); if (promo.price <= 0) errors.push(`錯誤: ${promoContext} 的促銷價格必須大於 0。`); if (promo.price >= item.price) errors.push(`錯誤: ${promoContext} 的促銷價 (${promo.price}) 必須低於原價 (${item.price})。`); if (!promo.start) errors.push(`錯誤: ${promoContext} 的開始日期不可為空。`); if (!promo.end) errors.push(`錯誤: ${promoContext} 的結束日期不可為空。`); if (promo.start && promo.end && promo.start > promo.end) errors.push(`錯誤: ${promoContext} 的結束日期不可早於開始日期。`); if (promo.price > 0 && item.price > 0 && promo.price < item.price * 0.8) warnings.push(`提示: ${promoContext} 的促銷價低於八折，請確認。`); }); }); });
+                    (this.data.combos || []).forEach((combo, i) => { const comboContext = `組合 '${combo.name || `未命名${i+1}`}'`; if (!combo.name) errors.push(`錯誤: ${comboContext} 缺少名稱。`); if (combo.itemIds.length === 0) errors.push(`錯誤: ${comboContext} 未選擇任何服務項目。`); checkId(combo.id, comboContext); const originalPrice = this.calculateComboOriginalPrice(combo); (combo.promotions || []).forEach((promo, pi) => { const promoContext = `${comboContext} > 促銷 '${promo.label || `未命名${pi+1}`}'`; if (!promo.label) errors.push(`錯誤: ${promoContext} 缺少標籤。`); if (promo.price <= 0) errors.push(`錯誤: ${promoContext} 的促銷價格必須大於 0。`); if (promo.price >= originalPrice) errors.push(`錯誤: ${promoContext} 的促銷價 (${promo.price}) 必須低於原價 (${originalPrice})。`); if (!promo.start) errors.push(`錯誤: ${promoContext} 的開始日期不可為空。`); if (!promo.end) errors.push(`錯誤: ${promoContext} 的結束日期不可為空。`); if (promo.start && promo.end && promo.start > promo.end) errors.push(`錯誤: ${promoContext} 的結束日期不可早於開始日期。`); if (promo.price > 0 && originalPrice > 0 && promo.price < originalPrice * 0.8) warnings.push(`提示: ${promoContext} 的促銷價低於八折，請確認。`); }); });
+                    return { isValid: errors.length === 0, errors: errors.join('\n'), warnings: warnings.join('\n') };
+                },
+
+                updateJsonOutput: function() {
+                    let outputData = JSON.parse(JSON.stringify(this.data)); outputData.categories.forEach(cat => cat.items.forEach(item => { if (item.promotions && item.promotions.length === 0) delete item.promotions; })); if (outputData.combos) { outputData.combos.forEach(combo => { if (combo.promotions && combo.promotions.length === 0) delete combo.promotions; }); if (outputData.combos.length === 0) delete outputData.combos; }
+                    this.generatedJson = JSON.stringify(outputData, null, 2); this.elements.generateBtn.style.display = 'none'; this.elements.copyBtn.style.display = 'inline-block'; this.setDirty(false);
+                },
 
                 addEventListeners: function() {
                     this.elements.toggleEditMode.addEventListener('change', (e) => {
@@ -354,7 +379,7 @@
                         }
                     });
                     this.elements.generateBtn.addEventListener('click', () => {
-                        const validationResult = this.validateData(); // Using a placeholder for brevity
+                        const validationResult = this.validateData();
                         this.elements.validationMessage.textContent = validationResult.errors; this.elements.validationWarnings.textContent = validationResult.warnings; if (validationResult.isValid) this.updateJsonOutput();
                     });
                     this.elements.copyBtn.addEventListener('click', () => {
@@ -370,23 +395,10 @@
                     });
                 }
             };
-            // Re-add the full validation logic as it was before
-            app.validateData = function() {
-                const errors = [], warnings = [], ids = new Set(), idRegex = /^[a-zA-Z0-9_.]+$/;
-                const checkId = (id, context) => { if (!id) { errors.push(`錯誤: ${context} 的 ID 不可為空。`); return; } if (!idRegex.test(id)) { errors.push(`錯誤: ${context} 的 ID "${id}" 格式不正確 (只能使用英文、數字、底線、點)。`); return; } if (ids.has(id)) { errors.push(`錯誤: ID "${id}" (${context}) 重複了，每個ID必須是唯一的。`); return; } ids.add(id); };
-                this.data.categories.forEach((cat, ci) => { if (!cat.name) errors.push(`錯誤: 類別 ${ci + 1} 缺少名稱。`); cat.items.forEach((item, ii) => { const itemContext = `類別 '${cat.name || `未命名${ci+1}`}' > 項目 '${item.name || `未命名${ii+1}`}'`; if (!item.name) errors.push(`錯誤: ${itemContext} 缺少名稱。`); if (item.price <= 0) errors.push(`錯誤: ${itemContext} 的價格必須大於 0。`); checkId(item.id, itemContext); (item.promotions || []).forEach((promo, pi) => { const promoContext = `${itemContext} > 促銷 '${promo.label || `未命名${pi+1}`}'`; if (!promo.label) errors.push(`錯誤: ${promoContext} 缺少標籤。`); if (promo.price <= 0) errors.push(`錯誤: ${promoContext} 的促銷價格必須大於 0。`); if (promo.price >= item.price) errors.push(`錯誤: ${promoContext} 的促銷價 (${promo.price}) 必須低於原價 (${item.price})。`); if (!promo.start) errors.push(`錯誤: ${promoContext} 的開始日期不可為空。`); if (!promo.end) errors.push(`錯誤: ${promoContext} 的結束日期不可為空。`); if (promo.start && promo.end && promo.start > promo.end) errors.push(`錯誤: ${promoContext} 的結束日期不可早於開始日期。`); if (promo.price > 0 && item.price > 0 && promo.price < item.price * 0.8) warnings.push(`提示: ${promoContext} 的促銷價低於八折，請確認。`); }); }); });
-                (this.data.combos || []).forEach((combo, i) => { const comboContext = `組合 '${combo.name || `未命名${i+1}`}'`; if (!combo.name) errors.push(`錯誤: ${comboContext} 缺少名稱。`); if (combo.itemIds.length === 0) errors.push(`錯誤: ${comboContext} 未選擇任何服務項目。`); checkId(combo.id, comboContext); const originalPrice = this.calculateComboOriginalPrice(combo); (combo.promotions || []).forEach((promo, pi) => { const promoContext = `${comboContext} > 促銷 '${promo.label || `未命名${pi+1}`}'`; if (!promo.label) errors.push(`錯誤: ${promoContext} 缺少標籤。`); if (promo.price <= 0) errors.push(`錯誤: ${promoContext} 的促銷價格必須大於 0。`); if (promo.price >= originalPrice) errors.push(`錯誤: ${promoContext} 的促銷價 (${promo.price}) 必須低於原價 (${originalPrice})。`); if (!promo.start) errors.push(`錯誤: ${promoContext} 的開始日期不可為空。`); if (!promo.end) errors.push(`錯誤: ${promoContext} 的結束日期不可為空。`); if (promo.start && promo.end && promo.start > promo.end) errors.push(`錯誤: ${promoContext} 的結束日期不可早於開始日期。`); if (promo.price > 0 && originalPrice > 0 && promo.price < originalPrice * 0.8) warnings.push(`提示: ${promoContext} 的促銷價低於八折，請確認。`); }); });
-                return { isValid: errors.length === 0, errors: errors.join('\n'), warnings: warnings.join('\n') };
-            };
-            app.updateJsonOutput = function() {
-                let outputData = JSON.parse(JSON.stringify(this.data)); outputData.categories.forEach(cat => cat.items.forEach(item => { if (item.promotions && item.promotions.length === 0) delete item.promotions; })); if (outputData.combos) { outputData.combos.forEach(combo => { if (combo.promotions && combo.promotions.length === 0) delete combo.promotions; }); if (outputData.combos.length === 0) delete outputData.combos; }
-                this.generatedJson = JSON.stringify(outputData, null, 2); this.elements.generateBtn.style.display = 'none'; this.elements.copyBtn.style.display = 'inline-block'; this.setDirty(false);
-            };
-
+            
             window.app = app;
             app.init();
         });
     </script>
 </body>
 </html>
-
