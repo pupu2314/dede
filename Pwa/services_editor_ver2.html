@@ -203,8 +203,8 @@
                             <div class="editable-details">
                                 <label>類別名稱</label>
                                 <input type="text" value="${this.escapeHtml(category.name)}" data-path="${path}.name">
+                                <button type="button" class="btn btn-danger remove-category-btn" data-index="${catIndex}" style="width: auto; margin-top: 5px; margin-bottom: 20px; padding: 8px 15px;">移除此類別</button>
                             </div>
-                            <button type="button" class="btn btn-danger remove-category-btn" data-index="${catIndex}" style="width: auto; margin-top: 5px; margin-bottom: 20px; padding: 8px 15px;">移除此類別</button>
                             <h4>服務項目</h4>
                             <div class="items-container">${category.items.map((item, itemIndex) => this.renderItem(item, catIndex, itemIndex)).join('')}</div>
                             <button type="button" class="btn add-item-btn" data-cat-index="${catIndex}">＋ 新增項目到此類別</button>
@@ -231,11 +231,11 @@
                                 <input type="text" value="${this.escapeHtml(item.name)}" data-path="${path}.name">
                                 <label>價格</label>
                                 <input type="number" value="${item.price}" data-path="${path}.price">
+                                <button type="button" class="btn btn-danger remove-item-btn" data-cat-index="${catIndex}" data-item-index="${itemIndex}">移除此項目</button>
                             </div>
                             <h6>促銷活動</h6>
                             <div class="promotions-container">${(item.promotions || []).map((promo, promoIndex) => this.renderPromotion(promo, catIndex, itemIndex, promoIndex, item.price)).join('')}</div>
                             <button type="button" class="btn add-promotion-btn" data-cat-index="${catIndex}" data-item-index="${itemIndex}">＋ 新增促銷</button>
-                            <button type="button" class="btn btn-danger remove-item-btn" data-cat-index="${catIndex}" data-item-index="${itemIndex}">移除此項目</button>
                         </div>`;
                 },
                 
