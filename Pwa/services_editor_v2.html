@@ -332,6 +332,8 @@
                                 if (!promo.label) errors.push(`錯誤: ${promoContext} 缺少標籤。`);
                                 if (promo.price <= 0) errors.push(`錯誤: ${promoContext} 的促銷價格必須大於 0。`);
                                 if (promo.price >= item.price) errors.push(`錯誤: ${promoContext} 的促銷價 (${promo.price}) 必須低於原價 (${item.price})。`);
+                                if (!promo.start) errors.push(`錯誤: ${promoContext} 的開始日期不可為空。`);
+                                if (!promo.end) errors.push(`錯誤: ${promoContext} 的結束日期不可為空。`);
                                 if (promo.start && promo.end && promo.start > promo.end) errors.push(`錯誤: ${promoContext} 的結束日期不可早於開始日期。`);
                                 if (promo.price > 0 && item.price > 0 && promo.price < item.price * 0.8) warnings.push(`提示: ${promoContext} 的促銷價低於八折，請確認。`);
                             });
@@ -348,6 +350,8 @@
                              if (!promo.label) errors.push(`錯誤: ${promoContext} 缺少標籤。`);
                              if (promo.price <= 0) errors.push(`錯誤: ${promoContext} 的促銷價格必須大於 0。`);
                              if (promo.price >= originalPrice) errors.push(`錯誤: ${promoContext} 的促銷價 (${promo.price}) 必須低於原價 (${originalPrice})。`);
+                             if (!promo.start) errors.push(`錯誤: ${promoContext} 的開始日期不可為空。`);
+                             if (!promo.end) errors.push(`錯誤: ${promoContext} 的結束日期不可為空。`);
                              if (promo.start && promo.end && promo.start > promo.end) errors.push(`錯誤: ${promoContext} 的結束日期不可早於開始日期。`);
                              if (promo.price > 0 && originalPrice > 0 && promo.price < originalPrice * 0.8) warnings.push(`提示: ${promoContext} 的促銷價低於八折，請確認。`);
                         });
