@@ -3,7 +3,8 @@ const CACHE_NAME = 'overtime-calculator-v4'; // 更新版本號以觸發更新
 const urlsToCache = [
   'index.html',
   'work.css',
-  'manifest.json', // 也將 manifest 加入快取
+  'work.js',
+  'manifest.json',
   'work_512.png',
   'work_192.png',
   'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js'
@@ -45,5 +46,6 @@ self.addEventListener('fetch', event => {
     )
   );
 });
+
 
 
