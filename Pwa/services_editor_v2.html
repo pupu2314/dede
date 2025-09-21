@@ -434,7 +434,7 @@
                     let errorMessage = '';
 
                     const checkId = (id, context) => {
-                        if (!id || !/^[a-zA-Z0-9_]+$/.test(id)) {
+                        if (!id || !/^[a-zA-Z0-9_.]+$/.test(id)) {
                              isValid = false;
                              errorMessage = `錯誤: ${context} 的 ID "${id}" 格式不正確 (只能使用英文、數字、底線)。`;
                              return false;
