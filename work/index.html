@@ -6,10 +6,73 @@
     <title>加班費計算機</title>
     <!-- PWA-related tags -->
     <meta name="theme-color" content="#007bff"/>
-    <!-- FIX: Use absolute path for manifest -->
-    <link rel="manifest" href="/dede/work/manifest.json">
+    <link rel="manifest" href="/dede/manifest.json">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-    <link rel="stylesheet" href="work.css">
+    <style>
+        :root {
+            --primary-color: #007bff; --secondary-color: #6c757d; --bg-color: #f8f9fa;
+            --text-color: #333; --border-color: #dee2e6; --success-color: #28a745;
+            --danger-color: #dc3545; --white-color: #fff; --font-family: 'Segoe UI', 'Microsoft JhengHei', sans-serif;
+        }
+        body { font-family: var(--font-family); background-color: var(--bg-color); color: var(--text-color); margin: 0; padding: 1rem; line-height: 1.6; }
+        .container { max-width: 1000px; margin: auto; background: var(--white-color); padding: 1.5rem; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+        h1, h2 { color: var(--primary-color); border-bottom: 2px solid var(--border-color); padding-bottom: 0.5rem; margin-top: 0; }
+        summary { font-size: 1.5rem; font-weight: bold; cursor: pointer; }
+        details > div { margin-top: 1rem; }
+        .grid-container { display: grid; grid-template-columns: 1fr; gap: 2rem; }
+        @media (min-width: 768px) { .grid-container { grid-template-columns: repeat(2, 1fr); } }
+        @media (min-width: 768px) { .grid-container.single-column-grid { grid-template-columns: 1fr; } }
+        .card { background: #fff; padding: 1.5rem; border: 1px solid var(--border-color); border-radius: 8px; }
+        .form-group { margin-bottom: 1rem; }
+        .time-input-group { display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.5rem; align-items: center; }
+        label { display: block; margin-bottom: 0.5rem; font-weight: bold; }
+        input[type="number"], input[type="datetime-local"], input[type="text"], input[type="time"], textarea { width: 100%; padding: 0.75rem; border: 1px solid var(--border-color); border-radius: 4px; box-sizing: border-box; font-size: 1rem; }
+        .radio-group label, .checkbox-group label { display: inline-flex; align-items: center; margin-right: 1rem; font-weight: normal; cursor: pointer; }
+        .checkbox-group input { margin-right: 0.5rem; }
+        button { background-color: var(--primary-color); color: var(--white-color); border: none; padding: 0.75rem 1.5rem; border-radius: 4px; cursor: pointer; font-size: 1rem; transition: background-color 0.3s; }
+        button:hover { background-color: #0056b3; }
+        .btn-secondary { background-color: var(--secondary-color); }
+        .btn-secondary:hover { background-color: #545b62; }
+        table { width: 100%; border-collapse: collapse; margin-top: 1rem; }
+        th, td { border-bottom: 1px solid var(--border-color); padding: 0.75rem; text-align: left; word-break: break-word; }
+        th { background-color: #f2f2f2; }
+        .summary { background: #e9f5ff; border: 1px solid #b3d7ff; padding: 1.5rem; margin-top: 1rem; border-radius: 8px; }
+        .summary-value { font-size: 1.5rem; font-weight: bold; color: var(--success-color); }
+        .error-message { margin-top: 0.5rem; font-weight: bold; padding: 0.75rem; border-radius: 4px; color: var(--danger-color); background-color: #f8d7da; border: 1px solid #f5c6cb;}
+        .info-message { margin-top: 0.5rem; font-weight: bold; padding: 0.75rem; border-radius: 4px; color: #0c5460; background-color: #d1ecf1; border: 1px solid #bee5eb; }
+        .mode-switcher { display: flex; gap: 0.5rem; margin-bottom: 1rem; border-bottom: 1px solid var(--border-color); padding-bottom: 1rem; }
+        .mode-switcher button { flex: 1; }
+        .mode-switcher button.active { background-color: #0056b3; font-weight: bold; }
+        .daily-group-header { background-color: #f2f2f2; font-weight: bold; }
+        .record-detail-row td, .formula-detail-row td { padding-left: 2rem; font-size: 0.9rem; color: #555; border-top: 1px dotted #ccc; }
+        .formula-detail-row td { background-color: #f9f9f9; padding: 1rem; font-family: monospace; color: #0056b3; }
+        .actions-container { display: flex; justify-content: flex-end; align-items: center; gap: 0.5rem; min-width: 140px; }
+
+
+        #export-container { position: absolute; left: -9999px; top: auto; width: 1000px; background: white; padding: 2rem; box-sizing: border-box; font-family: var(--font-family); color: var(--text-color); }
+        #export-container h2, #export-container h3 { color: var(--primary-color); border-bottom: 2px solid var(--border-color); padding-bottom: 0.5rem; margin-top: 0; }
+        #export-container table { width: 100%; border-collapse: collapse; }
+        #export-container th, #export-container td { border: 1px solid var(--border-color); padding: 0.75rem; text-align: left; }
+        #export-container th { background-color: #f2f2f2; }
+        #export-container .summary { margin-top: 2rem; text-align: right; background: #e9f5ff; border: 1px solid #b3d7ff; padding: 1.5rem; border-radius: 8px; }
+        #export-container .summary-value { font-size: 1.8rem; color: var(--success-color); }
+        #export-container thead { display: table-header-group !important; }
+        #export-container tr { display: table-row !important; }
+        #export-container td { display: table-cell !important; }
+        #export-container td::before { content: none !important; }
+
+
+        @media (max-width: 768px) {
+            thead { display: none; }
+            tr:not(.formula-detail-row) { display: block; border: 1px solid var(--border-color); border-radius: 8px; margin-bottom: 1rem; padding: 1rem; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+            tr.daily-group-header { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; padding: 0.5rem; margin-bottom: 0.5rem; background-color: #e9f5ff; }
+            td { display: flex; justify-content: space-between; align-items: center; padding: 0.5rem 0; border-bottom: 1px dotted var(--border-color); text-align: right; }
+            td:last-child { border-bottom: none; }
+            td::before { content: attr(data-label); font-weight: bold; text-align: left; margin-right: 1rem; }
+            .formula-detail-row { display: block; }
+            .formula-detail-row td { display: block; text-align: left; }
+        }
+    </style>
 </head>
 <body>
 
@@ -60,6 +123,7 @@
                     <label><input type="checkbox" id="force-full-calc-toggle"> <strong>強制計算完整時長</strong> (用於補休時加班等情境)</label>
                 </div>
                 <button id="add-record">新增/更新紀錄</button><button id="clear-form" class="btn-secondary">清除表單</button>
+                <div id="restore-message" class="info-message" style="display: none;"></div>
                 <div id="form-error" class="error-message" style="display: none;"></div>
             </div>
         </div>
@@ -169,6 +233,12 @@ document.addEventListener('DOMContentLoaded', () => {
         ['start-time', 'end-time', 'overtime-reason', 'edit-id'].forEach(id => document.getElementById(id).value = '');
         document.querySelector('input[name="overtimeType"][value="weekday"]').checked = true;
         forceFullCalcToggle.checked = false; addRecordBtn.textContent = '新增紀錄'; hideError();
+
+        // Clear temporary record and restore message
+        sessionStorage.removeItem('tempOvertimeRecordV9');
+        const restoreMsgEl = document.getElementById('restore-message');
+        restoreMsgEl.style.display = 'none';
+        restoreMsgEl.textContent = '';
     }
     
     function isOverlapping(newRecord) {
@@ -236,9 +306,26 @@ document.addEventListener('DOMContentLoaded', () => {
     function endPunch() {
         if (!punchStartTime) return;
         switchMode('manual');
-        document.getElementById('start-time').value = formatDateTimeLocal(punchStartTime);
-        document.getElementById('end-time').value = formatDateTimeLocal(new Date());
-        punchStartTime = null; sessionStorage.removeItem('punchStartTime'); updatePunchUI(false);
+        
+        const startTimeValue = formatDateTimeLocal(punchStartTime);
+        const endTimeValue = formatDateTimeLocal(new Date());
+
+        document.getElementById('start-time').value = startTimeValue;
+        document.getElementById('end-time').value = endTimeValue;
+
+        // Save a temporary record in case the user closes the window
+        const tempRecord = {
+            start: startTimeValue,
+            end: endTimeValue,
+            reason: document.getElementById('overtime-reason').value,
+            type: document.querySelector('input[name="overtimeType"]:checked').value,
+            forceFullCalculation: document.getElementById('force-full-calc-toggle').checked
+        };
+        sessionStorage.setItem('tempOvertimeRecordV9', JSON.stringify(tempRecord));
+
+        punchStartTime = null; 
+        sessionStorage.removeItem('punchStartTime'); 
+        updatePunchUI(false);
     }
     function updatePunchUI(isPunchedIn) { punchStartBtn.disabled = isPunchedIn; punchEndBtn.disabled = !isPunchedIn; }
 
@@ -461,11 +548,30 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // --- INIT ---
+    function restoreTempRecord() {
+        const tempRecordJSON = sessionStorage.getItem('tempOvertimeRecordV9');
+        if (tempRecordJSON) {
+            const tempRecord = JSON.parse(tempRecordJSON);
+            switchMode('manual');
+            document.getElementById('start-time').value = tempRecord.start;
+            document.getElementById('end-time').value = tempRecord.end;
+            document.getElementById('overtime-reason').value = tempRecord.reason || '';
+            document.querySelector(`input[name="overtimeType"][value="${tempRecord.type}"]`).checked = true;
+            document.getElementById('force-full-calc-toggle').checked = !!tempRecord.forceFullCalculation;
+
+            const restoreMsgEl = document.getElementById('restore-message');
+            restoreMsgEl.textContent = '您有未儲存的打卡紀錄，已為您還原。';
+            restoreMsgEl.style.display = 'block';
+        }
+    }
+
     function init() {
         loadSettings(); loadRecords();
         if (sessionStorage.getItem('punchStartTime')) { punchStartTime = new Date(sessionStorage.getItem('punchStartTime')); updatePunchUI(true); }
         monthFilter.value = new Date().toISOString().substring(0, 7);
-        render(); setupEventListeners();
+        render(); 
+        setupEventListeners();
+        restoreTempRecord();
     }
     
     window.app = { deleteRecord, editRecord, toggleDetails };
@@ -475,7 +581,8 @@ document.addEventListener('DOMContentLoaded', () => {
 // PWA Service Worker Registration
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('./sw.js').then(registration => {
+    // FIX: Use absolute path for service worker
+    navigator.serviceWorker.register('/dede/sw.js').then(registration => {
       console.log('ServiceWorker registration successful with scope: ', registration.scope);
     }).catch(err => {
       console.log('ServiceWorker registration failed: ', err);
@@ -486,4 +593,3 @@ if ('serviceWorker' in navigator) {
 
 </body>
 </html>
-
