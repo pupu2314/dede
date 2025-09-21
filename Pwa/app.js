@@ -122,10 +122,8 @@ function initCalculatorPage() {
         screenshotBtn: document.getElementById('screenshot-btn'),
         originalTotalP: document.getElementById('original-total-p'),
         discountedTotalP: document.getElementById('discounted-total-p'),
-        pointsP: document.getElementById('points-p'), // 新增 DOM 元素
         originalTotalSpan: document.getElementById('floating-original-total'),
         discountedTotalSpan: document.getElementById('floating-discounted-total'),
-        pointsSpan: document.getElementById('floating-points'), // 新增 DOM 元素
         savingsContainer: document.getElementById('savings-container'),
         savingsSpan: document.getElementById('floating-savings'),
         selectedItemsListUl: document.querySelector('#floating-selected-items-list ul'),
@@ -224,17 +222,12 @@ function initCalculatorPage() {
         const bestDiscount = potentialDiscounts.reduce((best, current) => current.price < best.price ? current : best, potentialDiscounts[0]);
         finalPrice = bestDiscount.price;
         discountType = bestDiscount.type;
-
-        // 計算點數
-        const earnedPoints = Math.floor(finalPrice / 1500);
-
         return {
             originalTotal: Math.round(originalTotal),
             finalTotal: Math.round(finalPrice),
             savedAmount: Math.round(originalTotal - finalPrice),
             appliedDiscount: discountType,
-            displayItems,
-            earnedPoints // 新增回傳點數
+            displayItems
         };
     }
 
@@ -251,11 +244,6 @@ function initCalculatorPage() {
             dom.savingsContainer.style.display = 'none';
             dom.discountNoteContainer.style.display = 'none';
         }
-
-        // 更新點數顯示
-        dom.pointsP.style.display = 'block';
-        dom.pointsSpan.textContent = result.earnedPoints;
-
         dom.discountedTotalSpan.textContent = result.finalTotal.toLocaleString();
         dom.discountedTotalP.firstChild.nodeValue = result.savedAmount > 0 ? '折扣後總金額：' : '總金額：';
         dom.selectedItemsListUl.innerHTML = '';
@@ -366,7 +354,7 @@ function initCalculatorPage() {
             });
             return itemHtml;
         }).join('');
-        let totalsHtml = result.savedAmount > 0 ? `<p style="margin: 4px 0;">原始總金額: ${result.originalTotal.toLocaleString()} 元</p><p style="margin: 4px 0; font-size: 0.9em; color: #28a745;"><strong>套用最佳優惠方案： ${result.appliedDiscount}</strong></p><p style="margin: 4px 0; font-size: 1.1em; color: #28a745;"><strong>共節省: ${result.savedAmount.toLocaleString()} 元</strong></p><p style="margin: 10px 0 0 0; font-size: 1.3em;"><strong>折扣後總金額: <span style="color: #dc3545;">${result.finalTotal.toLocaleString()}</span> 元</strong></p><p style="margin: 4px 0; font-size: 1.1em; color: #007bff;"><strong>獲得消費點數：<span style="color: #007bff;">${result.earnedPoints.toLocaleString()}</span> 點</strong></p>` : `<p style="margin: 10px 0 0 0; font-size: 1.3em;"><strong>總金額: <span style="color: #dc3545;">${result.finalTotal.toLocaleString()}</span> 元</strong></p><p style="margin: 4px 0; font-size: 1.1em; color: #007bff;"><strong>獲得消費點數：<span style="color: #007bff;">${result.earnedPoints.toLocaleString()}</span> 點</strong></p>`;
+        let totalsHtml = result.savedAmount > 0 ? `<p style="margin: 4px 0;">原始總金額: ${result.originalTotal.toLocaleString()} 元</p><p style="margin: 4px 0; font-size: 0.9em; color: #28a745;"><strong>套用最佳優惠方案： ${result.appliedDiscount}</strong></p><p style="margin: 4px 0; font-size: 1.1em; color: #28a745;"><strong>共節省: ${result.savedAmount.toLocaleString()} 元</strong></p><p style="margin: 10px 0 0 0; font-size: 1.3em;"><strong>折扣後總金額: <span style="color: #dc3545;">${result.finalTotal.toLocaleString()}</span> 元</strong></p>` : `<p style="margin: 10px 0 0 0; font-size: 1.3em;"><strong>總金額: <span style="color: #dc3545;">${result.finalTotal.toLocaleString()}</span> 元</strong></p>`;
         const now = new Date();
         const rocYear = now.getFullYear() - 1911;
         const month = String(now.getMonth() + 1).padStart(2, '0');
@@ -493,6 +481,4 @@ function initCheckPage() {
     });
     comboTableHtml += '</tbody></table>';
     container.innerHTML += comboTableHtml;
-}
-
 }
