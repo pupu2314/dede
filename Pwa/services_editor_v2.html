@@ -44,502 +44,506 @@
             text-align: center;
             cursor: pointer;
             border: none;
-            transition: background-color 0.2s;
-            box-sizing: border-box;
-        }
-        .btn-primary {
-            background-color: #007bff;
             color: #fff;
+            background-color: #007bff;
+            transition: background-color 0.2s;
+            font-size: 1em;
+            margin-top: 10px;
         }
-        .btn-primary:hover {
+        .btn:hover {
             background-color: #0056b3;
         }
         .btn-danger {
             background-color: #dc3545;
-            color: #fff;
         }
         .btn-danger:hover {
             background-color: #c82333;
         }
         .btn-secondary {
             background-color: #6c757d;
-            color: #fff;
         }
         .btn-secondary:hover {
             background-color: #5a6268;
         }
-        .btn-sm {
-            padding: 5px 10px;
-            font-size: 0.9em;
-            width: auto;
-            margin-right: 5px;
-        }
-        .promo-item, .service-block, .combo-block {
-            border: 1px solid #e5e7eb;
-            padding: 1rem;
-            margin-top: 1rem;
+
+        .category-block, .item-block, .promotion-block, .combo-block {
+            border: 1px solid #ddd;
+            padding: 20px;
+            margin-bottom: 20px;
             border-radius: 8px;
-            background-color: #f8f9fa;
+            background: #f9f9f9;
         }
-        .dirty-warning {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            color: #721c24;
-            background-color: #f8d7da;
-            padding: 0.75rem;
-            text-align: center;
-            font-weight: 600;
-            z-index: 1001;
-            display: none;
-            border-bottom: 1px solid #f5c6cb;
+        .item-block { background: #fff; }
+        .promotion-block { background: #eef7ff; }
+        .combo-block { background: #fff8e1; }
+
+        .items-container, .promotions-container {
+            margin-left: 15px;
+            padding-left: 15px;
+            border-left: 2px solid #eee;
         }
-        .floating-footer {
+
+        label {
+            font-weight: bold;
+            display: block;
+            margin-top: 10px;
+            margin-bottom: 5px;
+        }
+        .footer-actions {
             position: fixed;
             bottom: 0;
             left: 0;
             right: 0;
-            background: #ffffff;
-            padding: 1rem;
-            box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1);
-            z-index: 1000;
-        }
-        .validation-message {
-            color: #dc3545;
-            margin-bottom: 0.5rem;
+            background: rgba(255, 255, 255, 0.95);
+            padding: 15px;
+            border-top: 1px solid #ddd;
+            box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
             text-align: center;
+            z-index: 100;
+        }
+        .footer-actions .btn {
+            width: auto;
+            margin: 0 10px;
+        }
+        #json-output {
+            white-space: pre-wrap;
+            background: #282c34;
+            color: #abb2bf;
+            padding: 15px;
+            border-radius: 5px;
+            max-height: 400px;
+            overflow-y: auto;
+            font-family: 'Courier New', Courier, monospace;
+        }
+        #validation-message {
+            color: red;
             font-weight: bold;
+            margin-top: 10px;
         }
-        .footer-buttons {
-            display: flex;
-            gap: 1rem;
+        .dirty-indicator {
+            color: #ffc107;
+            font-weight: bold;
+            margin-left: 10px;
+            display: none; /* Initially hidden */
         }
-        .hidden {
-            display: none;
-        }
-        .date-shortcuts {
-            margin-top: 5px;
+        .combo-items-display {
+            background-color: #eee;
+            padding: 8px;
+            border-radius: 4px;
+            font-style: italic;
+            color: #555;
             margin-bottom: 10px;
+            min-height: 20px;
         }
     </style>
 </head>
 <body>
-    <div id="dirty-warning" class="dirty-warning">
-        資料已更新，請按「產生 JSON」按鈕匯出
-    </div>
-
     <div class="container">
-        <h1>服務資料編輯器</h1>
-        <p style="text-align: center; color: #666; margin-bottom: 2rem;">在這裡編輯服務項目與促銷內容，完成後請複製下方生成的 JSON 內容。</p>
-
-        <div id="editor-app">
-            <div id="loading-message" style="text-align: center; font-size: 1.2em; color: #888; padding: 2rem;">
-                載入中... 請稍候
-            </div>
-
-            <div id="editor-content" class="hidden">
-                <fieldset id="categories-section">
-                    <legend>服務項目</legend>
-                    <div id="categories-container"></div>
-                    <button onclick="app.addCategory()" class="btn btn-secondary" style="margin-top: 1rem;">新增類別</button>
-                </fieldset>
-
-                <fieldset id="combos-section" style="margin-top: 2rem;">
-                    <legend>組合優惠</legend>
-                    <div id="combos-container"></div>
-                    <button onclick="app.addCombo()" class="btn btn-secondary" style="margin-top: 1rem;">新增組合</button>
-                </fieldset>
-            </div>
+        <h1>服務與促銷編輯器 <span id="dirty-indicator" class="dirty-indicator">（有未儲存的變更）</span></h1>
+        <p>在此頁面編輯服務項目、促銷活動與組合，完成後點擊「產生 JSON」並「複製」，然後手動貼到 <code>services.json</code> 檔案中。</p>
+        
+        <div id="main-container">
+            <!-- Dynamic content will be injected here -->
         </div>
+
+        <button type="button" class="btn" id="add-category-btn">＋ 新增服務類別</button>
+        <button type="button" class="btn btn-secondary" id="add-combo-btn">＋ 新增組合優惠</button>
     </div>
-    
-    <div class="floating-footer">
-        <div id="validation-message" class="validation-message"></div>
-        <div class="footer-buttons">
-            <button id="generate-json-btn" class="btn btn-primary">產生 JSON</button>
-            <button id="copy-json-btn" class="btn btn-secondary hidden">複製 JSON</button>
-        </div>
+
+    <div class="footer-actions">
+        <button type="button" class="btn" id="generate-btn">產生 JSON</button>
+        <button type="button" class="btn btn-secondary" id="copy-btn">複製 JSON</button>
+        <div id="validation-message"></div>
+    </div>
+
+    <div class="container" style="margin-top: 30px;">
+        <h2>產生的 JSON 預覽</h2>
+        <pre><code id="json-output">點擊「產生 JSON」按鈕後，會在此顯示結果。</code></pre>
     </div>
 
     <script>
         document.addEventListener('DOMContentLoaded', () => {
             const app = {
-                data: {
-                    categories: [],
-                    combos: []
-                },
-                allServiceItems: [],
-                isDataDirty: false,
-                elements: {
-                    loadingMessage: document.getElementById('loading-message'),
-                    editorContent: document.getElementById('editor-content'),
-                    dirtyWarning: document.getElementById('dirty-warning'),
-                    categoriesContainer: document.getElementById('categories-container'),
-                    combosContainer: document.getElementById('combos-container'),
-                    generateBtn: document.getElementById('generate-json-btn'),
-                    copyBtn: document.getElementById('copy-json-btn'),
-                    validationMessage: document.getElementById('validation-message'),
-                },
+                data: null,
+                allServiceItems: [], // Flattened list of all service items for combo selectors
+                isDirty: false, // Track unsaved changes
                 generatedJson: '',
+                elements: {
+                    mainContainer: document.getElementById('main-container'),
+                    addCategoryBtn: document.getElementById('add-category-btn'),
+                    addComboBtn: document.getElementById('add-combo-btn'),
+                    generateBtn: document.getElementById('generate-btn'),
+                    copyBtn: document.getElementById('copy-btn'),
+                    jsonOutput: document.getElementById('json-output'),
+                    validationMessage: document.getElementById('validation-message'),
+                    dirtyIndicator: document.getElementById('dirty-indicator'),
+                },
 
                 init: async function() {
                     try {
-                        const response = await fetch('services.json'); // Use relative path
-                        if (!response.ok) {
-                            throw new Error('無法載入 services.json 檔案。請確認網路連線或路徑是否正確。');
-                        }
+                        const response = await fetch('services.json?t=' + new Date().getTime());
                         this.data = await response.json();
-                        this.elements.loadingMessage.classList.add('hidden');
-                        this.elements.editorContent.classList.remove('hidden');
+                        this.flattenServiceItems();
                         this.render();
+                        this.addEventListeners();
                     } catch (error) {
-                        this.elements.loadingMessage.textContent = `載入失敗：${error.message}`;
-                        console.error('載入 services.json 失敗:', error);
+                        console.error('無法載入 services.json:', error);
+                        this.elements.mainContainer.innerHTML = '<p style="color: red;">錯誤：無法載入 services.json。請檢查檔案是否存在且格式正確。</p>';
                     }
                 },
 
-                updateAllServiceItems: function() {
-                     this.allServiceItems = this.data.categories.flatMap(cat => cat.items);
+                setDirty: function(dirty = true) {
+                    this.isDirty = dirty;
+                    this.elements.dirtyIndicator.style.display = this.isDirty ? 'inline' : 'none';
+                },
+
+                escapeHtml: function(str) {
+                    if (typeof str !== 'string') return '';
+                    return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+                },
+                
+                flattenServiceItems: function() {
+                    this.allServiceItems = this.data.categories.flatMap(cat => 
+                        cat.items.map(item => ({...item, categoryName: cat.name}))
+                    );
                 },
 
                 render: function() {
-                    this.updateAllServiceItems();
-                    this.renderCategories();
-                    this.renderCombos();
-                },
-
-                renderCategories: function() {
-                    this.elements.categoriesContainer.innerHTML = '';
+                    let html = '<h2>服務類別</h2>';
+                    
+                    // Render Categories and Items
                     this.data.categories.forEach((category, catIndex) => {
-                        const categoryEl = document.createElement('div');
-                        categoryEl.className = 'combo-block';
-                        categoryEl.innerHTML = `
-                            <div>
-                                <label><strong>類別名稱</strong></label>
-                                <input type="text" value="${category.name}" onblur="app.updateCategoryName(${catIndex}, this.value)">
-                            </div>
-                            <button onclick="app.removeCategory(${catIndex})" class="btn btn-danger" style="margin-top: 0.5rem; margin-bottom: 1.5rem;">移除此類別</button>
-                            <h3 style="margin-top: 1.5rem;">服務項目</h3>
-                            <div id="items-container-${catIndex}"></div>
-                            <button onclick="app.addServiceItem(${catIndex})" class="btn btn-secondary" style="margin-top: 1rem;">新增服務項目</button>
-                        `;
-                        const itemsContainer = categoryEl.querySelector(`#items-container-${catIndex}`);
-                        category.items.forEach((item, itemIndex) => {
-                            itemsContainer.appendChild(this.createServiceItemElement(item, catIndex, itemIndex));
+                        html += `
+                            <div class="category-block">
+                                <h3>類別 ${catIndex + 1}</h3>
+                                <label for="category-name-${catIndex}">類別名稱</label>
+                                <input type="text" id="category-name-${catIndex}" value="${this.escapeHtml(category.name)}" data-path="categories[${catIndex}].name">
+                                <button type="button" class="btn btn-danger remove-category-btn" data-index="${catIndex}" style="width: auto; margin-top: 5px; margin-bottom: 20px; padding: 8px 15px;">移除此類別</button>
+                                
+                                <h4>服務項目</h4>
+                                <div id="items-container-${catIndex}" class="items-container">
+                                    ${category.items.map((item, itemIndex) => this.renderItem(item, catIndex, itemIndex)).join('')}
+                                </div>
+                                <button type="button" class="btn add-item-btn" data-cat-index="${catIndex}">＋ 新增項目到此類別</button>
+                            </div>`;
+                    });
+                    
+                    // Render Combos
+                    html += '<h2>組合優惠</h2>';
+                    if (this.data.combos && this.data.combos.length > 0) {
+                        this.data.combos.forEach((combo, comboIndex) => {
+                             html += this.renderCombo(combo, comboIndex);
                         });
-                        this.elements.categoriesContainer.appendChild(categoryEl);
-                    });
+                    } else {
+                        html += '<p>目前沒有組合優惠。</p>';
+                    }
+
+                    this.elements.mainContainer.innerHTML = html;
+                    this.updateAllComboItemDisplays();
                 },
 
-                createServiceItemElement: function(item, catIndex, itemIndex) {
-                    const itemEl = document.createElement('div');
-                    itemEl.className = 'service-block';
-                    itemEl.innerHTML = `
-                        <div>
-                            <label>ID</label>
-                            <input type="text" value="${item.id}" onblur="app.updateServiceItem(${catIndex}, ${itemIndex}, 'id', this.value)">
-                        </div>
-                        <div>
+                renderItem: function(item, catIndex, itemIndex) {
+                    return `
+                        <div class="item-block">
+                            <h5>項目 ${itemIndex + 1}</h5>
+                            <label>ID (英文/數字，不可重複)</label>
+                            <input type="text" value="${this.escapeHtml(item.id)}" data-path="categories[${catIndex}].items[${itemIndex}].id">
                             <label>名稱</label>
-                            <input type="text" value="${item.name}" onblur="app.updateServiceItem(${catIndex}, ${itemIndex}, 'name', this.value)">
-                        </div>
-                        <div>
+                            <input type="text" value="${this.escapeHtml(item.name)}" data-path="categories[${catIndex}].items[${itemIndex}].name">
                             <label>價格</label>
-                            <input type="number" value="${item.price}" onblur="app.updateServiceItem(${catIndex}, ${itemIndex}, 'price', parseInt(this.value))">
-                        </div>
-                        <h4>促銷活動</h4>
-                        <div id="promos-container-${catIndex}-${itemIndex}"></div>
-                        <button onclick="app.addPromo(${catIndex}, ${itemIndex}, 'service')" class="btn btn-secondary btn-sm" style="margin-top: 0.5rem; margin-bottom: 1rem;">新增促銷</button>
-                        <button onclick="app.removeServiceItem(${catIndex}, ${itemIndex})" class="btn btn-danger">移除此服務項目</button>
-                    `;
-                    const promosContainer = itemEl.querySelector(`#promos-container-${catIndex}-${itemIndex}`);
-                    (item.promotions || []).forEach((promo, promoIndex) => {
-                        promosContainer.appendChild(this.createPromoElement(promo, catIndex, itemIndex, promoIndex, 'service'));
-                    });
-                    return itemEl;
-                },
-
-                renderCombos: function() {
-                    this.elements.combosContainer.innerHTML = '';
-                    this.data.combos.forEach((combo, comboIndex) => {
-                        this.elements.combosContainer.appendChild(this.createComboElement(combo, comboIndex));
-                    });
-                },
-
-                createComboElement: function(combo, comboIndex) {
-                    const comboEl = document.createElement('div');
-                    comboEl.className = 'combo-block';
-                    
-                    const optionsHtml = this.allServiceItems.map(item => {
-                        const isSelected = combo.itemIds.includes(item.id);
-                        return `<option value="${item.id}" ${isSelected ? 'selected' : ''}>${item.name} (${item.id})</option>`;
-                    }).join('');
-
-                    const selectedItemNames = combo.itemIds.map(id => {
-                        const item = this.allServiceItems.find(s => s.id === id);
-                        return item ? item.name : '未知服務';
-                    }).join(' + ');
-
-                    comboEl.innerHTML = `
-                        <div>
-                            <label><strong>組合名稱</strong></label>
-                            <input type="text" value="${combo.name}" onblur="app.updateCombo(${comboIndex}, 'name', this.value)">
-                            <p id="combo-items-display-${comboIndex}" style="font-size: 0.9em; color: #666; margin-top: 5px;">${selectedItemNames}</p>
-                        </div>
-                        <div>
-                            <label>包含項目</label>
-                            <select multiple onchange="app.updateComboItemIds(${comboIndex}, this)">
-                                ${optionsHtml}
-                            </select>
-                        </div>
-                        <h3>促銷活動</h3>
-                        <div id="combo-promos-container-${comboIndex}"></div>
-                        <button onclick="app.addPromo(${comboIndex}, null, 'combo')" class="btn btn-secondary btn-sm" style="margin-top: 0.5rem; margin-bottom: 1rem;">新增促銷</button>
-                        <button onclick="app.removeCombo(${comboIndex})" class="btn btn-danger">移除此組合</button>
-                    `;
-                    const promosContainer = comboEl.querySelector(`#combo-promos-container-${comboIndex}`);
-                    (combo.promotions || []).forEach((promo, promoIndex) => {
-                        promosContainer.appendChild(this.createPromoElement(promo, comboIndex, null, promoIndex, 'combo'));
-                    });
-                    return comboEl;
+                            <input type="number" value="${item.price}" data-path="categories[${catIndex}].items[${itemIndex}].price">
+                            
+                            <h6>促銷活動</h6>
+                            <div class="promotions-container">
+                                ${item.promotions ? item.promotions.map((promo, promoIndex) => this.renderPromotion(promo, catIndex, itemIndex, promoIndex)).join('') : ''}
+                            </div>
+                            <button type="button" class="btn add-promotion-btn" data-cat-index="${catIndex}" data-item-index="${itemIndex}">＋ 新增促銷</button>
+                            <button type="button" class="btn btn-danger remove-item-btn" data-cat-index="${catIndex}" data-item-index="${itemIndex}">移除此項目</button>
+                        </div>`;
                 },
                 
-                createPromoElement: function(promo, parentIndex, itemIndex, promoIndex, type) {
-                    const promoEl = document.createElement('div');
-                    promoEl.className = 'promo-item';
-                    
-                    const priceValue = promo.price !== undefined && promo.price !== null ? promo.price : '';
-
-                    let originalPrice = 0;
-                    if (type === 'service') {
-                        originalPrice = this.data.categories[parentIndex].items[itemIndex].price || 0;
-                    } else if (type === 'combo') {
-                        const combo = this.data.combos[parentIndex];
-                        originalPrice = combo.itemIds.reduce((sum, id) => {
-                            const service = this.allServiceItems.find(s => s.id === id);
-                            return sum + (service ? service.price : 0);
-                        }, 0);
-                    }
-                    const discountAmount = originalPrice - (parseFloat(promo.price) || 0);
-                    const discountPercentage = originalPrice > 0 ? ((discountAmount / originalPrice) * 100).toFixed(1) : 0;
-                    const discountRate = originalPrice > 0 ? (10 - (discountPercentage / 10)).toFixed(1) : 0;
-
-                    const discountInfo = promo.price !== undefined && promo.price !== null ? `
-                        <p style="font-size: 0.9em; color: #555; margin-top: 5px;">
-                            原價：${originalPrice.toLocaleString()} 元 | 
-                            折扣：<span style="color: #007bff; font-weight: bold;">-${discountAmount.toLocaleString()}</span> 元 | 
-                            約 <span style="color: #007bff; font-weight: bold;">${discountRate}</span> 折
-                        </p>
-                    ` : '';
-
-                    const onclickArgs = type === 'service' ? `${parentIndex}, ${itemIndex}, ${promoIndex}, '${type}'` : `${parentIndex}, null, ${promoIndex}, '${type}'`;
-
-                    promoEl.innerHTML = `
-                        <div>
-                            <label>促銷名稱</label>
-                            <input type="text" value="${promo.label}" onblur="app.updatePromo(${onclickArgs}, 'label', this.value)">
-                        </div>
-                        <div>
+                renderPromotion: function(promo, catIndex, itemIndex, promoIndex) {
+                    return `
+                        <div class="promotion-block">
+                            <label>促銷標籤 (例如：九月優惠)</label>
+                            <input type="text" value="${this.escapeHtml(promo.label)}" data-path="categories[${catIndex}].items[${itemIndex}].promotions[${promoIndex}].label">
                             <label>促銷價格</label>
-                            <input type="number" value="${priceValue}" onblur="app.updatePromo(${onclickArgs}, 'price', parseFloat(this.value))">
-                        </div>
-                        <div>
-                            <label>開始日期</label>
-                            <input type="date" value="${promo.start}" onblur="app.updatePromo(${onclickArgs}, 'start', this.value)">
-                        </div>
-                        <div>
-                            <label>結束日期</label>
-                            <input type="date" value="${promo.end}" onblur="app.updatePromo(${onclickArgs}, 'end', this.value)">
-                        </div>
-                        <div class="date-shortcuts">
-                            <button type="button" class="btn btn-secondary btn-sm" onclick="app.setPromoDateRange(${onclickArgs}, 'current')">本月</button>
-                            <button type="button" class="btn btn-secondary btn-sm" onclick="app.setPromoDateRange(${onclickArgs}, 'next')">次月</button>
-                        </div>
-                        ${discountInfo}
-                        <button onclick="app.removePromo(${onclickArgs})" class="btn btn-danger" style="margin-top: 0.5rem;">移除促銷</button>
-                    `;
-                    return promoEl;
+                            <input type="number" value="${promo.price}" data-path="categories[${catIndex}].items[${itemIndex}].promotions[${promoIndex}].price">
+                            <label>開始日期 (YYYY-MM-DD)</label>
+                            <input type="date" value="${promo.start || ''}" data-path="categories[${catIndex}].items[${itemIndex}].promotions[${promoIndex}].start">
+                            <label>結束日期 (YYYY-MM-DD)</label>
+                            <input type="date" value="${promo.end || ''}" data-path="categories[${catIndex}].items[${itemIndex}].promotions[${promoIndex}].end">
+                             <button type="button" class="btn btn-danger remove-promotion-btn" data-cat-index="${catIndex}" data-item-index="${itemIndex}" data-promo-index="${promoIndex}" style="width: auto; padding: 5px 10px; font-size: 0.8em;">移除促銷</button>
+                        </div>`;
                 },
                 
-                setPromoDateRange: function(parentIndex, itemIndex, promoIndex, type, monthType) {
-                    const now = new Date();
-                    let targetDate = new Date(now.getFullYear(), now.getMonth(), 1);
-                    if (monthType === 'next') {
-                        targetDate.setMonth(targetDate.getMonth() + 1);
+                renderCombo: function(combo, comboIndex) {
+                    return `
+                        <div class="combo-block">
+                             <h3>組合 ${comboIndex + 1}</h3>
+                             <label>組合 ID (英文/數字，不可重複)</label>
+                             <input type="text" value="${this.escapeHtml(combo.id)}" data-path="combos[${comboIndex}].id">
+                             <label>組合名稱</label>
+                             <input type="text" value="${this.escapeHtml(combo.name)}" data-path="combos[${comboIndex}].name">
+                             
+                             <label>選擇包含的服務項目 (可多選)</label>
+                             <select multiple data-combo-index="${comboIndex}" class="combo-items-select">
+                                 ${this.allServiceItems.map(item => `<option value="${item.id}" ${combo.itemIds.includes(item.id) ? 'selected' : ''}>${item.categoryName} - ${item.name}</option>`).join('')}
+                             </select>
+                             <div class="combo-items-display" id="combo-items-display-${comboIndex}"></div>
+                             
+                             <h6>組合的促銷活動</h6>
+                             <div class="promotions-container">
+                                 ${combo.promotions ? combo.promotions.map((promo, promoIndex) => this.renderComboPromotion(promo, comboIndex, promoIndex)).join('') : ''}
+                             </div>
+                             <button type="button" class="btn add-combo-promotion-btn" data-combo-index="${comboIndex}">＋ 新增組合促銷</button>
+                             <button type="button" class="btn btn-danger remove-combo-btn" data-index="${comboIndex}">移除此組合</button>
+                        </div>`;
+                },
+
+                renderComboPromotion: function(promo, comboIndex, promoIndex) {
+                    return `
+                        <div class="promotion-block">
+                            <label>促銷標籤</label>
+                            <input type="text" value="${this.escapeHtml(promo.label)}" data-path="combos[${comboIndex}].promotions[${promoIndex}].label">
+                            <label>促銷價格</label>
+                            <input type="number" value="${promo.price}" data-path="combos[${comboIndex}].promotions[${promoIndex}].price">
+                            <label>開始日期 (YYYY-MM-DD)</label>
+                            <input type="date" value="${promo.start || ''}" data-path="combos[${comboIndex}].promotions[${promoIndex}].start">
+                            <label>結束日期 (YYYY-MM-DD)</label>
+                            <input type="date" value="${promo.end || ''}" data-path="combos[${comboIndex}].promotions[${promoIndex}].end">
+                            <button type="button" class="btn btn-danger remove-combo-promotion-btn" data-combo-index="${comboIndex}" data-promo-index="${promoIndex}" style="width: auto; padding: 5px 10px; font-size: 0.8em;">移除促銷</button>
+                        </div>`;
+                },
+
+                updateAllComboItemDisplays: function() {
+                    if (!this.data.combos) return;
+                    this.data.combos.forEach((combo, index) => {
+                        const displayEl = document.getElementById(`combo-items-display-${index}`);
+                        if (displayEl) {
+                           const itemNames = combo.itemIds.map(id => this.allServiceItems.find(item => item.id === id)?.name || `[${id}]`);
+                           displayEl.textContent = itemNames.join(' + ');
+                        }
+                    });
+                },
+
+                // --- Data Manipulation Methods ---
+                addCategory: function() {
+                    this.data.categories.push({ name: '新類別', items: [] });
+                    this.render(); this.setDirty();
+                },
+                removeCategory: function(index) {
+                    this.data.categories.splice(index, 1);
+                    this.render(); this.setDirty();
+                },
+                addItem: function(catIndex) {
+                    const newItem = { id: `new_item_${Date.now()}`, name: '新服務項目', price: 0, promotions: [] };
+                    this.data.categories[catIndex].items.push(newItem);
+                    this.render(); this.setDirty();
+                },
+                removeItem: function(catIndex, itemIndex) {
+                    this.data.categories[catIndex].items.splice(itemIndex, 1);
+                    this.render(); this.setDirty();
+                },
+                addPromotion: function(catIndex, itemIndex) {
+                    if (!this.data.categories[catIndex].items[itemIndex].promotions) {
+                        this.data.categories[catIndex].items[itemIndex].promotions = [];
                     }
-                    
-                    const year = targetDate.getFullYear();
-                    const month = targetDate.getMonth();
-                    
-                    const startDate = new Date(year, month, 1);
-                    const endDate = new Date(year, month + 1, 0);
-
-                    const formatDate = (date) => {
-                        const y = date.getFullYear();
-                        const m = String(date.getMonth() + 1).padStart(2, '0');
-                        const d = String(date.getDate()).padStart(2, '0');
-                        return `${y}-${m}-${d}`;
-                    };
-                    const startDateString = formatDate(startDate);
-                    const endDateString = formatDate(endDate);
-
-                    this.updatePromo(parentIndex, itemIndex, promoIndex, type, 'start', startDateString);
-                    this.updatePromo(parentIndex, itemIndex, promoIndex, type, 'end', endDateString);
+                    const newPromo = { label: '新促銷', price: 0, start: '', end: '' };
+                    this.data.categories[catIndex].items[itemIndex].promotions.push(newPromo);
+                    this.render(); this.setDirty();
                 },
-                
+                removePromotion: function(catIndex, itemIndex, promoIndex) {
+                    this.data.categories[catIndex].items[itemIndex].promotions.splice(promoIndex, 1);
+                    this.render(); this.setDirty();
+                },
+                addCombo: function() {
+                    if (!this.data.combos) this.data.combos = [];
+                    const newCombo = { id: `new_combo_${Date.now()}`, name: '新組合優惠', itemIds: [], promotions: [] };
+                    this.data.combos.push(newCombo);
+                    this.render(); this.setDirty();
+                },
+                removeCombo: function(index) {
+                    this.data.combos.splice(index, 1);
+                    this.render(); this.setDirty();
+                },
+                addComboPromotion: function(comboIndex) {
+                    if (!this.data.combos[comboIndex].promotions) {
+                        this.data.combos[comboIndex].promotions = [];
+                    }
+                    const newPromo = { label: '組合促銷', price: 0, start: '', end: '' };
+                    this.data.combos[comboIndex].promotions.push(newPromo);
+                    this.render(); this.setDirty();
+                },
+                removeComboPromotion: function(comboIndex, promoIndex) {
+                    this.data.combos[comboIndex].promotions.splice(promoIndex, 1);
+                    this.render(); this.setDirty();
+                },
+
+                updateDataFromInput: function(path, value) {
+                    const keys = path.replace(/\[/g, '.').replace(/\]/g, '').split('.');
+                    let current = this.data;
+                    for (let i = 0; i < keys.length - 1; i++) {
+                        current = current[keys[i]];
+                    }
+                    // Coerce to number if the original value was a number
+                    const finalKey = keys[keys.length - 1];
+                    if (typeof current[finalKey] === 'number' && finalKey === 'price') {
+                        current[finalKey] = parseFloat(value) || 0;
+                    } else {
+                        current[finalKey] = value;
+                    }
+                    this.setDirty();
+                    if(path.includes('items') && (path.includes('id') || path.includes('name'))){
+                       this.flattenServiceItems();
+                       this.render(); // Re-render to update combo selectors
+                    }
+                },
+
                 updateJsonOutput: function() {
-                    const clonedData = JSON.parse(JSON.stringify(this.data));
-                    clonedData.categories.forEach(category => {
-                        category.items.forEach(item => {
+                    // Create a deep copy to clean up empty arrays before outputting
+                    let outputData = JSON.parse(JSON.stringify(this.data));
+                    
+                    outputData.categories.forEach(cat => {
+                        cat.items.forEach(item => {
                             if (item.promotions && item.promotions.length === 0) {
                                 delete item.promotions;
                             }
                         });
                     });
-                    clonedData.combos.forEach(combo => {
-                        if (combo.promotions && combo.promotions.length === 0) {
-                            delete combo.promotions;
+
+                    if (outputData.combos) {
+                         outputData.combos.forEach(combo => {
+                            if (combo.promotions && combo.promotions.length === 0) {
+                                delete combo.promotions;
+                            }
+                        });
+                        if(outputData.combos.length === 0){
+                            delete outputData.combos;
+                        }
+                    }
+
+                    this.generatedJson = JSON.stringify(outputData, null, 2);
+                    this.elements.jsonOutput.textContent = this.generatedJson;
+                    this.setDirty(false); // Consider generated state as "saved"
+                },
+                
+                validateData: function() {
+                    const ids = new Set();
+                    let isValid = true;
+                    let errorMessage = '';
+
+                    const checkId = (id, context) => {
+                        if (!id || !/^[a-zA-Z0-9_]+$/.test(id)) {
+                             isValid = false;
+                             errorMessage = `錯誤: ${context} 的 ID "${id}" 格式不正確 (只能使用英文、數字、底線)。`;
+                             return false;
+                        }
+                        if (ids.has(id)) {
+                            isValid = false;
+                            errorMessage = `錯誤: ID "${id}" (${context}) 重複了，每個ID必須是唯一的。`;
+                            return false;
+                        }
+                        ids.add(id);
+                        return true;
+                    };
+                    
+                    this.data.categories.forEach((cat, ci) => {
+                        cat.items.forEach((item, ii) => {
+                            if (!checkId(item.id, `類別 '${cat.name}' 中的項目`)) return;
+                        });
+                    });
+
+                    if (this.data.combos) {
+                        this.data.combos.forEach((combo, i) => {
+                            if (!checkId(combo.id, `組合 '${combo.name}'`)) return;
+                        });
+                    }
+
+                    if (!isValid) {
+                        this.elements.validationMessage.textContent = errorMessage;
+                    }
+                    return isValid;
+                },
+
+                addEventListeners: function() {
+                    this.elements.addCategoryBtn.addEventListener('click', () => this.addCategory());
+                    this.elements.addComboBtn.addEventListener('click', () => this.addCombo());
+
+                    this.elements.mainContainer.addEventListener('input', e => {
+                        if (e.target.dataset.path) {
+                            this.updateDataFromInput(e.target.dataset.path, e.target.value);
                         }
                     });
 
-                    this.generatedJson = JSON.stringify(clonedData, null, 2);
-                    this.elements.generateBtn.classList.add('hidden');
-                    this.elements.copyBtn.classList.remove('hidden');
-                    this.isDataDirty = false;
-                    this.updateDirtyMessage();
-                },
-
-                setDirty: function() {
-                    this.isDataDirty = true;
-                    this.elements.copyBtn.classList.add('hidden');
-                    this.elements.generateBtn.classList.remove('hidden');
-                    this.updateDirtyMessage();
-                },
-
-                updateDirtyMessage: function() {
-                    this.elements.dirtyWarning.style.display = this.isDataDirty ? 'block' : 'none';
-                },
-
-                validateData: function() {
-                    let errorMessage = '';
-                    const allItems = this.data.categories.flatMap(cat => cat.items);
-                    const allCombos = this.data.combos;
-
-                    for (const item of allItems) {
-                        if (!item.id || !item.name || item.price === undefined || item.price === null || isNaN(item.price)) {
-                            errorMessage = `錯誤：服務項目 [${item.name || '無名稱'}] 的 ID, 名稱或價格無效。`;
-                            break;
+                    this.elements.mainContainer.addEventListener('click', e => {
+                        if (e.target.classList.contains('add-item-btn')) {
+                            const catIndex = parseInt(e.target.dataset.catIndex, 10);
+                            this.addItem(catIndex);
                         }
-                        for (const promo of (item.promotions || [])) {
-                            const originalPrice = item.price;
-                            if (!promo.label || promo.price === undefined || promo.price === null || isNaN(promo.price) || !promo.start || !promo.end) {
-                                errorMessage = `錯誤：服務項目 [${item.name}] 的促銷活動有空欄位或無效價格。`; break;
-                            }
-                            if (new Date(promo.start) >= new Date(promo.end)) {
-                                errorMessage = `錯誤：服務項目 [${item.name}] 的促銷開始日期必須早於結束日期。`; break;
-                            }
-                            if (parseFloat(promo.price) >= parseFloat(originalPrice)) {
-                                errorMessage = `錯誤：服務項目 [${item.name}] 的促銷價格 (${promo.price}) 必須低於原價 (${originalPrice})。`; break;
+                        if (e.target.classList.contains('add-promotion-btn')) {
+                            const catIndex = parseInt(e.target.dataset.catIndex, 10);
+                            const itemIndex = parseInt(e.target.dataset.itemIndex, 10);
+                            this.addPromotion(catIndex, itemIndex);
+                        }
+                        if (e.target.classList.contains('remove-category-btn')) {
+                            if (confirm('您確定要移除這個類別嗎？所有類別內的項目也會一併被刪除。')) {
+                                const index = parseInt(e.target.dataset.index, 10);
+                                this.removeCategory(index);
                             }
                         }
-                        if (errorMessage) break;
-                    }
-                    if (!errorMessage) {
-                        for (const combo of allCombos) {
-                            if (!combo.name) { errorMessage = `錯誤：有組合的名稱為空。請檢查並填寫。`; break; }
-                            if (!combo.itemIds || combo.itemIds.length === 0) { errorMessage = `錯誤：組合 [${combo.name}] 必須包含至少一個服務項目。`; break; }
-                            for (const promo of (combo.promotions || [])) {
-                                const originalPrice = combo.itemIds.reduce((sum, id) => {
-                                    const service = this.allServiceItems.find(s => s.id === id);
-                                    return sum + (service ? service.price : 0);
-                                }, 0);
-                                if (!promo.label || promo.price === undefined || promo.price === null || isNaN(promo.price) || !promo.start || !promo.end) {
-                                    errorMessage = `錯誤：組合 [${combo.name}] 的促銷活動有空欄位或無效價格。`; break;
-                                }
-                                if (new Date(promo.start) >= new Date(promo.end)) {
-                                    errorMessage = `錯誤：組合 [${combo.name}] 的促銷開始日期必須早於結束日期。`; break;
-                                }
-                                if (parseFloat(promo.price) >= parseFloat(originalPrice)) {
-                                    errorMessage = `錯誤：組合 [${combo.name}] 的促銷價格 (${promo.price}) 必須低於原價 (${originalPrice})。`; break;
-                                }
+                        if (e.target.classList.contains('remove-item-btn')) {
+                            if (confirm('您確定要移除這個項目嗎？')) {
+                                const catIndex = parseInt(e.target.dataset.catIndex, 10);
+                                const itemIndex = parseInt(e.target.dataset.itemIndex, 10);
+                                this.removeItem(catIndex, itemIndex);
                             }
-                            if (errorMessage) break;
                         }
-                    }
-                    this.elements.validationMessage.textContent = errorMessage;
-                    return !errorMessage;
+                        if (e.target.classList.contains('remove-promotion-btn')) {
+                            if (confirm('您確定要移除這個促銷活動嗎？')) {
+                                const catIndex = parseInt(e.target.dataset.catIndex, 10);
+                                const itemIndex = parseInt(e.target.dataset.itemIndex, 10);
+                                const promoIndex = parseInt(e.target.dataset.promoIndex, 10);
+                                this.removePromotion(catIndex, itemIndex, promoIndex);
+                            }
+                        }
+                        if (e.target.classList.contains('remove-combo-btn')) {
+                            if (confirm('您確定要移除這個組合嗎？')) {
+                                const index = parseInt(e.target.dataset.index, 10);
+                                this.removeCombo(index);
+                            }
+                        }
+                        if (e.target.classList.contains('add-combo-promotion-btn')) {
+                            const comboIndex = parseInt(e.target.dataset.comboIndex, 10);
+                            this.addComboPromotion(comboIndex);
+                        }
+                        if (e.target.classList.contains('remove-combo-promotion-btn')) {
+                            if (confirm('您確定要移除這個組合的促銷活動嗎？')) {
+                                const comboIndex = parseInt(e.target.dataset.comboIndex, 10);
+                                const promoIndex = parseInt(e.target.dataset.promoIndex, 10);
+                                this.removeComboPromotion(comboIndex, promoIndex);
+                            }
+                        }
+                    });
+
+                    this.elements.mainContainer.addEventListener('change', e => {
+                        if (e.target.classList.contains('combo-items-select')) {
+                            this.handleComboItemsChange(e.target);
+                        }
+                    });
                 },
                 
-                addCategory: function() { this.data.categories.push({ name: "新類別", items: [] }); this.render(); this.setDirty(); },
-                removeCategory: function(index) {
-                    const categoryName = this.data.categories[index].name;
-                    if (confirm(`確定要移除「${categoryName}」類別及其所有服務項目嗎？`)) {
-                        this.data.categories.splice(index, 1);
-                        this.render();
-                        this.setDirty();
-                    }
-                },
-                updateCategoryName: function(index, value) { this.data.categories[index].name = value; this.setDirty(); },
-                addServiceItem: function(catIndex) { const newItem = { id: "", name: "新服務", price: 0, promotions: [] }; this.data.categories[catIndex].items.push(newItem); this.render(); this.setDirty(); },
-                removeServiceItem: function(catIndex, itemIndex) {
-                    const itemName = this.data.categories[catIndex].items[itemIndex].name;
-                    if (confirm(`確定要移除服務項目「${itemName}」嗎？`)) {
-                        this.data.categories[catIndex].items.splice(itemIndex, 1);
-                        this.render();
-                        this.setDirty();
-                    }
-                },
-                updateServiceItem: function(catIndex, itemIndex, key, value) { const item = this.data.categories[catIndex].items[itemIndex]; item[key] = value; this.render(); this.setDirty(); },
-                addPromo: function(parentIndex, itemIndex, type) {
-                    const newPromo = { label: "新促銷", price: 0, start: "", end: "" };
-                    if (type === 'service') {
-                        if (!this.data.categories[parentIndex].items[itemIndex].promotions) this.data.categories[parentIndex].items[itemIndex].promotions = [];
-                        this.data.categories[parentIndex].items[itemIndex].promotions.push(newPromo);
-                    } else if (type === 'combo') {
-                        if (!this.data.combos[parentIndex].promotions) this.data.combos[parentIndex].promotions = [];
-                        this.data.combos[parentIndex].promotions.push(newPromo);
-                    }
-                    this.render(); this.setDirty();
-                },
-                removePromo: function(parentIndex, itemIndex, promoIndex, type) {
-                    let promo;
-                    if (type === 'service') {
-                        promo = this.data.categories[parentIndex].items[itemIndex].promotions[promoIndex];
-                    } else if (type === 'combo') {
-                        promo = this.data.combos[parentIndex].promotions[promoIndex];
-                    }
-                    const promoLabel = promo ? promo.label : '';
-
-                    if (confirm(`確定要移除促銷活動「${promoLabel}」嗎？`)) {
-                        if (type === 'service') {
-                            this.data.categories[parentIndex].items[itemIndex].promotions.splice(promoIndex, 1);
-                        } else if (type === 'combo') {
-                            this.data.combos[parentIndex].promotions.splice(promoIndex, 1);
-                        }
-                        this.render();
-                        this.setDirty();
-                    }
-                },
-                addCombo: function() { this.data.combos.push({ name: "新 組合優惠", itemIds: [], promotions: [] }); this.render(); this.setDirty(); },
-                removeCombo: function(index) {
-                    const comboName = this.data.combos[index].name;
-                    if (confirm(`確定要移除組合「${comboName}」嗎？`)) {
-                        this.data.combos.splice(index, 1);
-                        this.render();
-                        this.setDirty();
-                    }
-                },
-                updateCombo: function(index, key, value) { this.data.combos[index][key] = value; this.setDirty(); },
-                updateComboItemIds: function(index, selectEl) {
-                    const selectedOptions = Array.from(selectEl.selectedOptions).map(option => option.value);
-                    this.data.combos[index].itemIds = selectedOptions;
-                    const displayEl = document.getElementById(`combo-items-display-${index}`);
+                handleComboItemsChange: function(selectElement) {
+                    const comboIndex = parseInt(selectElement.dataset.comboIndex, 10);
+                    const selectedOptions = Array.from(selectElement.selectedOptions).map(opt => opt.value);
+                    this.data.combos[comboIndex].itemIds = selectedOptions;
+                    
+                    const displayEl = document.getElementById(`combo-items-display-${comboIndex}`);
                     if (displayEl) {
                         const itemNames = selectedOptions.map(id => this.allServiceItems.find(item => item.id === id)?.name || '未找到');
                         displayEl.textContent = itemNames.join(' + ');
                     }
-                    this.render(); this.setDirty();
+                    this.setDirty();
                 },
                 
                 setupEventListeners: function() {
@@ -557,6 +561,8 @@
                                 alert('複製失敗，請手動複製。');
                                 console.error('複製失敗:', err);
                             });
+                        } else {
+                            alert('請先點擊「產生 JSON」按鈕。');
                         }
                     });
                 }
