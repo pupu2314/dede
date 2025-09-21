@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>加班費計算機</title>
+    <title>加班費計算機 v9.7 (全面暫存)</title>
     <!-- PWA-related tags -->
     <meta name="theme-color" content="#007bff"/>
     <link rel="manifest" href="/dede/manifest.json">
@@ -77,7 +77,7 @@
 <body>
 
     <div class="container">
-        <h1>加班費計算機</h1>
+        <h1>加班費計算機 v9.7 (全面暫存)</h1>
         
         <div class="grid-container single-column-grid">
             <div class="card">
@@ -173,9 +173,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const formError = document.getElementById('form-error'), editIdInput = document.getElementById('edit-id');
     const punchStartBtn = document.getElementById('punch-start'), punchEndBtn = document.getElementById('punch-end');
     const forceFullCalcToggle = document.getElementById('force-full-calc-toggle');
+    const TEMP_RECORD_KEY = 'tempOvertimeRecordV9.7';
 
     // App State
-    let settings = {}, records = [], punchStartTime = null;
+    let settings = {}, records = [];
 
     // --- UTILITY FUNCTIONS ---
     const formatDateTimeLocal = (date) => new Date(date.getTime() - (date.getTimezoneOffset() * 60000)).toISOString().slice(0, 16);
@@ -235,7 +236,7 @@ document.addEventListener('DOMContentLoaded', () => {
         forceFullCalcToggle.checked = false; addRecordBtn.textContent = '新增紀錄'; hideError();
 
         // Clear temporary record and restore message
-        sessionStorage.removeItem('tempOvertimeRecordV9');
+        sessionStorage.removeItem(TEMP_RECORD_KEY);
         const restoreMsgEl = document.getElementById('restore-message');
         restoreMsgEl.style.display = 'none';
         restoreMsgEl.textContent = '';
@@ -302,32 +303,46 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('mode-manual').classList.toggle('active', mode === 'manual');
         clearForm();
     }
-    function startPunch() { punchStartTime = new Date(); sessionStorage.setItem('punchStartTime', punchStartTime.toISOString()); updatePunchUI(true); }
-    function endPunch() {
-        if (!punchStartTime) return;
-        switchMode('manual');
-        
-        const startTimeValue = formatDateTimeLocal(punchStartTime);
-        const endTimeValue = formatDateTimeLocal(new Date());
-
-        document.getElementById('start-time').value = startTimeValue;
-        document.getElementById('end-time').value = endTimeValue;
-
-        // Save a temporary record in case the user closes the window
+    function startPunch() {
+        const startTime = new Date();
         const tempRecord = {
-            start: startTimeValue,
-            end: endTimeValue,
+            start: formatDateTimeLocal(startTime),
+            end: null,
             reason: document.getElementById('overtime-reason').value,
             type: document.querySelector('input[name="overtimeType"]:checked').value,
             forceFullCalculation: document.getElementById('force-full-calc-toggle').checked
         };
-        sessionStorage.setItem('tempOvertimeRecordV9', JSON.stringify(tempRecord));
+        sessionStorage.setItem(TEMP_RECORD_KEY, JSON.stringify(tempRecord));
+        updatePunchUI(true);
+    }
+    function endPunch() {
+        const tempRecordJSON = sessionStorage.getItem(TEMP_RECORD_KEY);
+        if (!tempRecordJSON) return;
 
-        punchStartTime = null; 
-        sessionStorage.removeItem('punchStartTime'); 
+        const tempRecord = JSON.parse(tempRecordJSON);
+        if (!tempRecord.start || tempRecord.end) return;
+
+        tempRecord.end = formatDateTimeLocal(new Date());
+        tempRecord.reason = document.getElementById('overtime-reason').value;
+        tempRecord.type = document.querySelector('input[name="overtimeType"]:checked').value;
+        tempRecord.forceFullCalculation = document.getElementById('force-full-calc-toggle').checked;
+        
+        sessionStorage.setItem(TEMP_RECORD_KEY, JSON.stringify(tempRecord));
+        
+        switchMode('manual');
+        
+        document.getElementById('start-time').value = tempRecord.start;
+        document.getElementById('end-time').value = tempRecord.end;
+        document.getElementById('overtime-reason').value = tempRecord.reason || '';
+        document.querySelector(`input[name="overtimeType"][value="${tempRecord.type}"]`).checked = true;
+        document.getElementById('force-full-calc-toggle').checked = !!tempRecord.forceFullCalculation;
+        
         updatePunchUI(false);
     }
-    function updatePunchUI(isPunchedIn) { punchStartBtn.disabled = isPunchedIn; punchEndBtn.disabled = !isPunchedIn; }
+    function updatePunchUI(isPunchedIn) {
+        punchStartBtn.disabled = isPunchedIn;
+        punchEndBtn.disabled = !isPunchedIn;
+    }
 
     // --- CALCULATION LOGIC ---
     function calculateNetOvertimeHours(record) {
@@ -470,7 +485,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         const startTime = new Date(rec.start).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
                         const endTime = new Date(rec.end).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
                         let reasonText = `${rec.reason || '-'}`;
-                        if (rec.forceFullCalculation) reasonText += ' <strong style="color:var(--danger-color);">(強制計算)</strong>';
+                        if (rec.forceFullCalculation) reasonText += ' (強制計算)';
                         return `${startTime} - ${endTime}: ${calculateNetOvertimeHours(rec).toFixed(2)}H (${reasonText})`;
                     }).join('<br>');
 
@@ -548,30 +563,43 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // --- INIT ---
-    function restoreTempRecord() {
-        const tempRecordJSON = sessionStorage.getItem('tempOvertimeRecordV9');
-        if (tempRecordJSON) {
-            const tempRecord = JSON.parse(tempRecordJSON);
+    function restoreState() {
+        const tempRecordJSON = sessionStorage.getItem(TEMP_RECORD_KEY);
+        if (!tempRecordJSON) {
+            updatePunchUI(false);
+            return;
+        }
+
+        const tempRecord = JSON.parse(tempRecordJSON);
+        const restoreMsgEl = document.getElementById('restore-message');
+
+        if (tempRecord.start && !tempRecord.end) {
+            updatePunchUI(true);
+            document.getElementById('overtime-reason').value = tempRecord.reason || '';
+            document.querySelector(`input[name="overtimeType"][value="${tempRecord.type}"]`).checked = true;
+            document.getElementById('force-full-calc-toggle').checked = !!tempRecord.forceFullCalculation;
+            restoreMsgEl.textContent = '已為您還原上次的打卡上班狀態。';
+            restoreMsgEl.style.display = 'block';
+        } else if (tempRecord.start && tempRecord.end) {
             switchMode('manual');
             document.getElementById('start-time').value = tempRecord.start;
             document.getElementById('end-time').value = tempRecord.end;
             document.getElementById('overtime-reason').value = tempRecord.reason || '';
             document.querySelector(`input[name="overtimeType"][value="${tempRecord.type}"]`).checked = true;
             document.getElementById('force-full-calc-toggle').checked = !!tempRecord.forceFullCalculation;
-
-            const restoreMsgEl = document.getElementById('restore-message');
             restoreMsgEl.textContent = '您有未儲存的打卡紀錄，已為您還原。';
             restoreMsgEl.style.display = 'block';
+            updatePunchUI(false);
         }
     }
 
     function init() {
-        loadSettings(); loadRecords();
-        if (sessionStorage.getItem('punchStartTime')) { punchStartTime = new Date(sessionStorage.getItem('punchStartTime')); updatePunchUI(true); }
+        loadSettings(); 
+        loadRecords();
         monthFilter.value = new Date().toISOString().substring(0, 7);
         render(); 
         setupEventListeners();
-        restoreTempRecord();
+        restoreState();
     }
     
     window.app = { deleteRecord, editRecord, toggleDetails };
@@ -593,3 +621,4 @@ if ('serviceWorker' in navigator) {
 
 </body>
 </html>
+
