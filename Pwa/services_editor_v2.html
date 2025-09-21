@@ -219,11 +219,10 @@
                                 <label><strong>類別名稱</strong></label>
                                 <input type="text" value="${category.name}" onblur="app.updateCategoryName(${catIndex}, this.value)">
                             </div>
+                            <button onclick="app.removeCategory(${catIndex})" class="btn btn-danger" style="margin-top: 0.5rem; margin-bottom: 1.5rem;">移除此類別</button>
                             <h3 style="margin-top: 1.5rem;">服務項目</h3>
                             <div id="items-container-${catIndex}"></div>
                             <button onclick="app.addServiceItem(${catIndex})" class="btn btn-secondary" style="margin-top: 1rem;">新增服務項目</button>
-                            <hr style="margin: 1.5rem 0;">
-                            <button onclick="app.removeCategory(${catIndex})" class="btn btn-danger">移除此類別</button>
                         `;
                         const itemsContainer = categoryEl.querySelector(`#items-container-${catIndex}`);
                         category.items.forEach((item, itemIndex) => {
@@ -251,9 +250,8 @@
                         </div>
                         <h4>促銷活動</h4>
                         <div id="promos-container-${catIndex}-${itemIndex}"></div>
-                        <button onclick="app.addPromo(${catIndex}, ${itemIndex}, 'service')" class="btn btn-secondary btn-sm" style="margin-top: 0.5rem;">新增促銷</button>
-                        <hr style="margin: 1rem 0;">
-                        <button onclick="app.removeServiceItem(${catIndex}, ${itemIndex})" class="btn btn-danger">移除此項目</button>
+                        <button onclick="app.addPromo(${catIndex}, ${itemIndex}, 'service')" class="btn btn-secondary btn-sm" style="margin-top: 0.5rem; margin-bottom: 1rem;">新增促銷</button>
+                        <button onclick="app.removeServiceItem(${catIndex}, ${itemIndex})" class="btn btn-danger">移除此服務項目</button>
                     `;
                     const promosContainer = itemEl.querySelector(`#promos-container-${catIndex}-${itemIndex}`);
                     (item.promotions || []).forEach((promo, promoIndex) => {
@@ -297,8 +295,7 @@
                         </div>
                         <h3>促銷活動</h3>
                         <div id="combo-promos-container-${comboIndex}"></div>
-                        <button onclick="app.addPromo(${comboIndex}, null, 'combo')" class="btn btn-secondary btn-sm" style="margin-top: 0.5rem;">新增促銷</button>
-                        <hr style="margin: 1.5rem 0;">
+                        <button onclick="app.addPromo(${comboIndex}, null, 'combo')" class="btn btn-secondary btn-sm" style="margin-top: 0.5rem; margin-bottom: 1rem;">新增促銷</button>
                         <button onclick="app.removeCombo(${comboIndex})" class="btn btn-danger">移除此組合</button>
                     `;
                     const promosContainer = comboEl.querySelector(`#combo-promos-container-${comboIndex}`);
@@ -360,7 +357,7 @@
                             <button type="button" class="btn btn-secondary btn-sm" onclick="app.setPromoDateRange(${onclickArgs}, 'next')">次月</button>
                         </div>
                         ${discountInfo}
-                        <button onclick="app.removePromo(${onclickArgs})" class="btn btn-danger" style="margin-top: 1rem;">移除促銷</button>
+                        <button onclick="app.removePromo(${onclickArgs})" class="btn btn-danger" style="margin-top: 0.5rem;">移除促銷</button>
                     `;
                     return promoEl;
                 },
@@ -475,10 +472,24 @@
                 },
                 
                 addCategory: function() { this.data.categories.push({ name: "新類別", items: [] }); this.render(); this.setDirty(); },
-                removeCategory: function(index) { this.data.categories.splice(index, 1); this.render(); this.setDirty(); },
+                removeCategory: function(index) {
+                    const categoryName = this.data.categories[index].name;
+                    if (confirm(`確定要移除「${categoryName}」類別及其所有服務項目嗎？`)) {
+                        this.data.categories.splice(index, 1);
+                        this.render();
+                        this.setDirty();
+                    }
+                },
                 updateCategoryName: function(index, value) { this.data.categories[index].name = value; this.setDirty(); },
                 addServiceItem: function(catIndex) { const newItem = { id: "", name: "新服務", price: 0, promotions: [] }; this.data.categories[catIndex].items.push(newItem); this.render(); this.setDirty(); },
-                removeServiceItem: function(catIndex, itemIndex) { this.data.categories[catIndex].items.splice(itemIndex, 1); this.render(); this.setDirty(); },
+                removeServiceItem: function(catIndex, itemIndex) {
+                    const itemName = this.data.categories[catIndex].items[itemIndex].name;
+                    if (confirm(`確定要移除服務項目「${itemName}」嗎？`)) {
+                        this.data.categories[catIndex].items.splice(itemIndex, 1);
+                        this.render();
+                        this.setDirty();
+                    }
+                },
                 updateServiceItem: function(catIndex, itemIndex, key, value) { const item = this.data.categories[catIndex].items[itemIndex]; item[key] = value; this.render(); this.setDirty(); },
                 addPromo: function(parentIndex, itemIndex, type) {
                     const newPromo = { label: "新促銷", price: 0, start: "", end: "" };
@@ -492,18 +503,33 @@
                     this.render(); this.setDirty();
                 },
                 removePromo: function(parentIndex, itemIndex, promoIndex, type) {
-                    if (type === 'service') this.data.categories[parentIndex].items[itemIndex].promotions.splice(promoIndex, 1);
-                    else if (type === 'combo') this.data.combos[parentIndex].promotions.splice(promoIndex, 1);
-                    this.render(); this.setDirty();
-                },
-                updatePromo: function(parentIndex, itemIndex, promoIndex, type, key, value) {
                     let promo;
-                    if (type === 'service') promo = this.data.categories[parentIndex].items[itemIndex].promotions[promoIndex];
-                    else if (type === 'combo') promo = this.data.combos[parentIndex].promotions[promoIndex];
-                    if (promo) { promo[key] = value; this.render(); this.setDirty(); }
+                    if (type === 'service') {
+                        promo = this.data.categories[parentIndex].items[itemIndex].promotions[promoIndex];
+                    } else if (type === 'combo') {
+                        promo = this.data.combos[parentIndex].promotions[promoIndex];
+                    }
+                    const promoLabel = promo ? promo.label : '';
+
+                    if (confirm(`確定要移除促銷活動「${promoLabel}」嗎？`)) {
+                        if (type === 'service') {
+                            this.data.categories[parentIndex].items[itemIndex].promotions.splice(promoIndex, 1);
+                        } else if (type === 'combo') {
+                            this.data.combos[parentIndex].promotions.splice(promoIndex, 1);
+                        }
+                        this.render();
+                        this.setDirty();
+                    }
                 },
                 addCombo: function() { this.data.combos.push({ name: "新 組合優惠", itemIds: [], promotions: [] }); this.render(); this.setDirty(); },
-                removeCombo: function(index) { this.data.combos.splice(index, 1); this.render(); this.setDirty(); },
+                removeCombo: function(index) {
+                    const comboName = this.data.combos[index].name;
+                    if (confirm(`確定要移除組合「${comboName}」嗎？`)) {
+                        this.data.combos.splice(index, 1);
+                        this.render();
+                        this.setDirty();
+                    }
+                },
                 updateCombo: function(index, key, value) { this.data.combos[index][key] = value; this.setDirty(); },
                 updateComboItemIds: function(index, selectEl) {
                     const selectedOptions = Array.from(selectEl.selectedOptions).map(option => option.value);
@@ -542,4 +568,3 @@
     </script>
 </body>
 </html>
-
