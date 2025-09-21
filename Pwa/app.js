@@ -126,6 +126,8 @@ function initCalculatorPage() {
         discountedTotalSpan: document.getElementById('floating-discounted-total'),
         savingsContainer: document.getElementById('savings-container'),
         savingsSpan: document.getElementById('floating-savings'),
+        pointsContainer: document.getElementById('points-container'), // 新增：點數容器
+        pointsSpan: document.getElementById('floating-points'), // 新增：點數顯示 span
         selectedItemsListUl: document.querySelector('#floating-selected-items-list ul'),
         discountNoteContainer: document.getElementById('discount-note-container'),
         discountNoteSpan: document.querySelector('#discount-note-container .discount-note')
@@ -222,12 +224,17 @@ function initCalculatorPage() {
         const bestDiscount = potentialDiscounts.reduce((best, current) => current.price < best.price ? current : best, potentialDiscounts[0]);
         finalPrice = bestDiscount.price;
         discountType = bestDiscount.type;
+
+        // 新增：計算點數 (每 1500 元一點)
+        const points = Math.floor(finalPrice / 1500);
+
         return {
             originalTotal: Math.round(originalTotal),
             finalTotal: Math.round(finalPrice),
             savedAmount: Math.round(originalTotal - finalPrice),
             appliedDiscount: discountType,
-            displayItems
+            displayItems,
+            points: points // 新增：回傳點數
         };
     }
 
@@ -246,6 +253,15 @@ function initCalculatorPage() {
         }
         dom.discountedTotalSpan.textContent = result.finalTotal.toLocaleString();
         dom.discountedTotalP.firstChild.nodeValue = result.savedAmount > 0 ? '折扣後總金額：' : '總金額：';
+
+        // 新增：更新點數顯示
+        if (result.points > 0 && dom.pointsContainer) {
+            dom.pointsContainer.style.display = 'block';
+            dom.pointsSpan.textContent = result.points.toLocaleString();
+        } else if (dom.pointsContainer) {
+            dom.pointsContainer.style.display = 'none';
+        }
+
         dom.selectedItemsListUl.innerHTML = '';
         const isIdentityDiscount = result.appliedDiscount.includes('壽星') || result.appliedDiscount.includes('學生');
         result.displayItems.forEach(item => {
@@ -355,6 +371,12 @@ function initCalculatorPage() {
             return itemHtml;
         }).join('');
         let totalsHtml = result.savedAmount > 0 ? `<p style="margin: 4px 0;">原始總金額: ${result.originalTotal.toLocaleString()} 元</p><p style="margin: 4px 0; font-size: 0.9em; color: #28a745;"><strong>套用最佳優惠方案： ${result.appliedDiscount}</strong></p><p style="margin: 4px 0; font-size: 1.1em; color: #28a745;"><strong>共節省: ${result.savedAmount.toLocaleString()} 元</strong></p><p style="margin: 10px 0 0 0; font-size: 1.3em;"><strong>折扣後總金額: <span style="color: #dc3545;">${result.finalTotal.toLocaleString()}</span> 元</strong></p>` : `<p style="margin: 10px 0 0 0; font-size: 1.3em;"><strong>總金額: <span style="color: #dc3545;">${result.finalTotal.toLocaleString()}</span> 元</strong></p>`;
+        
+        // 將點數資訊加入圖片中
+        if (result.points > 0) {
+            totalsHtml += `<p style="margin: 10px 0 0 0; font-size: 1.1em; color: #007bff;"><strong>🎁 獲得點數: ${result.points.toLocaleString()} 點</strong></p>`;
+        }
+        
         const now = new Date();
         const rocYear = now.getFullYear() - 1911;
         const month = String(now.getMonth() + 1).padStart(2, '0');
