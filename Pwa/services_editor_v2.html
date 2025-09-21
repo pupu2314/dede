@@ -246,7 +246,7 @@
                     return `
                         <div class="item-block">
                             <h5>項目 ${itemIndex + 1}</h5>
-                            <label>ID (英文/數字，不可重複)</label>
+                            <label>ID (英文、數字、底線和點，不可重複)</label>
                             <input type="text" value="${this.escapeHtml(item.id)}" data-path="categories[${catIndex}].items[${itemIndex}].id">
                             <label>名稱</label>
                             <input type="text" value="${this.escapeHtml(item.name)}" data-path="categories[${catIndex}].items[${itemIndex}].name">
@@ -281,7 +281,7 @@
                     return `
                         <div class="combo-block">
                              <h3>組合 ${comboIndex + 1}</h3>
-                             <label>組合 ID (英文/數字，不可重複)</label>
+                             <label>組合 ID (英文、數字、底線和點，不可重複)</label>
                              <input type="text" value="${this.escapeHtml(combo.id)}" data-path="combos[${comboIndex}].id">
                              <label>組合名稱</label>
                              <input type="text" value="${this.escapeHtml(combo.name)}" data-path="combos[${comboIndex}].name">
@@ -436,7 +436,7 @@
                     const checkId = (id, context) => {
                         if (!id || !/^[a-zA-Z0-9_.]+$/.test(id)) {
                              isValid = false;
-                             errorMessage = `錯誤: ${context} 的 ID "${id}" 格式不正確 (只能使用英文、數字、底線)。`;
+                             errorMessage = `錯誤: ${context} 的 ID "${id}" 格式不正確 (只能使用英文、數字、底線和點)。`;
                              return false;
                         }
                         if (ids.has(id)) {
