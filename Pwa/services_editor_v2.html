@@ -378,13 +378,17 @@
                     const startDate = new Date(year, month, 1);
                     const endDate = new Date(year, month + 1, 0);
 
-                    const formatDate = (date) => date.toISOString().split('T')[0];
+                    const formatDate = (date) => {
+                        const y = date.getFullYear();
+                        const m = String(date.getMonth() + 1).padStart(2, '0');
+                        const d = String(date.getDate()).padStart(2, '0');
+                        return `${y}-${m}-${d}`;
+                    };
                     const startDateString = formatDate(startDate);
                     const endDateString = formatDate(endDate);
 
                     this.updatePromo(parentIndex, itemIndex, promoIndex, type, 'start', startDateString);
                     this.updatePromo(parentIndex, itemIndex, promoIndex, type, 'end', endDateString);
-                    // updatePromo already calls render and setDirty, so we don't need to call them again here.
                 },
                 
                 updateJsonOutput: function() {
@@ -538,3 +542,4 @@
     </script>
 </body>
 </html>
+
