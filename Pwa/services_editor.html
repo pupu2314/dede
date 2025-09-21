@@ -518,7 +518,7 @@
                     }
                 },
                 addCombo: function() {
-                    this.data.combos.push({ name: "新組合", itemIds: [], promotions: [] });
+                    this.data.combos.push({ name: "新 組合優惠", itemIds: [], promotions: [] });
                     this.render();
                     this.setDirty();
                 },
@@ -560,7 +560,7 @@
                             tempTextarea.select();
                             document.execCommand('copy');
                             document.body.removeChild(tempTextarea);
-                            alert('JSON 已複製到剪貼簿！');
+                            alert('JSON 已複製到剪貼簿！但需要手動更新services.json檔案才會生效。');
                         }
                     });
                 }
