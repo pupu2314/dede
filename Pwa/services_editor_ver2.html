@@ -397,22 +397,51 @@
                 comparePromotions: function(promos1 = [], promos2 = [], itemPrice) {
                     let promoChanges = '';
                     const maxLen = Math.max(promos1.length, promos2.length);
+
+                    const getDiscountText = (promoPrice, originalPrice) => {
+                        if (originalPrice > 0 && promoPrice > 0 && promoPrice < originalPrice) {
+                            const saved = originalPrice - promoPrice;
+                            const zhe = (promoPrice / originalPrice) * 10;
+                            return ` (省 ${saved.toLocaleString()} 元, 約 ${zhe.toFixed(2)} 折)`;
+                        }
+                        return '';
+                    };
+
                     for (let i = 0; i < maxLen; i++) {
                         const p1 = promos1[i], p2 = promos2[i];
+                        
                         let warningHtml = '';
                         if (p2 && itemPrice > 0 && p2.price > 0 && (p2.price / itemPrice) < 0.8) {
                             warningHtml = `<div class="diff-line removed" style="font-weight: bold;">【注意】此促銷低於八折優惠！</div>`;
                         }
-                        if (p1 && !p2) { promoChanges += `<div class="diff-line removed">【移除促銷】 ${this.escapeHtml(p1.label)}</div>`;
+
+                        if (p1 && !p2) {
+                            promoChanges += `<div class="diff-line removed">【移除促銷】 ${this.escapeHtml(p1.label)}</div>`;
                         } else if (!p1 && p2) {
                             promoChanges += `<div class="diff-subtitle added">【新增促銷】 ${this.escapeHtml(p2.label)}</div>`;
-                            const diff = this.compareObjects({}, p2, ['label', 'price', 'start', 'end']);
-                            promoChanges += diff + warningHtml;
+                            promoChanges += this.compareObjects({}, p2, ['label', 'start', 'end']);
+                            const discountText = getDiscountText(p2.price, itemPrice);
+                            promoChanges += `<div class="diff-line"><div class="label">price:</div><div class="change"><ins>${this.escapeHtml(p2.price)}${this.escapeHtml(discountText)}</ins></div></div>`;
+                            promoChanges += warningHtml;
                         } else if (p1 && p2) {
-                            const diff = this.compareObjects(p1, p2, ['label', 'price', 'start', 'end']);
-                            if (diff || warningHtml) {
-                                promoChanges += `<div class="diff-subtitle">促銷 ${i + 1} (${this.escapeHtml(p2.label || p1.label)}):</div>`;
-                                promoChanges += diff + warningHtml;
+                            let diff = this.compareObjects(p1, p2, ['label', 'start', 'end']);
+                            let priceDiff = '';
+
+                            if (p1.price !== p2.price) {
+                                const discountText = getDiscountText(p2.price, itemPrice);
+                                priceDiff = `<div class="diff-line"><div class="label">price:</div><div class="change"><del>${this.escapeHtml(p1.price)}</del> &rarr; <ins>${this.escapeHtml(p2.price)}${this.escapeHtml(discountText)}</ins></div></div>`;
+                            }
+
+                            if (diff || priceDiff || warningHtml) {
+                                 promoChanges += `<div class="diff-subtitle">促銷 ${i + 1} (${this.escapeHtml(p2.label || p1.label)}):</div>`;
+                                 promoChanges += diff;
+                                 promoChanges += priceDiff;
+                                 // If price hasn't changed but there is a warning, add a line for context
+                                 if (!priceDiff && warningHtml) {
+                                    const discountText = getDiscountText(p2.price, itemPrice);
+                                    promoChanges += `<div class="diff-line"><div class="label">price:</div><div class="change">${this.escapeHtml(p2.price)}${this.escapeHtml(discountText)}</div></div>`;
+                                 }
+                                 promoChanges += warningHtml;
                             }
                         }
                     }
