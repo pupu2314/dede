@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>德德美體美容中心</title>
+    <title>德德美體美容中心 - 價格計算機</title>
     <link rel="stylesheet" href="dede.css">
     <style>
         /* index.html 獨有樣式 */
@@ -19,6 +19,7 @@
         .summary-total { text-align: right; }
         .summary-total p { margin: 0; }
         .savings-note { margin-top: 4px; color: #28a745; font-size: 0.9em; }
+        .discount-note { margin-top: 4px; color: #007bff; font-weight:bold; font-size: 0.9em;}
         #summary-details {
             position: fixed; bottom: 0; left: 0;
             width: 100%; height: 60vh; max-height: 0;
@@ -29,7 +30,8 @@
         }
         #summary-details[aria-hidden="false"] { max-height: 60vh; }
         .details-content { display: flex; flex-direction: column; height: 100%; padding: 0 20px; }
-        .details-header h3 { text-align: left; }
+        .details-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #007bff; padding-bottom: 10px; margin-bottom: 10px; }
+        .details-header h3 { border: none; padding: 0; margin: 0; }
         #floating-selected-items-list { overflow-y: auto; flex-grow: 1; }
         #floating-selected-items-list ul { list-style: none; padding: 0; }
         #floating-selected-items-list li { padding: 8px 0; border-bottom: 1px dotted #eee; display: flex; justify-content: space-between; }
@@ -59,11 +61,11 @@
         <legend>特殊折扣</legend>
         <div class="service-item">
             <input type="checkbox" id="student-discount">
-            <label for="student-discount">憑學生證，消費滿千折百</label>
+            <label for="student-discount">憑學生證 (原價八折)</label>
         </div>
         <div class="service-item">
             <input type="checkbox" id="birthday-discount">
-            <label for="birthday-discount">當月壽星，消費滿千折百</label>
+            <label for="birthday-discount">當月壽星 (原價五折)</label>
         </div>
     </fieldset>
 
@@ -85,6 +87,9 @@
             <p id="total-p">原價：<span id="floating-total">0</span> 元</p>
         </div>
         <div class="summary-total">
+            <div id="discount-note-container" style="display: none;">
+               <p class="discount-note"><span id="discount-note-label"></span></p>
+            </div>
             <div id="savings-container" style="display: none;">
                 <p class="savings-note">共節省：<span id="floating-savings">0</span> 元</p>
             </div>
@@ -96,12 +101,8 @@
     </div>
     <div id="summary-details" aria-hidden="true">
         <div class="details-content">
-            <div class="details-header">
-                <h3>消費明細</h3>
-            </div>
-            <div id="floating-selected-items-list">
-                <ul></ul>
-            </div>
+            <div class="details-header"><h3>消費明細</h3></div>
+            <div id="floating-selected-items-list"><ul></ul></div>
         </div>
     </div>
 </div>
@@ -109,21 +110,37 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script src="app.js"></script>
 <script>
-    // 此頁面獨有的應用程式邏輯
     document.addEventListener('DOMContentLoaded', async () => {
-        const serviceData = await loadServiceData(); // From app.js
+        const serviceData = await loadServiceData();
         if (!serviceData) {
-            document.getElementById('service-form').innerHTML = '<p style="color:red;">無法載入服務項目。</p>';
+            document.getElementById('service-form').innerHTML = '<p style="color:red; text-align:center;">無法載入服務項目清單。<br>請檢查網路連線或聯繫管理員。</p>';
             return;
         }
 
         const allServices = new Map();
         const serviceForm = document.getElementById('service-form');
         const searchInput = document.getElementById('search-input');
+        const studentDiscountCheckbox = document.getElementById('student-discount');
+        const birthdayDiscountCheckbox = document.getElementById('birthday-discount');
         const today = new Date().toISOString().split('T')[0];
+        
+        const ui = {
+            selectedCount: document.getElementById('selected-count'),
+            floatingTotal: document.getElementById('floating-total'),
+            floatingSavings: document.getElementById('floating-savings'),
+            floatingDiscountedTotal: document.getElementById('floating-discounted-total'),
+            floatingPoints: document.getElementById('floating-points'),
+            savingsContainer: document.getElementById('savings-container'),
+            pointsContainer: document.getElementById('points-container'),
+            discountNoteContainer: document.getElementById('discount-note-container'),
+            discountNoteLabel: document.getElementById('discount-note-label'),
+            floatingSelectedItemsList: document.querySelector('#floating-selected-items-list ul'),
+            toast: document.getElementById('toast-notification')
+        };
 
-        // --- 初始化 & 渲染畫面 ---
         function initialize() {
+            if(serviceData.version) document.getElementById('price-version').textContent = `v${serviceData.version}`;
+            
             (serviceData.categories || []).forEach(category => {
                 const fieldset = document.createElement('fieldset');
                 const legend = document.createElement('legend');
@@ -161,32 +178,184 @@
                 });
                 serviceForm.appendChild(fieldset);
             });
+            loadSelectionFromURL();
             updateTotal();
         }
 
-        // --- 計算邏輯 ---
         function updateTotal() {
-            // ... 此處為 index.html 獨有的完整計算邏輯，為求簡潔故省略 ...
-            // 包含處理項目選取、組合優惠、學生壽星折扣等
-            // 此函式會更新所有浮動視窗的數字
+            let total = 0;
+            let promoTotal = 0;
+            let selectedCount = 0;
+            const selectedItems = [];
+
+            const checkboxes = serviceForm.querySelectorAll('input[type="checkbox"]:checked');
+            checkboxes.forEach(cb => {
+                const item = allServices.get(cb.value);
+                if (!item) return;
+
+                selectedCount++;
+                total += item.price;
+                const currentPrice = cb.dataset.promoPrice ? parseInt(cb.dataset.promoPrice) : item.price;
+                promoTotal += currentPrice;
+                selectedItems.push({
+                    name: item.name,
+                    price: item.price,
+                    promoPrice: cb.dataset.promoPrice ? parseInt(cb.dataset.promoPrice) : null,
+                    promoLabel: cb.dataset.promoLabel || null
+                });
+            });
+
+            const studentDiscountApplied = studentDiscountCheckbox.checked;
+            const birthdayDiscountApplied = birthdayDiscountCheckbox.checked;
+            
+            let finalTotal = promoTotal;
+            let specialDiscountNote = '';
+
+            const studentPrice = total * 0.8;
+            const birthdayPrice = total * 0.5;
+
+            if (birthdayDiscountApplied && birthdayPrice < finalTotal) {
+                finalTotal = birthdayPrice;
+                specialDiscountNote = '壽星五折優惠';
+            } else if (studentDiscountApplied && studentPrice < finalTotal) {
+                finalTotal = studentPrice;
+                specialDiscountNote = '學生八折優惠';
+            }
+            
+            finalTotal = Math.round(finalTotal);
+            const savings = total - finalTotal;
+
+            ui.selectedCount.textContent = selectedCount;
+            ui.floatingTotal.textContent = total.toLocaleString();
+            ui.floatingDiscountedTotal.textContent = finalTotal.toLocaleString();
+            ui.floatingSavings.textContent = savings.toLocaleString();
+            
+            ui.savingsContainer.style.display = savings > 0 ? 'block' : 'none';
+            ui.discountNoteContainer.style.display = specialDiscountNote ? 'block' : 'none';
+            ui.discountNoteLabel.textContent = specialDiscountNote;
+
+            const points = Math.floor(finalTotal / 1500);
+            ui.pointsContainer.style.display = points > 0 ? 'block' : 'none';
+            ui.floatingPoints.textContent = points;
+
+            updateFloatingList(selectedItems);
         }
 
-        // --- 事件監聽 ---
-        serviceForm.addEventListener('change', updateTotal);
-        document.getElementById('student-discount').addEventListener('change', updateTotal);
-        document.getElementById('birthday-discount').addEventListener('change', updateTotal);
-        searchInput.addEventListener('input', () => {
-             // ... 搜尋邏輯 ...
-        });
-        
-        // --- 快速操作按鈕功能 ---
-        document.getElementById('save-btn').addEventListener('click', () => { /* 儲存邏輯 */ });
-        document.getElementById('load-btn').addEventListener('click', () => { /* 讀取邏輯 */ });
-        document.getElementById('clear-btn').addEventListener('click', () => { /* 清除邏輯 */ });
-        document.getElementById('share-link-btn').addEventListener('click', () => { /* 分享邏輯 */ });
-        document.getElementById('screenshot-btn').addEventListener('click', () => { /* 截圖邏輯 */ });
+        function updateFloatingList(items) {
+            ui.floatingSelectedItemsList.innerHTML = '';
+            if (items.length === 0) {
+                ui.floatingSelectedItemsList.innerHTML = '<li>尚未選擇任何項目</li>';
+                return;
+            }
+            items.forEach(item => {
+                const li = document.createElement('li');
+                const nameSpan = document.createElement('span');
+                nameSpan.className = 'item-name';
+                nameSpan.textContent = item.name;
 
-        // --- 浮動視窗互動 ---
+                const priceDiv = document.createElement('div');
+                priceDiv.className = 'item-price-detail';
+                let priceHtml = '';
+                if (item.promoPrice !== null) {
+                    priceHtml = `<span class="original-price">${item.price.toLocaleString()}</span> <span class="price">${item.promoPrice.toLocaleString()}</span>`;
+                } else {
+                    priceHtml = `<span class="price">${item.price.toLocaleString()}</span>`;
+                }
+                priceDiv.innerHTML = priceHtml;
+
+                li.appendChild(nameSpan);
+                li.appendChild(priceDiv);
+                ui.floatingSelectedItemsList.appendChild(li);
+            });
+        }
+        
+        function showToast(message) {
+            ui.toast.textContent = message;
+            ui.toast.classList.add('show');
+            setTimeout(() => { ui.toast.classList.remove('show'); }, 3000);
+        }
+
+        function saveSelection() {
+            const selectedIds = Array.from(serviceForm.querySelectorAll('input[type="checkbox"]:checked')).map(cb => cb.value);
+            localStorage.setItem('selectedServices', JSON.stringify(selectedIds));
+            showToast('選擇已儲存！');
+        }
+
+        function loadSelection() {
+            const savedIds = JSON.parse(localStorage.getItem('selectedServices') || '[]');
+            clearSelection(false);
+            savedIds.forEach(id => {
+                const checkbox = document.getElementById(`item-${id}`);
+                if (checkbox) checkbox.checked = true;
+            });
+            updateTotal();
+            showToast('已載入上次的選擇！');
+        }
+
+        function clearSelection(showMsg = true) {
+            serviceForm.querySelectorAll('input[type="checkbox"]').forEach(cb => cb.checked = false);
+            studentDiscountCheckbox.checked = false;
+            birthdayDiscountCheckbox.checked = false;
+            updateTotal();
+            if(showMsg) showToast('已清除所有選項！');
+        }
+
+        function generateShareLink() {
+            const selectedIds = Array.from(serviceForm.querySelectorAll('input[type="checkbox"]:checked')).map(cb => cb.value);
+            const params = new URLSearchParams();
+            if (selectedIds.length > 0) params.set('items', selectedIds.join(','));
+            if (studentDiscountCheckbox.checked) params.set('student', '1');
+            if (birthdayDiscountCheckbox.checked) params.set('birthday', '1');
+            const url = `${window.location.origin}${window.location.pathname}?${params.toString()}`;
+            navigator.clipboard.writeText(url).then(() => {
+                showToast('分享連結已複製！');
+            });
+        }
+        
+        function loadSelectionFromURL() {
+            const params = new URLSearchParams(window.location.search);
+            const items = params.get('items');
+            if (items) {
+                clearSelection(false);
+                items.split(',').forEach(id => {
+                    const checkbox = document.getElementById(`item-${id}`);
+                    if (checkbox) checkbox.checked = true;
+                });
+            }
+            if (params.get('student') === '1') studentDiscountCheckbox.checked = true;
+            if (params.get('birthday') === '1') birthdayDiscountCheckbox.checked = true;
+        }
+
+        function takeScreenshot() {
+            const container = document.querySelector('.container');
+            const summary = document.getElementById('floating-summary-wrapper');
+            summary.style.display = 'none'; // 暫時隱藏浮動元素
+            html2canvas(container).then(canvas => {
+                const link = document.createElement('a');
+                link.download = '消費預估.png';
+                link.href = canvas.toDataURL();
+                link.click();
+                summary.style.display = 'block'; // 恢復顯示
+            });
+        }
+
+        serviceForm.addEventListener('change', updateTotal);
+        studentDiscountCheckbox.addEventListener('change', updateTotal);
+        birthdayDiscountCheckbox.addEventListener('change', updateTotal);
+        searchInput.addEventListener('input', (e) => {
+            const searchTerm = e.target.value.toLowerCase();
+            serviceForm.querySelectorAll('.service-item').forEach(itemDiv => {
+                const label = itemDiv.querySelector('label');
+                itemDiv.style.display = label.textContent.toLowerCase().includes(searchTerm) ? 'flex' : 'none';
+            });
+        });
+
+        document.getElementById('save-btn').addEventListener('click', saveSelection);
+        document.getElementById('load-btn').addEventListener('click', loadSelection);
+        document.getElementById('clear-btn').addEventListener('click', () => clearSelection(true));
+        document.getElementById('share-link-btn').addEventListener('click', generateShareLink);
+        document.getElementById('screenshot-btn').addEventListener('click', takeScreenshot);
+
         const floatingSummary = document.getElementById('floating-summary');
         const summaryDetails = document.getElementById('summary-details');
         floatingSummary.addEventListener('click', () => {
