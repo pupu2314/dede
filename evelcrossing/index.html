@@ -72,10 +72,10 @@
     </div>
 
     <script>
-        // 將資料定義為全域變數，但暫時不賦值
-        let crossingData = [];
+        // Store the full, unfiltered dataset
+        let fullCrossingData = [];
 
-        // 獲取 DOM 元素
+        // Get DOM elements
         const searchInput = document.getElementById('search-input');
         const cityFilter = document.getElementById('city-filter');
         const stationFilter = document.getElementById('station-filter');
@@ -85,9 +85,9 @@
         const loadingMessage = document.getElementById('loading-message');
         const noResultsMessage = document.getElementById('no-results-message');
 
-        // 渲染平交道卡片
+        // Render the crossing cards
         function renderCrossings(data) {
-            resultsContainer.innerHTML = ''; // 清空現有內容
+            resultsContainer.innerHTML = '';
             if (data.length === 0) {
                 noResultsMessage.classList.remove('hidden');
             } else {
@@ -121,82 +121,85 @@
             }
         }
 
-        // 填充篩選器選項
-        function populateFilters() {
-            const cities = new Set();
-            const stations = new Set();
-            const sections = new Set();
-            const lines = new Set();
-
-            crossingData.forEach(item => {
-                cities.add(item['所在縣市']);
-                stations.add(item['分駐所']);
-                sections.add(item['區間']);
-                lines.add(item['路線別']);
-            });
-
-            // 填充縣市
-            cities.forEach(city => {
+        // Populates the dropdown options for a given filter
+        function populateFilter(selectElement, data, key) {
+            const currentValue = selectElement.value; // Save the current selection
+            selectElement.innerHTML = '<option value="">全部</option>'; // Clear and add "全部" option
+            
+            const uniqueValues = new Set();
+            data.forEach(item => uniqueValues.add(item[key]));
+            
+            Array.from(uniqueValues).sort().forEach(value => {
                 const option = document.createElement('option');
-                option.value = city;
-                option.textContent = city;
-                cityFilter.appendChild(option);
+                option.value = value;
+                option.textContent = value;
+                selectElement.appendChild(option);
             });
-
-            // 填充分駐所
-            stations.forEach(station => {
-                const option = document.createElement('option');
-                option.value = station;
-                option.textContent = station;
-                stationFilter.appendChild(option);
-            });
-
-            // 填充區間
-            sections.forEach(section => {
-                const option = document.createElement('option');
-                option.value = section;
-                option.textContent = section;
-                sectionFilter.appendChild(option);
-            });
-
-            // 填充路線別
-            lines.forEach(line => {
-                const option = document.createElement('option');
-                option.value = line;
-                option.textContent = line;
-                lineFilter.appendChild(option);
-            });
+            
+            // Restore the previous selection if it still exists
+            if ([...uniqueValues].includes(currentValue)) {
+                selectElement.value = currentValue;
+            }
         }
 
-        // 篩選資料
-        function filterData() {
+        // Main function to filter data and update the display/filters
+        function filterAndRender() {
+            // Get all current filter values
             const searchTerm = searchInput.value.toLowerCase();
             const selectedCity = cityFilter.value;
             const selectedStation = stationFilter.value;
             const selectedSection = sectionFilter.value;
             const selectedLine = lineFilter.value;
 
-            const filteredData = crossingData.filter(item => {
+            // Apply all filters sequentially
+            let filteredData = fullCrossingData.filter(item => {
                 const nameMatch = item['平交道名稱'].toLowerCase().includes(searchTerm);
                 const cityMatch = !selectedCity || item['所在縣市'] === selectedCity;
                 const stationMatch = !selectedStation || item['分駐所'] === selectedStation;
                 const sectionMatch = !selectedSection || item['區間'] === selectedSection;
                 const lineMatch = !selectedLine || item['路線別'] === selectedLine;
-                
                 return nameMatch && cityMatch && stationMatch && sectionMatch && lineMatch;
             });
             
+            // Renders the final filtered list of crossings
             renderCrossings(filteredData);
+            
+            // Dynamically update each dropdown based on the currently filtered data
+            // We pass the currently filtered data to populate other select elements
+            // The currently selected filter remains unchanged.
+            populateFilter(cityFilter, fullCrossingData.filter(item => 
+                (!selectedStation || item['分駐所'] === selectedStation) &&
+                (!selectedSection || item['區間'] === selectedSection) &&
+                (!selectedLine || item['路線別'] === selectedLine)
+            ), '所在縣市');
+
+            populateFilter(stationFilter, fullCrossingData.filter(item => 
+                (!selectedCity || item['所在縣市'] === selectedCity) &&
+                (!selectedSection || item['區間'] === selectedSection) &&
+                (!selectedLine || item['路線別'] === selectedLine)
+            ), '分駐所');
+
+            populateFilter(sectionFilter, fullCrossingData.filter(item => 
+                (!selectedCity || item['所在縣市'] === selectedCity) &&
+                (!selectedStation || item['分駐所'] === selectedStation) &&
+                (!selectedLine || item['路線別'] === selectedLine)
+            ), '區間');
+
+            populateFilter(lineFilter, fullCrossingData.filter(item => 
+                (!selectedCity || item['所在縣市'] === selectedCity) &&
+                (!selectedStation || item['分駐所'] === selectedStation) &&
+                (!selectedSection || item['區間'] === selectedSection)
+            ), '路線別');
         }
 
-        // 綁定事件監聽器
-        searchInput.addEventListener('input', filterData);
-        cityFilter.addEventListener('change', filterData);
-        stationFilter.addEventListener('change', filterData);
-        sectionFilter.addEventListener('change', filterData);
-        lineFilter.addEventListener('change', filterData);
+        // Attach event listeners to all filter controls
+        searchInput.addEventListener('input', filterAndRender);
+        cityFilter.addEventListener('change', filterAndRender);
+        stationFilter.addEventListener('change', filterAndRender);
+        sectionFilter.addEventListener('change', filterAndRender);
+        lineFilter.addEventListener('change', filterAndRender);
 
-        // 使用 fetch 載入資料
+        // Fetch data on page load
         window.addEventListener('load', () => {
             fetch('evelcrossing.json')
                 .then(response => {
@@ -206,10 +209,9 @@
                     return response.json();
                 })
                 .then(data => {
-                    crossingData = data; // 將載入的資料賦值給變數
-                    loadingMessage.classList.add('hidden'); // 隱藏載入訊息
-                    populateFilters(); // 填充篩選器選項
-                    filterData(); // 初始渲染資料
+                    fullCrossingData = data;
+                    loadingMessage.classList.add('hidden');
+                    filterAndRender();
                 })
                 .catch(error => {
                     console.error('Error fetching data:', error);
