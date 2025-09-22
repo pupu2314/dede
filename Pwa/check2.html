@@ -13,7 +13,6 @@
         }
         .container {
             max-width: 960px;
-            position: relative;
         }
         h1, h2 {
             color: #0056b3;
@@ -49,57 +48,24 @@
         .discount-info { color: #28a745; font-weight: bold; font-size: 0.9em; white-space: nowrap; }
         .note { background-color: #fff3cd; border-left: 5px solid #ffeeba; padding: 15px; margin-bottom: 20px; border-radius: 4px; }
 
-        /* JSON Input Styles */
-        #json-input-container {
-            max-width: 800px; margin: 40px auto; padding: 25px;
+        /* Mode Selection & JSON Input Styles */
+        .selection-container {
+            max-width: 600px; margin: 40px auto; padding: 30px;
             background: #fff; border: 1px solid #ddd;
             border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            text-align: center;
         }
         #json-textarea {
             width: 100%;
-            height: 40vh; min-height: 200px; font-family: monospace;
+            height: 35vh; min-height: 200px; font-family: monospace;
             font-size: 14px;
             padding: 10px; border: 1px solid #ccc; border-radius: 5px;
             margin-bottom: 10px;
         }
         .btn { display: inline-block; width: 100%; padding: 12px 20px; border-radius: 5px; font-weight: bold; text-align: center; cursor: pointer; border: none; color: #fff; background-color: #007bff; transition: background-color 0.2s; font-size: 1em; margin-top: 10px; }
-        .btn:hover { background-color: #0056b3; }
-        .btn-secondary { background-color: #6c757d; }
-        .btn-secondary:hover { background-color: #5a6268; }
+        .btn.btn-secondary { background-color: #6c757d; }
+        .btn:hover { opacity: 0.9; }
 
-        /* Tabs Styles */
-        .input-tabs {
-            display: flex;
-            border-bottom: 1px solid #ddd;
-            margin-bottom: 20px;
-        }
-        .tab-btn {
-            padding: 10px 20px;
-            cursor: pointer;
-            border: none;
-            background-color: transparent;
-            border-bottom: 3px solid transparent;
-            font-size: 1em;
-        }
-        .tab-btn.active {
-            border-bottom-color: #007bff;
-            font-weight: bold;
-            color: #0056b3;
-        }
-        .tab-content {
-            display: none;
-        }
-        .tab-content.active {
-            display: block;
-        }
-        #file-input {
-            width: 100%;
-            padding: 10px;
-            border: 1px solid #ccc;
-            border-radius: 5px;
-            margin-bottom: 10px;
-            box-sizing: border-box;
-        }
 
         @media (max-width: 768px) {
             body { margin: 0; font-size: 16px; }
@@ -116,28 +82,26 @@
 </head>
 <body>
 
-    <div id="json-input-container">
+    <div id="mode-selection-container" class="selection-container">
         <h2>選擇資料來源</h2>
-        <div class="input-tabs">
-            <button class="tab-btn active" data-tab="paste">貼上 JSON</button>
-            <button class="tab-btn" data-tab="file">從檔案載入</button>
-        </div>
-        <div id="paste-content" class="tab-content active">
-            <p>請將 services.json 的完整內容複製並貼到下方的文字框中。</p>
-            <textarea id="json-textarea" placeholder="在這裡貼上 JSON..."></textarea>
-            <button id="load-json-btn" class="btn">產生報表</button>
-        </div>
-        <div id="file-content" class="tab-content">
-            <p>請選擇 services.json 檔案以產生報表。</p>
-            <input type="file" id="file-input" accept=".json">
-            <button id="load-file-btn" class="btn">從檔案產生報表</button>
-        </div>
+        <p>請選擇您要檢查的 services.json 資料來源。</p>
+        <button id="load-from-server-btn" class="btn">檢查伺服器線上版本</button>
+        <button id="load-from-clipboard-btn" class="btn btn-secondary">檢查剪貼簿/本機版本</button>
+        <p id="server-load-error" style="color:red; margin-top:10px;"></p>
+    </div>
+
+    <div id="json-input-container" class="selection-container" style="display: none;">
+        <h2>貼上 services.json 內容</h2>
+        <p>請將 JSON 內容貼到下方文字框中以產生報表。</p>
+        <textarea id="json-textarea" placeholder="在這裡貼上 JSON..."></textarea>
+        <button id="generate-report-btn" class="btn">產生報表</button>
+        <button id="back-to-selection-btn1" class="btn btn-secondary">返回選擇</button>
         <p id="json-error" style="color:red; margin-top:10px;"></p>
     </div>
 
     <div id="report-container" style="display: none;">
         <div class="container">
-            <button id="reset-check-btn" class="btn btn-secondary" style="float: right; width: auto; margin-top: 20px;">重新檢查</button>
+            <button id="back-to-selection-btn2" class="btn btn-secondary" style="float: right; width: auto; margin: 15px 0;">返回選擇</button>
             <h1>促銷設定檢查頁面</h1>
             <p class="note">此頁面用於檢查所有服務項目與組合的促銷活動狀態，方便您快速了解哪些活動正在進行、即將開始或已經過期。</p>
         
@@ -179,6 +143,8 @@
         </div>
     </div>
 
+
+    <script src="app.js"></script>
     <script>
         function getPromoStatus(promo, today) {
             if (!promo.start || !promo.end) {
@@ -204,6 +170,7 @@
                             const discountAmount = item.price - promo.price;
                             const discountPercentage = item.price > 0 ? (discountAmount / item.price) * 100 : 0;
                             const discountText = `省 ${discountAmount.toLocaleString()} (${discountPercentage.toFixed(1)}%)`;
+                            
                             tableHtml += `<tr>
                                 ${index === 0 ? `<td data-label="類別" rowspan="${item.promotions.length}">${category.name}</td><td data-label="項目名稱" rowspan="${item.promotions.length}">${item.name}</td><td data-label="原價" rowspan="${item.promotions.length}" style="text-align: right;">${item.price.toLocaleString()}</td>` : ''}
                                 <td data-label="促銷活動">${promo.label}</td>
@@ -217,7 +184,10 @@
                     }
                 });
             });
-            tableBody.innerHTML = tableHtml || '<tr><td colspan="9" style="text-align: center;">目前沒有設定任何服務項目促銷活動。</td></tr>';
+            if (!tableHtml) {
+                tableHtml = '<tr><td colspan="9" style="text-align: center;">目前沒有設定任何服務項目促銷活動。</td></tr>';
+            }
+            tableBody.innerHTML = tableHtml;
         }
 
         function displayComboPromotions(today, allServices, combos = []) {
@@ -239,90 +209,76 @@
                     });
                  }
             });
-            comboTableBody.innerHTML = comboTableHtml || '<tr><td colspan="9" style="text-align: center;">目前沒有設定任何組合優惠促銷活動。</td></tr>';
+            if (!comboTableHtml) {
+                comboTableHtml = '<tr><td colspan="9" style="text-align: center;">目前沒有設定任何組合優惠促銷活動。</td></tr>';
+            }
+            comboTableBody.innerHTML = comboTableHtml;
         }
         
         function startReport(jsonData) {
-            if (jsonData) {
-                const allServices = new Map();
-                (jsonData.categories || []).forEach(category => {
-                    (category.items || []).forEach(item => {
-                        allServices.set(item.id, item);
-                    });
+            const allServices = new Map();
+            (jsonData.categories || []).forEach(category => {
+                (category.items || []).forEach(item => {
+                    allServices.set(item.id, item);
                 });
-                const today = new Date().toISOString().split('T')[0];
-                displayAllPromotions(today, allServices, jsonData.categories);
-                displayComboPromotions(today, allServices, jsonData.combos);
-            } else {
-                document.getElementById('item-promotions-body').innerHTML = '<tr><td colspan="9">無法載入資料。</td></tr>';
-                document.getElementById('combo-promotions-body').innerHTML = '<tr><td colspan="9">無法載入資料。</td></tr>';
-            }
+            });
+            const today = new Date().toISOString().split('T')[0];
+            displayAllPromotions(today, allServices, jsonData.categories);
+            displayComboPromotions(today, allServices, jsonData.combos);
+        }
+
+        // --- UI Control ---
+        const modeSelectionContainer = document.getElementById('mode-selection-container');
+        const jsonInputContainer = document.getElementById('json-input-container');
+        const reportContainer = document.getElementById('report-container');
+
+        function showView(view) {
+            modeSelectionContainer.style.display = 'none';
+            jsonInputContainer.style.display = 'none';
+            reportContainer.style.display = 'none';
+            view.style.display = 'block';
         }
         
-        function handleJsonData(jsonText) {
+        // --- Event Listeners ---
+        document.getElementById('load-from-server-btn').addEventListener('click', async () => {
+            document.getElementById('server-load-error').textContent = '載入中...';
+            const jsonData = await loadServiceData(); // Assumes loadServiceData is in app.js
+            if (jsonData) {
+                startReport(jsonData);
+                showView(reportContainer);
+            } else {
+                document.getElementById('server-load-error').textContent = '從伺服器載入資料失敗，請檢查檔案或網路連線。';
+            }
+        });
+
+        document.getElementById('load-from-clipboard-btn').addEventListener('click', () => {
+            showView(jsonInputContainer);
+        });
+        
+        document.getElementById('generate-report-btn').addEventListener('click', () => {
+            const jsonText = document.getElementById('json-textarea').value;
             const errorEl = document.getElementById('json-error');
             if (!jsonText) {
-                errorEl.textContent = '內容為空。';
+                errorEl.textContent = '請貼上 JSON 內容。';
                 return;
             }
             try {
                 const parsedData = JSON.parse(jsonText);
                 errorEl.textContent = '';
-                document.getElementById('json-input-container').style.display = 'none';
-                document.getElementById('report-container').style.display = 'block';
                 startReport(parsedData);
+                showView(reportContainer);
             } catch (e) {
                 errorEl.textContent = 'JSON 格式無效，請檢查您的輸入。 ' + e.message;
             }
-        }
-
-        // Tab switching logic
-        const tabContainer = document.querySelector('.input-tabs');
-        tabContainer.addEventListener('click', (e) => {
-            if (e.target.classList.contains('tab-btn')) {
-                const tabName = e.target.dataset.tab;
-                tabContainer.querySelector('.active').classList.remove('active');
-                e.target.classList.add('active');
-                
-                document.querySelector('.tab-content.active').classList.remove('active');
-                document.getElementById(`${tabName}-content`).classList.add('active');
-                document.getElementById('json-error').textContent = '';
-            }
-        });
-        
-        // Event listener for pasting JSON
-        document.getElementById('load-json-btn').addEventListener('click', () => {
-            const jsonText = document.getElementById('json-textarea').value;
-            handleJsonData(jsonText);
-        });
-        
-        // Event listener for loading from file
-        document.getElementById('load-file-btn').addEventListener('click', () => {
-            const fileInput = document.getElementById('file-input');
-            const errorEl = document.getElementById('json-error');
-            if (fileInput.files.length === 0) {
-                errorEl.textContent = '請先選擇一個檔案。';
-                return;
-            }
-            const file = fileInput.files[0];
-            const reader = new FileReader();
-            reader.onload = (event) => {
-                handleJsonData(event.target.result);
-            };
-            reader.onerror = () => {
-                errorEl.textContent = '讀取檔案時發生錯誤。';
-            };
-            reader.readAsText(file);
         });
 
-        // Event listener for resetting the view
-        document.getElementById('reset-check-btn').addEventListener('click', () => {
-            document.getElementById('report-container').style.display = 'none';
-            document.getElementById('json-input-container').style.display = 'block';
-            document.getElementById('json-textarea').value = '';
-            document.getElementById('file-input').value = '';
-            document.getElementById('json-error').textContent = '';
+        document.getElementById('back-to-selection-btn1').addEventListener('click', () => {
+             showView(modeSelectionContainer);
         });
+        document.getElementById('back-to-selection-btn2').addEventListener('click', () => {
+             showView(modeSelectionContainer);
+        });
+
     </script>
 </body>
 </html>
