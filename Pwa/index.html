@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- PWA Basic Meta -->
     <meta name="theme-color" content="#007bff">
     <link rel="manifest" href="manifest.json">
     <title>德德美體美容中心</title>
@@ -10,7 +11,7 @@
 </head>
 <body>
 
-<div id="toast-notification"></div>
+<div id="toast-notification" class="toast-notification" role="alert" aria-live="assertive"></div>
 
 <div class="container">
     <h2>德德美體美容中心 <small id="price-version"></small></h2>
@@ -18,59 +19,58 @@
     <fieldset>
         <legend>快速操作</legend>
         <div class="header-actions">
-             <button id="save-btn" class="btn" title="儲存當前選擇">💾 儲存</button>
-             <button id="load-btn" class="btn" title="載入上次選擇">📂 讀取</button>
-             <button id="clear-btn" class="btn" title="清除所有選項">🗑️ 清除</button>
-             <button id="share-link-btn" class="btn" title="產生分享網址並複製">🔗 分享</button>
-             <button id="screenshot-btn" class="btn" title="輸出為圖片">📷 截圖</button>
-        </div>
+             <button id="save-btn" title="儲存當前選擇">💾 儲存</button>
+             <button id="load-btn" title="載入上次選擇">📂 讀取</button>
+             <button id="clear-btn" title="清除所有選項">🗑️ 清除</button>
+             <button id="share-link-btn" title="產生分享網址並複製">🔗 分享</button>
+             <button id="screenshot-btn" title="輸出為圖片">📷 截圖</button>
+           </div>
     </fieldset>
 
     <div class="search-container">
         <label for="search-input" class="sr-only">搜尋服務項目</label>
-        <input type="search" id="search-input" placeholder="🔍 搜尋服務項目 (例如：除毛)">
+        <input type="search" id="search-input" placeholder="搜尋服務項目...">
+    </div>
+
+    <div id="service-list">
+        <!-- 服務列表將由 JavaScript 動態載入 -->
+        <p>正在載入服務項目...</p>
     </div>
 
     <fieldset>
-        <legend>客戶身分折扣 (擇優套用)</legend>
-        <div class="customer-type">
-            <div class="service-item">
-                <input type="checkbox" id="student-discount">
-                <label for="student-discount">學生 (原價 8 折)</label>
-            </div>
-            <div class="service-item">
-                <input type="checkbox" id="birthday-discount">
-                <label for="birthday-discount">當月壽星 (原價 5 折)</label>
-            </div>
+        <legend>客戶身分</legend>
+        <div class="service-item">
+            <input type="checkbox" id="isBirthdayPerson">
+            <label for="isBirthdayPerson">當月壽星 (原價 5 折)</label>
+        </div>
+        <div class="service-item">
+            <input type="checkbox" id="isStudent">
+            <label for="isStudent">學生 (原價 8 折)</label>
         </div>
     </fieldset>
-    
-    <div id="services-container">
-        <!-- Services will be rendered here by JavaScript -->
-    </div>
-
 </div>
 
-<!-- Floating Summary Panel -->
-<div id="floating-summary" class="floating-summary" aria-hidden="true">
-    <div class="summary-content">
-        <div class="summary-header">
-            <h3>總計</h3>
-            <button id="toggle-details-btn" aria-label="顯示/隱藏明細">📋 明細</button>
+<div id="floating-summary">
+    <div id="summary-bar">
+        <div id="toggle-details" role="button" tabindex="0" aria-expanded="false" aria-controls="summary-details">
+            <span>查看明細</span>
+            <span class="arrow" aria-hidden="true">▲</span>
         </div>
-        <div class="summary-totals">
-            <div id="original-total-container">
-                <p>原價：<del id="floating-original-total">0</del> 元</p>
+        <div class="final-totals">
+            <p id="original-total-p" style="display: none;">原始總金額：<span id="floating-original-total">0</span> 元</p>
+            <div id="discount-note-container" style="display: none;">
+                <span class="discount-note"></span>
             </div>
-            <div id="savings-container">
+            <div id="savings-container" style="display: none;">
                 <p class="savings-note">共節省：<span id="floating-savings">0</span> 元</p>
             </div>
             <p id="discounted-total-p">總金額：<span id="floating-discounted-total">0</span> 元</p>
-            <div id="points-container">
+            <!-- 請將此區塊加到 dede.html 的浮動視窗中 -->
+            <div id="points-container" style="display: none; color: #007bff; font-weight: bold; margin-top: 8px;">
               <span>🎁 獲得點數：</span>
               <span id="floating-points">0</span>
-              <span> 點</span>
-            </div>
+            <span> 點</span>
+        </div>
         </div>
     </div>
     <div id="summary-details" aria-hidden="true">
@@ -85,262 +85,21 @@
     </div>
 </div>
 
+<!-- 引用 html2canvas 函式庫以支援截圖功能 -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script src="app.js"></script>
 <script>
-document.addEventListener('DOMContentLoaded', () => {
-    // DOM Elements
-    const servicesContainer = document.getElementById('services-container');
-    const searchInput = document.getElementById('search-input');
-    const studentDiscountCheckbox = document.getElementById('student-discount');
-    const birthdayDiscountCheckbox = document.getElementById('birthday-discount');
-    
-    // Floating Panel Elements
-    const floatingSummary = document.getElementById('floating-summary');
-    const floatingOriginalTotal = document.getElementById('floating-original-total');
-    const floatingDiscountedTotal = document.getElementById('floating-discounted-total');
-    const floatingSavings = document.getElementById('floating-savings');
-    const floatingPoints = document.getElementById('floating-points');
-    const savingsContainer = document.getElementById('savings-container');
-    const originalTotalContainer = document.getElementById('original-total-container');
-    const pointsContainer = document.getElementById('points-container');
-    const selectedItemsList = document.querySelector('#floating-selected-items-list ul');
-    const toggleDetailsBtn = document.getElementById('toggle-details-btn');
-    const summaryDetails = document.getElementById('summary-details');
-
-    // Quick Action Buttons
-    const saveBtn = document.getElementById('save-btn');
-    const loadBtn = document.getElementById('load-btn');
-    const clearBtn = document.getElementById('clear-btn');
-    const shareBtn = document.getElementById('share-link-btn');
-    const screenshotBtn = document.getElementById('screenshot-btn');
-
-    const today = new Date();
-
-    const isPromoActive = (promo) => {
-        if (!promo.start || !promo.end) return false;
-        const startDate = new Date(promo.start + 'T00:00:00');
-        const endDate = new Date(promo.end + 'T23:59:59');
-        return today >= startDate && today <= endDate;
-    };
-
-    const showToast = (message) => {
-        const toast = document.getElementById('toast-notification');
-        toast.textContent = message;
-        toast.className = 'toast-notification show';
-        setTimeout(() => { toast.className = toast.className.replace('show', ''); }, 3000);
-    };
-
-    function renderServices() {
-        if (!serviceData) return;
-        servicesContainer.innerHTML = '';
-        const query = searchInput.value.toLowerCase().trim();
-
-        serviceData.categories.forEach(category => {
-            const filteredItems = category.items.filter(item => item.name.toLowerCase().includes(query));
-            if (filteredItems.length === 0) return;
-
-            const fieldset = document.createElement('fieldset');
-            const legend = document.createElement('legend');
-            legend.textContent = category.name;
-            fieldset.appendChild(legend);
-
-            filteredItems.forEach(item => {
-                const itemDiv = document.createElement('div');
-                itemDiv.className = 'service-item';
-                
-                const checkbox = document.createElement('input');
-                checkbox.type = 'checkbox';
-                checkbox.id = item.id;
-                checkbox.dataset.price = item.price;
-
-                const label = document.createElement('label');
-                label.htmlFor = item.id;
-                label.textContent = item.name;
-
-                const priceSpan = document.createElement('span');
-                priceSpan.className = 'price';
-                
-                const activePromo = (item.promotions || []).find(isPromoActive);
-                if (activePromo) {
-                    checkbox.dataset.promoPrice = activePromo.price;
-                    priceSpan.innerHTML = `<span class="promo-price">${item.price.toLocaleString()}</span> ${activePromo.price.toLocaleString()}`;
-                } else {
-                    priceSpan.textContent = item.price.toLocaleString();
-                }
-
-                itemDiv.appendChild(checkbox);
-                itemDiv.appendChild(label);
-                itemDiv.appendChild(priceSpan);
-                fieldset.appendChild(itemDiv);
-            });
-            servicesContainer.appendChild(fieldset);
-        });
-        attachEventListeners();
-        updateTotals();
-    }
-    
-    function updateTotals() {
-        let originalTotal = 0;
-        let finalTotal = 0;
-        selectedItemsList.innerHTML = '';
-
-        const isStudent = studentDiscountCheckbox.checked;
-        const isBirthday = birthdayDiscountCheckbox.checked;
-        const checkboxes = servicesContainer.querySelectorAll('input[type="checkbox"]:checked');
-        
-        checkboxes.forEach(cb => {
-            const originalPrice = parseInt(cb.dataset.price, 10);
-            let priceOptions = [originalPrice];
-
-            // Add promo price if available
-            if (cb.dataset.promoPrice) {
-                priceOptions.push(parseInt(cb.dataset.promoPrice, 10));
-            }
-            // Add identity discounts
-            if (isStudent) {
-                priceOptions.push(Math.round(originalPrice * 0.8));
-            }
-            if (isBirthday) {
-                priceOptions.push(Math.round(originalPrice * 0.5));
-            }
-            
-            const bestPrice = Math.min(...priceOptions);
-
-            originalTotal += originalPrice;
-            finalTotal += bestPrice;
-            
-            const listItem = document.createElement('li');
-            const itemName = document.createElement('span');
-            itemName.className = 'item-name';
-            itemName.textContent = document.querySelector(`label[for="${cb.id}"]`).textContent;
-
-            const itemPriceDetail = document.createElement('span');
-            itemPriceDetail.className = 'item-price-detail';
-            
-            if (originalPrice !== bestPrice) {
-                 itemPriceDetail.innerHTML = `<del>${originalPrice.toLocaleString()}</del> ${bestPrice.toLocaleString()}`;
-            } else {
-                 itemPriceDetail.textContent = originalPrice.toLocaleString();
-            }
-
-            listItem.appendChild(itemName);
-            listItem.appendChild(itemPriceDetail);
-            selectedItemsList.appendChild(listItem);
-        });
-
-        const savings = originalTotal - finalTotal;
-        const points = Math.floor(finalTotal / 100);
-        
-        floatingOriginalTotal.textContent = originalTotal.toLocaleString();
-        floatingDiscountedTotal.textContent = finalTotal.toLocaleString();
-        floatingSavings.textContent = savings.toLocaleString();
-        floatingPoints.textContent = points.toLocaleString();
-
-        const hasSelection = checkboxes.length > 0;
-        floatingSummary.setAttribute('aria-hidden', !hasSelection);
-        document.body.style.paddingBottom = hasSelection ? (summaryDetails.getAttribute('aria-hidden') === 'false' ? '300px' : '150px') : '20px';
-        
-        const showSavings = savings > 0;
-        savingsContainer.style.display = showSavings ? 'block' : 'none';
-        originalTotalContainer.style.display = showSavings ? 'block' : 'none';
-        pointsContainer.style.display = hasSelection ? 'block' : 'none';
-    }
-
-    function attachEventListeners() {
-        const checkboxes = servicesContainer.querySelectorAll('input[type="checkbox"]');
-        checkboxes.forEach(cb => cb.addEventListener('change', updateTotals));
-    }
-
-    const handleQuickActions = () => {
-        saveBtn.addEventListener('click', () => {
-            const selectedIds = Array.from(servicesContainer.querySelectorAll('input[type="checkbox"]:checked')).map(cb => cb.id);
-            localStorage.setItem('selectedServices', JSON.stringify(selectedIds));
-            showToast('選項已儲存！');
-        });
-
-        loadBtn.addEventListener('click', () => {
-            const selectedIds = JSON.parse(localStorage.getItem('selectedServices') || '[]');
-            if (selectedIds.length === 0) {
-                showToast('沒有儲存的選項。');
-                return;
-            }
-            servicesContainer.querySelectorAll('input[type="checkbox"]').forEach(cb => {
-                cb.checked = selectedIds.includes(cb.id);
-            });
-            updateTotals();
-            showToast('已載入上次的選項！');
-        });
-
-        clearBtn.addEventListener('click', () => {
-            servicesContainer.querySelectorAll('input[type="checkbox"]:checked').forEach(cb => cb.checked = false);
-            updateTotals();
-            showToast('已清除所有選項。');
-        });
-
-        shareBtn.addEventListener('click', () => {
-            const selectedIds = Array.from(servicesContainer.querySelectorAll('input[type="checkbox"]:checked')).map(cb => cb.id);
-            if (selectedIds.length === 0) {
-                showToast('請先選擇服務項目。');
-                return;
-            }
-            const url = `${location.origin}${location.pathname}?services=${selectedIds.join(',')}`;
-            navigator.clipboard.writeText(url).then(() => {
-                showToast('分享連結已複製！');
-            }, () => {
-                showToast('複製失敗！');
-            });
-        });
-
-        screenshotBtn.addEventListener('click', () => {
-            showToast('正在產生圖片...');
-            const nodeToCapture = document.querySelector('.container');
-            html2canvas(nodeToCapture, { scale: 2, useCORS: true, backgroundColor: '#f4f4f9' }).then(canvas => {
-                const link = document.createElement('a');
-                link.download = `德德美體美容中心估價單-${new Date().toISOString().slice(0,10)}.png`;
-                link.href = canvas.toDataURL();
-                link.click();
-            });
-        });
-    };
-
-    async function initializeApp() {
-        serviceData = await loadServiceData();
-        if (serviceData) {
-            (serviceData.categories || []).forEach(category => {
-                (category.items || []).forEach(item => allServices.set(item.id, item));
-            });
-            renderServices();
-
-            const params = new URLSearchParams(location.search);
-            const servicesToSelect = params.get('services');
-            if (servicesToSelect) {
-                const ids = servicesToSelect.split(',');
-                ids.forEach(id => {
-                    const cb = document.getElementById(id);
-                    if (cb) cb.checked = true;
-                });
-                updateTotals();
-            }
-
-        } else {
-            servicesContainer.innerHTML = '<p>無法載入服務項目。請檢查您的網路連線或聯繫管理員。</p>';
-        }
-        handleQuickActions();
-    }
-    
-    searchInput.addEventListener('input', renderServices);
-    studentDiscountCheckbox.addEventListener('change', updateTotals);
-    birthdayDiscountCheckbox.addEventListener('change', updateTotals);
-
-    toggleDetailsBtn.addEventListener('click', () => {
-        const isHidden = summaryDetails.getAttribute('aria-hidden') === 'true';
-        summaryDetails.setAttribute('aria-hidden', !isHidden);
-        updateTotals(); // Recalculate body padding
+    // PWA: 註冊 Service Worker
+    if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('./service-worker.js', { scope: './' })
+    .then(registration => {
+        console.log('ServiceWorker 註冊成功: ', registration.scope);
+    })
+    .catch(error => {
+        console.log('ServiceWorker 註冊失敗: ', error);
     });
-
-    initializeApp();
-});
+    }
 </script>
+
 </body>
 </html>
