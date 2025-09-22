@@ -8,59 +8,6 @@
     <link rel="manifest" href="manifest.json">
     <title>德德美體美容中心</title>
     <link rel="stylesheet" href="dede.css">
-    <style>
-        /* index.html 獨有樣式 */
-        .service-item { margin-bottom: 12px; display: flex; align-items: center; }
-        .service-item input[type="checkbox"] { margin-right: 10px; width: 20px; height: 20px; }
-        .service-item label { font-weight: normal; cursor: pointer; flex-grow: 1; }
-        .service-item .price { margin-left: 10px; font-weight: bold; white-space: nowrap; }
-        .original-price { text-decoration: line-through; color: #6c757d; font-weight: normal; margin-right: 5px; }
-        .promo-label { font-size: 0.8em; background: #ffc107; color: #333; padding: 2px 6px; border-radius: 4px; margin-left: 8px; }
-
-        /* 浮動總計視窗 */
-        #floating-summary {
-            position: fixed; bottom: 20px; left: 50%;
-            transform: translateX(-50%);
-            width: 90%; max-width: 400px;
-            background-color: #fff; border-radius: 10px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
-            padding: 15px; z-index: 1000;
-            cursor: pointer; display: flex; justify-content: space-between; align-items: center;
-        }
-        .summary-total { text-align: right; }
-        .summary-total p { margin: 0; }
-        #floating-total { font-weight: bold; color: #007bff; }
-        .discount-note { color: #28a745; font-size: 0.9em; }
-        .savings-note { margin-top: 4px; color: #28a745; font-size: 0.9em; }
-
-        /* 消費明細彈出視窗 */
-        #summary-details {
-            position: fixed; bottom: 0; left: 0;
-            width: 100%; height: 60vh; max-height: 0;
-            background: #fff; border-radius: 20px 20px 0 0;
-            box-shadow: 0 -4px 20px rgba(0,0,0,0.15);
-            z-index: 999; overflow: hidden;
-            transition: max-height 0.3s ease-in-out;
-        }
-        #summary-details[aria-hidden="false"] { max-height: 60vh; }
-        .details-content { display: flex; flex-direction: column; height: 100%; padding: 0 20px; }
-        .details-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #007bff; padding-bottom: 10px; margin-bottom: 10px; flex-shrink: 0; }
-        .details-header h3 { margin: 0; padding: 0; border: none; color: #0056b3; }
-        .header-actions { display: inline-block; }
-        .header-actions button {
-            background: #e9ecef; border: 1px solid #ced4da; border-radius: 5px; cursor: pointer;
-            padding: 0; width: 64px; height: 32px; font-size: 16px; line-height: 32px;
-            text-align: center; color: #495057;
-        }
-        .header-actions button:hover { background: #dee2e6; }
-
-        #floating-selected-items-list { overflow-y: auto; flex-grow: 1; }
-        #floating-selected-items-list ul { list-style: none; padding: 0; }
-        #floating-selected-items-list li { padding: 8px 0; border-bottom: 1px dotted #eee; display: flex; justify-content: space-between; }
-        .item-name { flex-grow: 1; }
-        .item-price-detail { white-space: nowrap; margin-left: 15px; }
-        .final-totals { text-align: right; }
-    </style>
 </head>
 <body>
 
@@ -85,31 +32,45 @@
         <input type="search" id="search-input" placeholder="搜尋服務項目...">
     </div>
 
-    <form id="service-form">
-        <!-- 內容由 JS 動態生成 -->
-    </form>
+    <div id="service-list">
+        <!-- 服務列表將由 JavaScript 動態載入 -->
+        <p>正在載入服務項目...</p>
+    </div>
+
+    <fieldset>
+        <legend>客戶身分</legend>
+        <div class="service-item">
+            <input type="checkbox" id="isBirthdayPerson">
+            <label for="isBirthdayPerson">當月壽星 (原價 5 折)</label>
+        </div>
+        <div class="service-item">
+            <input type="checkbox" id="isStudent">
+            <label for="isStudent">學生 (原價 8 折)</label>
+        </div>
+    </fieldset>
 </div>
 
-<!-- 浮動總計與消費明細 -->
-<div id="floating-summary-wrapper">
-    <div id="floating-summary" role="button" tabindex="0" aria-haspopup="true" aria-expanded="false" aria-controls="summary-details">
-        <div>
-            <p>已選 <span id="selected-count">0</span> 項</p>
-            <p id="total-p">原價：<span id="floating-total">0</span> 元</p>
+<div id="floating-summary">
+    <div id="summary-bar">
+        <div id="toggle-details" role="button" tabindex="0" aria-expanded="false" aria-controls="summary-details">
+            <span>查看明細</span>
+            <span class="arrow" aria-hidden="true">▲</span>
         </div>
-        <div class="summary-total">
-            <div id="discount-container" style="display: none;">
-               <span class="discount-note"></span>
+        <div class="final-totals">
+            <p id="original-total-p" style="display: none;">原始總金額：<span id="floating-original-total">0</span> 元</p>
+            <div id="discount-note-container" style="display: none;">
+                <span class="discount-note"></span>
             </div>
             <div id="savings-container" style="display: none;">
                 <p class="savings-note">共節省：<span id="floating-savings">0</span> 元</p>
             </div>
             <p id="discounted-total-p">總金額：<span id="floating-discounted-total">0</span> 元</p>
+            <!-- 請將此區塊加到 dede.html 的浮動視窗中 -->
             <div id="points-container" style="display: none; color: #007bff; font-weight: bold; margin-top: 8px;">
               <span>🎁 獲得點數：</span>
               <span id="floating-points">0</span>
-              <span> 點</span>
-            </div>
+            <span> 點</span>
+        </div>
         </div>
     </div>
     <div id="summary-details" aria-hidden="true">
@@ -124,47 +85,21 @@
     </div>
 </div>
 
+<!-- 引用 html2canvas 函式庫以支援截圖功能 -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script src="app.js"></script>
 <script>
     // PWA: 註冊 Service Worker
     if ('serviceWorker' in navigator) {
         navigator.serviceWorker.register('./service-worker.js', { scope: './' })
-            .then(reg => console.log('Service Worker 註冊成功:', reg))
-            .catch(err => console.error('Service Worker 註冊失敗:', err));
-    }
-    
-    document.addEventListener('DOMContentLoaded', async () => {
-        const serviceData = await loadServiceData();
-        if (!serviceData) {
-            document.getElementById('service-form').innerHTML = '<p style="color:red;">無法載入服務項目，請檢查網路連線或聯繫管理員。</p>';
-            return;
-        }
-
-        const allServices = new Map();
-        const serviceForm = document.getElementById('service-form');
-        const today = new Date().toISOString().split('T')[0];
-
-        // ... 此處省略頁面獨有的、長篇的事件處理與計算邏輯 ...
-        // 這些邏輯與 index.html 高度綁定，不適合提取到 app.js
-
-        // 初始化頁面
-        (serviceData.categories || []).forEach(category => {
-            const fieldset = document.createElement('fieldset');
-            const legend = document.createElement('legend');
-            legend.textContent = category.name;
-            fieldset.appendChild(legend);
-
-            (category.items || []).forEach(item => {
-                const itemData = { ...item, categoryName: category.name, promotions: item.promotions || [] };
-                allServices.set(item.id, itemData);
-                // ... 動態產生 HTML 的邏輯 ...
-            });
-            serviceForm.appendChild(fieldset);
-        });
-
-        // ... 其他初始化與事件監聽 ...
+    .then(registration => {
+        console.log('ServiceWorker 註冊成功: ', registration.scope);
+    })
+    .catch(error => {
+        console.log('ServiceWorker 註冊失敗: ', error);
     });
+    }
 </script>
+
 </body>
 </html>
