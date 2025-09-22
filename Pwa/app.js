@@ -1,21 +1,19 @@
 /**
  * 載入服務資料的核心函式
- * 採用網路優先策略，確保總是嘗試獲取最新資料。
  * @returns {Promise<object|null>} 成功時回傳服務資料物件，失敗時回傳 null
  */
 async function loadServiceData() {
     try {
-        // 加入時間戳記以繞過瀏覽器快取，確保請求到達伺服器
+        // 加入時間戳記以繞過瀏覽器快取
         const response = await fetch(`services.json?t=${new Date().getTime()}`);
         if (!response.ok) {
             throw new Error(`伺服器回應錯誤: ${response.status}`);
         }
         const data = await response.json();
-        console.log('成功從網路載入 services.json');
+        console.log('成功載入 services.json');
         return data;
     } catch (error) {
-        console.error('從網路載入 services.json 失敗:', error);
-        // 在 PWA 應用中，可以在此處加入從快取讀取的備用邏輯
+        console.error('載入 services.json 失敗:', error);
         return null;
     }
 }

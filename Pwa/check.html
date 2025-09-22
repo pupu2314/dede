@@ -41,10 +41,10 @@
     </div>
 
     <div id="report-container" style="display: none;">
-        <div class="container">
+        <div class="container" style="max-width: 960px;">
             <button id="back-to-selection-btn2" class="btn btn-secondary" style="float: right; width: auto; margin: 15px 0;">返回選擇</button>
             <h1>促銷設定檢查頁面</h1>
-            <p class="note">此頁面用於檢查所有服務項目與組合的促銷活動狀態，方便您快速了解哪些活動正在進行、即將開始或已經過期。</p>
+            <p class="note">此頁面用於檢查所有服務項目與組合的促銷活動狀態。</p>
             
             <div class="view-toggle">
                 <label><input type="checkbox" id="show-only-promos-toggle"> 僅顯示優惠項目</label>
@@ -58,10 +58,10 @@
         </div>
     </div>
 
-
     <script src="app.js"></script>
     <script>
-        let currentJsonData = null; // 儲存當前載入的資料
+        // 此頁面獨有的應用程式邏輯
+        let currentJsonData = null; 
 
         function renderItemsReport(today, allServices, categories = [], showOnlyPromos) {
             const container = document.getElementById('item-reports-container');
@@ -71,19 +71,34 @@
                 const itemsToShow = showOnlyPromos ? (category.items || []).filter(item => item.promotions && item.promotions.length > 0) : (category.items || []);
                 if (itemsToShow.length === 0) return;
 
-                let tableHtml = `<h3>${escapeHtml(category.name)}</h3><table><thead>...</thead><tbody>`;
+                let tableHtml = `<h3>${escapeHtml(category.name)}</h3>
+                    <table><thead><tr><th>項目名稱</th><th style="text-align: right;">原價</th><th>促銷活動</th><th style="text-align: right;">促銷價</th><th>折扣</th><th>開始日期</th><th>結束日期</th><th>狀態</th></tr></thead><tbody>`;
+                
                 itemsToShow.forEach(item => {
                     const hasPromos = item.promotions && item.promotions.length > 0;
                     if (hasPromos) {
                         item.promotions.forEach((promo, index) => {
-                            const status = getPromoStatus(promo, today); // 使用 app.js 的函式
+                            const status = getPromoStatus(promo, today); // from app.js
                             const discountAmount = item.price - promo.price;
                             const discountPercentage = item.price > 0 ? (discountAmount / item.price) * 100 : 0;
                             const discountText = `省 ${discountAmount.toLocaleString()} (${discountPercentage.toFixed(1)}%)`;
-                            tableHtml += `<tr>...</tr>`; // 省略重複的 HTML 結構
+                            
+                            tableHtml += `<tr>
+                                ${index === 0 ? `<td data-label="項目名稱" rowspan="${item.promotions.length}">${escapeHtml(item.name)}</td><td data-label="原價" rowspan="${item.promotions.length}" style="text-align: right;">${item.price.toLocaleString()}</td>` : ''}
+                                <td data-label="促銷活動">${escapeHtml(promo.label)}</td>
+                                <td data-label="促銷價" style="text-align: right;">${promo.price.toLocaleString()}</td>
+                                <td data-label="折扣" class="discount-info">${discountText}</td>
+                                <td data-label="開始日期">${promo.start}</td>
+                                <td data-label="結束日期">${promo.end}</td>
+                                <td data-label="狀態"><span class="status ${status.class}">${status.text}</span></td>
+                            </tr>`;
                         });
                     } else {
-                        tableHtml += `<tr>...</tr>`;
+                        tableHtml += `<tr>
+                            <td data-label="項目名稱">${escapeHtml(item.name)}</td>
+                            <td data-label="原價" style="text-align: right;">${item.price.toLocaleString()}</td>
+                            <td data-label="促銷詳情" colspan="6" class="no-promo-cell">---</td>
+                        </tr>`;
                     }
                 });
                 tableHtml += '</tbody></table>';
@@ -91,9 +106,11 @@
             });
             container.innerHTML = finalHtml || '<p>找不到符合篩選條件的服務項目。</p>';
         }
-        
-        // 此處省略了 renderCombosReport 函式，其邏輯與 renderItemsReport 類似
 
+        function renderCombosReport(today, allServices, combos = [], showOnlyPromos) {
+            // ... 此處省略了 renderCombosReport 的完整邏輯，與 renderItemsReport 類似 ...
+        }
+        
         function renderReport() {
             if (!currentJsonData) return;
             const showOnlyPromos = document.getElementById('show-only-promos-toggle').checked;
@@ -101,10 +118,35 @@
             (currentJsonData.categories || []).forEach(cat => (cat.items || []).forEach(item => allServices.set(item.id, item)));
             const today = new Date().toISOString().split('T')[0];
             renderItemsReport(today, allServices, currentJsonData.categories, showOnlyPromos);
-            // renderCombosReport(...);
+            renderCombosReport(today, allServices, currentJsonData.combos, showOnlyPromos);
+        }
+
+        function startReport(jsonData) {
+            currentJsonData = jsonData;
+            renderReport();
+        }
+
+        // --- UI 控制與事件監聽 ---
+        const modeSelectionContainer = document.getElementById('mode-selection-container');
+        const jsonInputContainer = document.getElementById('json-input-container');
+        const reportContainer = document.getElementById('report-container');
+        function showView(view) {
+            modeSelectionContainer.style.display = 'none';
+            jsonInputContainer.style.display = 'none';
+            reportContainer.style.display = 'none';
+            view.style.display = 'block';
         }
         
-        // 此處省略了 UI 控制與事件監聽的程式碼
+        document.getElementById('load-from-server-btn').addEventListener('click', async () => {
+            document.getElementById('server-load-error').textContent = '載入中...';
+            const jsonData = await loadServiceData(); // from app.js
+            if (jsonData) { startReport(jsonData); showView(reportContainer); } 
+            else { document.getElementById('server-load-error').textContent = '從伺服器載入資料失敗。'; }
+        });
+
+        // ... 此處省略了其他按鈕的事件監聽邏輯 ...
+        document.getElementById('show-only-promos-toggle').addEventListener('change', renderReport);
+
     </script>
 </body>
 </html>
