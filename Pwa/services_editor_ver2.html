@@ -316,7 +316,30 @@
                 removeCombo: function(index) { this.data.combos.splice(index, 1); this.setDirty(); this.render(); },
                 addComboPromotion: function(comboIndex) { const path = `combos[${comboIndex}]`; this.updateAndMark(path, () => { if (!this.data.combos[comboIndex].promotions) this.data.combos[comboIndex].promotions = []; this.data.combos[comboIndex].promotions.push({ label: '組合促銷', price: 0, start: '', end: '' }); }); },
                 removeComboPromotion: function(comboIndex, promoIndex) { const path = `combos[${comboIndex}]`; this.updateAndMark(path, () => this.data.combos[comboIndex].promotions.splice(promoIndex, 1)); },
-                handleDateShortcut: function(button) { const { type, pathPrefix } = button.dataset, now = new Date(); let targetYear = now.getFullYear(), targetMonth = now.getMonth(); if (type === 'next-month') { if(targetMonth === 11) { targetYear++; targetMonth = 0; } else { targetMonth++; } } const firstDay = new Date(targetYear, targetMonth, 1), lastDay = new Date(targetYear, targetMonth + 1, 0); const formatDate = (date) => date.toISOString().split('T')[0]; this.updateDataFromInput(`${pathPrefix}.start`, formatDate(firstDay), true); this.updateDataFromInput(`${pathPrefix}.end`, formatDate(lastDay), true); },
+                handleDateShortcut: function(button) {
+                    const { type, pathPrefix } = button.dataset;
+                    const now = new Date();
+                    let targetYear = now.getFullYear();
+                    let targetMonth = now.getMonth();
+                    if (type === 'next-month') {
+                        if (targetMonth === 11) {
+                            targetYear++;
+                            targetMonth = 0;
+                        } else {
+                            targetMonth++;
+                        }
+                    }
+                    const firstDay = new Date(targetYear, targetMonth, 1);
+                    const lastDay = new Date(targetYear, targetMonth + 1, 0);
+                    const formatDate = (date) => {
+                        const year = date.getFullYear();
+                        const month = (date.getMonth() + 1).toString().padStart(2, '0');
+                        const day = date.getDate().toString().padStart(2, '0');
+                        return `${year}-${month}-${day}`;
+                    };
+                    this.updateDataFromInput(`${pathPrefix}.start`, formatDate(firstDay), true);
+                    this.updateDataFromInput(`${pathPrefix}.end`, formatDate(lastDay), true);
+                },
 
                 // --- Event Listeners ---
                 addEventListeners: function() {
