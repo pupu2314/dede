@@ -12,6 +12,29 @@
             background-color: #1a202c;
             color: #e2e8f0;
         }
+        .scroll-to-top {
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            width: 3.5rem;
+            height: 3.5rem;
+            background-color: #6366f1;
+            color: white;
+            border-radius: 9999px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            transition: opacity 0.3s, transform 0.3s;
+            transform: translateY(100px);
+            opacity: 0;
+            cursor: pointer;
+            z-index: 1000;
+        }
+        .scroll-to-top.show {
+            transform: translateY(0);
+            opacity: 1;
+        }
     </style>
 </head>
 <body class="p-4 sm:p-8">
@@ -55,6 +78,9 @@
                 </div>
             </div>
         </div>
+        
+        <!-- 符合筆數顯示區 -->
+        <p id="results-count" class="text-sm text-gray-400 mb-4 text-center"></p>
 
         <!-- 顯示結果區塊 -->
         <div id="results-container" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -71,6 +97,13 @@
 
     </div>
 
+    <!-- 返回頂端按鈕 -->
+    <div id="scroll-to-top-btn" class="scroll-to-top">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 10l7-7m0 0l7 7m-7-7v18" />
+        </svg>
+    </div>
+
     <script>
         // Store the full, unfiltered dataset
         let fullCrossingData = [];
@@ -84,10 +117,14 @@
         const resultsContainer = document.getElementById('results-container');
         const loadingMessage = document.getElementById('loading-message');
         const noResultsMessage = document.getElementById('no-results-message');
+        const resultsCountElement = document.getElementById('results-count');
+        const scrollToTopBtn = document.getElementById('scroll-to-top-btn');
 
         // Render the crossing cards
         function renderCrossings(data) {
             resultsContainer.innerHTML = '';
+            resultsCountElement.textContent = `共 ${data.length} 筆符合的平交道資訊`;
+
             if (data.length === 0) {
                 noResultsMessage.classList.remove('hidden');
             } else {
@@ -95,17 +132,20 @@
                 data.forEach(item => {
                     const card = document.createElement('div');
                     card.className = 'bg-gray-800 p-6 rounded-2xl shadow-lg transition-transform transform hover:scale-105 hover:bg-gray-700';
+
+                    const oldName = item['舊名或別名'] ? ` (${item['舊名或別名']})` : '';
+
                     card.innerHTML = `
-                        <h2 class="text-xl font-bold text-indigo-400 mb-2">${item['平交道名稱']}</h2>
-                        <p class="text-sm text-gray-400 mb-4">編號：${item['編號']}</p>
+                        <div class="flex flex-col sm:flex-row sm:items-baseline sm:space-x-2 mb-2">
+                            <h2 class="text-xl font-bold text-indigo-400">${item['平交道名稱']}${oldName}</h2>
+                            <p class="text-sm text-gray-400">編號：${item['編號']}</p>
+                        </div>
                         <div class="space-y-2 text-sm">
-                            <p><span class="font-medium text-gray-300">所在縣市：</span>${item['所在縣市']}</p>
+                            <p><span class="font-medium text-gray-300">所在縣市：</span>${item['所在縣市']} / <span class="font-medium text-gray-300">區間：</span>${item['區間']}</p>
                             <p><span class="font-medium text-gray-300">路線別：</span>${item['路線別']}</p>
-                            <p><span class="font-medium text-gray-300">區間：</span>${item['區間']}</p>
                             <p><span class="font-medium text-gray-300">分駐所：</span>${item['分駐所']}</p>
                             <p><span class="font-medium text-gray-300">種類：</span>${item['平交道種類']}</p>
                             <p><span class="font-medium text-gray-300">里程：</span>${item['里程']}</p>
-                            <p><span class="font-medium text-gray-300">舊名：</span>${item['舊名或別名'] || '無'}</p>
                         </div>
                         <a href="${item['Google地圖']}" target="_blank" class="mt-4 inline-block text-indigo-300 hover:text-indigo-200 transition-colors">
                             <div class="flex items-center space-x-1">
@@ -198,6 +238,19 @@
         stationFilter.addEventListener('change', filterAndRender);
         sectionFilter.addEventListener('change', filterAndRender);
         lineFilter.addEventListener('change', filterAndRender);
+
+        // Scroll to top functionality
+        window.addEventListener('scroll', () => {
+            if (window.scrollY > 300) {
+                scrollToTopBtn.classList.add('show');
+            } else {
+                scrollToTopBtn.classList.remove('show');
+            }
+        });
+
+        scrollToTopBtn.addEventListener('click', () => {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        });
 
         // Fetch data on page load
         window.addEventListener('load', () => {
