@@ -121,7 +121,6 @@
         <button type="button" class="btn btn-secondary" id="copy-btn" style="display: none;">複製 JSON</button>
         <div id="validation-message-container">
             <pre id="validation-message"></pre>
-            <pre id="validation-warnings"></pre>
         </div>
     </div>
     
@@ -150,7 +149,6 @@
                     generateBtn: document.getElementById('generate-btn'),
                     copyBtn: document.getElementById('copy-btn'),
                     validationMessage: document.getElementById('validation-message'),
-                    validationWarnings: document.getElementById('validation-warnings'),
                     toggleEditMode: document.getElementById('toggle-edit-mode'),
                     storageToast: document.getElementById('storage-toast'),
                     discardStorageBtn: document.getElementById('discard-storage-btn'),
@@ -175,7 +173,7 @@
                 },
                 
                 // --- State & Storage ---
-                setDirty: function(dirty = true) { if (dirty) { this.isDirty = true; this.generatedJson = ''; this.elements.generateBtn.style.display = 'inline-block'; this.elements.copyBtn.style.display = 'none'; this.elements.validationMessage.textContent = ''; this.elements.validationWarnings.textContent = ''; this.saveStateToStorage(); } else { this.isDirty = false; } },
+                setDirty: function(dirty = true) { if (dirty) { this.isDirty = true; this.generatedJson = ''; this.elements.generateBtn.style.display = 'inline-block'; this.elements.copyBtn.style.display = 'none'; this.elements.validationMessage.textContent = ''; this.saveStateToStorage(); } else { this.isDirty = false; } },
                 markAsModified: function(path) { if (path) { const match = path.match(/^(categories\[\d+\]\.items\[\d+\]|categories\[\d+\]|combos\[\d+\])/); if (match) this.modifiedPaths.add(match[0]); } },
                 saveStateToStorage: function() { const state = { data: this.data, modifiedPaths: Array.from(this.modifiedPaths) }; localStorage.setItem(this.STORAGE_KEY, JSON.stringify(state)); },
                 loadStateFromStorage: async function() { const savedStateJSON = localStorage.getItem(this.STORAGE_KEY); if (savedStateJSON) { const savedState = JSON.parse(savedStateJSON); this.data = savedState.data; this.modifiedPaths = new Set(savedState.modifiedPaths); this.setDirty(); this.elements.storageToast.classList.add('show'); document.body.classList.add('toast-visible'); } },
@@ -293,7 +291,20 @@
                 calculateComboOriginalPrice: function(combo) { return (combo.itemIds || []).reduce((sum, id) => { const item = this.allServiceItems.find(i => i.id === id); return sum + (item ? item.price : 0); }, 0); },
                 
                 // --- Data Manipulation ---
-                updateDataFromInput: function(path, value) { let current = this.data; const keys = path.replace(/\[(\d+)\]/g, '.$1').split('.'); for (let i = 0; i < keys.length - 1; i++) { current = current[keys[i]]; } const finalKey = keys[keys.length - 1]; const isNumericPrice = typeof current[finalKey] === 'number' && !path.includes('promotions'); current[finalKey] = isNumericPrice ? parseFloat(value) || 0 : value; this.markAsModified(path); this.setDirty(); if(path.includes('items') && (path.includes('id') || path.includes('name') || path.includes('price')) && !path.includes('promotions')) { this.flattenServiceItems(); this.render(); } },
+                updateDataFromInput: function(path, value, shouldRender = false) { 
+                    let current = this.data; 
+                    const keys = path.replace(/\[(\d+)\]/g, '.$1').split('.'); 
+                    for (let i = 0; i < keys.length - 1; i++) { current = current[keys[i]]; } 
+                    const finalKey = keys[keys.length - 1]; 
+                    const isNumericPrice = typeof current[finalKey] === 'number' && path.endsWith('.price') && !path.includes('promotions');
+                    current[finalKey] = isNumericPrice ? parseFloat(value) || 0 : value;
+                    this.markAsModified(path); 
+                    this.setDirty(); 
+                    if (shouldRender) { 
+                        this.flattenServiceItems();
+                        this.render();
+                    } 
+                },
                 updateAndMark: function(path, action) { action(); this.markAsModified(path); this.setDirty(); this.render(); },
                 addCategory: function() { if(!this.data.categories) this.data.categories = []; this.data.categories.push({ name: '新類別', items: [] }); this.setDirty(); this.render(); },
                 removeCategory: function(index) { this.data.categories.splice(index, 1); this.setDirty(); this.render(); },
@@ -305,15 +316,15 @@
                 removeCombo: function(index) { this.data.combos.splice(index, 1); this.setDirty(); this.render(); },
                 addComboPromotion: function(comboIndex) { const path = `combos[${comboIndex}]`; this.updateAndMark(path, () => { if (!this.data.combos[comboIndex].promotions) this.data.combos[comboIndex].promotions = []; this.data.combos[comboIndex].promotions.push({ label: '組合促銷', price: 0, start: '', end: '' }); }); },
                 removeComboPromotion: function(comboIndex, promoIndex) { const path = `combos[${comboIndex}]`; this.updateAndMark(path, () => this.data.combos[comboIndex].promotions.splice(promoIndex, 1)); },
-                handleDateShortcut: function(button) { const { type, pathPrefix } = button.dataset, now = new Date(); let targetYear = now.getFullYear(), targetMonth = now.getMonth(); if (type === 'next-month') { if(targetMonth === 11) { targetYear++; targetMonth = 0; } else { targetMonth++; } } const firstDay = new Date(targetYear, targetMonth, 1), lastDay = new Date(targetYear, targetMonth + 1, 0); const formatDate = (date) => date.toISOString().split('T')[0]; this.updateDataFromInput(`${pathPrefix}.start`, formatDate(firstDay)); this.updateDataFromInput(`${pathPrefix}.end`, formatDate(lastDay)); this.render(); },
+                handleDateShortcut: function(button) { const { type, pathPrefix } = button.dataset, now = new Date(); let targetYear = now.getFullYear(), targetMonth = now.getMonth(); if (type === 'next-month') { if(targetMonth === 11) { targetYear++; targetMonth = 0; } else { targetMonth++; } } const firstDay = new Date(targetYear, targetMonth, 1), lastDay = new Date(targetYear, targetMonth + 1, 0); const formatDate = (date) => date.toISOString().split('T')[0]; this.updateDataFromInput(`${pathPrefix}.start`, formatDate(firstDay), true); this.updateDataFromInput(`${pathPrefix}.end`, formatDate(lastDay), true); },
 
                 // --- Event Listeners ---
                 addEventListeners: function() {
                     this.elements.toggleEditMode.addEventListener('change', (e) => { document.body.classList.toggle('detail-edit-mode', e.target.checked); });
                     this.elements.mainContainer.addEventListener('click', e => { const target = e.target; if (target.id === 'add-category-btn') this.addCategory(); else if (target.classList.contains('add-item-btn')) this.addItem(parseInt(target.dataset.catIndex)); else if (target.classList.contains('add-promotion-btn')) this.addPromotion(parseInt(target.dataset.catIndex), parseInt(target.dataset.itemIndex)); else if (target.classList.contains('add-combo-promotion-btn')) this.addComboPromotion(parseInt(target.dataset.comboIndex)); else if (target.classList.contains('remove-category-btn') && confirm('您確定要移除這個類別嗎？')) this.removeCategory(parseInt(target.dataset.index)); else if (target.classList.contains('remove-item-btn') && confirm('您確定要移除這個項目嗎？')) this.removeItem(parseInt(target.dataset.catIndex), parseInt(target.dataset.itemIndex)); else if (target.classList.contains('remove-promotion-btn') && confirm('您確定要移除這個促銷活動嗎？')) this.removePromotion(parseInt(target.dataset.catIndex), parseInt(target.dataset.itemIndex), parseInt(target.dataset.promoIndex)); else if (target.classList.contains('remove-combo-btn') && confirm('您確定要移除這個組合嗎？')) this.removeCombo(parseInt(target.dataset.index)); else if (target.classList.contains('remove-combo-promotion-btn') && confirm('您確定要移除這個組合的促銷活動嗎？')) this.removeComboPromotion(parseInt(target.dataset.comboIndex), parseInt(target.dataset.promoIndex)); else if (target.classList.contains('date-shortcut-btn')) this.handleDateShortcut(target); });
                     this.elements.addComboBtn.addEventListener('click', () => this.addCombo());
-                    this.elements.mainContainer.addEventListener('input', e => { if (e.target.dataset.path) this.updateDataFromInput(e.target.dataset.path, e.target.value); if (e.target.classList.contains('promo-price-input')) this.updateDiscountDisplay(e.target); });
-                    this.elements.mainContainer.addEventListener('change', e => { if (e.target.classList.contains('combo-items-select')) { const path = e.target.dataset.path; const selectedIds = Array.from(e.target.selectedOptions).map(opt => opt.value); this.updateDataFromInput(path, selectedIds); this.render(); }});
+                    this.elements.mainContainer.addEventListener('input', e => { if (e.target.dataset.path) this.updateDataFromInput(e.target.dataset.path, e.target.value, false); if (e.target.classList.contains('promo-price-input')) this.updateDiscountDisplay(e.target); });
+                    this.elements.mainContainer.addEventListener('change', e => { const path = e.target.dataset.path; if (!path) return; if (e.target.classList.contains('combo-items-select')) { const selectedIds = Array.from(e.target.selectedOptions).map(opt => opt.value); this.updateDataFromInput(path, selectedIds, true); } else if (path.endsWith('.price') && !path.includes('promotions')) { this.flattenServiceItems(); this.render(); } else if (path.endsWith('.id') || path.endsWith('.name')) { this.flattenServiceItems(); this.render(); } });
                     this.elements.discardStorageBtn.addEventListener('click', () => { if (confirm('您確定要放棄所有暫存的變更嗎？這將會重載頁面並遺失所有未儲存的內容。')) { this.clearStorage(); window.location.reload(); }});
                     this.elements.generateBtn.addEventListener('click', () => { const validationResult = this.validateData(); this.elements.validationMessage.textContent = validationResult.errors; if (validationResult.isValid) { this.buildAndShowDiffModal(); }});
                     this.elements.copyBtn.addEventListener('click', () => { if (this.generatedJson) { navigator.clipboard.writeText(this.generatedJson).then(() => { alert('JSON 已複製到剪貼簿！'); }).catch(err => { alert('複製失敗'); }); }});
