@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>台灣平交道查詢</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #1a202c;
+            color: #e2e8f0;
+        }
+    </style>
+</head>
+<body class="p-4 sm:p-8">
+
+    <div class="max-w-7xl mx-auto">
+        <h1 class="text-3xl sm:text-4xl font-extrabold text-center mb-6 text-indigo-400">平交道資訊查詢</h1>
+        
+        <!-- 篩選器與搜尋欄 -->
+        <div class="bg-gray-800 p-6 rounded-2xl shadow-xl mb-8 flex flex-col md:flex-row md:items-end md:space-x-4 space-y-4 md:space-y-0">
+            <!-- 名稱搜尋 -->
+            <div class="flex-1">
+                <label for="search-input" class="block text-sm font-medium text-gray-400 mb-1">平交道名稱</label>
+                <input type="text" id="search-input" placeholder="例如：成功路" class="w-full px-4 py-2 bg-gray-700 text-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-colors">
+            </div>
+
+            <!-- 下拉式篩選器 -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 flex-grow">
+                <div>
+                    <label for="city-filter" class="block text-sm font-medium text-gray-400 mb-1">所在縣市</label>
+                    <select id="city-filter" class="w-full px-4 py-2 bg-gray-700 text-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-colors">
+                        <option value="">全部</option>
+                    </select>
+                </div>
+                <div>
+                    <label for="station-filter" class="block text-sm font-medium text-gray-400 mb-1">分駐所</label>
+                    <select id="station-filter" class="w-full px-4 py-2 bg-gray-700 text-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-colors">
+                        <option value="">全部</option>
+                    </select>
+                </div>
+                <div>
+                    <label for="section-filter" class="block text-sm font-medium text-gray-400 mb-1">區間</label>
+                    <select id="section-filter" class="w-full px-4 py-2 bg-gray-700 text-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-colors">
+                        <option value="">全部</option>
+                    </select>
+                </div>
+                <div>
+                    <label for="line-filter" class="block text-sm font-medium text-gray-400 mb-1">路線別</label>
+                    <select id="line-filter" class="w-full px-4 py-2 bg-gray-700 text-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-colors">
+                        <option value="">全部</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <!-- 顯示結果區塊 -->
+        <div id="results-container" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            <!-- 動態生成的平交道卡片會顯示在這裡 -->
+        </div>
+
+        <div id="loading-message" class="text-center text-gray-400 mt-12 text-lg">
+            正在載入資料...
+        </div>
+
+        <div id="no-results-message" class="hidden text-center text-gray-400 mt-12 text-lg">
+            沒有找到符合條件的平交道資訊。
+        </div>
+
+    </div>
+
+    <script>
+        // 將資料定義為全域變數，但暫時不賦值
+        let crossingData = [];
+
+        // 獲取 DOM 元素
+        const searchInput = document.getElementById('search-input');
+        const cityFilter = document.getElementById('city-filter');
+        const stationFilter = document.getElementById('station-filter');
+        const sectionFilter = document.getElementById('section-filter');
+        const lineFilter = document.getElementById('line-filter');
+        const resultsContainer = document.getElementById('results-container');
+        const loadingMessage = document.getElementById('loading-message');
+        const noResultsMessage = document.getElementById('no-results-message');
+
+        // 渲染平交道卡片
+        function renderCrossings(data) {
+            resultsContainer.innerHTML = ''; // 清空現有內容
+            if (data.length === 0) {
+                noResultsMessage.classList.remove('hidden');
+            } else {
+                noResultsMessage.classList.add('hidden');
+                data.forEach(item => {
+                    const card = document.createElement('div');
+                    card.className = 'bg-gray-800 p-6 rounded-2xl shadow-lg transition-transform transform hover:scale-105 hover:bg-gray-700';
+                    card.innerHTML = `
+                        <h2 class="text-xl font-bold text-indigo-400 mb-2">${item['平交道名稱']}</h2>
+                        <p class="text-sm text-gray-400 mb-4">編號：${item['編號']}</p>
+                        <div class="space-y-2 text-sm">
+                            <p><span class="font-medium text-gray-300">所在縣市：</span>${item['所在縣市']}</p>
+                            <p><span class="font-medium text-gray-300">路線別：</span>${item['路線別']}</p>
+                            <p><span class="font-medium text-gray-300">區間：</span>${item['區間']}</p>
+                            <p><span class="font-medium text-gray-300">分駐所：</span>${item['分駐所']}</p>
+                            <p><span class="font-medium text-gray-300">種類：</span>${item['平交道種類']}</p>
+                            <p><span class="font-medium text-gray-300">里程：</span>${item['里程']}</p>
+                            <p><span class="font-medium text-gray-300">舊名：</span>${item['舊名或別名'] || '無'}</p>
+                        </div>
+                        <a href="${item['Google地圖']}" target="_blank" class="mt-4 inline-block text-indigo-300 hover:text-indigo-200 transition-colors">
+                            <div class="flex items-center space-x-1">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                                    <path fill-rule="evenodd" d="M5.057 5.057a7 7 0 119.886 9.886L10 18.886l-4.943-4.943a7 7 0 010-9.886zM10 11a2 2 1000-4 2 2 0 000 4z" clip-rule="evenodd" />
+                                </svg>
+                                <span>Google 地圖</span>
+                            </div>
+                        </a>
+                    `;
+                    resultsContainer.appendChild(card);
+                });
+            }
+        }
+
+        // 填充篩選器選項
+        function populateFilters() {
+            const cities = new Set();
+            const stations = new Set();
+            const sections = new Set();
+            const lines = new Set();
+
+            crossingData.forEach(item => {
+                cities.add(item['所在縣市']);
+                stations.add(item['分駐所']);
+                sections.add(item['區間']);
+                lines.add(item['路線別']);
+            });
+
+            // 填充縣市
+            cities.forEach(city => {
+                const option = document.createElement('option');
+                option.value = city;
+                option.textContent = city;
+                cityFilter.appendChild(option);
+            });
+
+            // 填充分駐所
+            stations.forEach(station => {
+                const option = document.createElement('option');
+                option.value = station;
+                option.textContent = station;
+                stationFilter.appendChild(option);
+            });
+
+            // 填充區間
+            sections.forEach(section => {
+                const option = document.createElement('option');
+                option.value = section;
+                option.textContent = section;
+                sectionFilter.appendChild(option);
+            });
+
+            // 填充路線別
+            lines.forEach(line => {
+                const option = document.createElement('option');
+                option.value = line;
+                option.textContent = line;
+                lineFilter.appendChild(option);
+            });
+        }
+
+        // 篩選資料
+        function filterData() {
+            const searchTerm = searchInput.value.toLowerCase();
+            const selectedCity = cityFilter.value;
+            const selectedStation = stationFilter.value;
+            const selectedSection = sectionFilter.value;
+            const selectedLine = lineFilter.value;
+
+            const filteredData = crossingData.filter(item => {
+                const nameMatch = item['平交道名稱'].toLowerCase().includes(searchTerm);
+                const cityMatch = !selectedCity || item['所在縣市'] === selectedCity;
+                const stationMatch = !selectedStation || item['分駐所'] === selectedStation;
+                const sectionMatch = !selectedSection || item['區間'] === selectedSection;
+                const lineMatch = !selectedLine || item['路線別'] === selectedLine;
+                
+                return nameMatch && cityMatch && stationMatch && sectionMatch && lineMatch;
+            });
+            
+            renderCrossings(filteredData);
+        }
+
+        // 綁定事件監聽器
+        searchInput.addEventListener('input', filterData);
+        cityFilter.addEventListener('change', filterData);
+        stationFilter.addEventListener('change', filterData);
+        sectionFilter.addEventListener('change', filterData);
+        lineFilter.addEventListener('change', filterData);
+
+        // 使用 fetch 載入資料
+        window.addEventListener('load', () => {
+            fetch('evelcrossing.json')
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Network response was not ok');
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    crossingData = data; // 將載入的資料賦值給變數
+                    loadingMessage.classList.add('hidden'); // 隱藏載入訊息
+                    populateFilters(); // 填充篩選器選項
+                    filterData(); // 初始渲染資料
+                })
+                .catch(error => {
+                    console.error('Error fetching data:', error);
+                    loadingMessage.textContent = '載入資料失敗。請檢查檔案。';
+                });
+        });
+
+    </script>
+</body>
+</html>
