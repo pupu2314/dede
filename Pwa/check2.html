@@ -13,6 +13,7 @@
         }
         .container {
             max-width: 960px;
+            position: relative;
         }
         h1, h2 {
             color: #0056b3;
@@ -63,7 +64,42 @@
         }
         .btn { display: inline-block; width: 100%; padding: 12px 20px; border-radius: 5px; font-weight: bold; text-align: center; cursor: pointer; border: none; color: #fff; background-color: #007bff; transition: background-color 0.2s; font-size: 1em; margin-top: 10px; }
         .btn:hover { background-color: #0056b3; }
+        .btn-secondary { background-color: #6c757d; }
+        .btn-secondary:hover { background-color: #5a6268; }
 
+        /* Tabs Styles */
+        .input-tabs {
+            display: flex;
+            border-bottom: 1px solid #ddd;
+            margin-bottom: 20px;
+        }
+        .tab-btn {
+            padding: 10px 20px;
+            cursor: pointer;
+            border: none;
+            background-color: transparent;
+            border-bottom: 3px solid transparent;
+            font-size: 1em;
+        }
+        .tab-btn.active {
+            border-bottom-color: #007bff;
+            font-weight: bold;
+            color: #0056b3;
+        }
+        .tab-content {
+            display: none;
+        }
+        .tab-content.active {
+            display: block;
+        }
+        #file-input {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            margin-bottom: 10px;
+            box-sizing: border-box;
+        }
 
         @media (max-width: 768px) {
             body { margin: 0; font-size: 16px; }
@@ -81,15 +117,27 @@
 <body>
 
     <div id="json-input-container">
-        <h2>貼上 services.json 內容</h2>
-        <p>請將 services.json 的完整內容複製並貼到下方的文字框中，以產生促銷狀態報表。</p>
-        <textarea id="json-textarea" placeholder="在這裡貼上 JSON..."></textarea>
-        <button id="load-json-btn" class="btn">產生報表</button>
+        <h2>選擇資料來源</h2>
+        <div class="input-tabs">
+            <button class="tab-btn active" data-tab="paste">貼上 JSON</button>
+            <button class="tab-btn" data-tab="file">從檔案載入</button>
+        </div>
+        <div id="paste-content" class="tab-content active">
+            <p>請將 services.json 的完整內容複製並貼到下方的文字框中。</p>
+            <textarea id="json-textarea" placeholder="在這裡貼上 JSON..."></textarea>
+            <button id="load-json-btn" class="btn">產生報表</button>
+        </div>
+        <div id="file-content" class="tab-content">
+            <p>請選擇 services.json 檔案以產生報表。</p>
+            <input type="file" id="file-input" accept=".json">
+            <button id="load-file-btn" class="btn">從檔案產生報表</button>
+        </div>
         <p id="json-error" style="color:red; margin-top:10px;"></p>
     </div>
 
     <div id="report-container" style="display: none;">
         <div class="container">
+            <button id="reset-check-btn" class="btn btn-secondary" style="float: right; width: auto; margin-top: 20px;">重新檢查</button>
             <h1>促銷設定檢查頁面</h1>
             <p class="note">此頁面用於檢查所有服務項目與組合的促銷活動狀態，方便您快速了解哪些活動正在進行、即將開始或已經過期。</p>
         
@@ -108,9 +156,7 @@
                         <th>狀態</th>
                     </tr>
                 </thead>
-                <tbody id="item-promotions-body">
-                    <!-- 內容由 JavaScript 動態生成 -->
-                </tbody>
+                <tbody id="item-promotions-body"></tbody>
             </table>
         
             <h2>組合優惠促銷</h2>
@@ -128,22 +174,12 @@
                         <th>狀態</th>
                     </tr>
                 </thead>
-                <tbody id="combo-promotions-body">
-                    <!-- 內容由 JavaScript 動態生成 -->
-                </tbody>
+                <tbody id="combo-promotions-body"></tbody>
             </table>
         </div>
     </div>
 
-
-    <script src="app.js"></script>
     <script>
-        /**
-         * 根據促銷的開始和結束日期，判斷其當前狀態
-         * @param {object} promo - 促銷物件，需包含 start 和 end 屬性
-         * @param {string} today - YYYY-MM-DD 格式的今天日期字串
-         * @returns {object} 包含狀態文字和對應 CSS class 的物件
-         */
         function getPromoStatus(promo, today) {
             if (!promo.start || !promo.end) {
                 return { text: '日期無效', class: 'invalid' };
@@ -157,25 +193,17 @@
             }
         }
 
-        /**
-         * 顯示所有服務項目的促銷列表
-         * @param {string} today - YYYY-MM-DD 格式的今天日期字串
-         * @param {Map<string, object>} allServices - 所有服務項目的 Map
-         * @param {Array<object>} categories - 服務類別陣列
-         */
         function displayAllPromotions(today, allServices, categories = []) {
             const tableBody = document.getElementById('item-promotions-body');
             let tableHtml = '';
-
             categories.forEach(category => {
-                category.items.forEach(item => {
+                (category.items || []).forEach(item => {
                     if (item.promotions && item.promotions.length > 0) {
                         item.promotions.forEach((promo, index) => {
                             const status = getPromoStatus(promo, today);
                             const discountAmount = item.price - promo.price;
                             const discountPercentage = item.price > 0 ? (discountAmount / item.price) * 100 : 0;
                             const discountText = `省 ${discountAmount.toLocaleString()} (${discountPercentage.toFixed(1)}%)`;
-                            
                             tableHtml += `<tr>
                                 ${index === 0 ? `<td data-label="類別" rowspan="${item.promotions.length}">${category.name}</td><td data-label="項目名稱" rowspan="${item.promotions.length}">${item.name}</td><td data-label="原價" rowspan="${item.promotions.length}" style="text-align: right;">${item.price.toLocaleString()}</td>` : ''}
                                 <td data-label="促銷活動">${promo.label}</td>
@@ -189,27 +217,16 @@
                     }
                 });
             });
-
-            if (!tableHtml) {
-                tableHtml = '<tr><td colspan="9" style="text-align: center;">目前沒有設定任何服務項目促銷活動。</td></tr>';
-            }
-            tableBody.innerHTML = tableHtml;
+            tableBody.innerHTML = tableHtml || '<tr><td colspan="9" style="text-align: center;">目前沒有設定任何服務項目促銷活動。</td></tr>';
         }
 
-        /**
-         * 顯示所有組合優惠的促銷列表
-         * @param {string} today - YYYY-MM-DD 格式的今天日期字串
-         * @param {Map<string, object>} allServices - 所有服務項目的 Map
-         * @param {Array<object>} combos - 組合優惠陣列
-         */
         function displayComboPromotions(today, allServices, combos = []) {
             const comboTableBody = document.getElementById('combo-promotions-body');
             let comboTableHtml = '';
-
-            combos.forEach(combo => {
+            (combos || []).forEach(combo => {
                  if (combo.promotions && combo.promotions.length > 0) {
-                    const itemNames = combo.itemIds.map(id => allServices.get(id)?.name || '<span style="color:red;">錯誤ID</span>').join('<br>');
-                    const comboOriginalPrice = combo.itemIds.reduce((sum, id) => sum + (allServices.get(id)?.price || 0), 0);
+                    const itemNames = (combo.itemIds || []).map(id => allServices.get(id)?.name || '<span style="color:red;">錯誤ID</span>').join('<br>');
+                    const comboOriginalPrice = (combo.itemIds || []).reduce((sum, id) => sum + (allServices.get(id)?.price || 0), 0);
                     combo.promotions.forEach((promo, index) => {
                         const status = getPromoStatus(promo, today);
                         const discountAmount = comboOriginalPrice - promo.price;
@@ -222,11 +239,7 @@
                     });
                  }
             });
-
-            if (!comboTableHtml) {
-                comboTableHtml = '<tr><td colspan="9" style="text-align: center;">目前沒有設定任何組合優惠促銷活動。</td></tr>';
-            }
-            comboTableBody.innerHTML = comboTableHtml;
+            comboTableBody.innerHTML = comboTableHtml || '<tr><td colspan="9" style="text-align: center;">目前沒有設定任何組合優惠促銷活動。</td></tr>';
         }
         
         function startReport(jsonData) {
@@ -237,7 +250,6 @@
                         allServices.set(item.id, item);
                     });
                 });
-
                 const today = new Date().toISOString().split('T')[0];
                 displayAllPromotions(today, allServices, jsonData.categories);
                 displayComboPromotions(today, allServices, jsonData.combos);
@@ -247,26 +259,70 @@
             }
         }
         
-        document.getElementById('load-json-btn').addEventListener('click', () => {
-            const jsonText = document.getElementById('json-textarea').value;
+        function handleJsonData(jsonText) {
             const errorEl = document.getElementById('json-error');
             if (!jsonText) {
-                errorEl.textContent = '請貼上 JSON 內容。';
+                errorEl.textContent = '內容為空。';
                 return;
             }
             try {
                 const parsedData = JSON.parse(jsonText);
                 errorEl.textContent = '';
-                
                 document.getElementById('json-input-container').style.display = 'none';
                 document.getElementById('report-container').style.display = 'block';
-
                 startReport(parsedData);
             } catch (e) {
                 errorEl.textContent = 'JSON 格式無效，請檢查您的輸入。 ' + e.message;
             }
+        }
+
+        // Tab switching logic
+        const tabContainer = document.querySelector('.input-tabs');
+        tabContainer.addEventListener('click', (e) => {
+            if (e.target.classList.contains('tab-btn')) {
+                const tabName = e.target.dataset.tab;
+                tabContainer.querySelector('.active').classList.remove('active');
+                e.target.classList.add('active');
+                
+                document.querySelector('.tab-content.active').classList.remove('active');
+                document.getElementById(`${tabName}-content`).classList.add('active');
+                document.getElementById('json-error').textContent = '';
+            }
+        });
+        
+        // Event listener for pasting JSON
+        document.getElementById('load-json-btn').addEventListener('click', () => {
+            const jsonText = document.getElementById('json-textarea').value;
+            handleJsonData(jsonText);
+        });
+        
+        // Event listener for loading from file
+        document.getElementById('load-file-btn').addEventListener('click', () => {
+            const fileInput = document.getElementById('file-input');
+            const errorEl = document.getElementById('json-error');
+            if (fileInput.files.length === 0) {
+                errorEl.textContent = '請先選擇一個檔案。';
+                return;
+            }
+            const file = fileInput.files[0];
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                handleJsonData(event.target.result);
+            };
+            reader.onerror = () => {
+                errorEl.textContent = '讀取檔案時發生錯誤。';
+            };
+            reader.readAsText(file);
         });
 
+        // Event listener for resetting the view
+        document.getElementById('reset-check-btn').addEventListener('click', () => {
+            document.getElementById('report-container').style.display = 'none';
+            document.getElementById('json-input-container').style.display = 'block';
+            document.getElementById('json-textarea').value = '';
+            document.getElementById('file-input').value = '';
+            document.getElementById('json-error').textContent = '';
+        });
     </script>
 </body>
 </html>
