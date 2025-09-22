@@ -19,58 +19,56 @@
     <fieldset>
         <legend>快速操作</legend>
         <div class="header-actions">
-             <button id="save-btn" title="儲存當前選擇">💾 儲存</button>
-             <button id="load-btn" title="載入上次選擇">📂 讀取</button>
-             <button id="clear-btn" title="清除所有選項">🗑️ 清除</button>
-             <button id="share-link-btn" title="產生分享網址並複製">🔗 分享</button>
-             <button id="screenshot-btn" title="輸出為圖片">📷 截圖</button>
+             <button id="save-btn" class="btn" title="儲存當前選擇">💾 儲存</button>
+             <button id="load-btn" class="btn" title="載入上次選擇">📂 讀取</button>
+             <button id="clear-btn" class="btn" title="清除所有選項">🗑️ 清除</button>
+             <button id="share-link-btn" class="btn" title="產生分享網址並複製">🔗 分享</button>
+             <button id="screenshot-btn" class="btn" title="輸出為圖片">📷 截圖</button>
            </div>
     </fieldset>
 
     <div class="search-container">
         <label for="search-input" class="sr-only">搜尋服務項目</label>
-        <input type="search" id="search-input" placeholder="搜尋服務項目...">
-    </div>
-
-    <div id="service-list">
-        <!-- 服務列表將由 JavaScript 動態載入 -->
-        <p>正在載入服務項目...</p>
+        <input type="search" id="search-input" placeholder="🔍 搜尋服務項目 (例如：除毛)">
     </div>
 
     <fieldset>
         <legend>客戶身分</legend>
-        <div class="service-item">
-            <input type="checkbox" id="isBirthdayPerson">
-            <label for="isBirthdayPerson">當月壽星 (原價 5 折)</label>
-        </div>
-        <div class="service-item">
-            <input type="checkbox" id="isStudent">
-            <label for="isStudent">學生 (原價 8 折)</label>
+        <div class="customer-type">
+            <input type="radio" id="customer-new" name="customer-type" value="new" checked>
+            <label for="customer-new">新客</label>
+            <input type="radio" id="customer-return" name="customer-type" value="return">
+            <label for="customer-return">熟客</label>
         </div>
     </fieldset>
+    
+    <div id="services-container">
+        <!-- Services will be rendered here by JavaScript -->
+    </div>
+
 </div>
 
-<div id="floating-summary">
-    <div id="summary-bar">
-        <div id="toggle-details" role="button" tabindex="0" aria-expanded="false" aria-controls="summary-details">
-            <span>查看明細</span>
-            <span class="arrow" aria-hidden="true">▲</span>
+<!-- Floating Summary Panel -->
+<div id="floating-summary" class="floating-summary" aria-hidden="true">
+    <div class="summary-content">
+        <div class="summary-header">
+            <h3>總計</h3>
+            <button id="toggle-details-btn" aria-label="顯示/隱藏明細">📋 明細</button>
         </div>
-        <div class="final-totals">
-            <p id="original-total-p" style="display: none;">原始總金額：<span id="floating-original-total">0</span> 元</p>
-            <div id="discount-note-container" style="display: none;">
-                <span class="discount-note"></span>
+        <div class="summary-totals">
+            <div id="original-total-container">
+                <p>原價：<del id="floating-original-total">0</del> 元</p>
+               <span class="discount-note"></span>
             </div>
             <div id="savings-container" style="display: none;">
                 <p class="savings-note">共節省：<span id="floating-savings">0</span> 元</p>
             </div>
             <p id="discounted-total-p">總金額：<span id="floating-discounted-total">0</span> 元</p>
-            <!-- 請將此區塊加到 dede.html 的浮動視窗中 -->
             <div id="points-container" style="display: none; color: #007bff; font-weight: bold; margin-top: 8px;">
               <span>🎁 獲得點數：</span>
               <span id="floating-points">0</span>
-            <span> 點</span>
-        </div>
+              <span> 點</span>
+            </div>
         </div>
     </div>
     <div id="summary-details" aria-hidden="true">
@@ -89,17 +87,167 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script src="app.js"></script>
 <script>
-    // PWA: 註冊 Service Worker
-    if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.register('./service-worker.js', { scope: './' })
-    .then(registration => {
-        console.log('ServiceWorker 註冊成功: ', registration.scope);
-    })
-    .catch(error => {
-        console.log('ServiceWorker 註冊失敗: ', error);
-    });
-    }
-</script>
+// PWA: 註冊 Service Worker
+if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('./service-worker.js', { scope: './' })
+        .then(reg => console.log('Service Worker registered', reg))
+        .catch(err => console.error('Service Worker registration failed', err));
+}
 
+document.addEventListener('DOMContentLoaded', () => {
+    // DOM Elements
+    const servicesContainer = document.getElementById('services-container');
+    const searchInput = document.getElementById('search-input');
+    const floatingSummary = document.getElementById('floating-summary');
+    const floatingOriginalTotal = document.getElementById('floating-original-total');
+    const floatingDiscountedTotal = document.getElementById('floating-discounted-total');
+    const floatingSavings = document.getElementById('floating-savings');
+    const savingsContainer = document.getElementById('savings-container');
+    const originalTotalContainer = document.getElementById('original-total-container');
+    const selectedItemsList = document.querySelector('#floating-selected-items-list ul');
+    const toggleDetailsBtn = document.getElementById('toggle-details-btn');
+    const summaryDetails = document.getElementById('summary-details');
+
+    let today = new Date();
+
+    function isPromoActive(promo) {
+        if (!promo.start || !promo.end) return false;
+        const startDate = new Date(promo.start + 'T00:00:00');
+        const endDate = new Date(promo.end + 'T23:59:59');
+        return today >= startDate && today <= endDate;
+    }
+
+    function renderServices() {
+        if (!serviceData) return;
+        servicesContainer.innerHTML = '';
+        const query = searchInput.value.toLowerCase().trim();
+
+        serviceData.categories.forEach(category => {
+            const filteredItems = category.items.filter(item => 
+                item.name.toLowerCase().includes(query)
+            );
+
+            if (filteredItems.length === 0) return;
+
+            const fieldset = document.createElement('fieldset');
+            const legend = document.createElement('legend');
+            legend.textContent = category.name;
+            fieldset.appendChild(legend);
+
+            filteredItems.forEach(item => {
+                const itemDiv = document.createElement('div');
+                itemDiv.className = 'service-item';
+                
+                const checkbox = document.createElement('input');
+                checkbox.type = 'checkbox';
+                checkbox.id = item.id;
+                checkbox.dataset.price = item.price;
+
+                const label = document.createElement('label');
+                label.htmlFor = item.id;
+                label.textContent = item.name;
+
+                const priceSpan = document.createElement('span');
+                priceSpan.className = 'price';
+                
+                let activePromo = (item.promotions || []).find(isPromoActive);
+                if (activePromo) {
+                    checkbox.dataset.promoPrice = activePromo.price;
+                    priceSpan.innerHTML = `<span class="promo-price">${item.price.toLocaleString()}</span> ${activePromo.price.toLocaleString()}`;
+                } else {
+                    priceSpan.textContent = item.price.toLocaleString();
+                }
+
+                itemDiv.appendChild(checkbox);
+                itemDiv.appendChild(label);
+                itemDiv.appendChild(priceSpan);
+                fieldset.appendChild(itemDiv);
+            });
+            servicesContainer.appendChild(fieldset);
+        });
+        attachEventListeners();
+        updateTotals();
+    }
+    
+    function updateTotals() {
+        let originalTotal = 0;
+        let discountedTotal = 0;
+        selectedItemsList.innerHTML = '';
+
+        const checkboxes = servicesContainer.querySelectorAll('input[type="checkbox"]:checked');
+        
+        checkboxes.forEach(cb => {
+            const price = parseInt(cb.dataset.price, 10);
+            const promoPrice = cb.dataset.promoPrice ? parseInt(cb.dataset.promoPrice, 10) : price;
+            
+            originalTotal += price;
+            discountedTotal += promoPrice;
+            
+            const listItem = document.createElement('li');
+            const itemName = document.createElement('span');
+            itemName.className = 'item-name';
+            itemName.textContent = document.querySelector(`label[for="${cb.id}"]`).textContent;
+
+            const itemPriceDetail = document.createElement('span');
+            itemPriceDetail.className = 'item-price-detail';
+            
+            if (price !== promoPrice) {
+                 itemPriceDetail.innerHTML = `<del>${price.toLocaleString()}</del> ${promoPrice.toLocaleString()}`;
+            } else {
+                 itemPriceDetail.textContent = price.toLocaleString();
+            }
+
+            listItem.appendChild(itemName);
+            listItem.appendChild(itemPriceDetail);
+            selectedItemsList.appendChild(listItem);
+        });
+
+        const savings = originalTotal - discountedTotal;
+        
+        floatingOriginalTotal.textContent = originalTotal.toLocaleString();
+        floatingDiscountedTotal.textContent = discountedTotal.toLocaleString();
+        floatingSavings.textContent = savings.toLocaleString();
+
+        if (savings > 0) {
+            savingsContainer.style.display = 'block';
+            originalTotalContainer.style.display = 'block';
+        } else {
+            savingsContainer.style.display = 'none';
+            originalTotalContainer.style.display = 'none';
+        }
+
+        floatingSummary.setAttribute('aria-hidden', checkboxes.length === 0);
+        document.body.style.paddingBottom = checkboxes.length > 0 ? '180px' : '0';
+    }
+
+    function attachEventListeners() {
+        const checkboxes = servicesContainer.querySelectorAll('input[type="checkbox"]');
+        checkboxes.forEach(cb => cb.addEventListener('change', updateTotals));
+    }
+
+    async function initializeApp() {
+        serviceData = await loadServiceData();
+        if (serviceData) {
+            (serviceData.categories || []).forEach(category => {
+                (category.items || []).forEach(item => allServices.set(item.id, item));
+            });
+            renderServices();
+        } else {
+            servicesContainer.innerHTML = '<p>無法載入服務項目。請檢查您的網路連線或聯繫管理員。</p>';
+        }
+    }
+    
+    searchInput.addEventListener('input', renderServices);
+
+    toggleDetailsBtn.addEventListener('click', () => {
+        const isHidden = summaryDetails.getAttribute('aria-hidden') === 'true';
+        summaryDetails.setAttribute('aria-hidden', !isHidden);
+    });
+
+    // --- Other button functionalities (save, load, etc.) would go here ---
+
+    initializeApp();
+});
+</script>
 </body>
 </html>

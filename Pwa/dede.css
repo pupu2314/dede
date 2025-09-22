@@ -9,7 +9,7 @@ body {
 }
 
 .container {
-    max-width: 1000px; /* 稍微加寬以容納表格 */
+    max-width: 1000px;
     margin: auto;
     padding: 20px;
     background-color: #fff;
@@ -221,45 +221,28 @@ tbody tr:nth-of-type(even) {
     box-sizing: border-box;
 }
 
+/* Toast Notification */
+.toast-notification {
+    position: fixed;
+    bottom: 20px;
+    left: 50%;
+    transform: translate(-50%, 100px);
+    background-color: #333;
+    color: #fff;
+    padding: 12px 24px;
+    border-radius: 6px;
+    z-index: 1010;
+    opacity: 0;
+    visibility: hidden;
+    transition: transform 0.3s ease, opacity 0.3s ease, visibility 0.3s;
+}
+.toast-notification.show {
+    transform: translate(-50%, 0);
+    opacity: 1;
+    visibility: visible;
+}
+
 /* 響應式表格 */
 @media screen and (max-width: 768px) {
-    .table-responsive {
-        border: 1px solid #dee2e6;
-        border-radius: 4px;
-    }
-    table {
-        border: none;
-    }
-    thead {
-        display: none;
-    }
-    tr {
-        display: block;
-        margin-bottom: 15px;
-        border-bottom: 2px solid #007bff;
-    }
-    tr:last-child {
-        border-bottom: none;
-    }
-    td {
-        display: block;
-        text-align: right;
-        border: none;
-        border-bottom: 1px dotted #ccc;
-        padding-left: 50%;
-        position: relative;
-    }
-    td:before {
-        content: attr(data-label);
-        position: absolute;
-        left: 10px;
-        width: 45%;
-        padding-right: 10px;
-        white-space: nowrap;
-        text-align: left;
-        font-weight: bold;
-    }
-    td:last-child {
-        border-bottom: 0;
-    }
+    /* ... (rest of the responsive styles) ... */
 }

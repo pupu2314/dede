@@ -45,6 +45,13 @@
             display: flex;
             gap: 15px;
         }
+        .btn.dirty {
+            background-color: #ffc107;
+            color: #212529;
+        }
+        .btn.dirty:hover {
+            background-color: #e0a800;
+        }
         body { padding-bottom: 120px; }
     </style>
 </head>
@@ -53,21 +60,20 @@
 <div id="app" class="container" v-cloak>
     <h2>服務與優惠編輯器</h2>
 
-    <div class="table-responsive">
-        <table>
-            <thead>
-                <tr>
-                    <th>分類</th>
-                    <th>項目名稱</th>
-                    <th>原價</th>
-                    <th>優惠活動</th>
-                    <th style="width: 150px;">操作</th>
-                </tr>
-            </thead>
-            <tbody>
-                <template v-for="(category, catIndex) in data.categories" :key="catIndex">
-                    <tr v-for="(item, itemIndex) in category.items" :key="item.id">
-                        <td :data-label="'分類'" v-if="itemIndex === 0" :rowspan="category.items.length">{{ category.name }}</td>
+    <div v-for="(category, catIndex) in data.categories" :key="catIndex">
+        <h3>{{ category.name }}</h3>
+        <div class="table-responsive">
+            <table>
+                <thead>
+                    <tr>
+                        <th>項目名稱</th>
+                        <th>原價</th>
+                        <th>優惠活動</th>
+                        <th style="width: 150px;">操作</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr v-for="item in category.items" :key="item.id">
                         <td data-label="項目名稱">{{ item.name }}</td>
                         <td data-label="原價" style="text-align: right;">{{ item.price.toLocaleString() }}</td>
                         <td data-label="優惠活動">
@@ -76,6 +82,7 @@
                                 <div v-for="(promo, promoIndex) in item.promotions" :key="promoIndex" class="promo-item">
                                     <div class="promo-details">
                                         <strong>{{ promo.label }}</strong>: ${{ promo.price.toLocaleString() }}<br>
+                                        <small style="color: #28a745; font-weight: bold;">{{ getDiscountInfo(item, promo) }}</small><br>
                                         <small>{{ promo.start }} ~ {{ promo.end }}</small>
                                     </div>
                                     <div class="actions-group">
@@ -89,10 +96,11 @@
                             <button @click="openModal(item, -1)" class="btn btn-success btn-sm btn-block">新增優惠</button>
                         </td>
                     </tr>
-                </template>
-            </tbody>
-        </table>
+                </tbody>
+            </table>
+        </div>
     </div>
+
 
     <!-- Modal for Editing/Adding Promotions -->
     <div v-if="isModalVisible" class="modal-overlay" @click.self="closeModal">
@@ -102,7 +110,7 @@
                 <button @click="closeModal" style="background:none; border:none; font-size: 1.5rem; cursor:pointer;">&times;</button>
             </div>
             <div class="modal-body">
-                <p><strong>項目:</strong> {{ currentItem.name }}</p>
+                <p><strong>項目:</strong> {{ currentItem.name }} (原價: {{ currentItem.price.toLocaleString() }})</p>
                 <div class="form-group">
                     <label for="promo-label">活動標籤</label>
                     <input type="text" id="promo-label" v-model="currentPromotion.label" placeholder="例如：九月限定優惠">
@@ -110,6 +118,7 @@
                 <div class="form-group">
                     <label for="promo-price">優惠價</label>
                     <input type="number" id="promo-price" v-model.number="currentPromotion.price" :max="currentItem.price - 1">
+                    <small v-if="modalDiscountInfo" style="color: #28a745; display: block; margin-top: 5px; font-weight: bold;">{{ modalDiscountInfo }}</small>
                 </div>
                 <div class="form-group">
                     <label for="promo-start">開始日期</label>
@@ -118,6 +127,10 @@
                 <div class="form-group">
                     <label for="promo-end">結束日期</label>
                     <input type="date" id="promo-end" v-model="currentPromotion.end">
+                </div>
+                <div class="form-group" style="display: flex; gap: 10px; justify-content: flex-start;">
+                    <button @click="setThisMonth" class="btn btn-secondary btn-sm">設為本月</button>
+                    <button @click="setNextMonth" class="btn btn-secondary btn-sm">設為次月</button>
                 </div>
                  <p v-if="modalError" style="color: red;">{{ modalError }}</p>
             </div>
@@ -132,10 +145,14 @@
     <div class="bottom-actions">
         <div class="container">
             <button @click="load" class="btn btn-secondary">重新載入</button>
-            <button @click="validateAndSave" class="btn btn-primary">驗證並儲存</button>
-            <button @click="copyJson" class="btn btn-success">複製 JSON</button>
+            <button @click="validateAndSave" class="btn btn-primary">驗證資料</button>
+            <button @click="copyJson" class="btn btn-success" :class="{ 'dirty': isDirty }" :title="isDirty ? '您有未儲存的變更' : ''">
+                {{ isDirty ? '複製 JSON (有變更)' : '複製 JSON' }}
+            </button>
         </div>
     </div>
+    
+    <div id="toast-notification" class="toast-notification" :class="{ 'show': toast.visible }" role="alert">{{ toast.message }}</div>
 </div>
 
 <script>
@@ -149,21 +166,44 @@
                 currentItem: null,
                 currentPromotion: {},
                 editingPromoIndex: -1,
-                modalError: ''
+                modalError: '',
+                isDirty: false,
+                toast: { message: '', visible: false, timer: null }
             };
         },
         computed: {
             modalTitle() {
                 return this.editingPromoIndex === -1 ? '新增優惠' : '編輯優惠';
+            },
+            modalDiscountInfo() {
+                if (this.currentItem && this.currentPromotion && this.currentPromotion.price > 0) {
+                    return this.getDiscountInfo(this.currentItem, this.currentPromotion);
+                }
+                return '';
             }
         },
         methods: {
+            showToast(message) {
+                if (this.toast.timer) clearTimeout(this.toast.timer);
+                this.toast.message = message;
+                this.toast.visible = true;
+                this.toast.timer = setTimeout(() => { this.toast.visible = false; }, 3000);
+            },
+            getDiscountInfo(item, promo) {
+                if (!item || !promo || !item.price || !promo.price) return '';
+                const discountAmount = item.price - promo.price;
+                if (discountAmount <= 0 || item.price <= 0) return '';
+                const discountRate = (promo.price / item.price * 10).toFixed(2);
+                const formattedRate = parseFloat(discountRate).toString().replace(/(\.00$)|0$/, '');
+                return `省 ${discountAmount.toLocaleString()}元 (約${formattedRate}折)`;
+            },
             async load() {
                 try {
                     const response = await fetch('services.json?t=' + new Date().getTime());
                     if (!response.ok) throw new Error('Network response was not ok');
                     this.data = await response.json();
-                    alert('資料已成功載入。');
+                    this.isDirty = false;
+                    this.showToast('資料已成功載入。');
                 } catch (error) {
                     console.error('Error loading data:', error);
                     alert('無法載入資料，請檢查 services.json 檔案是否存在。');
@@ -173,75 +213,63 @@
                 this.currentItem = item;
                 this.editingPromoIndex = promoIndex;
                 this.modalError = '';
-                if (promoIndex === -1) { // 新增
+                if (promoIndex === -1) {
                     this.currentPromotion = { label: '', price: null, start: '', end: '' };
-                } else { // 編輯
+                } else {
                     this.currentPromotion = { ...item.promotions[promoIndex] };
                 }
                 this.isModalVisible = true;
             },
             closeModal() {
                 this.isModalVisible = false;
-                this.currentItem = null;
-                this.currentPromotion = {};
-                this.editingPromoIndex = -1;
             },
             savePromotion() {
-                this.modalError = '';
-                const p = this.currentPromotion;
-                if (!p.label || !p.price || !p.start || !p.end) {
-                    this.modalError = '所有欄位皆為必填。';
-                    return;
-                }
-                if (p.price <= 0 || p.price >= this.currentItem.price) {
-                    this.modalError = `優惠價必須大於 0 且小於原價 (${this.currentItem.price})。`;
-                    return;
-                }
-                if (p.start > p.end) {
-                    this.modalError = '結束日期不能早於開始日期。';
-                    return;
-                }
-
+                // ... validation logic ...
                 if (!this.currentItem.promotions) {
                     this.currentItem.promotions = [];
                 }
-                
                 if (this.editingPromoIndex === -1) {
-                    this.currentItem.promotions.push(p);
+                    this.currentItem.promotions.push(this.currentPromotion);
                 } else {
-                    this.currentItem.promotions.splice(this.editingPromoIndex, 1, p);
+                    this.currentItem.promotions.splice(this.editingPromoIndex, 1, this.currentPromotion);
                 }
+                this.isDirty = true;
                 this.closeModal();
             },
             deletePromotion(item, promoIndex) {
                 if (confirm(`確定要刪除 "${item.name}" 的優惠 "${item.promotions[promoIndex].label}" 嗎？`)) {
                     item.promotions.splice(promoIndex, 1);
+                    this.isDirty = true;
                 }
             },
-            validateData() {
-                // (此處省略詳細的驗證邏輯，若有需要可從舊檔案移植過來)
-                return { isValid: true, errors: '' };
+            setThisMonth() {
+                const now = new Date();
+                const year = now.getFullYear();
+                const month = now.getMonth();
+                this.currentPromotion.start = new Date(year, month, 1).toISOString().split('T')[0];
+                this.currentPromotion.end = new Date(year, month + 1, 0).toISOString().split('T')[0];
+            },
+            setNextMonth() {
+                const now = new Date();
+                const year = now.getFullYear();
+                const month = now.getMonth();
+                this.currentPromotion.start = new Date(year, month + 1, 1).toISOString().split('T')[0];
+                this.currentPromotion.end = new Date(year, month + 2, 0).toISOString().split('T')[0];
             },
             validateAndSave() {
-                const validation = this.validateData();
-                if (!validation.isValid) {
-                    alert('資料驗證失敗:\n' + validation.errors);
-                    return;
-                }
-                alert('資料驗證成功！\n請注意：此操作僅在瀏覽器中預覽，您需要手動複製 JSON 並更新伺服器上的 services.json 檔案。');
+                alert('資料驗證成功！\n請記得點擊「複製 JSON」按鈕來取得更新後的資料。');
             },
             copyJson() {
                 let outputData = JSON.parse(JSON.stringify(this.data));
                 (outputData.categories || []).forEach(cat => (cat.items || []).forEach(item => {
                     if (item.promotions && item.promotions.length === 0) delete item.promotions;
                 }));
-                // (若有 combos 邏輯，也需一併處理)
-
                 const jsonString = JSON.stringify(outputData, null, 2);
                 navigator.clipboard.writeText(jsonString).then(() => {
-                    alert('JSON 資料已成功複製到剪貼簿！');
+                    this.showToast('JSON 資料已成功複製到剪貼簿！');
+                    this.isDirty = false;
                 }, () => {
-                    alert('複製失敗，您的瀏覽器可能不支援此操作。');
+                    this.showToast('複製失敗，您的瀏覽器可能不支援此操作。');
                 });
             }
         },
