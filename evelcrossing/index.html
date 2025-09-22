@@ -193,7 +193,8 @@
 
             // Apply all filters sequentially
             let filteredData = fullCrossingData.filter(item => {
-                const nameMatch = item['平交道名稱'].toLowerCase().includes(searchTerm);
+                const nameMatch = item['平交道名稱'].toLowerCase().includes(searchTerm) || 
+                                 (item['舊名或別名'] && item['舊名或別名'].toLowerCase().includes(searchTerm));
                 const cityMatch = !selectedCity || item['所在縣市'] === selectedCity;
                 const stationMatch = !selectedStation || item['分駐所'] === selectedStation;
                 const sectionMatch = !selectedSection || item['區間'] === selectedSection;
