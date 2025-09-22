@@ -3,7 +3,6 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <!-- PWA Basic Meta -->
     <meta name="theme-color" content="#007bff">
     <link rel="manifest" href="manifest.json">
     <title>德德美體美容中心</title>
@@ -11,7 +10,7 @@
 </head>
 <body>
 
-<div id="toast-notification" class="toast-notification" role="alert" aria-live="assertive"></div>
+<div id="toast-notification"></div>
 
 <div class="container">
     <h2>德德美體美容中心 <small id="price-version"></small></h2>
@@ -24,7 +23,7 @@
              <button id="clear-btn" class="btn" title="清除所有選項">🗑️ 清除</button>
              <button id="share-link-btn" class="btn" title="產生分享網址並複製">🔗 分享</button>
              <button id="screenshot-btn" class="btn" title="輸出為圖片">📷 截圖</button>
-           </div>
+        </div>
     </fieldset>
 
     <div class="search-container">
@@ -33,12 +32,16 @@
     </div>
 
     <fieldset>
-        <legend>客戶身分</legend>
+        <legend>客戶身分折扣 (擇優套用)</legend>
         <div class="customer-type">
-            <input type="radio" id="customer-new" name="customer-type" value="new" checked>
-            <label for="customer-new">新客</label>
-            <input type="radio" id="customer-return" name="customer-type" value="return">
-            <label for="customer-return">熟客</label>
+            <div class="service-item">
+                <input type="checkbox" id="student-discount">
+                <label for="student-discount">學生 (原價 8 折)</label>
+            </div>
+            <div class="service-item">
+                <input type="checkbox" id="birthday-discount">
+                <label for="birthday-discount">當月壽星 (原價 5 折)</label>
+            </div>
         </div>
     </fieldset>
     
@@ -58,13 +61,12 @@
         <div class="summary-totals">
             <div id="original-total-container">
                 <p>原價：<del id="floating-original-total">0</del> 元</p>
-               <span class="discount-note"></span>
             </div>
-            <div id="savings-container" style="display: none;">
+            <div id="savings-container">
                 <p class="savings-note">共節省：<span id="floating-savings">0</span> 元</p>
             </div>
             <p id="discounted-total-p">總金額：<span id="floating-discounted-total">0</span> 元</p>
-            <div id="points-container" style="display: none; color: #007bff; font-weight: bold; margin-top: 8px;">
+            <div id="points-container">
               <span>🎁 獲得點數：</span>
               <span id="floating-points">0</span>
               <span> 點</span>
@@ -83,39 +85,51 @@
     </div>
 </div>
 
-<!-- 引用 html2canvas 函式庫以支援截圖功能 -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script src="app.js"></script>
 <script>
-// PWA: 註冊 Service Worker
-if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('./service-worker.js', { scope: './' })
-        .then(reg => console.log('Service Worker registered', reg))
-        .catch(err => console.error('Service Worker registration failed', err));
-}
-
 document.addEventListener('DOMContentLoaded', () => {
     // DOM Elements
     const servicesContainer = document.getElementById('services-container');
     const searchInput = document.getElementById('search-input');
+    const studentDiscountCheckbox = document.getElementById('student-discount');
+    const birthdayDiscountCheckbox = document.getElementById('birthday-discount');
+    
+    // Floating Panel Elements
     const floatingSummary = document.getElementById('floating-summary');
     const floatingOriginalTotal = document.getElementById('floating-original-total');
     const floatingDiscountedTotal = document.getElementById('floating-discounted-total');
     const floatingSavings = document.getElementById('floating-savings');
+    const floatingPoints = document.getElementById('floating-points');
     const savingsContainer = document.getElementById('savings-container');
     const originalTotalContainer = document.getElementById('original-total-container');
+    const pointsContainer = document.getElementById('points-container');
     const selectedItemsList = document.querySelector('#floating-selected-items-list ul');
     const toggleDetailsBtn = document.getElementById('toggle-details-btn');
     const summaryDetails = document.getElementById('summary-details');
 
-    let today = new Date();
+    // Quick Action Buttons
+    const saveBtn = document.getElementById('save-btn');
+    const loadBtn = document.getElementById('load-btn');
+    const clearBtn = document.getElementById('clear-btn');
+    const shareBtn = document.getElementById('share-link-btn');
+    const screenshotBtn = document.getElementById('screenshot-btn');
 
-    function isPromoActive(promo) {
+    const today = new Date();
+
+    const isPromoActive = (promo) => {
         if (!promo.start || !promo.end) return false;
         const startDate = new Date(promo.start + 'T00:00:00');
         const endDate = new Date(promo.end + 'T23:59:59');
         return today >= startDate && today <= endDate;
-    }
+    };
+
+    const showToast = (message) => {
+        const toast = document.getElementById('toast-notification');
+        toast.textContent = message;
+        toast.className = 'toast-notification show';
+        setTimeout(() => { toast.className = toast.className.replace('show', ''); }, 3000);
+    };
 
     function renderServices() {
         if (!serviceData) return;
@@ -123,10 +137,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const query = searchInput.value.toLowerCase().trim();
 
         serviceData.categories.forEach(category => {
-            const filteredItems = category.items.filter(item => 
-                item.name.toLowerCase().includes(query)
-            );
-
+            const filteredItems = category.items.filter(item => item.name.toLowerCase().includes(query));
             if (filteredItems.length === 0) return;
 
             const fieldset = document.createElement('fieldset');
@@ -150,7 +161,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const priceSpan = document.createElement('span');
                 priceSpan.className = 'price';
                 
-                let activePromo = (item.promotions || []).find(isPromoActive);
+                const activePromo = (item.promotions || []).find(isPromoActive);
                 if (activePromo) {
                     checkbox.dataset.promoPrice = activePromo.price;
                     priceSpan.innerHTML = `<span class="promo-price">${item.price.toLocaleString()}</span> ${activePromo.price.toLocaleString()}`;
@@ -171,17 +182,33 @@ document.addEventListener('DOMContentLoaded', () => {
     
     function updateTotals() {
         let originalTotal = 0;
-        let discountedTotal = 0;
+        let finalTotal = 0;
         selectedItemsList.innerHTML = '';
 
+        const isStudent = studentDiscountCheckbox.checked;
+        const isBirthday = birthdayDiscountCheckbox.checked;
         const checkboxes = servicesContainer.querySelectorAll('input[type="checkbox"]:checked');
         
         checkboxes.forEach(cb => {
-            const price = parseInt(cb.dataset.price, 10);
-            const promoPrice = cb.dataset.promoPrice ? parseInt(cb.dataset.promoPrice, 10) : price;
+            const originalPrice = parseInt(cb.dataset.price, 10);
+            let priceOptions = [originalPrice];
+
+            // Add promo price if available
+            if (cb.dataset.promoPrice) {
+                priceOptions.push(parseInt(cb.dataset.promoPrice, 10));
+            }
+            // Add identity discounts
+            if (isStudent) {
+                priceOptions.push(Math.round(originalPrice * 0.8));
+            }
+            if (isBirthday) {
+                priceOptions.push(Math.round(originalPrice * 0.5));
+            }
             
-            originalTotal += price;
-            discountedTotal += promoPrice;
+            const bestPrice = Math.min(...priceOptions);
+
+            originalTotal += originalPrice;
+            finalTotal += bestPrice;
             
             const listItem = document.createElement('li');
             const itemName = document.createElement('span');
@@ -191,10 +218,10 @@ document.addEventListener('DOMContentLoaded', () => {
             const itemPriceDetail = document.createElement('span');
             itemPriceDetail.className = 'item-price-detail';
             
-            if (price !== promoPrice) {
-                 itemPriceDetail.innerHTML = `<del>${price.toLocaleString()}</del> ${promoPrice.toLocaleString()}`;
+            if (originalPrice !== bestPrice) {
+                 itemPriceDetail.innerHTML = `<del>${originalPrice.toLocaleString()}</del> ${bestPrice.toLocaleString()}`;
             } else {
-                 itemPriceDetail.textContent = price.toLocaleString();
+                 itemPriceDetail.textContent = originalPrice.toLocaleString();
             }
 
             listItem.appendChild(itemName);
@@ -202,28 +229,80 @@ document.addEventListener('DOMContentLoaded', () => {
             selectedItemsList.appendChild(listItem);
         });
 
-        const savings = originalTotal - discountedTotal;
+        const savings = originalTotal - finalTotal;
+        const points = Math.floor(finalTotal / 100);
         
         floatingOriginalTotal.textContent = originalTotal.toLocaleString();
-        floatingDiscountedTotal.textContent = discountedTotal.toLocaleString();
+        floatingDiscountedTotal.textContent = finalTotal.toLocaleString();
         floatingSavings.textContent = savings.toLocaleString();
+        floatingPoints.textContent = points.toLocaleString();
 
-        if (savings > 0) {
-            savingsContainer.style.display = 'block';
-            originalTotalContainer.style.display = 'block';
-        } else {
-            savingsContainer.style.display = 'none';
-            originalTotalContainer.style.display = 'none';
-        }
-
-        floatingSummary.setAttribute('aria-hidden', checkboxes.length === 0);
-        document.body.style.paddingBottom = checkboxes.length > 0 ? '180px' : '0';
+        const hasSelection = checkboxes.length > 0;
+        floatingSummary.setAttribute('aria-hidden', !hasSelection);
+        document.body.style.paddingBottom = hasSelection ? (summaryDetails.getAttribute('aria-hidden') === 'false' ? '300px' : '150px') : '20px';
+        
+        const showSavings = savings > 0;
+        savingsContainer.style.display = showSavings ? 'block' : 'none';
+        originalTotalContainer.style.display = showSavings ? 'block' : 'none';
+        pointsContainer.style.display = hasSelection ? 'block' : 'none';
     }
 
     function attachEventListeners() {
         const checkboxes = servicesContainer.querySelectorAll('input[type="checkbox"]');
         checkboxes.forEach(cb => cb.addEventListener('change', updateTotals));
     }
+
+    const handleQuickActions = () => {
+        saveBtn.addEventListener('click', () => {
+            const selectedIds = Array.from(servicesContainer.querySelectorAll('input[type="checkbox"]:checked')).map(cb => cb.id);
+            localStorage.setItem('selectedServices', JSON.stringify(selectedIds));
+            showToast('選項已儲存！');
+        });
+
+        loadBtn.addEventListener('click', () => {
+            const selectedIds = JSON.parse(localStorage.getItem('selectedServices') || '[]');
+            if (selectedIds.length === 0) {
+                showToast('沒有儲存的選項。');
+                return;
+            }
+            servicesContainer.querySelectorAll('input[type="checkbox"]').forEach(cb => {
+                cb.checked = selectedIds.includes(cb.id);
+            });
+            updateTotals();
+            showToast('已載入上次的選項！');
+        });
+
+        clearBtn.addEventListener('click', () => {
+            servicesContainer.querySelectorAll('input[type="checkbox"]:checked').forEach(cb => cb.checked = false);
+            updateTotals();
+            showToast('已清除所有選項。');
+        });
+
+        shareBtn.addEventListener('click', () => {
+            const selectedIds = Array.from(servicesContainer.querySelectorAll('input[type="checkbox"]:checked')).map(cb => cb.id);
+            if (selectedIds.length === 0) {
+                showToast('請先選擇服務項目。');
+                return;
+            }
+            const url = `${location.origin}${location.pathname}?services=${selectedIds.join(',')}`;
+            navigator.clipboard.writeText(url).then(() => {
+                showToast('分享連結已複製！');
+            }, () => {
+                showToast('複製失敗！');
+            });
+        });
+
+        screenshotBtn.addEventListener('click', () => {
+            showToast('正在產生圖片...');
+            const nodeToCapture = document.querySelector('.container');
+            html2canvas(nodeToCapture, { scale: 2, useCORS: true, backgroundColor: '#f4f4f9' }).then(canvas => {
+                const link = document.createElement('a');
+                link.download = `德德美體美容中心估價單-${new Date().toISOString().slice(0,10)}.png`;
+                link.href = canvas.toDataURL();
+                link.click();
+            });
+        });
+    };
 
     async function initializeApp() {
         serviceData = await loadServiceData();
@@ -232,19 +311,33 @@ document.addEventListener('DOMContentLoaded', () => {
                 (category.items || []).forEach(item => allServices.set(item.id, item));
             });
             renderServices();
+
+            const params = new URLSearchParams(location.search);
+            const servicesToSelect = params.get('services');
+            if (servicesToSelect) {
+                const ids = servicesToSelect.split(',');
+                ids.forEach(id => {
+                    const cb = document.getElementById(id);
+                    if (cb) cb.checked = true;
+                });
+                updateTotals();
+            }
+
         } else {
             servicesContainer.innerHTML = '<p>無法載入服務項目。請檢查您的網路連線或聯繫管理員。</p>';
         }
+        handleQuickActions();
     }
     
     searchInput.addEventListener('input', renderServices);
+    studentDiscountCheckbox.addEventListener('change', updateTotals);
+    birthdayDiscountCheckbox.addEventListener('change', updateTotals);
 
     toggleDetailsBtn.addEventListener('click', () => {
         const isHidden = summaryDetails.getAttribute('aria-hidden') === 'true';
         summaryDetails.setAttribute('aria-hidden', !isHidden);
+        updateTotals(); // Recalculate body padding
     });
-
-    // --- Other button functionalities (save, load, etc.) would go here ---
 
     initializeApp();
 });

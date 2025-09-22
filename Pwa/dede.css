@@ -1,7 +1,7 @@
 body {
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
     margin: 0;
-    padding: 20px;
+    padding: 20px 20px 150px 20px; /* Add initial bottom padding */
     line-height: 1.6;
     background-color: #f4f4f9;
     color: #333;
@@ -9,7 +9,7 @@ body {
 }
 
 .container {
-    max-width: 1000px;
+    max-width: 800px;
     margin: auto;
     padding: 20px;
     background-color: #fff;
@@ -56,6 +56,7 @@ legend {
     margin-right: 10px;
     width: 20px;
     height: 20px;
+    flex-shrink: 0;
 }
 
 .service-item label {
@@ -67,6 +68,7 @@ legend {
     font-weight: bold;
     color: #0056b3;
     margin-left: 10px;
+    white-space: nowrap;
 }
 
 .promo-price {
@@ -76,7 +78,7 @@ legend {
     margin-right: 5px;
 }
 
-.search-container {
+.search-container, .customer-type {
     margin-bottom: 20px;
 }
 
@@ -89,7 +91,6 @@ legend {
     box-sizing: border-box;
 }
 
-/* --- 按鈕統一樣式 --- */
 .btn {
     display: inline-block;
     padding: 10px 18px;
@@ -105,144 +106,112 @@ legend {
     margin: 5px 0;
 }
 .btn:hover { background-color: #0056b3; }
-.btn-secondary { background-color: #6c757d; }
-.btn-secondary:hover { background-color: #5a6268; }
-.btn-success { background-color: #28a745; }
-.btn-success:hover { background-color: #218838; }
-.btn-danger { background-color: #dc3545; }
-.btn-danger:hover { background-color: #c82333; }
-.btn-sm { padding: 5px 10px; font-size: 0.8em; }
-.btn-block { display: block; width: 100%; }
 
 .header-actions {
     display: flex;
     flex-wrap: wrap;
     gap: 10px;
 }
-.header-actions button, .header-actions .btn {
-    flex-grow: 1;
-}
+.header-actions .btn { flex-grow: 1; }
 
-/* --- 表格樣式 (for check.html & services_editor.html) --- */
-.table-responsive {
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
-}
-table {
-    border-collapse: collapse;
-    width: 100%;
-    margin-bottom: 15px;
-    font-size: 0.95em;
-    background-color: #fff;
-}
-th, td {
-    border: 1px solid #dee2e6;
-    padding: 12px;
-    text-align: left;
-    vertical-align: middle;
-}
-thead th {
-    background-color: #e9ecef;
-    font-weight: bold;
-    color: #495057;
-}
-tbody tr:nth-of-type(even) {
-    background-color: #f8f9fa;
-}
-.status {
-    padding: 4px 8px;
-    border-radius: 4px;
-    color: #fff;
-    font-weight: bold;
-    font-size: 0.85em;
-    white-space: nowrap;
-}
-.status.active { background-color: #28a745; }
-.status.upcoming { background-color: #ffc107; color: #333; }
-.status.expired { background-color: #6c757d; }
-.discount-info { color: #28a745; font-weight: bold; }
-
-/* --- 彈出視窗 (Modal) 樣式 --- */
-.modal-overlay {
+/* --- Floating Summary Panel --- */
+.floating-summary {
     position: fixed;
-    top: 0;
+    bottom: 0;
     left: 0;
-    width: 100%;
-    height: 100%;
-    background-color: rgba(0, 0, 0, 0.6);
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    z-index: 1000;
+    right: 0;
+    background: #ffffff;
+    border-top: 1px solid #ddd;
+    box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
+    padding: 15px 20px;
+    z-index: 100;
+    transform: translateY(100%);
+    transition: transform 0.3s ease-in-out;
 }
-.modal-content {
-    background: #fff;
-    padding: 25px;
-    border-radius: 8px;
-    box-shadow: 0 5px 15px rgba(0,0,0,0.3);
-    width: 90%;
-    max-width: 500px;
-    max-height: 90vh;
-    overflow-y: auto;
+.floating-summary[aria-hidden="false"] {
+    transform: translateY(0);
 }
-.modal-header {
+.summary-content {
+    max-width: 800px;
+    margin: 0 auto;
+}
+.summary-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    border-bottom: 1px solid #dee2e6;
-    padding-bottom: 15px;
-    margin-bottom: 15px;
+    margin-bottom: 10px;
 }
-.modal-header h3 {
-    margin: 0;
-    border: none;
-    color: #0056b3;
-}
-.modal-footer {
-    display: flex;
-    justify-content: flex-end;
-    gap: 10px;
-    margin-top: 20px;
-}
-.form-group {
-    margin-bottom: 15px;
-}
-.form-group label {
-    display: block;
-    margin-bottom: 5px;
-    font-weight: bold;
-}
-.form-group input, .form-group select {
-    width: 100%;
-    padding: 10px;
-    border: 1px solid #ccc;
-    border-radius: 5px;
-    font-size: 16px;
-    box-sizing: border-box;
-}
+.summary-header h3 { margin: 0; border: none; padding: 0; color: #0056b3; }
+#toggle-details-btn { background: none; border: none; font-size: 1em; cursor: pointer; color: #007bff; padding: 5px; }
+.summary-totals { text-align: right; }
+.summary-totals p { margin: 2px 0; }
+.savings-note { color: #28a745; font-weight: bold; }
+#discounted-total-p { font-size: 1.2em; font-weight: bold; color: #dc3545; }
+#points-container { color: #007bff; font-weight: bold; margin-top: 5px; }
 
-/* Toast Notification */
-.toast-notification {
+/* --- Summary Details Panel --- */
+#summary-details {
+    position: fixed;
+    bottom: 125px; /* Adjust based on summary panel height */
+    left: 0;
+    right: 0;
+    background: #f8f9fa;
+    z-index: 99;
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.3s ease-in-out;
+    border-top: 1px solid #ddd;
+}
+#summary-details[aria-hidden="false"] {
+    max-height: 200px; /* Or a suitable max-height */
+}
+.details-content {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 15px 20px;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+}
+.details-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 2px solid #007bff;
+    padding-bottom: 10px;
+    margin-bottom: 10px;
+}
+.details-header h3 { margin: 0; padding: 0; border: none; color: #0056b3; }
+#floating-selected-items-list { overflow-y: auto; }
+#floating-selected-items-list ul { list-style: none; padding: 0; margin: 0; }
+#floating-selected-items-list li {
+    padding: 8px 0;
+    border-bottom: 1px dotted #ccc;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+.item-name { flex-grow: 1; }
+.item-price-detail { white-space: nowrap; margin-left: 15px; text-align: right; }
+.item-price-detail del { color: #6c757d; margin-right: 5px; }
+
+/* --- Toast Notification --- */
+#toast-notification {
     position: fixed;
     bottom: 20px;
     left: 50%;
-    transform: translate(-50%, 100px);
-    background-color: #333;
+    transform: translateX(-50%);
+    background-color: rgba(0,0,0,0.75);
     color: #fff;
-    padding: 12px 24px;
-    border-radius: 6px;
+    padding: 10px 20px;
+    border-radius: 20px;
     z-index: 1010;
     opacity: 0;
     visibility: hidden;
-    transition: transform 0.3s ease, opacity 0.3s ease, visibility 0.3s;
+    transition: opacity 0.3s, visibility 0.3s;
 }
-.toast-notification.show {
-    transform: translate(-50%, 0);
+#toast-notification.show {
     opacity: 1;
     visibility: visible;
 }
 
-/* 響應式表格 */
-@media screen and (max-width: 768px) {
-    /* ... (rest of the responsive styles) ... */
-}
