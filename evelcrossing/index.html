@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>平交道查詢</title>
+    <title>平交道資訊查詢</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
@@ -53,14 +53,20 @@
             <!-- 下拉式篩選器 -->
             <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 flex-grow">
                 <div>
-                    <label for="city-filter" class="block text-sm font-medium text-gray-400 mb-1">所在縣市</label>
-                    <select id="city-filter" class="w-full px-4 py-2 bg-gray-700 text-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-colors">
+                    <label for="electric-section-filter" class="block text-sm font-medium text-gray-400 mb-1">電務段</label>
+                    <select id="electric-section-filter" class="w-full px-4 py-2 bg-gray-700 text-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-colors">
                         <option value="">全部</option>
                     </select>
                 </div>
                 <div>
                     <label for="station-filter" class="block text-sm font-medium text-gray-400 mb-1">分駐所</label>
                     <select id="station-filter" class="w-full px-4 py-2 bg-gray-700 text-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-colors">
+                        <option value="">全部</option>
+                    </select>
+                </div>
+                <div>
+                    <label for="city-filter" class="block text-sm font-medium text-gray-400 mb-1">所在縣市</label>
+                    <select id="city-filter" class="w-full px-4 py-2 bg-gray-700 text-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-colors">
                         <option value="">全部</option>
                     </select>
                 </div>
@@ -110,6 +116,7 @@
 
         // Get DOM elements
         const searchInput = document.getElementById('search-input');
+        const electricSectionFilter = document.getElementById('electric-section-filter');
         const cityFilter = document.getElementById('city-filter');
         const stationFilter = document.getElementById('station-filter');
         const sectionFilter = document.getElementById('section-filter');
@@ -143,6 +150,7 @@
                         <div class="space-y-2 text-sm">
                             <p><span class="font-medium text-gray-300">所在縣市：</span>${item['所在縣市']} / <span class="font-medium text-gray-300">區間：</span>${item['區間']}</p>
                             <p><span class="font-medium text-gray-300">路線別：</span>${item['路線別']}</p>
+                            <p><span class="font-medium text-gray-300">電務段：</span>${item['電務段']}</p>
                             <p><span class="font-medium text-gray-300">分駐所：</span>${item['分駐所']}</p>
                             <p><span class="font-medium text-gray-300">種類：</span>${item['平交道種類']}</p>
                             <p><span class="font-medium text-gray-300">里程：</span>${item['里程']}</p>
@@ -186,6 +194,7 @@
         function filterAndRender() {
             // Get all current filter values
             const searchTerm = searchInput.value.toLowerCase();
+            const selectedElectricSection = electricSectionFilter.value;
             const selectedCity = cityFilter.value;
             const selectedStation = stationFilter.value;
             const selectedSection = sectionFilter.value;
@@ -195,11 +204,12 @@
             let filteredData = fullCrossingData.filter(item => {
                 const nameMatch = item['平交道名稱'].toLowerCase().includes(searchTerm) || 
                                  (item['舊名或別名'] && item['舊名或別名'].toLowerCase().includes(searchTerm));
+                const electricSectionMatch = !selectedElectricSection || item['電務段'] === selectedElectricSection;
                 const cityMatch = !selectedCity || item['所在縣市'] === selectedCity;
                 const stationMatch = !selectedStation || item['分駐所'] === selectedStation;
                 const sectionMatch = !selectedSection || item['區間'] === selectedSection;
                 const lineMatch = !selectedLine || item['路線別'] === selectedLine;
-                return nameMatch && cityMatch && stationMatch && sectionMatch && lineMatch;
+                return nameMatch && electricSectionMatch && cityMatch && stationMatch && sectionMatch && lineMatch;
             });
             
             // Renders the final filtered list of crossings
@@ -208,25 +218,36 @@
             // Dynamically update each dropdown based on the currently filtered data
             // We pass the currently filtered data to populate other select elements
             // The currently selected filter remains unchanged.
+            populateFilter(electricSectionFilter, fullCrossingData.filter(item => 
+                (!selectedCity || item['所在縣市'] === selectedCity) &&
+                (!selectedStation || item['分駐所'] === selectedStation) &&
+                (!selectedSection || item['區間'] === selectedSection) &&
+                (!selectedLine || item['路線別'] === selectedLine)
+            ), '電務段');
+
             populateFilter(cityFilter, fullCrossingData.filter(item => 
+                (!selectedElectricSection || item['電務段'] === selectedElectricSection) &&
                 (!selectedStation || item['分駐所'] === selectedStation) &&
                 (!selectedSection || item['區間'] === selectedSection) &&
                 (!selectedLine || item['路線別'] === selectedLine)
             ), '所在縣市');
 
             populateFilter(stationFilter, fullCrossingData.filter(item => 
+                (!selectedElectricSection || item['電務段'] === selectedElectricSection) &&
                 (!selectedCity || item['所在縣市'] === selectedCity) &&
                 (!selectedSection || item['區間'] === selectedSection) &&
                 (!selectedLine || item['路線別'] === selectedLine)
             ), '分駐所');
 
             populateFilter(sectionFilter, fullCrossingData.filter(item => 
+                (!selectedElectricSection || item['電務段'] === selectedElectricSection) &&
                 (!selectedCity || item['所在縣市'] === selectedCity) &&
                 (!selectedStation || item['分駐所'] === selectedStation) &&
                 (!selectedLine || item['路線別'] === selectedLine)
             ), '區間');
 
             populateFilter(lineFilter, fullCrossingData.filter(item => 
+                (!selectedElectricSection || item['電務段'] === selectedElectricSection) &&
                 (!selectedCity || item['所在縣市'] === selectedCity) &&
                 (!selectedStation || item['分駐所'] === selectedStation) &&
                 (!selectedSection || item['區間'] === selectedSection)
@@ -235,6 +256,7 @@
 
         // Attach event listeners to all filter controls
         searchInput.addEventListener('input', filterAndRender);
+        electricSectionFilter.addEventListener('change', filterAndRender);
         cityFilter.addEventListener('change', filterAndRender);
         stationFilter.addEventListener('change', filterAndRender);
         sectionFilter.addEventListener('change', filterAndRender);
