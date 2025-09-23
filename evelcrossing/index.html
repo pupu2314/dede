@@ -11,10 +11,11 @@
             font-family: 'Inter', sans-serif;
             background-color: #1a202c;
             color: #e2e8f0;
+            padding-bottom: 4rem; /* Add padding to body to prevent footer from covering content */
         }
         .scroll-to-top {
             position: fixed;
-            bottom: 2rem;
+            bottom: 6rem; /* Adjust position to be above the new footer */
             right: 2rem;
             width: 3.5rem;
             height: 3.5rem;
@@ -110,6 +111,11 @@
         </svg>
     </div>
 
+    <!-- 置底浮動版權視窗 -->
+    <div class="fixed bottom-0 left-0 right-0 bg-gray-900 text-center p-4 text-gray-400 text-xs z-20 shadow-lg">
+        駿展工程有限公司 ©2025 All Rights Reserved
+    </div>
+
     <script>
         // Store the full, unfiltered dataset
         let fullCrossingData = [];
@@ -166,6 +172,7 @@
                             <p><span class="font-medium text-gray-300">隸屬單位：</span>${electricSectionDisplay}電務段${stationDisplay}分駐所</p>
                             <p><span class="font-medium text-gray-300">里程：</span>${item['里程']}</p>
                         </div>
+                        ${googleMa
                         ${googleMapContent}
                     `;
                     resultsContainer.appendChild(card);
