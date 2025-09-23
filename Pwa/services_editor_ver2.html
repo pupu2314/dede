@@ -30,7 +30,7 @@
             .detailed-edit-input { width: 100%; padding: 5px; border: 1px solid #ccc; border-radius: 4px; }
         }
         
-        .promo-item, .combo-item { background-color: #f8f9fa; border: 1px solid #dee2e6; border-radius: 4px; padding: 8px; margin-top: 8px; display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+        .promo-item, .combo-item-display { background-color: #f8f9fa; border: 1px solid #dee2e6; border-radius: 4px; padding: 8px; margin-top: 8px; display: flex; justify-content: space-between; align-items: center; gap: 10px; }
         .actions-group { display: flex; gap: 8px; flex-shrink: 0; }
         
         /* Modal Styles */
@@ -63,35 +63,95 @@
     <h1>服務資料編輯器</h1>
 
     <div class="detailed-edit-toggle">
-        <label><input type="checkbox" v-model="detailedEditEnabled"> <strong>啟用服務項目詳細編輯 (ID、名稱、價格)</strong></label>
+        <label><input type="checkbox" v-model="detailedEditEnabled" @change="handleDirtyState"> <strong>啟用服務項目詳細編輯 (ID、名稱、價格)</strong></label>
     </div>
 
     <!-- 服務項目編輯區塊 -->
     <div v-for="(category, ci) in data.categories" :key="'cat-table-'+ci">
         <h3>{{ category.name }}</h3>
-        <!-- (桌面版與行動版視圖，為簡潔省略，功能與先前相同) -->
+        <!-- [FIXED] Restored Table View -->
+        <table class="table-view">
+            <thead>
+                <tr>
+                    <th v-if="detailedEditEnabled">ID</th>
+                    <th>項目名稱</th>
+                    <th style="width: 15%;">原價</th>
+                    <th>優惠活動</th>
+                    <th style="width: 15%;">操作</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr v-for="(item, ii) in category.items" :key="item.id">
+                    <td v-if="detailedEditEnabled"><input type="text" v-model="item.id" class="detailed-edit-input"></td>
+                    <td><input v-if="detailedEditEnabled" type="text" v-model="item.name" class="detailed-edit-input"><span v-else>{{ item.name }}</span></td>
+                    <td style="text-align: right;"><input v-if="detailedEditEnabled" type="number" v-model.number="item.price" class="detailed-edit-input"><span v-else>{{ item.price.toLocaleString() }}</span></td>
+                    <td>
+                        <div v-if="!item.promotions || item.promotions.length === 0" style="color: #6c757d;">無</div>
+                        <div v-for="(promo, pi) in item.promotions" class="promo-item" :key="'promo-'+ii+'-'+pi">
+                           <div><strong>{{ promo.label }}</strong>: ${{ promo.price.toLocaleString() }} <br><small>{{ promo.start }} ~ {{ promo.end }}</small></div>
+                           <div class="actions-group"><button @click="openModal(item, pi)" class="btn btn-secondary btn-sm">編輯</button><button @click="removePromotion(item, pi)" class="btn btn-danger btn-sm">刪除</button></div>
+                        </div>
+                    </td>
+                    <td><button @click="openModal(item, -1)" class="btn btn-sm">新增優惠</button><button v-if="detailedEditEnabled" @click="deleteItem(category, ii)" class="btn btn-danger btn-sm">刪除項目</button></td>
+                </tr>
+            </tbody>
+        </table>
+         <!-- [FIXED] Restored Original Mobile View -->
+        <div class="original-view">
+            <div v-for="(item, ii) in category.items" class="item" :key="'item-orig-'+ii">
+                <div class="item-header">{{ item.name }} (原價: {{ item.price }})</div>
+                <div v-for="(promo, pi) in item.promotions" class="promo-item" :key="'promo-orig-'+ii+'-'+pi">
+                     <div><strong>{{ promo.label }}</strong>: ${{ promo.price }}<br><small>{{ promo.start }} ~ {{ promo.end }}</small></div>
+                     <div class="actions-group"><button @click="openModal(item, pi)" class="btn btn-secondary btn-sm">編輯</button><button @click="removePromotion(item, pi)" class="btn btn-danger btn-sm">刪除</button></div>
+                </div>
+                <button @click="openModal(item, -1)" class="btn btn-sm">新增優惠</button>
+            </div>
+        </div>
     </div>
 
     <!-- 組合優惠編輯區塊 -->
     <h2>組合優惠編輯</h2>
     <div v-if="!data.combos || data.combos.length === 0" style="color: #6c757d; text-align: center; padding: 20px;">目前沒有組合優惠</div>
-    <div v-for="(combo, cbi) in data.combos" :key="'combo-'+cbi" class="combo-item">
-        <div>
-            <strong>{{ combo.name }}</strong> ({{ combo.itemIds.length }}個項目)
-            <br><small>原價: {{ calculateComboOriginalPrice(combo).toLocaleString() }}</small>
-        </div>
-        <div class="actions-group">
-            <button @click="openComboModal(cbi)" class="btn btn-secondary btn-sm">編輯</button>
-            <button @click="deleteCombo(cbi)" class="btn btn-danger btn-sm">刪除</button>
-        </div>
+    <div v-for="(combo, cbi) in data.combos" :key="'combo-'+cbi" class="combo-item-display">
+        <div><strong>{{ combo.name }}</strong> ({{ combo.itemIds.length }}個項目)<br><small>原價: {{ calculateComboOriginalPrice(combo).toLocaleString() }}</small></div>
+        <div class="actions-group"><button @click="openComboModal(cbi)" class="btn btn-secondary btn-sm">編輯</button><button @click="deleteCombo(cbi)" class="btn btn-danger btn-sm">刪除</button></div>
     </div>
     <button @click="openComboModal(-1)" class="btn">新增組合優惠</button>
     
 
-    <!-- (多個彈出視窗，為簡潔省略HTML，功能在JS中實現) -->
-    <!-- 1. 編輯優惠 Modal -->
-    <!-- 2. 編輯組合 Modal -->
-    <!-- 3. 變更確認 Modal -->
+    <!-- [FIXED] Restored Promo Modal -->
+    <div v-if="isModalVisible" class="modal-overlay">
+         <div class="modal-content">
+            <div class="modal-header"><h4>{{ modalTitle }}</h4><button @click="closeModal" style="background:none; border:none; font-size: 1.5rem; cursor:pointer;">&times;</button></div>
+            <div class="modal-body">
+                <p><strong>項目:</strong> {{ currentItem.name }} (原價: {{ currentItem.price.toLocaleString() }})</p>
+                <div class="form-group"><label>活動標籤</label><input type="text" v-model="currentPromotion.label" placeholder="例如：新優惠"></div>
+                <div class="form-group"><label>優惠價</label><input type="number" v-model.number="currentPromotion.price" @input="calculateDiscount"><div v-if="promoCalculationText" :class="['promo-calculation', { 'strong-discount': isStrongDiscount }]">{{ promoCalculationText }}</div></div>
+                <div class="form-group"><label>開始/結束日期</label><div style="display: flex; gap: 10px;"><input type="date" v-model="currentPromotion.start" style="flex: 1;"><input type="date" v-model="currentPromotion.end" style="flex: 1;"></div><div style="display: flex; gap: 10px; margin-top: 10px;"><button @click="setThisMonth" class="btn btn-sm btn-secondary">設為本月</button><button @click="setNextMonth" class="btn btn-sm btn-secondary">設為次月</button></div></div>
+                <p v-if="modalError" class="modal-error">{{ modalError }}</p>
+            </div>
+            <div class="modal-footer"><button @click="closeModal" class="btn btn-secondary">取消</button><button @click="savePromotion" class="btn">儲存</button></div>
+        </div>
+    </div>
+    <!-- [FIXED] Restored Combo Modal -->
+    <div v-if="isComboModalVisible" class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-header"><h4>編輯組合優惠</h4><button @click="isComboModalVisible=false" style="background:none; border:none; font-size: 1.5rem; cursor:pointer;">&times;</button></div>
+            <div class="modal-body">
+                <div class="form-group"><label>組合名稱</label><input type="text" v-model="currentCombo.name"></div>
+                <div class="form-group"><label>包含的服務項目 (原價合計: {{ calculateComboOriginalPrice(currentCombo).toLocaleString() }})</label><select multiple v-model="currentCombo.itemIds"><option v-for="item in allItems" :value="item.id">{{ item.name }}</option></select></div>
+            </div>
+            <div class="modal-footer"><button @click="isComboModalVisible=false" class="btn btn-secondary">取消</button><button @click="saveCombo" class="btn">儲存組合</button></div>
+        </div>
+    </div>
+    <!-- [FIXED] Restored Changes Modal -->
+     <div v-if="isChangesModalVisible" class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-header"><h4>變更確認</h4><button @click="isChangesModalVisible=false" style="background:none; border:none; font-size: 1.5rem; cursor:pointer;">&times;</button></div>
+            <div class="modal-body"><p>請確認以下變更項目：</p><ul id="changes-list"><li v-for="change in changesList">{{ change }}</li></ul></div>
+            <div class="modal-footer"><button @click="isChangesModalVisible=false" class="btn btn-secondary">關閉視窗</button><button @click="copyJson()" class="btn">複製JSON</button></div>
+        </div>
+    </div>
 
 
     <!-- 底部操作按鈕 -->
@@ -109,11 +169,19 @@
         el: '#app',
         data: {
             data: { categories: [], combos: [] },
-            originalData: null, // 用於比較變更
+            originalData: null,
             isDirty: false,
             initialLoadComplete: false,
             detailedEditEnabled: false,
-            // ... (其他 Modal 狀態)
+            isModalVisible: false,
+            modalTitle: '',
+            currentItem: null,
+            currentPromotion: {},
+            originalPromotionState: '',
+            editingPromoIndex: -1,
+            modalError: '',
+            promoCalculationText: '',
+            isStrongDiscount: false,
             isComboModalVisible: false,
             currentCombo: { name: '', itemIds: [] },
             editingComboIndex: -1,
@@ -127,16 +195,19 @@
         },
         watch: {
             data: {
-                handler: function(newData) {
+                handler: function() {
                     if (this.initialLoadComplete) {
-                        localStorage.setItem('autosavedData', JSON.stringify(newData));
-                        this.isDirty = true;
+                        localStorage.setItem('autosavedData', JSON.stringify(this.data));
+                        this.handleDirtyState();
                     }
                 },
                 deep: true
             }
         },
         methods: {
+            handleDirtyState: function() {
+                this.isDirty = JSON.stringify(this.data) !== JSON.stringify(this.originalData);
+            },
             // --- 組合優惠方法 ---
             openComboModal: function(index) {
                 this.editingComboIndex = index;
@@ -175,30 +246,51 @@
             // --- 全新變更提交流程 ---
             openChangesModal: function() {
                 this.generateChangesList();
+                if (this.changesList.length === 0) {
+                    this.showToast('沒有偵測到任何變更。');
+                    return;
+                }
                 this.isChangesModalVisible = true;
             },
             generateChangesList: function() {
-                // ... (此處為複雜的比較邏輯，為簡潔省略)
-                // 範例：
-                this.changesList = ["修改項目 '私密處除毛' 的價格", "為 '鼻毛' 新增優惠 '9月優惠'"];
+                 let changes = [];
+                const originalMap = new Map((this.originalData.categories || []).flatMap(c => c.items).map(i => [i.id, i]));
+                const currentMap = new Map((this.data.categories || []).flatMap(c => c.items).map(i => [i.id, i]));
+                
+                currentMap.forEach((currentItem, id) => {
+                    const originalItem = originalMap.get(id);
+                    if (!originalItem) {
+                        changes.push(`新增項目：'${currentItem.name}'`);
+                    } else {
+                        if (currentItem.name !== originalItem.name) changes.push(`項目 '${originalItem.name}' 更名為 '${currentItem.name}'`);
+                        if (currentItem.price !== originalItem.price) changes.push(`項目 '${currentItem.name}' 價格由 ${originalItem.price} 改為 ${currentItem.price}`);
+                        
+                        const originalPromos = new Map((originalItem.promotions || []).map(p => [p.label, p]));
+                        const currentPromos = new Map((currentItem.promotions || []).map(p => [p.label, p]));
+                        
+                        currentPromos.forEach((p, label) => {
+                           if (!originalPromos.has(label)) changes.push(`為 '${currentItem.name}' 新增優惠 '${label}'`);
+                           else if (JSON.stringify(p) !== JSON.stringify(originalPromos.get(label))) changes.push(`修改了 '${currentItem.name}' 的優惠 '${label}'`);
+                        });
+                        originalPromos.forEach((p, label) => {
+                           if (!currentPromos.has(label)) changes.push(`刪除了 '${currentItem.name}' 的優惠 '${label}'`);
+                        });
+                    }
+                });
+                originalMap.forEach((originalItem, id) => {
+                    if (!currentMap.has(id)) changes.push(`刪除項目：'${originalItem.name}'`);
+                });
+                this.changesList = changes;
             },
 
             // --- 修改後的資料處理方法 ---
             copyJson: function(isManualCopy = false) {
                 var outputData = JSON.parse(JSON.stringify(this.data));
-                // ... (清理空 promotions 的邏輯)
+                (outputData.categories || []).forEach(cat => (cat.items || []).forEach(item => { if (item.promotions && item.promotions.length === 0) delete item.promotions; }));
                 var jsonString = JSON.stringify(outputData, null, 2);
                  navigator.clipboard.writeText(jsonString).then(() => {
                     this.showToast('JSON 已複製到剪貼簿，請傳送給管理者更新伺服器資料才會生效。');
                     if(this.isChangesModalVisible) this.isChangesModalVisible = false;
-                    // 注意：不再移除 autosave
-                    // isDirty 狀態在複製後應重設，代表目前狀態已 "發布"
-                    this.originalData = JSON.parse(JSON.stringify(this.data)); 
-                    this.isDirty = false;
-                    // 如果是手動複製(在沒有變更時)，也更新 originalData
-                    if (isManualCopy) {
-                         this.originalData = JSON.parse(JSON.stringify(this.data));
-                    }
                 }, () => {
                     alert('複製失敗!');
                 });
@@ -207,9 +299,10 @@
                 try {
                     var response = await fetch('services.json?t=' + new Date().getTime());
                     const data = await response.json();
-                    this.data = data;
-                    this.originalData = JSON.parse(JSON.stringify(data)); // 保存原始副本
-                    this.isDirty = false;
+                    this.data = JSON.parse(JSON.stringify(data));
+                    this.originalData = JSON.parse(JSON.stringify(data));
+                    this.handleDirtyState();
+                    this.showToast('已從伺服器載入最新資料。');
                 } catch (error) {
                     alert('無法載入資料!');
                 } finally {
@@ -217,44 +310,132 @@
                 }
             },
             discardAndReload: function() {
-                 if (confirm('您確定要放棄所有未儲存的變更嗎？')) {
-                    localStorage.removeItem('autosavedData');
-                    this.loadDataFromServer();
+                 if (this.isDirty && !confirm('您確定要放棄所有未儲存的變更嗎？')) {
+                    return;
                 }
+                localStorage.removeItem('autosavedData');
+                this.loadDataFromServer();
             },
 
             // --- 智慧標籤 ---
             openModal: function(item, promoIndex) {
-                 // ... (原有邏輯)
+                 this.currentItem = item;
+                this.editingPromoIndex = promoIndex;
+                this.modalError = '';
                 if (promoIndex === -1) {
-                    this.currentPromotion.label = '新優惠';
+                    this.modalTitle = '新增優惠';
+                    this.currentPromotion = { label: '新優惠', price: null, start: '', end: '' };
+                } else {
+                    this.modalTitle = '編輯優惠';
+                    this.currentPromotion = JSON.parse(JSON.stringify(item.promotions[promoIndex]));
                 }
-                // ...
+                this.originalPromotionState = JSON.stringify(this.currentPromotion);
+                this.calculateDiscount();
+                this.isModalVisible = true;
+            },
+             closeModal: function() {
+                 if (this.originalPromotionState !== JSON.stringify(this.currentPromotion)) {
+                    if (!confirm('您有未儲存的變更，確定要放棄嗎？')) {
+                        return;
+                    }
+                }
+                this.isModalVisible = false;
+                this.currentItem = null;
+                this.promoCalculationText = '';
             },
             setThisMonth: function() {
-                // ... (原有日期設定邏輯)
-                const month = new Date().getMonth() + 1;
+                const now = new Date();
+                const year = now.getFullYear();
+                const month = now.getMonth();
+                const firstDay = new Date(year, month, 1);
+                const lastDay = new Date(year, month + 1, 0);
+                this.currentPromotion.start = this.formatDate(firstDay);
+                this.currentPromotion.end = this.formatDate(lastDay);
                 if (this.currentPromotion.label === '新優惠') {
-                    this.currentPromotion.label = `${month}月優惠`;
+                    this.currentPromotion.label = `${month + 1}月優惠`;
                 }
             },
             setNextMonth: function() {
-                // ... (原有日期設定邏輯)
                 const now = new Date();
-                const month = new Date(now.getFullYear(), now.getMonth() + 1, 1).getMonth() + 1;
+                const year = now.getFullYear();
+                const month = now.getMonth();
+                const firstDay = new Date(year, month + 1, 1);
+                const lastDay = new Date(year, month + 2, 0);
+                this.currentPromotion.start = this.formatDate(firstDay);
+                this.currentPromotion.end = this.formatDate(lastDay);
                 if (this.currentPromotion.label === '新優惠') {
-                    this.currentPromotion.label = `${month}月優惠`;
+                    this.currentPromotion.label = `${firstDay.getMonth() + 1}月優惠`;
                 }
             },
-            // ... (其他所有既有方法)
+            // ... (其他所有既有方法如 calculateDiscount, savePromotion, deleteItem, showToast, formatDate 等保持不變)
+            // [NOTE] The other methods are omitted here for brevity but are assumed to be the same as the previous correct version.
+            savePromotion: function() {
+                this.modalError = '';
+                var p = this.currentPromotion;
+                var originalPrice = this.currentItem.price;
+
+                if (!p.label || p.label.trim() === '') { this.modalError = '錯誤: 活動標籤不可為空。'; return; }
+                if (typeof p.price !== 'number' || p.price <= 0) { this.modalError = '錯誤: 優惠價需為大於 0 的數字。'; return; }
+                if (p.price >= originalPrice) { this.modalError = '錯誤: 優惠價 (' + p.price + ') 需低於原價 (' + originalPrice + ')。'; return; }
+                if (!p.start) { this.modalError = '錯誤: 開始日期不可為空。'; return; }
+                if (!p.end) { this.modalError = '錯誤: 結束日期不可為空。'; return; }
+                if (p.start > p.end) { this.modalError = '錯誤: 結束日期不可早於開始日期。'; return; }
+
+                if (!this.currentItem.promotions) {
+                    this.$set(this.currentItem, 'promotions', []);
+                }
+                
+                if (this.editingPromoIndex === -1) {
+                    this.currentItem.promotions.push(p);
+                } else {
+                    this.currentItem.promotions.splice(this.editingPromoIndex, 1, p);
+                }
+                this.isModalVisible = false; // Close on success
+            },
+             calculateDiscount: function() {
+                const promoPrice = this.currentPromotion.price;
+                const originalPrice = this.currentItem.price;
+                if (!promoPrice || promoPrice <= 0 || promoPrice >= originalPrice) {
+                    this.promoCalculationText = '';
+                    return;
+                }
+                const savings = originalPrice - promoPrice;
+                const discountRatio = (promoPrice / originalPrice) * 10;
+                this.promoCalculationText = `省 ${savings.toLocaleString()} 元 (約 ${discountRatio.toFixed(1)} 折)`;
+                this.isStrongDiscount = discountRatio < 8.0;
+                 if (this.isStrongDiscount) {
+                    this.promoCalculationText += ' - 低於八折優惠！';
+                }
+            },
+             removePromotion: function(parent, index) {
+                if (confirm('確定要刪除這個優惠嗎？')) {
+                    parent.promotions.splice(index, 1);
+                }
+            },
+            deleteItem: function(category, itemIndex) {
+                if (confirm('您確定要永久刪除這個服務項目嗎？此操作無法復原。')) {
+                    category.items.splice(itemIndex, 1);
+                }
+            },
+             showToast: function(message) {
+                var toast = document.createElement('div');
+                toast.textContent = message;
+                toast.style.cssText = 'position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%); background-color: #333; color: #fff; padding: 10px 20px; border-radius: 5px; z-index: 1010;';
+                document.body.appendChild(toast);
+                setTimeout(function() { document.body.removeChild(toast); }, 3000);
+            },
+             formatDate: function(date) {
+                const y = date.getFullYear();
+                const m = ('0' + (date.getMonth() + 1)).slice(-2);
+                const d = ('0' + date.getDate()).slice(-2);
+                return `${y}-${m}-${d}`;
+            }
         },
         mounted: function() {
             const savedData = localStorage.getItem('autosavedData');
             if (savedData) {
-                this.data = JSON.parse(savedData);
-                this.loadDataFromServer().then(() => { // 載入原始資料以供比較
-                    this.data = JSON.parse(savedData); // 重新應用暫存資料
-                    this.isDirty = true;
+                this.loadDataFromServer().then(() => { 
+                    this.data = JSON.parse(savedData);
                     this.showToast('已載入上次未儲存的編輯內容。');
                 });
             } else {
@@ -263,17 +444,6 @@
         }
     });
 </script>
-
-<!-- 以下為彈出視窗的HTML模板 -->
-<template id="promo-modal-template">
-    <!-- ... -->
-</template>
-<template id="combo-modal-template">
-    <!-- ... -->
-</template>
-<template id="changes-modal-template">
-    <!-- ... -->
-</template>
 
 </body>
 </html>
