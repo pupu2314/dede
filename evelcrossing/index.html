@@ -72,7 +72,7 @@
                 </div>
                 <div>
                     <label for="section-filter" class="block text-sm font-medium text-gray-400 mb-1">區間</label>
-                    <select id="section-filter" class="w-full px-4 py-2 bg-gray-700 text-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-colors">
+                    <select id="section-filter" class="w-full px-4 py-2 bg-gray-700 text-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-ring-indigo-500 transition-colors">
                         <option value="">全部</option>
                     </select>
                 </div>
@@ -144,26 +144,31 @@
                     const electricSectionDisplay = (item['電務段'] === '' || item['電務段'] === 0) ? '不明' : item['電務段'];
                     const stationDisplay = (item['分駐所'] === '' || item['分駐所'] === 0) ? '不明' : item['分駐所'];
 
-                    card.innerHTML = `
-                        <div class="flex flex-col sm:flex-row sm:items-baseline sm:space-x-2 mb-2">
-                            <h2 class="text-xl font-bold text-indigo-400">${item['平交道名稱']}${oldName}</h2>
-                            <p class="text-sm text-gray-400">編號：${item['編號']}</p>
-                        </div>
-                        <div class="space-y-2 text-sm">
-                            <p><span class="font-medium text-gray-300">位置：</span>${item['所在縣市']} / <span class="font-medium text-gray-300"></span>${item['區間']}間</p>
-                            <p><span class="font-medium text-gray-300">路線別：</span>${item['路線別']}</p>
-                            <p><span class="font-medium text-gray-300">管理單位：</span>${electricSectionDisplay}電務段／${stationDisplay}分駐所</p>
-                            <p><span class="font-medium text-gray-300">種類：</span>${item['平交道種類']}</p>
-                            <p><span class="font-medium text-gray-300">里程：</span>${item['里程']}</p>
-                        </div>
-                        <a href="${item['Google地圖']}" target="_blank" class="mt-4 inline-block text-indigo-300 hover:text-indigo-200 transition-colors">
+                    const googleMapContent = item['Google地圖'] ? 
+                        `<a href="${item['Google地圖']}" target="_blank" class="mt-4 inline-block text-indigo-300 hover:text-indigo-200 transition-colors">
                             <div class="flex items-center space-x-1">
                                 <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
                                     <path fill-rule="evenodd" d="M5.057 5.057a7 7 0 119.886 9.886L10 18.886l-4.943-4.943a7 7 0 010-9.886zM10 11a2 2 1000-4 2 2 0 000 4z" clip-rule="evenodd" />
                                 </svg>
                                 <span>Google 地圖</span>
                             </div>
-                        </a>
+                        </a>` :
+                        `<p class="mt-4 text-sm text-gray-500">無位置資訊</p>`;
+
+                    card.innerHTML = `
+                        <div class="flex flex-col sm:flex-row sm:items-baseline sm:space-x-2 mb-2">
+                            <h2 class="text-xl font-bold text-indigo-400">${item['平交道名稱']}${oldName}</h2>
+                            <p class="text-sm text-gray-400">編號：${item['編號']}</p>
+                        </div>
+                        <div class="space-y-2 text-sm">
+                            <p><span class="font-medium text-gray-300">所在縣市：</span>${item['所在縣市']} / <span class="font-medium text-gray-300">區間：</span>${item['區間']}</p>
+                            <p><span class="font-medium text-gray-300">路線別：</span>${item['路線別']}</p>
+                            <p><span class="font-medium text-gray-300">電務段：</span>${electricSectionDisplay}</p>
+                            <p><span class="font-medium text-gray-300">分駐所：</span>${stationDisplay}</p>
+                            <p><span class="font-medium text-gray-300">種類：</span>${item['平交道種類']}</p>
+                            <p><span class="font-medium text-gray-300">里程：</span>${item['里程']}</p>
+                        </div>
+                        ${googleMapContent}
                     `;
                     resultsContainer.appendChild(card);
                 });
