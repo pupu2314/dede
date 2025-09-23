@@ -27,9 +27,12 @@
             .table-view th, .table-view td { border: 1px solid #dee2e6; padding: 12px; text-align: left; vertical-align: middle; }
             .table-view thead { background-color: #e9ecef; }
             .original-view { display: none; }
-            .detailed-edit-input { width: 100%; padding: 5px; border: 1px solid #ccc; border-radius: 4px; }
         }
         
+        .detailed-edit-input { width: 100%; padding: 5px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
+        .original-view .detailed-edit-group { margin-bottom: 10px; }
+        .original-view .detailed-edit-group label { font-weight: normal; font-size: 0.9em; }
+
         .promo-item, .combo-item-display { background-color: #f8f9fa; border: 1px solid #dee2e6; border-radius: 4px; padding: 8px; margin-top: 8px; display: flex; justify-content: space-between; align-items: center; gap: 10px; }
         .actions-group { display: flex; gap: 8px; flex-shrink: 0; }
         
@@ -54,6 +57,10 @@
         .bottom-actions .container { display: flex; gap: 15px; padding: 0; }
 
         .detailed-edit-toggle { background-color: #f0f0f0; padding: 15px; margin-bottom: 20px; border-radius: 8px; border: 1px solid #ddd; }
+        
+        .original-view .item { border: 1px solid #ccc; padding: 15px; margin-bottom: 15px; border-radius: 5px; }
+        .original-view .item-header { font-weight: bold; margin-bottom: 10px; }
+
     </style>
     <script src="https://unpkg.com/vue@2"></script>
 </head>
@@ -69,7 +76,6 @@
     <!-- 服務項目編輯區塊 -->
     <div v-for="(category, ci) in data.categories" :key="'cat-table-'+ci">
         <h3>{{ category.name }}</h3>
-        <!-- [FIXED] Restored Table View -->
         <table class="table-view">
             <thead>
                 <tr>
@@ -96,15 +102,24 @@
                 </tr>
             </tbody>
         </table>
-         <!-- [FIXED] Restored Original Mobile View -->
+        <!-- [FIXED] Restored Original Mobile View with detailed editing -->
         <div class="original-view">
             <div v-for="(item, ii) in category.items" class="item" :key="'item-orig-'+ii">
-                <div class="item-header">{{ item.name }} (原價: {{ item.price }})</div>
+                <div v-if="!detailedEditEnabled">
+                    <div class="item-header">{{ item.name }} (原價: {{ item.price }})</div>
+                </div>
+                <div v-else>
+                    <div class="detailed-edit-group"><label>ID</label><input type="text" v-model="item.id" class="detailed-edit-input"></div>
+                    <div class="detailed-edit-group"><label>名稱</label><input type="text" v-model="item.name" class="detailed-edit-input"></div>
+                    <div class="detailed-edit-group"><label>價格</label><input type="number" v-model.number="item.price" class="detailed-edit-input"></div>
+                </div>
+
                 <div v-for="(promo, pi) in item.promotions" class="promo-item" :key="'promo-orig-'+ii+'-'+pi">
                      <div><strong>{{ promo.label }}</strong>: ${{ promo.price }}<br><small>{{ promo.start }} ~ {{ promo.end }}</small></div>
                      <div class="actions-group"><button @click="openModal(item, pi)" class="btn btn-secondary btn-sm">編輯</button><button @click="removePromotion(item, pi)" class="btn btn-danger btn-sm">刪除</button></div>
                 </div>
                 <button @click="openModal(item, -1)" class="btn btn-sm">新增優惠</button>
+                <button v-if="detailedEditEnabled" @click="deleteItem(category, ii)" class="btn btn-danger btn-sm">刪除項目</button>
             </div>
         </div>
     </div>
@@ -119,12 +134,12 @@
     <button @click="openComboModal(-1)" class="btn">新增組合優惠</button>
     
 
-    <!-- [FIXED] Restored Promo Modal -->
+    <!-- 單項/組合 優惠編輯 Modal -->
     <div v-if="isModalVisible" class="modal-overlay">
          <div class="modal-content">
             <div class="modal-header"><h4>{{ modalTitle }}</h4><button @click="closeModal" style="background:none; border:none; font-size: 1.5rem; cursor:pointer;">&times;</button></div>
             <div class="modal-body">
-                <p><strong>項目:</strong> {{ currentItem.name }} (原價: {{ currentItem.price.toLocaleString() }})</p>
+                <p><strong>項目:</strong> {{ currentItem.name }} (原價: {{ (currentItem.price || calculateComboOriginalPrice(currentItem)).toLocaleString() }})</p>
                 <div class="form-group"><label>活動標籤</label><input type="text" v-model="currentPromotion.label" placeholder="例如：新優惠"></div>
                 <div class="form-group"><label>優惠價</label><input type="number" v-model.number="currentPromotion.price" @input="calculateDiscount"><div v-if="promoCalculationText" :class="['promo-calculation', { 'strong-discount': isStrongDiscount }]">{{ promoCalculationText }}</div></div>
                 <div class="form-group"><label>開始/結束日期</label><div style="display: flex; gap: 10px;"><input type="date" v-model="currentPromotion.start" style="flex: 1;"><input type="date" v-model="currentPromotion.end" style="flex: 1;"></div><div style="display: flex; gap: 10px; margin-top: 10px;"><button @click="setThisMonth" class="btn btn-sm btn-secondary">設為本月</button><button @click="setNextMonth" class="btn btn-sm btn-secondary">設為次月</button></div></div>
@@ -133,22 +148,30 @@
             <div class="modal-footer"><button @click="closeModal" class="btn btn-secondary">取消</button><button @click="savePromotion" class="btn">儲存</button></div>
         </div>
     </div>
-    <!-- [FIXED] Restored Combo Modal -->
+    <!-- 組合優惠主體編輯 Modal -->
     <div v-if="isComboModalVisible" class="modal-overlay">
         <div class="modal-content">
             <div class="modal-header"><h4>編輯組合優惠</h4><button @click="isComboModalVisible=false" style="background:none; border:none; font-size: 1.5rem; cursor:pointer;">&times;</button></div>
             <div class="modal-body">
                 <div class="form-group"><label>組合名稱</label><input type="text" v-model="currentCombo.name"></div>
                 <div class="form-group"><label>包含的服務項目 (原價合計: {{ calculateComboOriginalPrice(currentCombo).toLocaleString() }})</label><select multiple v-model="currentCombo.itemIds"><option v-for="item in allItems" :value="item.id">{{ item.name }}</option></select></div>
+                <hr>
+                <label style="font-weight: bold;">組合專屬優惠</label>
+                <div v-if="!currentCombo.promotions || currentCombo.promotions.length === 0" style="color: #6c757d; margin-top: 10px;">無</div>
+                <div v-for="(promo, pi) in currentCombo.promotions" class="promo-item" :key="'combo-promo-'+pi">
+                    <div><strong>{{ promo.label }}</strong>: ${{ promo.price.toLocaleString() }} <br><small>{{ promo.start }} ~ {{ promo.end }}</small></div>
+                    <div class="actions-group"><button @click="openModal(currentCombo, pi, true)" class="btn btn-secondary btn-sm">編輯</button><button @click="removePromotion(currentCombo, pi)" class="btn btn-danger btn-sm">刪除</button></div>
+                </div>
+                 <button @click="openModal(currentCombo, -1, true)" class="btn btn-sm" style="margin-top:10px;">新增組合優惠</button>
             </div>
-            <div class="modal-footer"><button @click="isComboModalVisible=false" class="btn btn-secondary">取消</button><button @click="saveCombo" class="btn">儲存組合</button></div>
+            <div class="modal-footer"><button @click="isComboModalVisible=false" class="btn btn-secondary">關閉</button><button @click="saveCombo" class="btn">儲存組合</button></div>
         </div>
     </div>
-    <!-- [FIXED] Restored Changes Modal -->
+    <!-- 變更確認 Modal -->
      <div v-if="isChangesModalVisible" class="modal-overlay">
         <div class="modal-content">
             <div class="modal-header"><h4>變更確認</h4><button @click="isChangesModalVisible=false" style="background:none; border:none; font-size: 1.5rem; cursor:pointer;">&times;</button></div>
-            <div class="modal-body"><p>請確認以下變更項目：</p><ul id="changes-list"><li v-for="change in changesList">{{ change }}</li></ul></div>
+            <div class="modal-body"><p>請確認以下變更項目：</p><ul id="changes-list"><li v-for="change in changesList" v-html="change"></li></ul></div>
             <div class="modal-footer"><button @click="isChangesModalVisible=false" class="btn btn-secondary">關閉視窗</button><button @click="copyJson()" class="btn">複製JSON</button></div>
         </div>
     </div>
@@ -183,10 +206,11 @@
             promoCalculationText: '',
             isStrongDiscount: false,
             isComboModalVisible: false,
-            currentCombo: { name: '', itemIds: [] },
+            currentCombo: { name: '', itemIds: [], promotions: [] },
             editingComboIndex: -1,
             isChangesModalVisible: false,
-            changesList: []
+            changesList: [],
+            isEditingComboPromo: false
         },
         computed: {
             allItems: function() {
@@ -212,7 +236,7 @@
             openComboModal: function(index) {
                 this.editingComboIndex = index;
                 if (index === -1) {
-                    this.currentCombo = { name: '', itemIds: [] };
+                    this.currentCombo = { name: '', itemIds: [], promotions: [] };
                 } else {
                     this.currentCombo = JSON.parse(JSON.stringify(this.data.combos[index]));
                 }
@@ -253,40 +277,51 @@
                 this.isChangesModalVisible = true;
             },
             generateChangesList: function() {
-                 let changes = [];
-                const originalMap = new Map((this.originalData.categories || []).flatMap(c => c.items).map(i => [i.id, i]));
-                const currentMap = new Map((this.data.categories || []).flatMap(c => c.items).map(i => [i.id, i]));
-                
-                currentMap.forEach((currentItem, id) => {
-                    const originalItem = originalMap.get(id);
+                let changes = [];
+                const originalItemsMap = new Map((this.originalData.categories || []).flatMap(c => c.items).map(i => [i.id, i]));
+                const currentItemsMap = new Map((this.data.categories || []).flatMap(c => c.items).map(i => [i.id, i]));
+
+                // 檢查項目變更
+                currentItemsMap.forEach((currentItem, id) => {
+                    const originalItem = originalItemsMap.get(id);
                     if (!originalItem) {
-                        changes.push(`新增項目：'${currentItem.name}'`);
+                        changes.push(`新增項目：<b>${currentItem.name}</b>`);
                     } else {
-                        if (currentItem.name !== originalItem.name) changes.push(`項目 '${originalItem.name}' 更名為 '${currentItem.name}'`);
-                        if (currentItem.price !== originalItem.price) changes.push(`項目 '${currentItem.name}' 價格由 ${originalItem.price} 改為 ${currentItem.price}`);
+                        if (currentItem.name !== originalItem.name) changes.push(`項目 '<b>${originalItem.name}</b>' 更名為 '<b>${currentItem.name}</b>'`);
+                        if (currentItem.price !== originalItem.price) changes.push(`項目 '<b>${currentItem.name}</b>' 價格由 <b>${originalItem.price}</b> 改為 <b>${currentItem.price}</b>`);
                         
+                        // 檢查優惠變更
                         const originalPromos = new Map((originalItem.promotions || []).map(p => [p.label, p]));
-                        const currentPromos = new Map((currentItem.promotions || []).map(p => [p.label, p]));
-                        
-                        currentPromos.forEach((p, label) => {
-                           if (!originalPromos.has(label)) changes.push(`為 '${currentItem.name}' 新增優惠 '${label}'`);
-                           else if (JSON.stringify(p) !== JSON.stringify(originalPromos.get(label))) changes.push(`修改了 '${currentItem.name}' 的優惠 '${label}'`);
+                        (currentItem.promotions || []).forEach(currentPromo => {
+                            const originalPromo = originalPromos.get(currentPromo.label);
+                            if (!originalPromo) {
+                                changes.push(`為 '<b>${currentItem.name}</b>' 新增優惠 '<b>${currentPromo.label}</b>'`);
+                            } else {
+                                let promoChanges = [];
+                                if (currentPromo.price !== originalPromo.price) promoChanges.push(`價格: ${originalPromo.price} -> <b>${currentPromo.price}</b>`);
+                                if (currentPromo.start !== originalPromo.start) promoChanges.push(`開始日期: ${originalPromo.start} -> <b>${currentPromo.start}</b>`);
+                                if (currentPromo.end !== originalPromo.end) promoChanges.push(`結束日期: ${originalPromo.end} -> <b>${currentPromo.end}</b>`);
+                                if(promoChanges.length > 0) changes.push(`修改了 '<b>${currentItem.name}</b>' 的優惠 '<b>${currentPromo.label}</b>' (${promoChanges.join(', ')})`);
+                            }
                         });
                         originalPromos.forEach((p, label) => {
-                           if (!currentPromos.has(label)) changes.push(`刪除了 '${currentItem.name}' 的優惠 '${label}'`);
+                           if (!(currentItem.promotions || []).find(cp => cp.label === label)) changes.push(`刪除了 '<b>${currentItem.name}</b>' 的優惠 '<b>${label}</b>'`);
                         });
                     }
                 });
-                originalMap.forEach((originalItem, id) => {
-                    if (!currentMap.has(id)) changes.push(`刪除項目：'${originalItem.name}'`);
+                originalItemsMap.forEach((originalItem, id) => {
+                    if (!currentItemsMap.has(id)) changes.push(`刪除項目：<b>${originalItem.name}</b>`);
                 });
+
+                // (可以加入組合優惠的變更檢查)
+
                 this.changesList = changes;
             },
 
-            // --- 修改後的資料處理方法 ---
             copyJson: function(isManualCopy = false) {
                 var outputData = JSON.parse(JSON.stringify(this.data));
                 (outputData.categories || []).forEach(cat => (cat.items || []).forEach(item => { if (item.promotions && item.promotions.length === 0) delete item.promotions; }));
+                (outputData.combos || []).forEach(combo => { if (combo.promotions && combo.promotions.length === 0) delete combo.promotions; });
                 var jsonString = JSON.stringify(outputData, null, 2);
                  navigator.clipboard.writeText(jsonString).then(() => {
                     this.showToast('JSON 已複製到剪貼簿，請傳送給管理者更新伺服器資料才會生效。');
@@ -317,17 +352,17 @@
                 this.loadDataFromServer();
             },
 
-            // --- 智慧標籤 ---
-            openModal: function(item, promoIndex) {
-                 this.currentItem = item;
+            openModal: function(itemOrCombo, promoIndex, isCombo = false) {
+                this.isEditingComboPromo = isCombo;
+                this.currentItem = itemOrCombo;
                 this.editingPromoIndex = promoIndex;
                 this.modalError = '';
                 if (promoIndex === -1) {
-                    this.modalTitle = '新增優惠';
+                    this.modalTitle = isCombo ? '新增組合優惠' : '新增優惠';
                     this.currentPromotion = { label: '新優惠', price: null, start: '', end: '' };
                 } else {
-                    this.modalTitle = '編輯優惠';
-                    this.currentPromotion = JSON.parse(JSON.stringify(item.promotions[promoIndex]));
+                    this.modalTitle = isCombo ? '編輯組合優惠' : '編輯優惠';
+                    this.currentPromotion = JSON.parse(JSON.stringify(itemOrCombo.promotions[promoIndex]));
                 }
                 this.originalPromotionState = JSON.stringify(this.currentPromotion);
                 this.calculateDiscount();
@@ -367,16 +402,14 @@
                     this.currentPromotion.label = `${firstDay.getMonth() + 1}月優惠`;
                 }
             },
-            // ... (其他所有既有方法如 calculateDiscount, savePromotion, deleteItem, showToast, formatDate 等保持不變)
-            // [NOTE] The other methods are omitted here for brevity but are assumed to be the same as the previous correct version.
             savePromotion: function() {
                 this.modalError = '';
                 var p = this.currentPromotion;
-                var originalPrice = this.currentItem.price;
+                var originalPrice = this.currentItem.price || this.calculateComboOriginalPrice(this.currentItem);
 
                 if (!p.label || p.label.trim() === '') { this.modalError = '錯誤: 活動標籤不可為空。'; return; }
                 if (typeof p.price !== 'number' || p.price <= 0) { this.modalError = '錯誤: 優惠價需為大於 0 的數字。'; return; }
-                if (p.price >= originalPrice) { this.modalError = '錯誤: 優惠價 (' + p.price + ') 需低於原價 (' + originalPrice + ')。'; return; }
+                if (p.price >= originalPrice) { this.modalError = `錯誤: 優惠價 (${p.price}) 需低於原價 (${originalPrice})。`; return; }
                 if (!p.start) { this.modalError = '錯誤: 開始日期不可為空。'; return; }
                 if (!p.end) { this.modalError = '錯誤: 結束日期不可為空。'; return; }
                 if (p.start > p.end) { this.modalError = '錯誤: 結束日期不可早於開始日期。'; return; }
@@ -390,11 +423,16 @@
                 } else {
                     this.currentItem.promotions.splice(this.editingPromoIndex, 1, p);
                 }
-                this.isModalVisible = false; // Close on success
+                this.isModalVisible = false;
+                if(this.isEditingComboPromo) {
+                    // Force update on combo modal if it's open
+                    this.saveCombo();
+                    this.isComboModalVisible = true;
+                }
             },
              calculateDiscount: function() {
                 const promoPrice = this.currentPromotion.price;
-                const originalPrice = this.currentItem.price;
+                const originalPrice = this.currentItem.price || this.calculateComboOriginalPrice(this.currentItem);
                 if (!promoPrice || promoPrice <= 0 || promoPrice >= originalPrice) {
                     this.promoCalculationText = '';
                     return;
