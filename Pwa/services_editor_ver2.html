@@ -19,6 +19,7 @@
         .btn.btn-danger:hover { background-color: #c82333; }
         .btn.btn-secondary { background-color: #6c757d; }
         .btn.btn-secondary:hover { background-color: #5a6268; }
+        .btn:disabled { background-color: #a0a0a0; cursor: not-allowed; }
         
         /* Table Styles for Desktop */
         .table-view { display: none; }
@@ -185,8 +186,7 @@
     <div class="bottom-actions">
         <div class="container">
             <button @click="discardAndReload" class="btn btn-secondary btn-block">放棄暫存並重載</button>
-            <button v-if="isDirty" @click="openChangesModal" class="btn btn-block">產生JSON</button>
-            <button v-else @click="copyJson(true)" class="btn btn-block btn-success">複製JSON</button>
+            <button @click="openChangesModal" :disabled="!isDirty" class="btn btn-block">產生JSON</button>
         </div>
     </div>
 </div>
@@ -311,11 +311,10 @@
                 const originalCombosMap = new Map((this.originalData.combos || []).map(c => [c.name, c]));
                 const currentCombosMap = new Map((this.data.combos || []).map(c => [c.name, c]));
 
-                // Helper for detailed promo change string
                 const getPromoChangeString = (currentPromo, originalPromo, parentName, originalParentPrice) => {
                     if (!originalPromo) {
                         let detail = `為 '<b>${parentName}</b>' 新增優惠 '<b>${currentPromo.label}</b>' (價格: ${currentPromo.price}, 期間: ${currentPromo.start} ~ ${currentPromo.end})`;
-                        if ((currentPromo.price / originalParentPrice) < 0.8) {
+                        if (originalParentPrice > 0 && (currentPromo.price / originalParentPrice) < 0.8) {
                             detail += ` <span style="color:red; font-weight:bold;">【注意】此促銷低於八折優惠！</span>`;
                         }
                         return detail;
@@ -328,7 +327,6 @@
                     return null;
                 };
 
-                // 檢查項目變更
                 currentItemsMap.forEach((currentItem, id) => {
                     const originalItem = originalItemsMap.get(id);
                     if (!originalItem) {
@@ -351,7 +349,6 @@
                     if (!currentItemsMap.has(id)) changes.push(`刪除項目：<b>${originalItem.name}</b>`);
                 });
 
-                // 檢查組合變更
                 currentCombosMap.forEach((currentCombo, name) => {
                     const originalCombo = originalCombosMap.get(name);
                     if (!originalCombo) {
@@ -378,7 +375,7 @@
                 this.changesList = changes;
             },
 
-            copyJson: function(isManualCopy = false) {
+            copyJson: function() {
                 var outputData = JSON.parse(JSON.stringify(this.data));
                 (outputData.categories || []).forEach(cat => (cat.items || []).forEach(item => { if (item.promotions && item.promotions.length === 0) delete item.promotions; }));
                 (outputData.combos || []).forEach(combo => { if (combo.promotions && combo.promotions.length === 0) delete combo.promotions; });
@@ -386,7 +383,6 @@
                  navigator.clipboard.writeText(jsonString).then(() => {
                     this.showToast('JSON 已複製到剪貼簿，請傳送給管理者更新伺服器資料才會生效。');
                     if(this.isChangesModalVisible) this.isChangesModalVisible = false;
-                    // [FIX] Update originalData after copying to correctly reset dirty state
                     this.originalData = JSON.parse(JSON.stringify(this.data));
                     this.handleDirtyState();
                 }, () => {
@@ -471,11 +467,26 @@
                 var p = this.currentPromotion;
                 var originalPrice = this.currentItem.price || this.calculateComboOriginalPrice(this.currentItem);
 
+                if (!p.start || !p.end) { this.modalError = '錯誤: 開始與結束日期不可為空。'; return; }
+
+                if (this.currentItem.promotions && this.currentItem.promotions.length > 0) {
+                    const newStart = new Date(p.start);
+                    const newEnd = new Date(p.end);
+                    for (let i = 0; i < this.currentItem.promotions.length; i++) {
+                        if (i === this.editingPromoIndex) continue;
+                        const existingPromo = this.currentItem.promotions[i];
+                        const existingStart = new Date(existingPromo.start);
+                        const existingEnd = new Date(existingPromo.end);
+                        if (newStart <= existingEnd && newEnd >= existingStart) {
+                            this.modalError = `錯誤: 優惠期間與現有的 '${existingPromo.label}' 優惠重疊。`;
+                            return;
+                        }
+                    }
+                }
+
                 if (!p.label || p.label.trim() === '') { this.modalError = '錯誤: 活動標籤不可為空。'; return; }
                 if (typeof p.price !== 'number' || p.price <= 0) { this.modalError = '錯誤: 優惠價需為大於 0 的數字。'; return; }
                 if (p.price >= originalPrice) { this.modalError = `錯誤: 優惠價 (${p.price}) 需低於原價 (${originalPrice})。`; return; }
-                if (!p.start) { this.modalError = '錯誤: 開始日期不可為空。'; return; }
-                if (!p.end) { this.modalError = '錯誤: 結束日期不可為空。'; return; }
                 if (p.start > p.end) { this.modalError = '錯誤: 結束日期不可早於開始日期。'; return; }
 
                 if (!this.currentItem.promotions) {
