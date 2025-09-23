@@ -174,18 +174,35 @@
         // Populates the dropdown options for a given filter
         function populateFilter(selectElement, data, key) {
             const currentValue = selectElement.value; // Save the current selection
-            selectElement.innerHTML = '<option value="">全部</option>'; // Clear and add "全部" option
+            selectElement.innerHTML = ''; // Clear existing options
             
             const uniqueValues = new Set();
+            let hasUnknown = false;
+            
             data.forEach(item => {
                 let value = item[key];
-                // Check for empty string or 0 and replace with '不明'
                 if ((key === '電務段' || key === '分駐所') && (value === '' || value === 0)) {
-                    value = '不明';
+                    hasUnknown = true;
+                } else if (value !== '' && value !== 0) {
+                    uniqueValues.add(value);
                 }
-                uniqueValues.add(value);
             });
             
+            // Add "全部" option first
+            const allOption = document.createElement('option');
+            allOption.value = '';
+            allOption.textContent = '全部';
+            selectElement.appendChild(allOption);
+
+            // Add "不明" option if it exists in the data
+            if (hasUnknown) {
+                const unknownOption = document.createElement('option');
+                unknownOption.value = '不明';
+                unknownOption.textContent = '不明';
+                selectElement.appendChild(unknownOption);
+            }
+            
+            // Add all other unique, sorted values
             Array.from(uniqueValues).sort().forEach(value => {
                 const option = document.createElement('option');
                 option.value = value;
@@ -194,7 +211,7 @@
             });
             
             // Restore the previous selection if it still exists
-            if ([...uniqueValues].includes(currentValue)) {
+            if (currentValue && (Array.from(uniqueValues).includes(currentValue) || (hasUnknown && currentValue === '不明') || currentValue === '')) {
                 selectElement.value = currentValue;
             }
         }
@@ -233,17 +250,10 @@
             // Dynamically update each dropdown based on the currently filtered data
             populateFilter(electricSectionFilter, fullCrossingData.filter(item => 
                 (!selectedCity || item['所在縣市'] === selectedCity) &&
-                (!selectedStation || item['分駐所'] === selectedStation) &&
+                (!selectedStation || ((item['分駐所'] === '' || item['分駐所'] === 0) ? '不明' : item['分駐所']) === selectedStation) &&
                 (!selectedSection || item['區間'] === selectedSection) &&
                 (!selectedLine || item['路線別'] === selectedLine)
             ), '電務段');
-
-            populateFilter(cityFilter, fullCrossingData.filter(item => 
-                (!selectedElectricSection || ((item['電務段'] === '' || item['電務段'] === 0) ? '不明' : item['電務段']) === selectedElectricSection) &&
-                (!selectedStation || item['分駐所'] === selectedStation) &&
-                (!selectedSection || item['區間'] === selectedSection) &&
-                (!selectedLine || item['路線別'] === selectedLine)
-            ), '所在縣市');
 
             populateFilter(stationFilter, fullCrossingData.filter(item => 
                 (!selectedElectricSection || ((item['電務段'] === '' || item['電務段'] === 0) ? '不明' : item['電務段']) === selectedElectricSection) &&
@@ -252,17 +262,24 @@
                 (!selectedLine || item['路線別'] === selectedLine)
             ), '分駐所');
 
+            populateFilter(cityFilter, fullCrossingData.filter(item => 
+                (!selectedElectricSection || ((item['電務段'] === '' || item['電務段'] === 0) ? '不明' : item['電務段']) === selectedElectricSection) &&
+                (!selectedStation || ((item['分駐所'] === '' || item['分駐所'] === 0) ? '不明' : item['分駐所']) === selectedStation) &&
+                (!selectedSection || item['區間'] === selectedSection) &&
+                (!selectedLine || item['路線別'] === selectedLine)
+            ), '所在縣市');
+
             populateFilter(sectionFilter, fullCrossingData.filter(item => 
                 (!selectedElectricSection || ((item['電務段'] === '' || item['電務段'] === 0) ? '不明' : item['電務段']) === selectedElectricSection) &&
                 (!selectedCity || item['所在縣市'] === selectedCity) &&
-                (!selectedStation || item['分駐所'] === selectedStation) &&
+                (!selectedStation || ((item['分駐所'] === '' || item['分駐所'] === 0) ? '不明' : item['分駐所']) === selectedStation) &&
                 (!selectedLine || item['路線別'] === selectedLine)
             ), '區間');
 
             populateFilter(lineFilter, fullCrossingData.filter(item => 
                 (!selectedElectricSection || ((item['電務段'] === '' || item['電務段'] === 0) ? '不明' : item['電務段']) === selectedElectricSection) &&
                 (!selectedCity || item['所在縣市'] === selectedCity) &&
-                (!selectedStation || item['分駐所'] === selectedStation) &&
+                (!selectedStation || ((item['分駐所'] === '' || item['分駐所'] === 0) ? '不明' : item['分駐所']) === selectedStation) &&
                 (!selectedSection || item['區間'] === selectedSection)
             ), '路線別');
         }
