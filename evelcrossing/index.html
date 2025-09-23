@@ -141,6 +141,8 @@
                     card.className = 'bg-gray-800 p-6 rounded-2xl shadow-lg transition-transform transform hover:scale-105 hover:bg-gray-700';
 
                     const oldName = item['舊名或別名'] ? ` (${item['舊名或別名']})` : '';
+                    const electricSectionDisplay = (item['電務段'] === '' || item['電務段'] === 0) ? '不明' : item['電務段'];
+                    const stationDisplay = (item['分駐所'] === '' || item['分駐所'] === 0) ? '不明' : item['分駐所'];
 
                     card.innerHTML = `
                         <div class="flex flex-col sm:flex-row sm:items-baseline sm:space-x-2 mb-2">
@@ -150,8 +152,8 @@
                         <div class="space-y-2 text-sm">
                             <p><span class="font-medium text-gray-300">所在縣市：</span>${item['所在縣市']} / <span class="font-medium text-gray-300">區間：</span>${item['區間']}</p>
                             <p><span class="font-medium text-gray-300">路線別：</span>${item['路線別']}</p>
-                            <p><span class="font-medium text-gray-300">電務段：</span>${item['電務段']}</p>
-                            <p><span class="font-medium text-gray-300">分駐所：</span>${item['分駐所']}</p>
+                            <p><span class="font-medium text-gray-300">電務段：</span>${electricSectionDisplay}</p>
+                            <p><span class="font-medium text-gray-300">分駐所：</span>${stationDisplay}</p>
                             <p><span class="font-medium text-gray-300">種類：</span>${item['平交道種類']}</p>
                             <p><span class="font-medium text-gray-300">里程：</span>${item['里程']}</p>
                         </div>
@@ -175,7 +177,14 @@
             selectElement.innerHTML = '<option value="">全部</option>'; // Clear and add "全部" option
             
             const uniqueValues = new Set();
-            data.forEach(item => uniqueValues.add(item[key]));
+            data.forEach(item => {
+                let value = item[key];
+                // Check for empty string or 0 and replace with '不明'
+                if ((key === '電務段' || key === '分駐所') && (value === '' || value === 0)) {
+                    value = '不明';
+                }
+                uniqueValues.add(value);
+            });
             
             Array.from(uniqueValues).sort().forEach(value => {
                 const option = document.createElement('option');
@@ -204,11 +213,17 @@
             let filteredData = fullCrossingData.filter(item => {
                 const nameMatch = item['平交道名稱'].toLowerCase().includes(searchTerm) || 
                                  (item['舊名或別名'] && item['舊名或別名'].toLowerCase().includes(searchTerm));
-                const electricSectionMatch = !selectedElectricSection || item['電務段'] === selectedElectricSection;
+                
+                const electricSectionValue = (item['電務段'] === '' || item['電務段'] === 0) ? '不明' : item['電務段'];
+                const electricSectionMatch = !selectedElectricSection || electricSectionValue === selectedElectricSection;
+                
+                const stationValue = (item['分駐所'] === '' || item['分駐所'] === 0) ? '不明' : item['分駐所'];
+                const stationMatch = !selectedStation || stationValue === selectedStation;
+
                 const cityMatch = !selectedCity || item['所在縣市'] === selectedCity;
-                const stationMatch = !selectedStation || item['分駐所'] === selectedStation;
                 const sectionMatch = !selectedSection || item['區間'] === selectedSection;
                 const lineMatch = !selectedLine || item['路線別'] === selectedLine;
+
                 return nameMatch && electricSectionMatch && cityMatch && stationMatch && sectionMatch && lineMatch;
             });
             
@@ -216,8 +231,6 @@
             renderCrossings(filteredData);
             
             // Dynamically update each dropdown based on the currently filtered data
-            // We pass the currently filtered data to populate other select elements
-            // The currently selected filter remains unchanged.
             populateFilter(electricSectionFilter, fullCrossingData.filter(item => 
                 (!selectedCity || item['所在縣市'] === selectedCity) &&
                 (!selectedStation || item['分駐所'] === selectedStation) &&
@@ -226,28 +239,28 @@
             ), '電務段');
 
             populateFilter(cityFilter, fullCrossingData.filter(item => 
-                (!selectedElectricSection || item['電務段'] === selectedElectricSection) &&
+                (!selectedElectricSection || ((item['電務段'] === '' || item['電務段'] === 0) ? '不明' : item['電務段']) === selectedElectricSection) &&
                 (!selectedStation || item['分駐所'] === selectedStation) &&
                 (!selectedSection || item['區間'] === selectedSection) &&
                 (!selectedLine || item['路線別'] === selectedLine)
             ), '所在縣市');
 
             populateFilter(stationFilter, fullCrossingData.filter(item => 
-                (!selectedElectricSection || item['電務段'] === selectedElectricSection) &&
+                (!selectedElectricSection || ((item['電務段'] === '' || item['電務段'] === 0) ? '不明' : item['電務段']) === selectedElectricSection) &&
                 (!selectedCity || item['所在縣市'] === selectedCity) &&
                 (!selectedSection || item['區間'] === selectedSection) &&
                 (!selectedLine || item['路線別'] === selectedLine)
             ), '分駐所');
 
             populateFilter(sectionFilter, fullCrossingData.filter(item => 
-                (!selectedElectricSection || item['電務段'] === selectedElectricSection) &&
+                (!selectedElectricSection || ((item['電務段'] === '' || item['電務段'] === 0) ? '不明' : item['電務段']) === selectedElectricSection) &&
                 (!selectedCity || item['所在縣市'] === selectedCity) &&
                 (!selectedStation || item['分駐所'] === selectedStation) &&
                 (!selectedLine || item['路線別'] === selectedLine)
             ), '區間');
 
             populateFilter(lineFilter, fullCrossingData.filter(item => 
-                (!selectedElectricSection || item['電務段'] === selectedElectricSection) &&
+                (!selectedElectricSection || ((item['電務段'] === '' || item['電務段'] === 0) ? '不明' : item['電務段']) === selectedElectricSection) &&
                 (!selectedCity || item['所在縣市'] === selectedCity) &&
                 (!selectedStation || item['分駐所'] === selectedStation) &&
                 (!selectedSection || item['區間'] === selectedSection)
