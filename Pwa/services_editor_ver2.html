@@ -37,6 +37,19 @@
         .promo-item, .combo-item-display { background-color: #f8f9fa; border: 1px solid #dee2e6; border-radius: 4px; padding: 8px; margin-top: 8px; display: flex; justify-content: space-between; align-items: center; gap: 10px; }
         .actions-group { display: flex; gap: 8px; flex-shrink: 0; }
         
+        /* [NEW] Unsaved Badge Style */
+        .unsaved-badge {
+            background-color: #ffc107;
+            color: #212529;
+            font-size: 0.7em;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-weight: bold;
+            margin-left: 8px;
+            vertical-align: middle;
+            display: inline-block;
+        }
+
         /* Modal Styles */
         .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.6); display: flex; justify-content: center; align-items: center; z-index: 1000; }
         .modal-overlay.top-level { z-index: 1010; }
@@ -72,7 +85,7 @@
     <h1>服務資料編輯器</h1>
 
     <div class="detailed-edit-toggle">
-        <label><input type="checkbox" v-model="detailedEditEnabled" @change="handleDirtyState"> <strong>啟用服務項目詳細編輯 (ID、名稱、價格)</strong></label>
+        <label><input type="checkbox" v-model="detailedEditEnabled"> <strong>啟用服務項目詳細編輯 (ID、名稱、價格)</strong></label>
     </div>
 
     <!-- 服務項目編輯區塊 -->
@@ -91,12 +104,20 @@
             <tbody>
                 <tr v-for="(item, ii) in category.items" :key="item.id">
                     <td v-if="detailedEditEnabled"><input type="text" v-model="item.id" class="detailed-edit-input"></td>
-                    <td><input v-if="detailedEditEnabled" type="text" v-model="item.name" class="detailed-edit-input"><span v-else>{{ item.name }}</span></td>
+                    <td>
+                        <input v-if="detailedEditEnabled" type="text" v-model="item.name" class="detailed-edit-input">
+                        <span v-else>{{ item.name }}</span>
+                        <span v-if="isItemUnsaved(item)" class="unsaved-badge">未儲存</span>
+                    </td>
                     <td style="text-align: right;"><input v-if="detailedEditEnabled" type="number" v-model.number="item.price" class="detailed-edit-input"><span v-else>{{ item.price.toLocaleString() }}</span></td>
                     <td>
                         <div v-if="!item.promotions || item.promotions.length === 0" style="color: #6c757d;">無</div>
                         <div v-for="(promo, pi) in item.promotions" class="promo-item" :key="'promo-'+ii+'-'+pi">
-                           <div><strong>{{ promo.label }}</strong>: ${{ promo.price.toLocaleString() }} <br><small>{{ promo.start }} ~ {{ promo.end }}</small></div>
+                           <div>
+                               <strong>{{ promo.label }}</strong>: ${{ promo.price.toLocaleString() }}
+                               <span v-if="isPromoUnsaved(item, promo)" class="unsaved-badge">未儲存</span>
+                               <br><small>{{ promo.start }} ~ {{ promo.end }}</small>
+                           </div>
                            <div class="actions-group"><button @click="openModal(item, pi)" class="btn btn-secondary btn-sm">編輯</button><button @click="removePromotion(item, pi)" class="btn btn-danger btn-sm">刪除</button></div>
                         </div>
                     </td>
@@ -106,17 +127,23 @@
         </table>
         <div class="original-view">
             <div v-for="(item, ii) in category.items" class="item" :key="'item-orig-'+ii">
-                <div v-if="!detailedEditEnabled">
-                    <div class="item-header">{{ item.name }} (原價: {{ item.price }})</div>
+                 <div class="item-header" v-if="!detailedEditEnabled">
+                    {{ item.name }} (原價: {{ item.price }})
+                    <span v-if="isItemUnsaved(item)" class="unsaved-badge">未儲存</span>
                 </div>
                 <div v-else>
                     <div class="detailed-edit-group"><label>ID</label><input type="text" v-model="item.id" class="detailed-edit-input"></div>
                     <div class="detailed-edit-group"><label>名稱</label><input type="text" v-model="item.name" class="detailed-edit-input"></div>
                     <div class="detailed-edit-group"><label>價格</label><input type="number" v-model.number="item.price" class="detailed-edit-input"></div>
+                     <span v-if="isItemUnsaved(item)" class="unsaved-badge">未儲存</span>
                 </div>
 
                 <div v-for="(promo, pi) in item.promotions" class="promo-item" :key="'promo-orig-'+ii+'-'+pi">
-                     <div><strong>{{ promo.label }}</strong>: ${{ promo.price }}<br><small>{{ promo.start }} ~ {{ promo.end }}</small></div>
+                     <div>
+                         <strong>{{ promo.label }}</strong>: ${{ promo.price }}
+                         <span v-if="isPromoUnsaved(item, promo)" class="unsaved-badge">未儲存</span>
+                         <br><small>{{ promo.start }} ~ {{ promo.end }}</small>
+                     </div>
                      <div class="actions-group"><button @click="openModal(item, pi)" class="btn btn-secondary btn-sm">編輯</button><button @click="removePromotion(item, pi)" class="btn btn-danger btn-sm">刪除</button></div>
                 </div>
                 <button @click="openModal(item, -1)" class="btn btn-sm">新增優惠</button>
@@ -129,7 +156,11 @@
     <h2>組合優惠編輯</h2>
     <div v-if="!data.combos || data.combos.length === 0" style="color: #6c757d; text-align: center; padding: 20px;">目前沒有組合優惠</div>
     <div v-for="(combo, cbi) in data.combos" :key="'combo-'+cbi" class="combo-item-display">
-        <div><strong>{{ combo.name }}</strong> ({{ combo.itemIds.length }}個項目)<br><small>原價: {{ calculateComboOriginalPrice(combo).toLocaleString() }}</small></div>
+        <div>
+            <strong>{{ combo.name }}</strong>
+            <span v-if="isComboUnsaved(combo)" class="unsaved-badge">未儲存</span>
+            <br><small>({{ combo.itemIds.length }}個項目, 原價: {{ calculateComboOriginalPrice(combo).toLocaleString() }})</small>
+        </div>
         <div class="actions-group"><button @click="openComboModal(cbi)" class="btn btn-secondary btn-sm">編輯</button><button @click="deleteCombo(cbi)" class="btn btn-danger btn-sm">刪除</button></div>
     </div>
     <button @click="openComboModal(-1)" class="btn">新增組合優惠</button>
@@ -164,7 +195,11 @@
                 <label style="font-weight: bold;">組合專屬優惠</label>
                 <div v-if="!currentCombo.promotions || currentCombo.promotions.length === 0" style="color: #6c757d; margin-top: 10px;">無</div>
                 <div v-for="(promo, pi) in currentCombo.promotions" class="promo-item" :key="'combo-promo-'+pi">
-                    <div><strong>{{ promo.label }}</strong>: ${{ promo.price.toLocaleString() }} <br><small>{{ promo.start }} ~ {{ promo.end }}</small></div>
+                    <div>
+                        <strong>{{ promo.label }}</strong>: ${{ promo.price.toLocaleString() }}
+                        <span v-if="isPromoUnsaved(currentCombo, promo)" class="unsaved-badge">未儲存</span>
+                        <br><small>{{ promo.start }} ~ {{ promo.end }}</small>
+                    </div>
                     <div class="actions-group"><button @click="openModal(currentCombo, pi, true)" class="btn btn-secondary btn-sm">編輯</button><button @click="removePromotion(currentCombo, pi)" class="btn btn-danger btn-sm">刪除</button></div>
                 </div>
                  <button @click="openModal(currentCombo, -1, true)" class="btn btn-sm" style="margin-top:10px;">新增組合優惠</button>
@@ -197,6 +232,8 @@
         data: {
             data: { categories: [], combos: [] },
             originalData: null,
+            originalItemsMap: new Map(),
+            originalCombosMap: new Map(),
             isDirty: false,
             initialLoadComplete: false,
             detailedEditEnabled: false,
@@ -247,7 +284,39 @@
             }
         },
         methods: {
+            updateOriginalDataMaps: function() {
+                this.originalItemsMap.clear();
+                this.originalCombosMap.clear();
+                (this.originalData.categories || []).flatMap(c => c.items).forEach(i => this.originalItemsMap.set(i.id, JSON.stringify(i)));
+                (this.originalData.combos || []).forEach(c => this.originalCombosMap.set(c.name, JSON.stringify(c)));
+            },
+            isItemUnsaved: function(item) {
+                const originalItemJSON = this.originalItemsMap.get(item.id);
+                if (!originalItemJSON) return true; // New item
+                return JSON.stringify(item) !== originalItemJSON;
+            },
+            isComboUnsaved: function(combo) {
+                 const originalComboJSON = this.originalCombosMap.get(combo.name);
+                if (!originalComboJSON) return true; // New combo
+                return JSON.stringify(combo) !== originalComboJSON;
+            },
+            isPromoUnsaved: function(parent, promo) {
+                let originalParent;
+                if (parent.itemIds) { // It's a combo
+                    const originalComboJSON = this.originalCombosMap.get(parent.name);
+                    if (!originalComboJSON) return true;
+                    originalParent = JSON.parse(originalComboJSON);
+                } else { // It's an item
+                    const originalItemJSON = this.originalItemsMap.get(parent.id);
+                    if (!originalItemJSON) return true;
+                    originalParent = JSON.parse(originalItemJSON);
+                }
+                const originalPromo = (originalParent.promotions || []).find(p => p.label === promo.label);
+                if (!originalPromo) return true; // New promo
+                return JSON.stringify(promo) !== JSON.stringify(originalPromo);
+            },
             handleDirtyState: function() {
+                if(!this.originalData) return;
                 this.isDirty = JSON.stringify(this.data) !== JSON.stringify(this.originalData);
             },
             // --- 組合優惠方法 ---
@@ -305,7 +374,7 @@
                 this.isChangesModalVisible = true;
             },
             generateChangesList: function() {
-                let changes = [];
+                 let changes = [];
                 const originalItemsMap = new Map((this.originalData.categories || []).flatMap(c => c.items).map(i => [i.id, i]));
                 const currentItemsMap = new Map((this.data.categories || []).flatMap(c => c.items).map(i => [i.id, i]));
                 const originalCombosMap = new Map((this.originalData.combos || []).map(c => [c.name, c]));
@@ -374,7 +443,6 @@
 
                 this.changesList = changes;
             },
-
             copyJson: function() {
                 var outputData = JSON.parse(JSON.stringify(this.data));
                 (outputData.categories || []).forEach(cat => (cat.items || []).forEach(item => { if (item.promotions && item.promotions.length === 0) delete item.promotions; }));
@@ -383,8 +451,7 @@
                  navigator.clipboard.writeText(jsonString).then(() => {
                     this.showToast('JSON 已複製到剪貼簿，請傳送給管理者更新伺服器資料才會生效。');
                     if(this.isChangesModalVisible) this.isChangesModalVisible = false;
-                    this.originalData = JSON.parse(JSON.stringify(this.data));
-                    this.handleDirtyState();
+                    // According to user, do NOT update originalData after copying
                 }, () => {
                     alert('複製失敗!');
                 });
@@ -395,6 +462,7 @@
                     const data = await response.json();
                     this.data = JSON.parse(JSON.stringify(data));
                     this.originalData = JSON.parse(JSON.stringify(data));
+                    this.updateOriginalDataMaps();
                     this.handleDirtyState();
                 } catch (error) {
                     alert('無法載入資料!');
