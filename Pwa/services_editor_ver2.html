@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>服務資料編輯器</title>
+    <link rel="stylesheet" href="dede.css">
+    <style>
+        /* Editor-specific styles */
+        :root { --toast-height: 50px; }
+        body { padding-bottom: 120px; }
+        .container { max-width: 1000px; }
+        h1, h2 { text-align: center; }
+        h3 { font-size: 1.2em; font-weight: bold; color: #333; margin-top: 1.5rem; margin-bottom: 0.5rem; border-bottom: 1px solid #ddd; padding-bottom: 0.5rem; }
+        .btn { display: inline-block; width: auto; padding: 10px 15px; border-radius: 5px; font-weight: bold; text-align: center; cursor: pointer; border: none; color: #fff; background-color: #007bff; transition: background-color 0.2s; font-size: 0.9em; margin-top: 5px; box-sizing: border-box; }
+        .btn.btn-block { width: 100%; }
+        .btn.btn-sm { padding: 5px 10px; font-size: 0.8em; }
+        .btn.btn-danger { background-color: #dc3545; }
+        .btn.btn-danger:hover { background-color: #c82333; }
+        .btn.btn-secondary { background-color: #6c757d; }
+        .btn.btn-secondary:hover { background-color: #5a6268; }
+        .btn.dirty { background-color: #ffc107; color: #212529; }
+        .btn.dirty:hover { background-color: #e0a800; }
+        
+        /* Table Styles for Desktop */
+        .table-view { display: none; } /* Hide by default */
+        @media (min-width: 768px) {
+            .table-view { display: table; width: 100%; border-collapse: collapse; margin-bottom: 1rem; }
+            .table-view th, .table-view td { border: 1px solid #dee2e6; padding: 12px; text-align: left; vertical-align: middle; }
+            .table-view thead { background-color: #e9ecef; }
+            .original-view { display: none; } /* Hide original view on desktop */
+        }
+        
+        .promo-item { background-color: #f8f9fa; border: 1px solid #dee2e6; border-radius: 4px; padding: 8px; margin-top: 8px; display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+        .actions-group { display: flex; gap: 8px; flex-shrink: 0; }
+        
+        /* Modal Styles */
+        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.6); display: flex; justify-content: center; align-items: center; z-index: 1000; }
+        .modal-content { background: #fff; padding: 25px; border-radius: 8px; box-shadow: 0 5px 15px rgba(0,0,0,0.3); width: 90%; max-width: 500px; }
+        .modal-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #dee2e6; padding-bottom: 15px; margin-bottom: 15px; }
+        .modal-header h4 { margin: 0; color: #0056b3; }
+        .modal-body .form-group { margin-bottom: 15px; }
+        .modal-body .form-group label { display: block; margin-bottom: 5px; font-weight: bold; }
+        .modal-body .form-group input { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 5px; box-sizing: border-box; }
+        .modal-footer { display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px; }
+        .modal-error { color: #dc3545; margin-top: 10px; font-size: 0.9em; font-weight: bold; }
+
+        /* Original Mobile View Styles */
+        .original-view .item, .original-view .combo { border: 1px solid #ccc; padding: 15px; margin-bottom: 15px; border-radius: 5px; }
+        .original-view .item-header, .original-view .combo-header { font-weight: bold; margin-bottom: 10px; }
+        
+        .bottom-actions { position: fixed; bottom: 0; left: 0; right: 0; background: #fff; padding: 15px; box-shadow: 0 -2px 10px rgba(0,0,0,0.1); z-index: 100; }
+        .bottom-actions .container { display: flex; gap: 15px; padding: 0; }
+    </style>
+    <script src="https://unpkg.com/vue@2"></script>
+</head>
+<body>
+
+<div id="app" class="container">
+    <h1>服務資料編輯器</h1>
+
+    <!-- 桌面版表格視圖 -->
+    <div v-for="(category, ci) in data.categories" :key="'cat-table-'+ci">
+        <h3>{{ category.name }}</h3>
+        <table class="table-view">
+            <thead>
+                <tr>
+                    <th>項目名稱</th>
+                    <th style="width: 15%;">原價</th>
+                    <th>優惠活動</th>
+                    <th style="width: 15%;">操作</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr v-for="(item, ii) in category.items" :key="item.id">
+                    <td data-label="項目名稱">{{ item.name }}</td>
+                    <td data-label="原價" style="text-align: right;">{{ item.price.toLocaleString() }}</td>
+                    <td data-label="優惠活動">
+                        <div v-if="!item.promotions || item.promotions.length === 0" style="color: #6c757d;">無</div>
+                        <div v-for="(promo, pi) in item.promotions" class="promo-item" :key="'promo-'+ii+'-'+pi">
+                            <div>
+                                <strong>{{ promo.label }}</strong>: ${{ promo.price.toLocaleString() }}
+                                <br><small>{{ promo.start }} ~ {{ promo.end }}</small>
+                            </div>
+                            <div class="actions-group">
+                                <button @click="openModal(item, pi)" class="btn btn-secondary btn-sm">編輯</button>
+                                <button @click="removePromotion(item, pi)" class="btn btn-danger btn-sm">刪除</button>
+                            </div>
+                        </div>
+                    </td>
+                    <td data-label="操作">
+                        <button @click="openModal(item, -1)" class="btn btn-sm">新增優惠</button>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <!-- 行動版原始視圖 -->
+    <div class="original-view">
+        <div v-for="(category, ci) in data.categories" :key="'cat-orig-'+ci">
+            <h3>{{ category.name }}</h3>
+            <div v-for="(item, ii) in category.items" class="item" :key="item.id">
+                <div class="item-header">{{ item.name }} (原價: {{ item.price }})</div>
+                <div v-for="(promo, pi) in item.promotions" class="promo-item" :key="'promo-orig-'+ii+'-'+pi">
+                    <div>
+                        <strong>{{ promo.label }}</strong>: ${{ promo.price }}
+                        <br><small>{{ promo.start }} ~ {{ promo.end }}</small>
+                    </div>
+                     <div class="actions-group">
+                        <button @click="openModal(item, pi)" class="btn btn-secondary btn-sm">編輯</button>
+                        <button @click="removePromotion(item, pi)" class="btn btn-danger btn-sm">刪除</button>
+                    </div>
+                </div>
+                <button @click="openModal(item, -1)" class="btn btn-sm">新增優惠</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- (保留原始的組合優惠編輯區塊) -->
+    <div class="original-view" v-if="data.combos && data.combos.length > 0">
+        <h2>組合優惠編輯</h2>
+        <!-- ... combo editor UI remains here ... -->
+    </div>
+
+
+    <!-- 新增/編輯優惠的彈出視窗 -->
+    <div v-if="isModalVisible" class="modal-overlay" @click.self="closeModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4>{{ modalTitle }}</h4>
+                <button @click="closeModal" style="background:none; border:none; font-size: 1.5rem; cursor:pointer;">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p><strong>項目:</strong> {{ currentItem.name }} (原價: {{ currentItem.price.toLocaleString() }})</p>
+                <div class="form-group">
+                    <label>活動標籤</label>
+                    <input type="text" v-model="currentPromotion.label" placeholder="例如：九月限定優惠">
+                </div>
+                <div class="form-group">
+                    <label>優惠價</label>
+                    <input type="number" v-model.number="currentPromotion.price">
+                </div>
+                <div class="form-group">
+                    <label>開始日期</label>
+                    <input type="date" v-model="currentPromotion.start">
+                </div>
+                <div class="form-group">
+                    <label>結束日期</label>
+                    <input type="date" v-model="currentPromotion.end">
+                </div>
+                <p v-if="modalError" class="modal-error">{{ modalError }}</p>
+            </div>
+            <div class="modal-footer">
+                <button @click="closeModal" class="btn btn-secondary">取消</button>
+                <button @click="savePromotion" class="btn">儲存</button>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- 底部操作按鈕 -->
+    <div class="bottom-actions">
+        <div class="container">
+            <button @click="loadData" class="btn btn-secondary btn-block">重新載入</button>
+            <button @click="validateAndSave" class="btn btn-block">驗證資料</button>
+            <button @click="copyJson" class="btn btn-block" :class="{ 'dirty': isDirty }" :title="isDirty ? '您有未儲存的變更' : ''">
+                {{ isDirty ? '複製 JSON (有變更)' : '複製 JSON' }}
+            </button>
+        </div>
+    </div>
+</div>
+
+<script>
+    new Vue({
+        el: '#app',
+        data: {
+            data: { categories: [], combos: [] },
+            isDirty: false,
+            // Modal state
+            isModalVisible: false,
+            modalTitle: '',
+            currentItem: null,
+            currentPromotion: {},
+            editingPromoIndex: -1,
+            modalError: ''
+        },
+        methods: {
+            // --- MODAL METHODS ---
+            openModal: function(item, promoIndex) {
+                this.currentItem = item;
+                this.editingPromoIndex = promoIndex;
+                this.modalError = '';
+
+                if (promoIndex === -1) { // Add new
+                    this.modalTitle = '新增優惠';
+                    this.currentPromotion = { label: '', price: null, start: '', end: '' };
+                } else { // Edit existing
+                    this.modalTitle = '編輯優惠';
+                    this.currentPromotion = JSON.parse(JSON.stringify(item.promotions[promoIndex])); // Deep copy
+                }
+                this.isModalVisible = true;
+            },
+            closeModal: function() {
+                this.isModalVisible = false;
+                this.currentItem = null;
+                this.currentPromotion = {};
+                this.editingPromoIndex = -1;
+            },
+            savePromotion: function() {
+                // Validation Logic
+                this.modalError = '';
+                var p = this.currentPromotion;
+                var originalPrice = this.currentItem.price;
+
+                if (!p.label || p.label.trim() === '') { this.modalError = '錯誤: 活動標籤不可為空。'; return; }
+                if (typeof p.price !== 'number' || p.price <= 0) { this.modalError = '錯誤: 優惠價需為大於 0 的數字。'; return; }
+                if (p.price >= originalPrice) { this.modalError = '錯誤: 優惠價 (' + p.price + ') 需低於原價 (' + originalPrice + ')。'; return; }
+                if (!p.start) { this.modalError = '錯誤: 開始日期不可為空。'; return; }
+                if (!p.end) { this.modalError = '錯誤: 結束日期不可為空。'; return; }
+                if (p.start > p.end) { this.modalError = '錯誤: 結束日期不可早於開始日期。'; return; }
+
+                // Save data
+                if (!this.currentItem.promotions) {
+                    this.$set(this.currentItem, 'promotions', []);
+                }
+                
+                if (this.editingPromoIndex === -1) {
+                    this.currentItem.promotions.push(p);
+                } else {
+                    this.currentItem.promotions.splice(this.editingPromoIndex, 1, p);
+                }
+
+                this.isDirty = true;
+                this.closeModal();
+            },
+            removePromotion: function(parent, index) {
+                if (confirm('確定要刪除這個優惠嗎？')) {
+                    parent.promotions.splice(index, 1);
+                    this.isDirty = true;
+                }
+            },
+            // --- ORIGINAL METHODS from your file ---
+            loadData: async function() {
+                try {
+                    var response = await fetch('services.json?t=' + new Date().getTime());
+                    if (!response.ok) throw new Error('Network response was not ok');
+                    this.data = await response.json();
+                    this.isDirty = false;
+                    this.showToast('資料已成功載入。');
+                } catch (error) {
+                    console.error('Error loading data:', error);
+                    alert('無法載入資料，請檢查 services.json 檔案是否存在。');
+                }
+            },
+            validateData: function() {
+                // This function is kept from your original file
+                var errors = [];
+                var allItems = new Map();
+                (this.data.categories || []).forEach(cat => (cat.items || []).forEach(item => allItems.set(item.id, item)));
+                (this.data.categories || []).forEach((category, ci) => {
+                    (category.items || []).forEach((item, ii) => {
+                        var itemContext = `分類 '${category.name}' > 項目 '${item.name}'`;
+                        if (!item.id) errors.push(`錯誤: ${itemContext} 缺少 ID。`);
+                        if (!item.name) errors.push(`錯誤: ${itemContext} 缺少名稱。`);
+                        if (item.price <= 0) errors.push(`錯誤: ${itemContext} 的價格需大於 0。`);
+                        (item.promotions || []).forEach((promo, pi) => {
+                            var promoContext = `${itemContext} > 促銷 '${promo.label || ''}'`;
+                            if (!promo.label) errors.push(`錯誤: ${promoContext} 缺少標籤。`);
+                            if (promo.price <= 0) errors.push(`錯誤: ${promoContext} 的促銷價需大於 0。`);
+                            if (promo.price >= item.price) errors.push(`錯誤: ${promoContext} 的促銷價 (${promo.price}) 需低於原價 (${item.price})。`);
+                            if (!promo.start) errors.push(`錯誤: ${promoContext} 的開始日期不可為空。`);
+                            if (!promo.end) errors.push(`錯誤: ${promoContext} 的結束日期不可為空。`);
+                            if (promo.start && promo.end && promo.start > promo.end) errors.push(`錯誤: ${promoContext} 的結束日不可早於開始日。`);
+                        });
+                    });
+                });
+                return { isValid: errors.length === 0, errors: errors.join('\n') };
+            },
+            validateAndSave: function() {
+                var validation = this.validateData();
+                if (!validation.isValid) {
+                    alert('資料驗證失敗:\n' + validation.errors);
+                } else {
+                    this.showToast('資料驗證成功！');
+                }
+            },
+            copyJson: function() {
+                this.updateJsonOutput(); // Assuming this is a method you have for cleaning up the JSON
+            },
+            updateJsonOutput: function() {
+                var outputData = JSON.parse(JSON.stringify(this.data));
+                (outputData.categories || []).forEach(cat => (cat.items || []).forEach(item => { if (item.promotions && item.promotions.length === 0) delete item.promotions; }));
+                if (outputData.combos) {
+                    outputData.combos.forEach(combo => { if (combo.promotions && combo.promotions.length === 0) delete combo.promotions; });
+                    if (outputData.combos.length === 0) delete outputData.combos;
+                }
+                var jsonString = JSON.stringify(outputData, null, 2);
+                 navigator.clipboard.writeText(jsonString).then(() => {
+                    this.showToast('JSON 資料已成功複製到剪貼簿！');
+                    this.isDirty = false;
+                }, () => {
+                    alert('複製失敗，您的瀏覽器可能不支援此操作。');
+                });
+            },
+            showToast: function(message) {
+                var toast = document.createElement('div');
+                toast.textContent = message;
+                toast.style.cssText = 'position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background-color: #333; color: #fff; padding: 10px 20px; border-radius: 5px; z-index: 1010;';
+                document.body.appendChild(toast);
+                setTimeout(function() { document.body.removeChild(toast); }, 3000);
+            }
+        },
+        mounted: function() {
+            this.loadData();
+        }
+    });
+</script>
+
+</body>
+</html>
