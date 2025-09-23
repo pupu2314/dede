@@ -38,6 +38,8 @@
         
         /* Modal Styles */
         .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.6); display: flex; justify-content: center; align-items: center; z-index: 1000; }
+        /* [FIX] Add a higher z-index for nested modals */
+        .modal-overlay.top-level { z-index: 1010; }
         .modal-content { background: #fff; padding: 25px; border-radius: 8px; box-shadow: 0 5px 15px rgba(0,0,0,0.3); width: 90%; max-width: 600px; display: flex; flex-direction: column; max-height: 90vh; }
         .modal-header { flex-shrink: 0; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #dee2e6; padding-bottom: 15px; margin-bottom: 15px; }
         .modal-header h4 { margin: 0; color: #0056b3; }
@@ -135,7 +137,8 @@
     
 
     <!-- 單項/組合 優惠編輯 Modal -->
-    <div v-if="isModalVisible" class="modal-overlay">
+    <!-- [FIX] Bind dynamic class to ensure it appears on top when nested -->
+    <div v-if="isModalVisible" class="modal-overlay" :class="{ 'top-level': isEditingComboPromo }">
          <div class="modal-content">
             <div class="modal-header"><h4>{{ modalTitle }}</h4><button @click="closeModal" style="background:none; border:none; font-size: 1.5rem; cursor:pointer;">&times;</button></div>
             <div class="modal-body">
@@ -151,7 +154,7 @@
     <!-- 組合優惠主體編輯 Modal -->
     <div v-if="isComboModalVisible" class="modal-overlay">
         <div class="modal-content">
-            <div class="modal-header"><h4>編輯組合優惠</h4><button @click="isComboModalVisible=false" style="background:none; border:none; font-size: 1.5rem; cursor:pointer;">&times;</button></div>
+            <div class="modal-header"><h4>編輯組合優惠</h4><button @click="closeComboModal" style="background:none; border:none; font-size: 1.5rem; cursor:pointer;">&times;</button></div>
             <div class="modal-body">
                 <div class="form-group"><label>組合名稱</label><input type="text" v-model="currentCombo.name"></div>
                 <div class="form-group"><label>包含的服務項目 (原價合計: {{ calculateComboOriginalPrice(currentCombo).toLocaleString() }})</label><select multiple v-model="currentCombo.itemIds"><option v-for="item in allItems" :value="item.id">{{ item.name }}</option></select></div>
@@ -164,11 +167,11 @@
                 </div>
                  <button @click="openModal(currentCombo, -1, true)" class="btn btn-sm" style="margin-top:10px;">新增組合優惠</button>
             </div>
-            <div class="modal-footer"><button @click="isComboModalVisible=false" class="btn btn-secondary">關閉</button><button @click="saveCombo" class="btn">儲存組合</button></div>
+            <div class="modal-footer"><button @click="closeComboModal" class="btn btn-secondary">關閉</button><button @click="saveCombo" class="btn">儲存組合</button></div>
         </div>
     </div>
     <!-- 變更確認 Modal -->
-     <div v-if="isChangesModalVisible" class="modal-overlay">
+     <div v-if="isChangesModalVisible" class="modal-overlay top-level">
         <div class="modal-content">
             <div class="modal-header"><h4>變更確認</h4><button @click="isChangesModalVisible=false" style="background:none; border:none; font-size: 1.5rem; cursor:pointer;">&times;</button></div>
             <div class="modal-body"><p>請確認以下變更項目：</p><ul id="changes-list"><li v-for="change in changesList" v-html="change"></li></ul></div>
@@ -207,6 +210,7 @@
             isStrongDiscount: false,
             isComboModalVisible: false,
             currentCombo: { name: '', itemIds: [], promotions: [] },
+            originalComboState: '',
             editingComboIndex: -1,
             isChangesModalVisible: false,
             changesList: [],
@@ -240,7 +244,16 @@
                 } else {
                     this.currentCombo = JSON.parse(JSON.stringify(this.data.combos[index]));
                 }
+                this.originalComboState = JSON.stringify(this.currentCombo);
                 this.isComboModalVisible = true;
+            },
+            closeComboModal: function() {
+                if (this.originalComboState !== JSON.stringify(this.currentCombo)) {
+                    if (!confirm('組合資料已被修改，確定要放棄嗎？')) {
+                        return;
+                    }
+                }
+                this.isComboModalVisible = false;
             },
             saveCombo: function() {
                 if (!this.currentCombo.name.trim()) { alert('組合名稱不可為空'); return; }
@@ -272,6 +285,7 @@
                 this.generateChangesList();
                 if (this.changesList.length === 0) {
                     this.showToast('沒有偵測到任何變更。');
+                    this.isDirty = false; // Reset dirty state if no changes found
                     return;
                 }
                 this.isChangesModalVisible = true;
@@ -312,9 +326,6 @@
                 originalItemsMap.forEach((originalItem, id) => {
                     if (!currentItemsMap.has(id)) changes.push(`刪除項目：<b>${originalItem.name}</b>`);
                 });
-
-                // (可以加入組合優惠的變更檢查)
-
                 this.changesList = changes;
             },
 
@@ -425,9 +436,7 @@
                 }
                 this.isModalVisible = false;
                 if(this.isEditingComboPromo) {
-                    // Force update on combo modal if it's open
-                    this.saveCombo();
-                    this.isComboModalVisible = true;
+                    this.$set(this.data.combos, this.editingComboIndex, this.currentCombo);
                 }
             },
              calculateDiscount: function() {
