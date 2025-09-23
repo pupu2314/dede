@@ -38,7 +38,6 @@
         
         /* Modal Styles */
         .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.6); display: flex; justify-content: center; align-items: center; z-index: 1000; }
-        /* [FIX] Add a higher z-index for nested modals */
         .modal-overlay.top-level { z-index: 1010; }
         .modal-content { background: #fff; padding: 25px; border-radius: 8px; box-shadow: 0 5px 15px rgba(0,0,0,0.3); width: 90%; max-width: 600px; display: flex; flex-direction: column; max-height: 90vh; }
         .modal-header { flex-shrink: 0; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #dee2e6; padding-bottom: 15px; margin-bottom: 15px; }
@@ -104,7 +103,6 @@
                 </tr>
             </tbody>
         </table>
-        <!-- [FIXED] Restored Original Mobile View with detailed editing -->
         <div class="original-view">
             <div v-for="(item, ii) in category.items" class="item" :key="'item-orig-'+ii">
                 <div v-if="!detailedEditEnabled">
@@ -137,7 +135,6 @@
     
 
     <!-- 單項/組合 優惠編輯 Modal -->
-    <!-- [FIX] Bind dynamic class to ensure it appears on top when nested -->
     <div v-if="isModalVisible" class="modal-overlay" :class="{ 'top-level': isEditingComboPromo }">
          <div class="modal-content">
             <div class="modal-header"><h4>{{ modalTitle }}</h4><button @click="closeModal" style="background:none; border:none; font-size: 1.5rem; cursor:pointer;">&times;</button></div>
@@ -156,7 +153,11 @@
         <div class="modal-content">
             <div class="modal-header"><h4>編輯組合優惠</h4><button @click="closeComboModal" style="background:none; border:none; font-size: 1.5rem; cursor:pointer;">&times;</button></div>
             <div class="modal-body">
-                <div class="form-group"><label>組合名稱</label><input type="text" v-model="currentCombo.name"></div>
+                <div class="form-group">
+                    <label>組合名稱</label>
+                    <input type="text" v-model="currentCombo.name">
+                    <small v-if="suggestedComboName" style="display: block; margin-top: 5px; color: #6c757d;">建議名稱: {{ suggestedComboName }}</small>
+                </div>
                 <div class="form-group"><label>包含的服務項目 (原價合計: {{ calculateComboOriginalPrice(currentCombo).toLocaleString() }})</label><select multiple v-model="currentCombo.itemIds"><option v-for="item in allItems" :value="item.id">{{ item.name }}</option></select></div>
                 <hr>
                 <label style="font-weight: bold;">組合專屬優惠</label>
@@ -185,7 +186,7 @@
         <div class="container">
             <button @click="discardAndReload" class="btn btn-secondary btn-block">放棄暫存並重載</button>
             <button v-if="isDirty" @click="openChangesModal" class="btn btn-block">產生JSON</button>
-            <button v-else @click="copyJson(true)" class="btn btn-block">複製JSON</button>
+            <button v-else @click="copyJson(true)" class="btn btn-block btn-success">複製JSON</button>
         </div>
     </div>
 </div>
@@ -219,6 +220,19 @@
         computed: {
             allItems: function() {
                 return (this.data.categories || []).flatMap(cat => cat.items || []);
+            },
+            suggestedComboName: function() {
+                if (!this.isComboModalVisible || !this.currentCombo.itemIds || this.currentCombo.itemIds.length === 0) {
+                    return '';
+                }
+                const selectedNames = this.currentCombo.itemIds.map(id => {
+                    const item = this.allItems.find(i => i.id === id);
+                    return item ? item.name : '';
+                }).filter(name => name);
+                if (selectedNames.length > 0) {
+                    return selectedNames.join(' + ') + ' 組合優惠';
+                }
+                return '';
             }
         },
         watch: {
@@ -294,6 +308,25 @@
                 let changes = [];
                 const originalItemsMap = new Map((this.originalData.categories || []).flatMap(c => c.items).map(i => [i.id, i]));
                 const currentItemsMap = new Map((this.data.categories || []).flatMap(c => c.items).map(i => [i.id, i]));
+                const originalCombosMap = new Map((this.originalData.combos || []).map(c => [c.name, c]));
+                const currentCombosMap = new Map((this.data.combos || []).map(c => [c.name, c]));
+
+                // Helper for detailed promo change string
+                const getPromoChangeString = (currentPromo, originalPromo, parentName, originalParentPrice) => {
+                    if (!originalPromo) {
+                        let detail = `為 '<b>${parentName}</b>' 新增優惠 '<b>${currentPromo.label}</b>' (價格: ${currentPromo.price}, 期間: ${currentPromo.start} ~ ${currentPromo.end})`;
+                        if ((currentPromo.price / originalParentPrice) < 0.8) {
+                            detail += ` <span style="color:red; font-weight:bold;">【注意】此促銷低於八折優惠！</span>`;
+                        }
+                        return detail;
+                    }
+                    let promoChanges = [];
+                    if (currentPromo.price !== originalPromo.price) promoChanges.push(`價格: ${originalPromo.price} -> <b>${currentPromo.price}</b>`);
+                    if (currentPromo.start !== originalPromo.start) promoChanges.push(`開始日期: ${originalPromo.start} -> <b>${currentPromo.start}</b>`);
+                    if (currentPromo.end !== originalPromo.end) promoChanges.push(`結束日期: ${originalPromo.end} -> <b>${currentPromo.end}</b>`);
+                    if (promoChanges.length > 0) return `修改了 '<b>${parentName}</b>' 的優惠 '<b>${currentPromo.label}</b>' (${promoChanges.join(', ')})`;
+                    return null;
+                };
 
                 // 檢查項目變更
                 currentItemsMap.forEach((currentItem, id) => {
@@ -304,21 +337,12 @@
                         if (currentItem.name !== originalItem.name) changes.push(`項目 '<b>${originalItem.name}</b>' 更名為 '<b>${currentItem.name}</b>'`);
                         if (currentItem.price !== originalItem.price) changes.push(`項目 '<b>${currentItem.name}</b>' 價格由 <b>${originalItem.price}</b> 改為 <b>${currentItem.price}</b>`);
                         
-                        // 檢查優惠變更
-                        const originalPromos = new Map((originalItem.promotions || []).map(p => [p.label, p]));
-                        (currentItem.promotions || []).forEach(currentPromo => {
-                            const originalPromo = originalPromos.get(currentPromo.label);
-                            if (!originalPromo) {
-                                changes.push(`為 '<b>${currentItem.name}</b>' 新增優惠 '<b>${currentPromo.label}</b>'`);
-                            } else {
-                                let promoChanges = [];
-                                if (currentPromo.price !== originalPromo.price) promoChanges.push(`價格: ${originalPromo.price} -> <b>${currentPromo.price}</b>`);
-                                if (currentPromo.start !== originalPromo.start) promoChanges.push(`開始日期: ${originalPromo.start} -> <b>${currentPromo.start}</b>`);
-                                if (currentPromo.end !== originalPromo.end) promoChanges.push(`結束日期: ${originalPromo.end} -> <b>${currentPromo.end}</b>`);
-                                if(promoChanges.length > 0) changes.push(`修改了 '<b>${currentItem.name}</b>' 的優惠 '<b>${currentPromo.label}</b>' (${promoChanges.join(', ')})`);
-                            }
+                        const originalPromosMap = new Map((originalItem.promotions || []).map(p => [p.label, p]));
+                        (currentItem.promotions || []).forEach(p => {
+                            const changeStr = getPromoChangeString(p, originalPromosMap.get(p.label), currentItem.name, originalItem.price);
+                            if (changeStr) changes.push(changeStr);
                         });
-                        originalPromos.forEach((p, label) => {
+                        originalPromosMap.forEach((p, label) => {
                            if (!(currentItem.promotions || []).find(cp => cp.label === label)) changes.push(`刪除了 '<b>${currentItem.name}</b>' 的優惠 '<b>${label}</b>'`);
                         });
                     }
@@ -326,6 +350,31 @@
                 originalItemsMap.forEach((originalItem, id) => {
                     if (!currentItemsMap.has(id)) changes.push(`刪除項目：<b>${originalItem.name}</b>`);
                 });
+
+                // 檢查組合變更
+                currentCombosMap.forEach((currentCombo, name) => {
+                    const originalCombo = originalCombosMap.get(name);
+                    if (!originalCombo) {
+                        changes.push(`新增組合：<b>${name}</b>`);
+                    } else {
+                        const originalIds = [...originalCombo.itemIds].sort().join(',');
+                        const currentIds = [...currentCombo.itemIds].sort().join(',');
+                        if(originalIds !== currentIds) changes.push(`修改了組合 '<b>${name}</b>' 的包含項目`);
+                        
+                        const originalPromosMap = new Map((originalCombo.promotions || []).map(p => [p.label, p]));
+                        (currentCombo.promotions || []).forEach(p => {
+                            const changeStr = getPromoChangeString(p, originalPromosMap.get(p.label), currentCombo.name, this.calculateComboOriginalPrice(originalCombo));
+                            if (changeStr) changes.push(changeStr);
+                        });
+                        originalPromosMap.forEach((p, label) => {
+                           if (!(currentCombo.promotions || []).find(cp => cp.label === label)) changes.push(`刪除了組合 '<b>${name}</b>' 的優惠 '<b>${label}</b>'`);
+                        });
+                    }
+                });
+                originalCombosMap.forEach((originalCombo, name) => {
+                    if (!currentCombosMap.has(name)) changes.push(`刪除組合：<b>${originalCombo.name}</b>`);
+                });
+
                 this.changesList = changes;
             },
 
@@ -337,6 +386,9 @@
                  navigator.clipboard.writeText(jsonString).then(() => {
                     this.showToast('JSON 已複製到剪貼簿，請傳送給管理者更新伺服器資料才會生效。');
                     if(this.isChangesModalVisible) this.isChangesModalVisible = false;
+                    // [FIX] Update originalData after copying to correctly reset dirty state
+                    this.originalData = JSON.parse(JSON.stringify(this.data));
+                    this.handleDirtyState();
                 }, () => {
                     alert('複製失敗!');
                 });
@@ -348,7 +400,6 @@
                     this.data = JSON.parse(JSON.stringify(data));
                     this.originalData = JSON.parse(JSON.stringify(data));
                     this.handleDirtyState();
-                    this.showToast('已從伺服器載入最新資料。');
                 } catch (error) {
                     alert('無法載入資料!');
                 } finally {
@@ -360,7 +411,9 @@
                     return;
                 }
                 localStorage.removeItem('autosavedData');
-                this.loadDataFromServer();
+                this.loadDataFromServer().then(() => {
+                     this.showToast('已從伺服器重新載入資料。');
+                });
             },
 
             openModal: function(itemOrCombo, promoIndex, isCombo = false) {
@@ -480,14 +533,12 @@
         },
         mounted: function() {
             const savedData = localStorage.getItem('autosavedData');
-            if (savedData) {
-                this.loadDataFromServer().then(() => { 
+            this.loadDataFromServer().then(() => { 
+                if (savedData) {
                     this.data = JSON.parse(savedData);
                     this.showToast('已載入上次未儲存的編輯內容。');
-                });
-            } else {
-                this.loadDataFromServer();
-            }
+                }
+            });
         }
     });
 </script>
