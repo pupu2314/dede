@@ -1,0 +1,468 @@
+<!DOCTYPE html>
+<html lang="zh-Hant-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>加班費計算機 v10.0 (精算版)</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <style>
+        :root {
+            --primary-color: #007bff; --secondary-color: #6c757d; --bg-color: #f8f9fa;
+            --text-color: #333; --border-color: #dee2e6; --success-color: #28a745;
+            --danger-color: #dc3545; --white-color: #fff; --font-family: 'Segoe UI', 'Microsoft JhengHei', sans-serif;
+        }
+        body { font-family: var(--font-family); background-color: var(--bg-color); color: var(--text-color); margin: 0; padding: 1rem; line-height: 1.6; }
+        .container { max-width: 1000px; margin: auto; background: var(--white-color); padding: 1.5rem; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+        h1, h2 { color: var(--primary-color); border-bottom: 2px solid var(--border-color); padding-bottom: 0.5rem; margin-top: 0; }
+        summary { font-size: 1.5rem; font-weight: bold; cursor: pointer; }
+        details > div { margin-top: 1rem; }
+        .grid-container { display: grid; grid-template-columns: 1fr; gap: 2rem; }
+        @media (min-width: 768px) { .grid-container { grid-template-columns: repeat(2, 1fr); } }
+        .card { background: #fff; padding: 1.5rem; border: 1px solid var(--border-color); border-radius: 8px; }
+        .form-group { margin-bottom: 1rem; }
+        .time-input-group { display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.5rem; align-items: center; }
+        label { display: block; margin-bottom: 0.5rem; font-weight: bold; }
+        input[type="number"], input[type="datetime-local"], input[type="text"], input[type="time"], textarea { width: 100%; padding: 0.75rem; border: 1px solid var(--border-color); border-radius: 4px; box-sizing: border-box; font-size: 1rem; }
+        .radio-group label, .checkbox-group label { display: inline-flex; align-items: center; margin-right: 1rem; font-weight: normal; cursor: pointer; }
+        .checkbox-group input { margin-right: 0.5rem; }
+        button { background-color: var(--primary-color); color: var(--white-color); border: none; padding: 0.75rem 1.5rem; border-radius: 4px; cursor: pointer; font-size: 1rem; transition: background-color 0.3s; }
+        button:hover { background-color: #0056b3; }
+        .btn-secondary { background-color: var(--secondary-color); }
+        .btn-secondary:hover { background-color: #545b62; }
+        table { width: 100%; border-collapse: collapse; margin-top: 1rem; }
+        th, td { border-bottom: 1px solid var(--border-color); padding: 0.75rem; text-align: left; word-break: break-word; }
+        th { background-color: #f2f2f2; }
+        .summary { background: #e9f5ff; border: 1px solid #b3d7ff; padding: 1.5rem; margin-top: 1rem; border-radius: 8px; }
+        .summary-value { font-size: 1.5rem; font-weight: bold; color: var(--success-color); }
+        .error-message { margin-top: 0.5rem; font-weight: bold; padding: 0.75rem; border-radius: 4px; color: var(--danger-color); background-color: #f8d7da; border: 1px solid #f5c6cb;}
+        .mode-switcher { display: flex; gap: 0.5rem; margin-bottom: 1rem; border-bottom: 1px solid var(--border-color); padding-bottom: 1rem; }
+        .mode-switcher button { flex: 1; }
+        .mode-switcher button.active { background-color: #0056b3; font-weight: bold; }
+        .daily-group-header { background-color: #f2f2f2; font-weight: bold; }
+        .record-detail-row td, .formula-detail-row td { padding-left: 2rem; font-size: 0.9rem; color: #555; border-top: 1px dotted #ccc; }
+        .formula-detail-row td { background-color: #f9f9f9; padding: 1rem; font-family: monospace; color: #0056b3; }
+
+        @media (max-width: 768px) {
+            thead { display: none; }
+            tr:not(.formula-detail-row) { display: block; border: 1px solid var(--border-color); border-radius: 8px; margin-bottom: 1rem; padding: 1rem; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+            tr.daily-group-header { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; padding: 0.5rem; margin-bottom: 0.5rem; background-color: #e9f5ff; }
+            td { display: flex; justify-content: space-between; align-items: center; padding: 0.5rem 0; border-bottom: 1px dotted var(--border-color); text-align: right; }
+            td:last-child { border-bottom: none; }
+            td::before { content: attr(data-label); font-weight: bold; text-align: left; margin-right: 1rem; }
+            .formula-detail-row { display: block; }
+            .formula-detail-row td { display: block; text-align: left; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h1>加班費計算機 v10.0 (精算版)</h1>
+        
+        <div class="grid-container">
+            <div class="card">
+                <details id="settings-details" open>
+                    <summary>1. 基本設定</summary>
+                    <div>
+                        <div class="form-group"><label>薪資類型</label><div class="radio-group"><label><input type="radio" name="salaryType" value="monthly" checked> 月薪</label><label><input type="radio" name="salaryType" value="hourly"> 時薪</label></div></div>
+                        <div class="form-group"><label for="salary">薪資金額 (NTD)</label><input type="number" id="salary" min="0" placeholder="例如：40000"></div>
+                        <div class="form-group"><label for="hourly-rate-display">時薪表達式 (自動)</label><input type="text" id="hourly-rate-display" readonly></div>
+                        <hr>
+                        <div class="form-group">
+                            <label>正常工作/午休時間 (僅於「平日」加班時自動排除)</label>
+                            <div class="time-input-group">
+                                <label>上班</label><input type="time" id="work-start" value="09:00">
+                                <label>下班</label><input type="time" id="work-end" value="18:00">
+                                <label>午休</label><input type="time" id="break-start" value="12:00">
+                                <label>結束</label><input type="time" id="break-end" value="13:00">
+                            </div>
+                        </div>
+                        <button id="save-settings">儲存設定</button>
+                    </div>
+                </details>
+            </div>
+
+            <div class="card">
+                <h2>2. 新增加班紀錄</h2>
+                <div class="mode-switcher">
+                    <button id="mode-punch" class="active">即時打卡</button>
+                    <button id="mode-manual">補登紀錄</button>
+                </div>
+                <div id="punch-mode-content"><div style="display: flex; gap: 1rem;"><button id="punch-start" style="flex: 1;">開始加班</button><button id="punch-end" style="flex: 1;" disabled>結束加班</button></div></div>
+                <div id="manual-mode-content" style="display: none;">
+                    <input type="hidden" id="edit-id">
+                    <div class="form-group"><label for="start-time">開始時間</label><input type="datetime-local" id="start-time"></div>
+                    <div class="form-group"><label for="end-time">結束時間</label><input type="datetime-local" id="end-time"></div>
+                </div>
+                <div class="form-group" style="margin-top: 1rem;"><label for="overtime-reason">加班事由 (選填)</label><input type="text" id="overtime-reason" placeholder="例如：專案A上線支援"></div>
+                <div class="form-group">
+                    <label>加班類型</label>
+                    <div class="radio-group"><label><input type="radio" name="overtimeType" value="weekday" checked> 平日</label><label><input type="radio" name="overtimeType" value="restday"> 休息日</label><label><input type="radio" name="overtimeType" value="holiday"> 國定假日</label></div>
+                </div>
+                 <div class="form-group checkbox-group" style="background: #f9f9f9; padding: 0.75rem; border-radius: 4px;">
+                    <label><input type="checkbox" id="force-full-calc-toggle"> <strong>強制計算完整時長</strong> (用於補休時加班等情境)</label>
+                </div>
+                <button id="add-record">新增/更新紀錄</button><button id="clear-form" class="btn-secondary">清除表單</button>
+                <div id="form-error" class="error-message" style="display: none;"></div>
+            </div>
+        </div>
+
+        <div id="capture-area" class="card" style="margin-top: 2rem;">
+            <h2>3. 加班紀錄與總覽</h2>
+            <div class="controls-container" style="display: flex; flex-wrap: wrap; gap: 1rem; align-items: flex-end;">
+                <div class="form-group" style="flex: 1 1 200px;"><label for="month-filter">篩選月份</label><input type="month" id="month-filter"></div>
+                <button id="export-image" class="btn-secondary" style="flex: 1 1 150px;">匯出本月圖片</button>
+            </div>
+            <table><thead><tr><th>日期</th><th>類型</th><th>總時長(H)</th><th>加班費($)</th><th>操作</th></tr></thead><tbody id="records-body"></tbody></table>
+            <div class="summary">
+                <h3 id="summary-title">篩選月份總計</h3>
+                <p>期間：<span id="summary-period"></span></p>
+                <span id="total-overtime-pay" class="summary-value">0</span> 元
+            </div>
+        </div>
+        
+        <div class="card" style="margin-top: 2rem;">
+            <h2>4. 資料管理</h2>
+            <div class="grid-container">
+                <div>
+                    <h3>匯出所有資料</h3>
+                    <button id="export-text">匯出為文字(JSON)</button>
+                    <div id="export-output" style="display:none; margin-top: 1rem;">
+                        <label>請複製以下所有文字：</label>
+                        <textarea id="export-textarea" readonly rows="5"></textarea>
+                    </div>
+                </div>
+                <div>
+                    <h3>匯入所有資料</h3>
+                    <textarea id="import-textarea" placeholder="在此貼上您備份的 JSON 文字" rows="5"></textarea>
+                    <button id="import-text" style="margin-top: 0.5rem;">確認匯入</button>
+                </div>
+            </div>
+        </div>
+        <div class="disclaimer" style="font-size: 0.8rem; color: var(--secondary-color); margin-top: 1.5rem; border-top: 1px solid var(--border-color); padding-top: 1rem;"><h4>免責聲明</h4><p>本工具計算結果僅供參考，實際加班費請以公司人資或會計部門計算為準。</p></div>
+    </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    // DOM Elements
+    const salaryInput = document.getElementById('salary'), hourlyRateDisplay = document.getElementById('hourly-rate-display');
+    const addRecordBtn = document.getElementById('add-record'), recordsBody = document.getElementById('records-body');
+    const totalOvertimePayEl = document.getElementById('total-overtime-pay'), summaryTitleEl = document.getElementById('summary-title');
+    const summaryPeriodEl = document.getElementById('summary-period'), monthFilter = document.getElementById('month-filter');
+    const formError = document.getElementById('form-error'), editIdInput = document.getElementById('edit-id');
+    const punchStartBtn = document.getElementById('punch-start'), punchEndBtn = document.getElementById('punch-end');
+    const forceFullCalcToggle = document.getElementById('force-full-calc-toggle');
+
+    // App State
+    let settings = {}, records = [], punchStartTime = null;
+
+    // --- UTILITY FUNCTIONS ---
+    const formatDateTimeLocal = (date) => new Date(date.getTime() - (date.getTimezoneOffset() * 60000)).toISOString().slice(0, 16);
+    const showError = (message) => { formError.textContent = message; formError.style.display = 'block'; };
+    const hideError = () => { formError.style.display = 'none'; };
+    const roundTo5 = (num) => Math.round(num * 100000) / 100000;
+    const formatPay = (rawPay) => {
+        const fixedPay = rawPay.toFixed(5); // Check against a higher precision
+        if (fixedPay.endsWith('000')) {
+            return rawPay.toFixed(2); // Can be cleanly represented with 2 decimals
+        }
+        return `${rawPay.toFixed(2)}...`;
+    };
+    
+    // --- SETTINGS MANAGEMENT ---
+    function loadSettings() {
+        const savedSettings = JSON.parse(localStorage.getItem('overtimeSettingsV10'));
+        settings = { salaryType: 'monthly', salary: 0, workStart: "09:00", workEnd: "18:00", breakStart: "12:00", breakEnd: "13:00", ...savedSettings };
+        salaryInput.value = settings.salary || '';
+        document.querySelector(`input[name="salaryType"][value="${settings.salaryType}"]`).checked = true;
+        Object.keys(settings).forEach(key => { if(document.getElementById(key)) document.getElementById(key).value = settings[key]; });
+        updateHourlyRateLogic();
+    }
+    function saveSettings() {
+        settings.salaryType = document.querySelector('input[name="salaryType"]:checked').value;
+        settings.salary = parseFloat(salaryInput.value) || 0;
+        settings.workStart = document.getElementById('work-start').value;
+        settings.workEnd = document.getElementById('work-end').value;
+        settings.breakStart = document.getElementById('break-start').value;
+        settings.breakEnd = document.getElementById('break-end').value;
+        
+        localStorage.setItem('overtimeSettingsV10', JSON.stringify(settings));
+        updateHourlyRateLogic();
+        render();
+        alert('設定已儲存！');
+    }
+    function updateHourlyRateLogic() {
+        if (settings.salaryType === 'monthly') {
+            settings.numerator = settings.salary;
+            settings.denominator = 240;
+            hourlyRateDisplay.value = `${settings.numerator} / ${settings.denominator}`;
+        } else {
+            settings.numerator = settings.salary;
+            settings.denominator = 1;
+            hourlyRateDisplay.value = `${settings.numerator}`;
+        }
+        settings.rate = (settings.denominator !== 0) ? roundTo5(settings.numerator / settings.denominator) : 0;
+    }
+
+    // --- RECORD MANAGEMENT ---
+    function loadRecords() {
+        records = JSON.parse(localStorage.getItem('overtimeRecordsV10')) || [];
+        records.sort((a, b) => new Date(b.start) - new Date(a.start));
+    }
+    function saveRecords() { localStorage.setItem('overtimeRecordsV10', JSON.stringify(records)); }
+    function clearForm() {
+        ['start-time', 'end-time', 'overtime-reason', 'edit-id'].forEach(id => document.getElementById(id).value = '');
+        document.querySelector('input[name="overtimeType"][value="weekday"]').checked = true;
+        forceFullCalcToggle.checked = false; addRecordBtn.textContent = '新增紀錄'; hideError();
+    }
+    function addRecord() {
+        hideError();
+        const startTime = document.getElementById('start-time').value, endTime = document.getElementById('end-time').value;
+        const type = document.querySelector('input[name="overtimeType"]:checked').value, reason = document.getElementById('overtime-reason').value;
+        const editId = editIdInput.value;
+
+        if (!startTime || !endTime || new Date(endTime) <= new Date(startTime)) { showError('錯誤：請檢查開始與結束時間。'); return; }
+        if (!settings.rate || settings.rate <= 0) { showError('錯誤：請先完成有效薪資設定。'); return; }
+        
+        const newRecord = { id: editId || `rec_${Date.now()}`, start: startTime, end: endTime, type, reason, forceFullCalculation: forceFullCalcToggle.checked };
+        
+        const netHours = calculateNetOvertimeHours(newRecord);
+        if (netHours <= 0 && !confirm("此筆紀錄計算出的加班時數為0，確定要新增嗎？")) return;
+
+        const index = editId ? records.findIndex(rec => rec.id === editId) : -1;
+        if (index > -1) { records[index] = newRecord; } else { records.push(newRecord); }
+        saveRecords(); loadRecords(); render(); clearForm();
+    }
+    function deleteRecord(id) {
+        if (confirm('確定要刪除這筆紀錄嗎？')) { records = records.filter(record => record.id !== id); saveRecords(); render(); }
+    }
+    function editRecord(id) {
+        const record = records.find(rec => rec.id === id);
+        if (record) {
+            switchMode('manual');
+            document.getElementById('start-time').value = record.start;
+            document.getElementById('end-time').value = record.end;
+            document.getElementById('overtime-reason').value = record.reason || '';
+            document.querySelector(`input[name="overtimeType"][value="${record.type}"]`).checked = true;
+            editIdInput.value = record.id;
+            forceFullCalcToggle.checked = !!record.forceFullCalculation;
+            addRecordBtn.textContent = '更新紀錄'; window.scrollTo(0, 0);
+        }
+    }
+    
+    // --- PUNCH & MODE SWITCHING ---
+    function switchMode(mode) {
+        document.getElementById('punch-mode-content').style.display = mode === 'punch' ? 'block' : 'none';
+        document.getElementById('manual-mode-content').style.display = mode === 'manual' ? 'block' : 'none';
+        document.getElementById('mode-punch').classList.toggle('active', mode === 'punch');
+        document.getElementById('mode-manual').classList.toggle('active', mode === 'manual');
+        clearForm();
+    }
+    function startPunch() { punchStartTime = new Date(); sessionStorage.setItem('punchStartTime', punchStartTime.toISOString()); updatePunchUI(true); }
+    function endPunch() {
+        if (!punchStartTime) return;
+        switchMode('manual');
+        document.getElementById('start-time').value = formatDateTimeLocal(punchStartTime);
+        document.getElementById('end-time').value = formatDateTimeLocal(new Date());
+        punchStartTime = null; sessionStorage.removeItem('punchStartTime'); updatePunchUI(false);
+    }
+    function updatePunchUI(isPunchedIn) { punchStartBtn.disabled = isPunchedIn; punchEndBtn.disabled = !isPunchedIn; }
+
+    // --- CALCULATION LOGIC ---
+    function calculateNetOvertimeHours(record) {
+        let totalMillis = new Date(record.end) - new Date(record.start);
+        if (record.type === 'weekday' && !record.forceFullCalculation) {
+             const d = new Date(record.start);
+             const h = (t) => t.split(':').map(Number);
+             const workStart = new Date(d).setHours(...h(settings.workStart), 0, 0);
+             const workEnd = new Date(d).setHours(...h(settings.workEnd), 0, 0);
+             const breakStart = new Date(d).setHours(...h(settings.breakStart), 0, 0);
+             const breakEnd = new Date(d).setHours(...h(settings.breakEnd), 0, 0);
+             const recStart = new Date(record.start).getTime(), recEnd = new Date(record.end).getTime();
+             let workOverlap = Math.max(0, Math.min(recEnd, workEnd) - Math.max(recStart, workStart));
+             let breakOverlap = Math.max(0, Math.min(recEnd, breakEnd) - Math.max(recStart, breakStart));
+             totalMillis -= (workOverlap - breakOverlap);
+        }
+        return Math.max(0, totalMillis / 3600000);
+    }
+
+    function getDailyPayAndFormula(totalHours, type) {
+        let pay = 0; let formula = ""; const rate = settings.rate;
+        const rateStr = settings.denominator === 1 ? `${settings.numerator}` : `(${settings.numerator}/${settings.denominator})`;
+        const h = (val) => val.toFixed(2);
+        
+        switch (type) {
+            case 'weekday': if (totalHours <= 2) { pay = totalHours * rate * 1.34; formula = `(${h(totalHours)}H*${rateStr}*1.34)`; } else { pay = (2 * rate * 1.34) + ((totalHours - 2) * rate * 1.67); formula = `(2H*${rateStr}*1.34)+(${h(totalHours-2)}H*${rateStr}*1.67)`; } break;
+            case 'restday': if (totalHours <= 2) { pay = totalHours * rate * 1.34; formula = `(${h(totalHours)}H*${rateStr}*1.34)`; } else if (totalHours <= 8) { pay = (2 * rate * 1.34) + ((totalHours - 2) * rate * 1.67); formula = `(2H*${rateStr}*1.34)+(${h(totalHours-2)}H*${rateStr}*1.67)`; } else { pay = (2 * rate * 1.34) + (6 * rate * 1.67) + ((totalHours - 8) * rate * 2.67); formula = `(2H*...)+(${h(totalHours-8)}H*${rateStr}*2.67)`; } break;
+            case 'holiday': pay = totalHours * rate; formula = `(${h(totalHours)}H*${rateStr}*1)`; break;
+        }
+        return { rawPay: pay, formula: `${formula} = ${formatPay(pay)}` };
+    }
+
+    // --- RENDER LOGIC ---
+    function render() {
+        const filteredRecords = filterRecords(monthFilter.value);
+        const dailyGroups = groupRecordsByDay(filteredRecords);
+        renderTable(recordsBody, dailyGroups);
+        renderSummary(dailyGroups, monthFilter.value);
+    }
+    function filterRecords(filterValue) {
+        if (!filterValue) return records;
+        const [year, month] = filterValue.split('-').map(Number);
+        return records.filter(rec => new Date(rec.start).getFullYear() === year && new Date(rec.start).getMonth() + 1 === month);
+    }
+    function groupRecordsByDay(records) {
+        const groups = {};
+        records.forEach(rec => {
+            const dateKey = new Date(rec.start).toLocaleDateString();
+            if (!groups[dateKey]) groups[dateKey] = { date: new Date(rec.start), type: rec.type, records: [] };
+            groups[dateKey].records.push(rec);
+        });
+        return Object.values(groups).map(group => {
+            const totalHours = group.records.reduce((sum, rec) => sum + calculateNetOvertimeHours(rec), 0);
+            const { rawPay, formula } = getDailyPayAndFormula(totalHours, group.type);
+            return { ...group, totalHours, rawPay, formula };
+        }).sort((a,b) => b.date - a.date);
+    }
+    
+    function renderTable(tbody, dailyGroups) {
+        tbody.innerHTML = '';
+        if (dailyGroups.length === 0) { tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;">該月份尚無紀錄</td></tr>`; return; }
+
+        dailyGroups.forEach(group => {
+            const dateStr = group.date.toLocaleDateString(), typeText = { weekday: '平日', restday: '休息日', holiday: '國定假日' }[group.type];
+            
+            const headerRow = tbody.insertRow();
+            headerRow.className = 'daily-group-header';
+            headerRow.innerHTML = `<td data-label="日期">${dateStr}</td><td data-label="類型">${typeText}</td><td data-label="總時長(H)">${group.totalHours.toFixed(2)}</td><td data-label="加班費($)">${formatPay(group.rawPay)}</td><td data-label="操作"><button class="btn-small btn-secondary" onclick="app.toggleDetails(this)">展開</button></td>`;
+            
+            group.records.sort((a,b) => new Date(a.start) - new Date(b.start)).forEach(rec => {
+                const detailRow = tbody.insertRow();
+                detailRow.className = 'record-detail-row';
+                detailRow.style.display = 'none'; detailRow.setAttribute('data-group-date', dateStr);
+                const startTime = new Date(rec.start).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                const endTime = new Date(rec.end).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                let reasonText = `${rec.reason || '-'}`;
+                if (rec.forceFullCalculation) reasonText += ' <strong style="color:var(--danger-color);">(強制計算)</strong>';
+                detailRow.innerHTML = `<td data-label="時間" colspan="3">${startTime} - ${endTime} (${reasonText})</td><td data-label="時長">${calculateNetOvertimeHours(rec).toFixed(2)} H</td><td data-label="操作"><button class="btn-small" onclick="app.editRecord('${rec.id}')">編輯</button> <button class="btn-small btn-danger" onclick="app.deleteRecord('${rec.id}')">刪除</button></td>`;
+            });
+            
+            const formulaRow = tbody.insertRow();
+            formulaRow.className = 'formula-detail-row';
+            formulaRow.style.display = 'none'; formulaRow.setAttribute('data-group-date', dateStr);
+            formulaRow.innerHTML = `<td colspan="5"><strong>計算式:</strong> ${group.formula}</td>`;
+        });
+    }
+
+    function renderSummary(dailyGroups, filterValue) {
+        const totalRawPay = dailyGroups.reduce((sum, group) => sum + group.rawPay, 0);
+        totalOvertimePayEl.textContent = Math.round(totalRawPay); // Final rounding
+        if (filterValue) {
+            const [year, month] = filterValue.split('-');
+            summaryTitleEl.textContent = `篩選月份總計 (${year}年${month}月)`; summaryPeriodEl.textContent = `共 ${dailyGroups.length} 個加班日`;
+        } else { summaryTitleEl.textContent = '所有紀錄總計'; summaryPeriodEl.textContent = `共 ${dailyGroups.length} 個加班日`; }
+    }
+    function toggleDetails(button) {
+        const date = button.closest('tr').querySelector('[data-label="日期"]').textContent;
+        const isExpanding = button.textContent === '展開';
+        button.textContent = isExpanding ? '收合' : '展開';
+        document.querySelectorAll(`tr[data-group-date="${date}"]`).forEach(row => { row.style.display = isExpanding ? '' : 'none'; });
+    }
+    
+    // --- [REBUILT V9.2] EXPORT & EVENTS ---
+    function getExportStyles() {
+        return `<style>body{font-family:'Segoe UI','Microsoft JhengHei',sans-serif!important;color:#333!important}h2{color:#007bff!important;border-bottom:2px solid #dee2e6!important;padding-bottom:.5rem!important;margin-top:0!important}table{width:100%!important;border-collapse:collapse!important;font-size:14px!important}thead{display:table-header-group!important}tbody,tr{display:table-row-group!important}tr{page-break-inside:avoid!important}th,td{display:table-cell!important;border:1px solid #dee2e6!important;padding:8px!important;text-align:left!important}td::before{content:none!important}th{background-color:#f2f2f2!important}.daily-group-header{background-color:#f2f2f2!important;font-weight:700!important}.record-detail-row td{padding-left:2rem!important;font-size:13px!important;color:#555!important;border-style:dotted!important}.formula-detail-row td{background-color:#f9f9f9!important;font-family:monospace!important;color:#0056b3!important}.summary{margin-top:1.5rem!important;text-align:right!important;background:#e9f5ff!important;border:1px solid #b3d7ff!important;padding:1.5rem!important;border-radius:8px!important}.summary h3{margin:0!important;color:#004085!important}.summary-value{font-size:1.5em!important;font-weight:700!important;color:#28a745!important}</style>`;
+    }
+
+    function generateExportHTML(dailyGroups, title) {
+        let tableHTML = `<h2>${title}</h2><table><thead><tr><th>日期</th><th>類型</th><th>總時長(H)</th><th>加班費($)</th></tr></thead><tbody>`;
+        if (dailyGroups.length === 0) {
+            tableHTML += `<tr><td colspan="4" style="text-align:center;">該月份尚無紀錄</td></tr>`;
+        } else {
+            dailyGroups.forEach(group => {
+                const typeText = { weekday: '平日', restday: '休息日', holiday: '國定假日' }[group.type];
+                tableHTML += `<tr class="daily-group-header"><td>${group.date.toLocaleDateString()}</td><td>${typeText}</td><td>${group.totalHours.toFixed(2)}</td><td>${formatPay(group.rawPay)}</td></tr>`;
+                group.records.sort((a,b) => new Date(a.start) - new Date(b.start)).forEach(rec => {
+                    const startTime = new Date(rec.start).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                    const endTime = new Date(rec.end).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                    let reasonText = `${rec.reason || '-'}`;
+                    if (rec.forceFullCalculation) reasonText += ' (強制計算)';
+                    tableHTML += `<tr class="record-detail-row"><td colspan="3">${startTime} - ${endTime} (${reasonText})</td><td>${calculateNetOvertimeHours(rec).toFixed(2)} H</td></tr>`;
+                });
+                tableHTML += `<tr class="formula-detail-row"><td colspan="4"><strong>計算式:</strong> ${group.formula}</td></tr>`;
+            });
+        }
+        tableHTML += `</tbody></table>`;
+        return tableHTML;
+    }
+
+    async function exportResultsAsImage() {
+        const [year, month] = (monthFilter.value || new Date().toISOString().substring(0, 7)).split('-');
+        const dailyGroups = groupRecordsByDay(filterRecords(monthFilter.value));
+        const totalRawPay = dailyGroups.reduce((sum, group) => sum + group.rawPay, 0);
+
+        const exportContainer = document.createElement('div');
+        exportContainer.style.cssText = 'position:absolute;left:-9999px;width:1000px;background:white;padding:2rem;';
+        
+        const title = `${year}年 ${month}月 加班紀錄`;
+        const styles = getExportStyles();
+        const tableHTML = generateExportHTML(dailyGroups, title);
+        const summaryHTML = `<div class="summary"><h3>總金額: <span class="summary-value">${Math.round(totalRawPay)}</span> 元</h3></div>`;
+
+        exportContainer.innerHTML = styles + tableHTML + summaryHTML;
+        document.body.appendChild(exportContainer);
+
+        try {
+            const canvas = await html2canvas(exportContainer, { scale: 2 });
+            const link = document.createElement('a');
+            link.download = `加班紀錄-${year}-${month}.png`;
+            link.href = canvas.toDataURL("image/png");
+            link.click();
+        } catch (error) { console.error('匯出圖片失敗:', error); alert('匯出圖片時發生錯誤。');
+        } finally { document.body.removeChild(exportContainer); }
+    }
+
+    function setupEventListeners() {
+        document.getElementById('save-settings').addEventListener('click', saveSettings);
+        addRecordBtn.addEventListener('click', addRecord);
+        document.getElementById('clear-form').addEventListener('click', clearForm);
+        monthFilter.addEventListener('change', render);
+        document.getElementById('mode-punch').addEventListener('click', () => switchMode('punch'));
+        document.getElementById('mode-manual').addEventListener('click', () => switchMode('manual'));
+        punchStartBtn.addEventListener('click', startPunch); punchEndBtn.addEventListener('click', endPunch);
+        document.getElementById('export-image').addEventListener('click', exportResultsAsImage);
+        document.getElementById('export-text').addEventListener('click', () => {
+            const outputArea = document.getElementById('export-output');
+            const textarea = document.getElementById('export-textarea');
+            textarea.value = JSON.stringify({ settings: { ...settings, rate: undefined }, records }, null, 2); // Don't export calculated rate
+            outputArea.style.display = 'block';
+        });
+        document.getElementById('import-text').addEventListener('click', () => {
+            const importText = document.getElementById('import-textarea').value;
+            if (!importText || !confirm('警告：匯入將會覆蓋所有現存資料，確定要繼續嗎？')) return;
+            try {
+                const data = JSON.parse(importText);
+                if (data.settings && Array.isArray(data.records)) {
+                    localStorage.setItem('overtimeSettingsV10', JSON.stringify(data.settings));
+                    localStorage.setItem('overtimeRecordsV10', JSON.stringify(data.records));
+                    init(); alert('資料匯入成功！');
+                } else { alert('匯入失敗：資料格式不正確。'); }
+            } catch (e) { alert('匯入失敗：無效的 JSON 格式。'); console.error(e); }
+        });
+    }
+
+    // --- INIT ---
+    function init() {
+        loadSettings(); loadRecords();
+        if (sessionStorage.getItem('punchStartTime')) { punchStartTime = new Date(sessionStorage.getItem('punchStartTime')); updatePunchUI(true); }
+        monthFilter.value = new Date().toISOString().substring(0, 7);
+        render(); setupEventListeners();
+    }
+    
+    window.app = { deleteRecord, editRecord, toggleDetails };
+    init();
+});
+</script>
+
+</body>
+</html>
