@@ -171,7 +171,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // --- SETTINGS MANAGEMENT ---
     function loadSettings() {
-        const savedSettings = JSON.parse(localStorage.getItem('overtimeSettingsV10'));
+        const savedSettings = JSON.parse(localStorage.getItem('overtimeRecordsV9'));
         settings = { salaryType: 'monthly', salary: 0, workStart: "09:00", workEnd: "18:00", breakStart: "12:00", breakEnd: "13:00", ...savedSettings };
         salaryInput.value = settings.salary || '';
         document.querySelector(`input[name="salaryType"][value="${settings.salaryType}"]`).checked = true;
