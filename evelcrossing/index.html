@@ -155,8 +155,8 @@
                     const isDeactivated = item['停用'] && item['停用'] !== '';
                     
                     const card = document.createElement('div');
-                    const cardBgClass = isDeactivated ? 'bg-gray-700 deactivated-card' : 'bg-gray-800';
-                    const cardHoverClass = isDeactivated ? 'hover:bg-gray-600' : 'hover:bg-gray-700';
+                    const cardBgClass = isDeactivated ? 'bg-gray-800 deactivated-card' : 'bg-gray-800';
+                    const cardHoverClass = isDeactivated ? 'hover:bg-gray-700' : 'hover:bg-gray-700';
 
                     card.className = `${cardBgClass} p-6 rounded-2xl shadow-lg transition-transform transform hover:scale-105 ${cardHoverClass}`;
 
