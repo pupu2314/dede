@@ -25,7 +25,7 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1-px rgba(0, 0, 0, 0.06);
             transition: opacity 0.3s, transform 0.3s;
             transform: translateY(100px);
             opacity: 0;
@@ -48,7 +48,7 @@
             <!-- 名稱搜尋 -->
             <div class="flex-1">
                 <label for="search-input" class="block text-sm font-medium text-gray-400 mb-1">平交道名稱</label>
-                <input type="text" id="search-input" placeholder="如：「成功路」或「成」" class="w-full px-4 py-2 bg-gray-700 text-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-colors">
+                <input type="text" id="search-input" placeholder="例如：成功路" class="w-full px-4 py-2 bg-gray-700 text-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-colors">
             </div>
 
             <!-- 下拉式篩選器 -->
@@ -143,8 +143,13 @@
             } else {
                 noResultsMessage.classList.add('hidden');
                 data.forEach(item => {
+                    const isDeactivated = item['停用'] && item['停用'] !== '';
+                    
                     const card = document.createElement('div');
-                    card.className = 'bg-gray-800 p-6 rounded-2xl shadow-lg transition-transform transform hover:scale-105 hover:bg-gray-700';
+                    const cardBgClass = isDeactivated ? 'bg-gray-700' : 'bg-gray-800';
+                    const cardHoverClass = isDeactivated ? 'hover:bg-gray-600' : 'hover:bg-gray-700';
+
+                    card.className = `${cardBgClass} p-6 rounded-2xl shadow-lg transition-transform transform hover:scale-105 ${cardHoverClass}`;
 
                     const oldName = item['舊名或別名'] ? ` (${item['舊名或別名']})` : '';
                     const electricSectionDisplay = (item['電務段'] === '' || item['電務段'] === 0) ? '不明' : item['電務段'];
@@ -167,9 +172,11 @@
                             <p class="text-sm text-gray-400">編號：${item['編號']}</p>
                         </div>
                         <div class="space-y-2 text-sm">
-                            <p><span class="font-medium text-gray-300">位置：</span>${item['所在縣市']} / ${item['區間']}間</p>
-                            <p><span class="font-medium text-gray-300">路線別：</span>${item['路線別']} （${item['平交道種類']}）</p>
-                            <p><span class="font-medium text-gray-300">隸屬單位：</span>${electricSectionDisplay}電務段${stationDisplay}分駐所</p>
+                            <p><span class="font-medium text-gray-300">所在縣市：</span>${item['所在縣市']} / <span class="font-medium text-gray-300">區間：</span>${item['區間']}</p>
+                            <p><span class="font-medium text-gray-300">路線別：</span>${item['路線別']}</p>
+                            <p><span class="font-medium text-gray-300">電務段：</span>${electricSectionDisplay}</p>
+                            <p><span class="font-medium text-gray-300">分駐所：</span>${stationDisplay}</p>
+                            <p><span class="font-medium text-gray-300">種類：</span>${item['平交道種類']}</p>
                             <p><span class="font-medium text-gray-300">里程：</span>${item['里程']}</p>
                         </div>
                         ${googleMapContent}
