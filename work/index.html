@@ -4,70 +4,22 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>加班費計算機</title>
+    <!-- PWA-related tags -->
+    <meta name="theme-color" content="#007bff"/>
+    <link rel="manifest" href="/dede/manifest.json">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-    <style>
-        :root {
-            --primary-color: #007bff; --secondary-color: #6c757d; --bg-color: #f8f9fa;
-            --text-color: #333; --border-color: #dee2e6; --success-color: #28a745;
-            --danger-color: #dc3545; --white-color: #fff; --font-family: 'Segoe UI', 'Microsoft JhengHei', sans-serif;
-        }
-        body { font-family: var(--font-family); background-color: var(--bg-color); color: var(--text-color); margin: 0; padding: 1rem; line-height: 1.6; }
-        .container { max-width: 1000px; margin: auto; background: var(--white-color); padding: 1.5rem; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
-        h1, h2 { color: var(--primary-color); border-bottom: 2px solid var(--border-color); padding-bottom: 0.5rem; margin-top: 0; }
-        summary { font-size: 1.5rem; font-weight: bold; cursor: pointer; }
-        details > div { margin-top: 1rem; }
-        .grid-container { display: grid; grid-template-columns: 1fr; gap: 2rem; }
-        @media (min-width: 768px) { .grid-container { grid-template-columns: repeat(2, 1fr); } }
-        .card { background: #fff; padding: 1.5rem; border: 1px solid var(--border-color); border-radius: 8px; }
-        .form-group { margin-bottom: 1rem; }
-        .time-input-group { display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.5rem; align-items: center; }
-        label { display: block; margin-bottom: 0.5rem; font-weight: bold; }
-        input[type="number"], input[type="datetime-local"], input[type="text"], input[type="time"], textarea { width: 100%; padding: 0.75rem; border: 1px solid var(--border-color); border-radius: 4px; box-sizing: border-box; font-size: 1rem; }
-        .radio-group label, .checkbox-group label { display: inline-flex; align-items: center; margin-right: 1rem; font-weight: normal; cursor: pointer; }
-        .checkbox-group input { margin-right: 0.5rem; }
-        button { background-color: var(--primary-color); color: var(--white-color); border: none; padding: 0.75rem 1.5rem; border-radius: 4px; cursor: pointer; font-size: 1rem; transition: background-color 0.3s; }
-        button:hover { background-color: #0056b3; }
-        .btn-secondary { background-color: var(--secondary-color); }
-        .btn-secondary:hover { background-color: #545b62; }
-        table { width: 100%; border-collapse: collapse; margin-top: 1rem; }
-        th, td { border-bottom: 1px solid var(--border-color); padding: 0.75rem; text-align: left; word-break: break-word; }
-        th { background-color: #f2f2f2; }
-        .summary { background: #e9f5ff; border: 1px solid #b3d7ff; padding: 1.5rem; margin-top: 1rem; border-radius: 8px; }
-        .summary-value { font-size: 1.5rem; font-weight: bold; color: var(--success-color); }
-        .error-message { margin-top: 0.5rem; font-weight: bold; padding: 0.75rem; border-radius: 4px; color: var(--danger-color); background-color: #f8d7da; border: 1px solid #f5c6cb;}
-        .mode-switcher { display: flex; gap: 0.5rem; margin-bottom: 1rem; border-bottom: 1px solid var(--border-color); padding-bottom: 1rem; }
-        .mode-switcher button { flex: 1; }
-        .mode-switcher button.active { background-color: #0056b3; font-weight: bold; }
-        .daily-group-header { background-color: #f2f2f2; font-weight: bold; }
-        .record-detail-row td, .formula-detail-row td { padding-left: 2rem; font-size: 0.9rem; color: #555; border-top: 1px dotted #ccc; }
-        .formula-detail-row td { background-color: #f9f9f9; padding: 1rem; font-family: monospace; color: #0056b3; }
-        .tooltip { position: relative; display: inline-block; cursor: help; }
-        .tooltip .tooltiptext { visibility: hidden; width: max-content; background-color: #555; color: #fff; text-align: center; border-radius: 6px; padding: 5px 10px; position: absolute; z-index: 1; bottom: 125%; left: 50%; margin-left: -60px; opacity: 0; transition: opacity 0.3s; }
-        .tooltip:hover .tooltiptext { visibility: visible; opacity: 1; }
-
-        @media (max-width: 768px) {
-            thead { display: none; }
-            tr:not(.formula-detail-row) { display: block; border: 1px solid var(--border-color); border-radius: 8px; margin-bottom: 1rem; padding: 1rem; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
-            tr.daily-group-header { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; padding: 0.5rem; margin-bottom: 0.5rem; background-color: #e9f5ff; }
-            td { display: flex; justify-content: space-between; align-items: center; padding: 0.5rem 0; border-bottom: 1px dotted var(--border-color); text-align: right; }
-            td:last-child { border-bottom: none; }
-            td::before { content: attr(data-label); font-weight: bold; text-align: left; margin-right: 1rem; }
-            .formula-detail-row { display: block; }
-            .formula-detail-row td { display: block; text-align: left; }
-        }
-    </style>
+    <link rel="stylesheet" href="work.css">
 </head>
 <body>
 
     <div class="container">
         <h1>加班費計算機</h1>
         
-        <div class="grid-container">
+        <div class="grid-container single-column-grid">
             <div class="card">
-                <details id="settings-details" open>
+                <details id="settings-details">
                     <summary>1. 基本設定</summary>
                     <div>
-                        <div class="form-group"><label for="employeeName">員工姓名</label><input type="text" id="employeeName" placeholder="例如：王大明"></div>
                         <div class="form-group"><label>薪資類型</label><div class="radio-group"><label><input type="radio" name="salaryType" value="monthly" checked> 月薪</label><label><input type="radio" name="salaryType" value="hourly"> 時薪</label></div></div>
                         <div class="form-group"><label for="salary">薪資金額 (NTD)</label><input type="number" id="salary" min="0" placeholder="例如：40000"></div>
                         <div class="form-group"><label for="hourly-rate">換算時薪 (自動)</label><input type="number" id="hourly-rate" readonly></div>
@@ -92,7 +44,16 @@
                     <button id="mode-punch" class="active">即時打卡</button>
                     <button id="mode-manual">補登紀錄</button>
                 </div>
-                <div id="punch-mode-content"><div style="display: flex; gap: 1rem;"><button id="punch-start" style="flex: 1;">開始加班</button><button id="punch-end" style="flex: 1;" disabled>結束加班</button></div></div>
+                <div id="punch-mode-content">
+                    <div style="display: flex; gap: 1rem;">
+                        <button id="punch-start" style="flex: 1;">開始加班</button>
+                        <button id="punch-end" style="flex: 1;" disabled>結束加班</button>
+                    </div>
+                    <div id="punch-status" class="info-message" style="display: none; margin-top: 1rem; text-align: center;">
+                        <div><strong>加班開始時間：</strong> <span id="punch-start-time-display"></span></div>
+                        <div><strong>目前已過時間：</strong> <span id="punch-elapsed-time-display">00:00:00</span></div>
+                    </div>
+                </div>
                 <div id="manual-mode-content" style="display: none;">
                     <input type="hidden" id="edit-id">
                     <div class="form-group"><label for="start-time">開始時間</label><input type="datetime-local" id="start-time"></div>
@@ -107,6 +68,7 @@
                     <label><input type="checkbox" id="force-full-calc-toggle"> <strong>強制計算完整時長</strong> (用於補休時加班等情境)</label>
                 </div>
                 <button id="add-record">新增/更新紀錄</button><button id="clear-form" class="btn-secondary">清除表單</button>
+                <div id="restore-message" class="info-message" style="display: none;"></div>
                 <div id="form-error" class="error-message" style="display: none;"></div>
             </div>
         </div>
@@ -149,77 +111,82 @@
 <script>
 document.addEventListener('DOMContentLoaded', () => {
     // DOM Elements
-    const employeeNameInput = document.getElementById('employeeName'), salaryInput = document.getElementById('salary');
-    const hourlyRateInput = document.getElementById('hourly-rate'), addRecordBtn = document.getElementById('add-record');
-    const recordsBody = document.getElementById('records-body'), totalOvertimePayEl = document.getElementById('total-overtime-pay');
-    const summaryTitleEl = document.getElementById('summary-title'), summaryPeriodEl = document.getElementById('summary-period');
-    const monthFilter = document.getElementById('month-filter'), formError = document.getElementById('form-error');
-    const editIdInput = document.getElementById('edit-id'), punchStartBtn = document.getElementById('punch-start');
-    const punchEndBtn = document.getElementById('punch-end'), forceFullCalcToggle = document.getElementById('force-full-calc-toggle');
-    const settingsDetails = document.getElementById('settings-details');
+    const salaryInput = document.getElementById('salary'), hourlyRateInput = document.getElementById('hourly-rate');
+    const addRecordBtn = document.getElementById('add-record'), recordsBody = document.getElementById('records-body');
+    const totalOvertimePayEl = document.getElementById('total-overtime-pay'), summaryTitleEl = document.getElementById('summary-title');
+    const summaryPeriodEl = document.getElementById('summary-period'), monthFilter = document.getElementById('month-filter');
+    const formError = document.getElementById('form-error'), editIdInput = document.getElementById('edit-id');
+    const punchStartBtn = document.getElementById('punch-start'), punchEndBtn = document.getElementById('punch-end');
+    const forceFullCalcToggle = document.getElementById('force-full-calc-toggle');
+    const TEMP_RECORD_KEY = 'tempOvertimeRecordV10.1';
 
     // App State
-    let settings = {}, records = [], punchStartTime = null;
+    let settings = {}, records = [], punchTimerInterval = null;
 
     // --- UTILITY FUNCTIONS ---
     const formatDateTimeLocal = (date) => new Date(date.getTime() - (date.getTimezoneOffset() * 60000)).toISOString().slice(0, 16);
     const showError = (message) => { formError.textContent = message; formError.style.display = 'block'; };
     const hideError = () => { formError.style.display = 'none'; };
-    const roundTo5 = (num) => Math.round(num * 100000) / 100000;
 
     // --- SETTINGS MANAGEMENT ---
     function loadSettings() {
-        const savedSettings = JSON.parse(localStorage.getItem('overtimeSettingsV10'));
-        settings = { 
-            employeeName: '', salaryType: 'monthly', salary: 0, 
-            workStart: "09:00", workEnd: "18:00", breakStart: "12:00", breakEnd: "13:00", 
-            ...savedSettings 
-        };
-        // Explicitly set each value to avoid mismatches
-        employeeNameInput.value = settings.employeeName;
+        const savedSettings = JSON.parse(localStorage.getItem('overtimeSettingsV9'));
+        settings = { salaryType: 'monthly', salary: 0, workStart: "09:00", workEnd: "18:00", breakStart: "12:00", breakEnd: "13:00", ...savedSettings };
+        const settingsDetails = document.getElementById('settings-details');
+        settingsDetails.open = !(savedSettings && savedSettings.salary > 0);
         salaryInput.value = settings.salary || '';
         document.querySelector(`input[name="salaryType"][value="${settings.salaryType}"]`).checked = true;
-        document.getElementById('work-start').value = settings.workStart;
-        document.getElementById('work-end').value = settings.workEnd;
-        document.getElementById('break-start').value = settings.breakStart;
-        document.getElementById('break-end').value = settings.breakEnd;
-
+        Object.assign(document.getElementById('work-start'), {value: settings.workStart});
+        Object.assign(document.getElementById('work-end'), {value: settings.workEnd});
+        Object.assign(document.getElementById('break-start'), {value: settings.breakStart});
+        Object.assign(document.getElementById('break-end'), {value: settings.breakEnd});
         calculateHourlyRate();
     }
     function saveSettings() {
         settings = {
-            employeeName: employeeNameInput.value,
             salaryType: document.querySelector('input[name="salaryType"]:checked').value,
             salary: parseFloat(salaryInput.value) || 0,
-            workStart: document.getElementById('work-start').value, workEnd: document.getElementById('work-end').value,
-            breakStart: document.getElementById('break-start').value, breakEnd: document.getElementById('break-end').value,
+            workStart: document.getElementById('work-start').value, 
+            workEnd: document.getElementById('work-end').value,
+            breakStart: document.getElementById('break-start').value, 
+            breakEnd: document.getElementById('break-end').value,
         };
-        localStorage.setItem('overtimeSettingsV10', JSON.stringify(settings));
+        localStorage.setItem('overtimeSettingsV9', JSON.stringify(settings));
         calculateHourlyRate(); 
         render(); 
         alert('設定已儲存！');
-
-        // Auto-collapse if name and salary are filled
-        if (settings.employeeName && settings.salary > 0) {
-            settingsDetails.open = false;
-        }
+        document.getElementById('settings-details').open = false;
     }
     function calculateHourlyRate() {
-        settings.hourlyRate = (settings.salaryType === 'monthly') ? roundTo5(settings.salary / 240) : (parseFloat(settings.salary) || 0);
+        settings.hourlyRate = (settings.salaryType === 'monthly') ? Math.round((settings.salary / 240) * 100) / 100 : (parseFloat(settings.salary) || 0);
         hourlyRateInput.value = settings.hourlyRate || 0;
     }
 
     // --- RECORD MANAGEMENT ---
     function loadRecords() {
-        records = JSON.parse(localStorage.getItem('overtimeRecordsV10')) || [];
+        records = JSON.parse(localStorage.getItem('overtimeRecordsV9')) || [];
         records.sort((a, b) => new Date(b.start) - new Date(a.start));
     }
-    function saveRecords() { localStorage.setItem('overtimeRecordsV10', JSON.stringify(records)); }
+    function saveRecords() { localStorage.setItem('overtimeRecordsV9', JSON.stringify(records)); }
     function clearForm() {
         ['start-time', 'end-time', 'overtime-reason', 'edit-id'].forEach(id => document.getElementById(id).value = '');
         document.querySelector('input[name="overtimeType"][value="weekday"]').checked = true;
         forceFullCalcToggle.checked = false; addRecordBtn.textContent = '新增紀錄'; hideError();
+        localStorage.removeItem(TEMP_RECORD_KEY);
+        const restoreMsgEl = document.getElementById('restore-message');
+        restoreMsgEl.style.display = 'none'; restoreMsgEl.textContent = '';
+        stopTimer(); updatePunchUI(false);
     }
+    
+    function isOverlapping(newRecord) {
+        const newStart = new Date(newRecord.start).getTime(), newEnd = new Date(newRecord.end).getTime();
+        return records.some(rec => {
+            if (rec.id === newRecord.id) return false;
+            const recStart = new Date(rec.start).getTime(), recEnd = new Date(rec.end).getTime();
+            return newStart < recEnd && newEnd > recStart;
+        });
+    }
+
     function addRecord() {
         hideError();
         const startTime = document.getElementById('start-time').value, endTime = document.getElementById('end-time').value;
@@ -235,7 +202,9 @@ document.addEventListener('DOMContentLoaded', () => {
         };
         
         const netHours = calculateNetOvertimeHours(newRecord);
-        if (netHours <= 0 && !confirm("此筆紀錄計算出的加班時數為0，確定要新增嗎？")) return;
+        if (netHours <= 0) {
+            if (!confirm("此筆紀錄計算出的加班時數為0，確定要新增嗎？")) return;
+        }
 
         if (isOverlapping(newRecord)) { showError('錯誤：此時間段與現有紀錄重疊。'); return; }
         
@@ -251,7 +220,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function editRecord(id) {
         const record = records.find(rec => rec.id === id);
         if (record) {
-            switchMode('manual');
+            switchMode('manual', false); // Do not clear form when editing
             document.getElementById('start-time').value = record.start;
             document.getElementById('end-time').value = record.end;
             document.getElementById('overtime-reason').value = record.reason || '';
@@ -262,72 +231,109 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
     
-    // --- PUNCH & MODE SWITCHING ---
-    function switchMode(mode) {
+    // --- TIMER & PUNCH ---
+    function startTimer(startTime) {
+        if (punchTimerInterval) clearInterval(punchTimerInterval);
+        const startTimeDisplay = document.getElementById('punch-start-time-display');
+        const elapsedTimeDisplay = document.getElementById('punch-elapsed-time-display');
+        const statusContainer = document.getElementById('punch-status');
+
+        startTimeDisplay.textContent = startTime.toLocaleString('zh-TW', { hour12: false });
+        statusContainer.style.display = 'block';
+
+        punchTimerInterval = setInterval(() => {
+            const now = new Date();
+            const elapsedSeconds = Math.floor((now - startTime) / 1000);
+            const hours = Math.floor(elapsedSeconds / 3600).toString().padStart(2, '0');
+            const minutes = Math.floor((elapsedSeconds % 3600) / 60).toString().padStart(2, '0');
+            const seconds = (elapsedSeconds % 60).toString().padStart(2, '0');
+            elapsedTimeDisplay.textContent = `${hours}:${minutes}:${seconds}`;
+        }, 1000);
+    }
+
+    function stopTimer() {
+        if (punchTimerInterval) clearInterval(punchTimerInterval);
+        punchTimerInterval = null;
+        document.getElementById('punch-status').style.display = 'none';
+    }
+    
+    function switchMode(mode, fromUserInteraction = false) {
         document.getElementById('punch-mode-content').style.display = mode === 'punch' ? 'block' : 'none';
         document.getElementById('manual-mode-content').style.display = mode === 'manual' ? 'block' : 'none';
         document.getElementById('mode-punch').classList.toggle('active', mode === 'punch');
         document.getElementById('mode-manual').classList.toggle('active', mode === 'manual');
-        clearForm();
+        
+        // BUG FIX: Only clear the form if the user initiated the mode switch.
+        if (fromUserInteraction) {
+            clearForm();
+        }
     }
-    function startPunch() { punchStartTime = new Date(); sessionStorage.setItem('punchStartTime', punchStartTime.toISOString()); updatePunchUI(true); }
+
+    function startPunch() {
+        const tempRecord = {
+            start: new Date().toISOString(), end: null,
+            reason: document.getElementById('overtime-reason').value,
+            type: document.querySelector('input[name="overtimeType"]:checked').value,
+            forceFullCalculation: document.getElementById('force-full-calc-toggle').checked
+        };
+        localStorage.setItem(TEMP_RECORD_KEY, JSON.stringify(tempRecord));
+        updatePunchUI(true);
+        startTimer(new Date(tempRecord.start));
+    }
+
     function endPunch() {
-        if (!punchStartTime) return;
-        switchMode('manual');
-        document.getElementById('start-time').value = formatDateTimeLocal(punchStartTime);
-        document.getElementById('end-time').value = formatDateTimeLocal(new Date());
-        punchStartTime = null; sessionStorage.removeItem('punchStartTime'); updatePunchUI(false);
+        const tempRecordJSON = localStorage.getItem(TEMP_RECORD_KEY);
+        if (!tempRecordJSON) return;
+        const tempRecord = JSON.parse(tempRecordJSON);
+        
+        if (tempRecord.start && !tempRecord.end) {
+            stopTimer();
+            tempRecord.end = new Date().toISOString();
+            tempRecord.reason = document.getElementById('overtime-reason').value;
+            tempRecord.type = document.querySelector('input[name="overtimeType"]:checked').value;
+            tempRecord.forceFullCalculation = document.getElementById('force-full-calc-toggle').checked;
+            localStorage.setItem(TEMP_RECORD_KEY, JSON.stringify(tempRecord));
+            updatePunchUI(false);
+            restoreState(); 
+        }
     }
-    function updatePunchUI(isPunchedIn) { punchStartBtn.disabled = isPunchedIn; punchEndBtn.disabled = !isPunchedIn; }
+    
+    function updatePunchUI(isPunchedIn) {
+        punchStartBtn.disabled = isPunchedIn;
+        punchEndBtn.disabled = !isPunchedIn;
+        document.getElementById('mode-manual').disabled = isPunchedIn;
+        document.getElementById('mode-punch').disabled = isPunchedIn;
+    }
 
     // --- CALCULATION LOGIC ---
     function calculateNetOvertimeHours(record) {
-        let totalMillis = new Date(record.end).getTime() - new Date(record.start).getTime();
-        
+        let recordStart = new Date(record.start).getTime(), recordEnd = new Date(record.end).getTime();
+        let totalMillis = recordEnd - recordStart;
         if (record.type === 'weekday' && !record.forceFullCalculation) {
              const d = new Date(record.start);
-             const workStart = new Date(d).setHours(...settings.workStart.split(':'), 0, 0);
-             const workEnd = new Date(d).setHours(...settings.workEnd.split(':'), 0, 0);
-             const breakStart = new Date(d).setHours(...settings.breakStart.split(':'), 0, 0);
-             const breakEnd = new Date(d).setHours(...settings.breakEnd.split(':'), 0, 0);
-             
-             let workOverlap = Math.max(0, Math.min(new Date(record.end).getTime(), workEnd) - Math.max(new Date(record.start).getTime(), workStart));
-             let breakOverlap = Math.max(0, Math.min(new Date(record.end).getTime(), breakEnd) - Math.max(new Date(record.start).getTime(), breakStart));
+             const [workStartH, workStartM] = settings.workStart.split(':').map(Number);
+             const [workEndH, workEndM] = settings.workEnd.split(':').map(Number);
+             const [breakStartH, breakStartM] = settings.breakStart.split(':').map(Number);
+             const [breakEndH, breakEndM] = settings.breakEnd.split(':').map(Number);
+             const workStart = new Date(d).setHours(workStartH, workStartM, 0, 0);
+             const workEnd = new Date(d).setHours(workEndH, workEndM, 0, 0);
+             const breakStart = new Date(d).setHours(breakStartH, breakStartM, 0, 0);
+             const breakEnd = new Date(d).setHours(breakEndH, breakEndM, 0, 0);
+             let workOverlap = Math.max(0, Math.min(recordEnd, workEnd) - Math.max(recordStart, workStart));
+             let breakOverlap = Math.max(0, Math.min(recordEnd, breakEnd) - Math.max(recordStart, breakStart));
              totalMillis -= (workOverlap - breakOverlap);
         }
-        return roundTo5(Math.max(0, totalMillis / 3600000));
+        return Math.max(0, totalMillis / 3600000);
     }
     function getDailyPayAndFormula(totalHours, type) {
-        let pay = 0, formula = ""; 
-        const rate = settings.hourlyRate;
-        const h = (val) => val.toFixed(2);
-        
-        const multipliers = {
-            weekday: { rates: [[2, 4/3], [Infinity, 5/3]], labels: ['4/3', '5/3'] },
-            restday: { rates: [[2, 4/3], [8, 5/3], [Infinity, 8/3]], labels: ['4/3', '5/3', '8/3'] },
-            holiday: { rates: [[Infinity, 1]], labels: ['1'] }
-        };
-
-        const currentType = multipliers[type];
-        let remainingHours = totalHours;
-        let prevLimit = 0;
-        let formulaParts = [];
-
-        for (let i = 0; i < currentType.rates.length && remainingHours > 0; i++) {
-            const [limit, multiplier] = currentType.rates[i];
-            const hoursInTier = roundTo5(Math.min(remainingHours, limit - prevLimit));
-            
-            if (hoursInTier > 0) {
-                const tierPay = roundTo5(hoursInTier * rate * multiplier);
-                pay = roundTo5(pay + tierPay);
-                formulaParts.push(`(${h(hoursInTier)}H * ${rate} * ${currentType.labels[i]})`);
-                remainingHours = roundTo5(remainingHours - hoursInTier);
-                prevLimit = limit;
-            }
+        let pay = 0, formula = ""; const rate = settings.hourlyRate;
+        const h = (val) => val.toFixed(2), f_rate = (val) => val.toFixed(2);
+        switch (type) {
+            case 'weekday': if (totalHours <= 2) { pay = totalHours * rate * 1.34; formula = `(${h(totalHours)}H*${f_rate(rate)}*1.34)`; } else { pay = (2 * rate * 1.34) + ((totalHours - 2) * rate * 1.67); formula = `(2H*${f_rate(rate)}*1.34)+(${h(totalHours-2)}H*${f_rate(rate)}*1.67)`; } break;
+            case 'restday': if (totalHours <= 2) { pay = totalHours * rate * 1.34; formula = `(${h(totalHours)}H*${f_rate(rate)}*1.34)`; } else if (totalHours <= 8) { pay = (2 * rate * 1.34) + ((totalHours - 2) * rate * 1.67); formula = `(2H*${f_rate(rate)}*1.34)+(${h(totalHours-2)}H*${f_rate(rate)}*1.67)`; } else { pay = (2 * rate * 1.34) + (6 * rate * 1.67) + ((totalHours - 8) * rate * 2.67); formula = `(2H*${f_rate(rate)}*1.34)+(6H*${f_rate(rate)}*1.67)+(${h(totalHours-8)}H*${f_rate(rate)}*2.67)`; } break;
+            case 'holiday': pay = totalHours * rate * 1; formula = `(${h(totalHours)}H*${f_rate(rate)}*1)`; break;
         }
-        
-        formula = formulaParts.join(' + ');
-        return { pay, formula: `${formula} = ${pay.toFixed(5)}` };
+        return { pay: Math.ceil(pay), formula: `${formula} = ${Math.ceil(pay)} 元` };
     }
 
     // --- RENDER LOGIC ---
@@ -357,17 +363,12 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     function renderTable(tbody, dailyGroups) {
         tbody.innerHTML = '';
-        if (dailyGroups.length === 0) {
-            tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;">該月份尚無紀錄</td></tr>`;
-            return;
-        }
+        if (dailyGroups.length === 0) { tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;">該月份尚無紀錄</td></tr>`; return; }
         dailyGroups.forEach(group => {
             const dateStr = group.date.toLocaleDateString(), typeText = { weekday: '平日', restday: '休息日', holiday: '國定假日' }[group.type];
-            const payStr = group.pay.toString();
-            const displayPay = payStr.indexOf('.') !== -1 && payStr.split('.')[1].length > 2 ? `${parseFloat(payStr).toFixed(2)}...` : parseFloat(payStr).toFixed(2);
             const headerRow = tbody.insertRow();
             headerRow.className = 'daily-group-header';
-            headerRow.innerHTML = `<td data-label="日期">${dateStr}</td><td data-label="類型">${typeText}</td><td data-label="總時長(H)">${group.totalHours.toFixed(2)}</td><td data-label="加班費($)"><div class="tooltip">${displayPay}<span class="tooltiptext">${group.pay}</span></div></td><td data-label="操作"><button class="btn-small btn-secondary" onclick="app.toggleDetails(this)">展開</button></td>`;
+            headerRow.innerHTML = `<td data-label="日期">${dateStr}</td><td data-label="類型">${typeText}</td><td data-label="總時長(H)">${group.totalHours.toFixed(2)}</td><td data-label="加班費($)">${group.pay}</td><td data-label="操作"><div class="actions-container"><button class="btn-small btn-secondary" onclick="app.toggleDetails(this)">展開</button></div></td>`;
             group.records.sort((a,b) => new Date(a.start) - new Date(b.start)).forEach(rec => {
                 const detailRow = tbody.insertRow();
                 detailRow.className = 'record-detail-row';
@@ -377,7 +378,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const endTime = new Date(rec.end).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
                 let reasonText = `${rec.reason || '-'}`;
                 if (rec.forceFullCalculation) reasonText += ' <strong style="color:var(--danger-color);">(強制計算)</strong>';
-                detailRow.innerHTML = `<td data-label="時間" colspan="3">${startTime} - ${endTime} (${reasonText})</td><td data-label="時長">${calculateNetOvertimeHours(rec).toFixed(2)} H</td><td data-label="操作"><button class="btn-small" onclick="app.editRecord('${rec.id}')">編輯</button> <button class="btn-small btn-danger" onclick="app.deleteRecord('${rec.id}')">刪除</button></td>`;
+                detailRow.innerHTML = `<td data-label="時間" colspan="3">${startTime} - ${endTime} (${reasonText})</td><td data--label="時長">${calculateNetOvertimeHours(rec).toFixed(2)} H</td><td data-label="操作"><div class="actions-container"><button class="btn-small" onclick="app.editRecord('${rec.id}')">編輯</button> <button class="btn-small btn-danger" onclick="app.deleteRecord('${rec.id}')">刪除</button></div></td>`;
             });
             const formulaRow = tbody.insertRow();
             formulaRow.className = 'formula-detail-row';
@@ -388,7 +389,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     function renderSummary(dailyGroups, filterValue) {
         const totalPay = dailyGroups.reduce((sum, group) => sum + group.pay, 0);
-        totalOvertimePayEl.textContent = Math.round(totalPay);
+        totalOvertimePayEl.textContent = totalPay;
         if (filterValue) {
             const [year, month] = filterValue.split('-');
             summaryTitleEl.textContent = `篩選月份總計 (${year}年${month}月)`; summaryPeriodEl.textContent = `共 ${dailyGroups.length} 個加班日`;
@@ -401,75 +402,51 @@ document.addEventListener('DOMContentLoaded', () => {
         document.querySelectorAll(`tr[data-group-date="${date}"]`).forEach(row => { row.style.display = isExpanding ? '' : 'none'; });
     }
     
-    // --- [REBUILT V10.1] EXPORT & EVENTS ---
-    function getExportStyles() {
-        return `<style>body{font-family:'Segoe UI','Microsoft JhengHei',sans-serif!important;color:#333!important}h2,h3{color:#007bff!important;border-bottom:2px solid #dee2e6!important;padding-bottom:.5rem!important;margin-top:0!important;margin-bottom:1rem!important}h3{border:none!important;text-align:left!important;font-size:1.1em;color:#555!important}table{width:100%!important;border-collapse:collapse!important;font-size:14px!important}thead{display:table-header-group!important}tbody,tr{display:table-row!important}tr{page-break-inside:avoid!important}th,td{display:table-cell!important;border:1px solid #dee2e6!important;padding:8px!important;text-align:left!important;vertical-align:top!important}td::before{content:none!important}th{background-color:#f2f2f2!important}.daily-group-header{background-color:#f2f2f2!important;font-weight:700!important}.record-detail-row td{padding-left:2rem!important;font-size:13px!important;color:#555!important;border-style:dotted!important}.formula-detail-row td{background-color:#f9f9f9!important;font-family:monospace!important;color:#0056b3!important}.summary{margin-top:1.5rem!important;text-align:right!important;background:#e9f5ff!important;border:1px solid #b3d7ff!important;padding:1.5rem!important;border-radius:8px!important}.summary h3{margin:0!important;color:#004085!important;border:none!important}.summary-value{font-size:1.5em!important;font-weight:700!important;color:#28a745!important}</style>`;
-    }
-
+    // --- IMPORT/EXPORT & EVENTS ---
     function generateExportHTML(dailyGroups, title) {
-        let tableHTML = `<h2>${title}</h2>${settings.employeeName ? `<h3>員工姓名: ${settings.employeeName}</h3>` : ''}<table><thead><tr><th>日期</th><th>類型</th><th>總時長(H)</th><th>加班費($)</th></tr></thead><tbody>`;
-        if (dailyGroups.length === 0) {
-            tableHTML += `<tr><td colspan="4" style="text-align:center;">該月份尚無紀錄</td></tr>`;
-        } else {
-            dailyGroups.forEach(group => {
+        let tableHTML = `<h2>${title}</h2><table><thead><tr><th>日期</th><th>類型</th><th>總時長(H)</th><th>加班費($)</th><th>詳細資料</th></tr></thead><tbody>`;
+        if (dailyGroups.length === 0) { tableHTML += `<tr><td colspan="5" style="text-align:center;">該月份尚無紀錄</td></tr>`; } 
+        else {
+             dailyGroups.forEach(group => {
                 const typeText = { weekday: '平日', restday: '休息日', holiday: '國定假日' }[group.type];
-                tableHTML += `<tr class="daily-group-header"><td>${group.date.toLocaleDateString()}</td><td>${typeText}</td><td>${group.totalHours.toFixed(2)}</td><td>${group.pay.toFixed(5)}</td></tr>`;
-                group.records.sort((a,b) => new Date(a.start) - new Date(b.start)).forEach(rec => {
+                const recordDetails = group.records.sort((a,b) => new Date(a.start) - new Date(b.start)).map(rec => {
                     const startTime = new Date(rec.start).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
                     const endTime = new Date(rec.end).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-                    let reasonText = `${rec.reason || '-'}`;
-                    if (rec.forceFullCalculation) reasonText += ' <strong style="color:var(--danger-color);">(強制計算)</strong>';
-                    tableHTML += `<tr class="record-detail-row"><td colspan="3">${startTime} - ${endTime} (${reasonText})</td><td>${calculateNetOvertimeHours(rec).toFixed(2)} H</td></tr>`;
-                });
-                tableHTML += `<tr class="formula-detail-row"><td colspan="4"><strong>計算式:</strong> ${group.formula}</td></tr>`;
+                    let reasonText = `${rec.reason || '-'}`; if (rec.forceFullCalculation) reasonText += ' <strong style="color:var(--danger-color);">(強制計算)</strong>';
+                    return `${startTime} - ${endTime}: ${calculateNetOvertimeHours(rec).toFixed(2)}H (${reasonText})`;
+                }).join('<br>');
+                tableHTML += `<tr><td>${group.date.toLocaleDateString()}</td><td>${typeText}</td><td>${group.totalHours.toFixed(2)}</td><td>${group.pay}</td><td style="font-size: 0.9em;">${recordDetails}<br><hr style="border-top: 1px dotted #ccc; margin: 4px 0;"><strong>計算式:</strong> ${group.formula}</td></tr>`;
             });
         }
-        tableHTML += `</tbody></table>`;
-        return tableHTML;
+        tableHTML += `</tbody></table>`; return tableHTML;
     }
-
     async function exportResultsAsImage() {
         const [year, month] = (monthFilter.value || new Date().toISOString().substring(0, 7)).split('-');
         const dailyGroups = groupRecordsByDay(filterRecords(monthFilter.value));
         const totalPay = dailyGroups.reduce((sum, group) => sum + group.pay, 0);
-
-        const exportContainer = document.createElement('div');
-        exportContainer.style.position = 'absolute'; exportContainer.style.left = '-9999px';
-        exportContainer.style.width = '1000px'; exportContainer.style.background = 'white';
-        exportContainer.style.padding = '2rem';
-        
-        const title = `${year}年 ${month}月 加班紀錄`;
-        const styles = getExportStyles();
-        const tableHTML = generateExportHTML(dailyGroups, title);
-        const summaryHTML = `<div class="summary"><h3>總金額: <span class="summary-value">${Math.round(totalPay)}</span> 元</h3></div>`;
-
-        exportContainer.innerHTML = styles + tableHTML + summaryHTML;
-        document.body.appendChild(exportContainer);
-
+        const exportContainer = document.createElement('div'); exportContainer.id = 'export-container';
+        const title = `${year}年 ${month}月 加班紀錄`; const tableHTML = generateExportHTML(dailyGroups, title);
+        const summaryHTML = `<div class="summary"><h3>總金額: <span class="summary-value">${totalPay}</span> 元</h3></div>`;
+        exportContainer.innerHTML = tableHTML + summaryHTML; document.body.appendChild(exportContainer);
         try {
-            const canvas = await html2canvas(exportContainer, { scale: 2 });
-            const link = document.createElement('a');
-            link.download = `加班紀錄-${year}-${month}.png`;
-            link.href = canvas.toDataURL("image/png");
-            link.click();
+            const canvas = await html2canvas(exportContainer, { scale: 2, useCORS: true, windowWidth: 1000 });
+            const link = document.createElement('a'); link.download = `加班紀錄-${year}-${month}.png`;
+            link.href = canvas.toDataURL("image/png"); link.click();
         } catch (error) { console.error('匯出圖片失敗:', error); alert('匯出圖片時發生錯誤。');
         } finally { document.body.removeChild(exportContainer); }
     }
-
     function setupEventListeners() {
         document.getElementById('save-settings').addEventListener('click', saveSettings);
         addRecordBtn.addEventListener('click', addRecord);
         document.getElementById('clear-form').addEventListener('click', clearForm);
         monthFilter.addEventListener('change', render);
-        document.getElementById('mode-punch').addEventListener('click', () => switchMode('punch'));
-        document.getElementById('mode-manual').addEventListener('click', () => switchMode('manual'));
+        document.getElementById('mode-punch').addEventListener('click', () => switchMode('punch', true));
+        document.getElementById('mode-manual').addEventListener('click', () => switchMode('manual', true));
         punchStartBtn.addEventListener('click', startPunch); punchEndBtn.addEventListener('click', endPunch);
         document.getElementById('export-image').addEventListener('click', exportResultsAsImage);
         document.getElementById('export-text').addEventListener('click', () => {
-            const outputArea = document.getElementById('export-output');
-            const textarea = document.getElementById('export-textarea');
-            textarea.value = JSON.stringify({ settings, records }, null, 2);
-            outputArea.style.display = 'block';
+            const outputArea = document.getElementById('export-output'); const textarea = document.getElementById('export-textarea');
+            textarea.value = JSON.stringify({ settings, records }, null, 2); outputArea.style.display = 'block';
         });
         document.getElementById('import-text').addEventListener('click', () => {
             const importText = document.getElementById('import-textarea').value;
@@ -477,25 +454,65 @@ document.addEventListener('DOMContentLoaded', () => {
             try {
                 const data = JSON.parse(importText);
                 if (data.settings && Array.isArray(data.records)) {
-                    localStorage.setItem('overtimeSettingsV10', JSON.stringify(data.settings));
-                    localStorage.setItem('overtimeRecordsV10', JSON.stringify(data.records));
+                    localStorage.setItem('overtimeSettingsV9', JSON.stringify(data.settings));
+                    localStorage.setItem('overtimeRecordsV9', JSON.stringify(data.records));
                     init(); alert('資料匯入成功！');
                 } else { alert('匯入失敗：資料格式不正確。'); }
             } catch (e) { alert('匯入失敗：無效的 JSON 格式。'); console.error(e); }
         });
     }
 
-    // --- INIT ---
+    // --- INIT & STATE RESTORE ---
+    function restoreState() {
+        const tempRecordJSON = localStorage.getItem(TEMP_RECORD_KEY);
+        if (!tempRecordJSON) { updatePunchUI(false); return; }
+        const tempRecord = JSON.parse(tempRecordJSON);
+        const restoreMsgEl = document.getElementById('restore-message');
+
+        const restoreFormFields = () => {
+            document.getElementById('overtime-reason').value = tempRecord.reason || '';
+            document.querySelector(`input[name="overtimeType"][value="${tempRecord.type}"]`).checked = true;
+            document.getElementById('force-full-calc-toggle').checked = !!tempRecord.forceFullCalculation;
+        };
+
+        if (tempRecord.start && !tempRecord.end) {
+            switchMode('punch', false); // Restore to punch mode without clearing
+            updatePunchUI(true); 
+            restoreFormFields();
+            startTimer(new Date(tempRecord.start));
+            restoreMsgEl.textContent = '已為您還原上次的打卡上班狀態。';
+            restoreMsgEl.style.display = 'block';
+        } else if (tempRecord.start && tempRecord.end) {
+            switchMode('manual', false); // Restore to manual mode without clearing
+            updatePunchUI(false);
+            document.getElementById('start-time').value = formatDateTimeLocal(new Date(tempRecord.start));
+            document.getElementById('end-time').value = formatDateTimeLocal(new Date(tempRecord.end));
+            restoreFormFields();
+            restoreMsgEl.textContent = '您有未儲存的打卡紀錄，已為您還原。';
+            restoreMsgEl.style.display = 'block';
+        }
+    }
+
     function init() {
         loadSettings(); loadRecords();
-        if (sessionStorage.getItem('punchStartTime')) { punchStartTime = new Date(sessionStorage.getItem('punchStartTime')); updatePunchUI(true); }
         monthFilter.value = new Date().toISOString().substring(0, 7);
         render(); setupEventListeners();
+        restoreState();
     }
     
     window.app = { deleteRecord, editRecord, toggleDetails };
     init();
 });
+
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/dede/sw.js').then(registration => {
+      console.log('ServiceWorker registration successful with scope: ', registration.scope);
+    }).catch(err => {
+      console.log('ServiceWorker registration failed: ', err);
+    });
+  });
+}
 </script>
 
 </body>
