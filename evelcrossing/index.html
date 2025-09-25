@@ -156,11 +156,11 @@
                     
                     const card = document.createElement('div');
                     const cardBgClass = isDeactivated ? 'bg-gray-800 deactivated-card' : 'bg-gray-800';
-                    const cardHoverClass = isDeactivated ? 'hover:bg-gray-700' : 'hover:bg-gray-700';
+                   // const cardHoverClass = isDeactivated ? 'hover:bg-gray-700' : 'hover:bg-gray-700';
 
                     card.className = `${cardBgClass} p-6 rounded-2xl shadow-lg transition-transform transform hover:scale-105 ${cardHoverClass}`;
 
-                    const oldName = item['舊名或別名'] ? ` (${item['舊名或別名']})` : '';
+                    const oldName = item['舊名或別名'] ? ` （${item['舊名或別名']}）` : '';
                     const electricSectionDisplay = (item['電務段'] === '' || item['電務段'] === 0) ? '不明' : item['電務段'];
                     const stationDisplay = (item['分駐所'] === '' || item['分駐所'] === 0) ? '不明' : item['分駐所'];
 
