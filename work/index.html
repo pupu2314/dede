@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>加班費計算機 v10.1 (最終修正版)</title>
+    <title>加班費計算機</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <style>
         :root {
@@ -60,7 +60,7 @@
 <body>
 
     <div class="container">
-        <h1>加班費計算機 v10.1 (最終修正版)</h1>
+        <h1>加班費計算機</h1>
         
         <div class="grid-container">
             <div class="card">
@@ -418,7 +418,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     const startTime = new Date(rec.start).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
                     const endTime = new Date(rec.end).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
                     let reasonText = `${rec.reason || '-'}`;
-                    if (rec.forceFullCalculation) reasonText += ' (強制計算)';
+                    if (rec.forceFullCalculation) reasonText += ' <strong style="color:var(--danger-color);">(強制計算)</strong>';
                     tableHTML += `<tr class="record-detail-row"><td colspan="3">${startTime} - ${endTime} (${reasonText})</td><td>${calculateNetOvertimeHours(rec).toFixed(2)} H</td></tr>`;
                 });
                 tableHTML += `<tr class="formula-detail-row"><td colspan="4"><strong>計算式:</strong> ${group.formula}</td></tr>`;
