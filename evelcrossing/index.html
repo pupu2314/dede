@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>平交道資訊查詢</title>
+    <title>台灣平交道查詢</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
@@ -25,7 +25,7 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1-px rgba(0, 0, 0, 0.06);
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
             transition: opacity 0.3s, transform 0.3s;
             transform: translateY(100px);
             opacity: 0;
@@ -35,6 +35,15 @@
         .scroll-to-top.show {
             transform: translateY(0);
             opacity: 1;
+        }
+        .deactivated-card {
+            color: #9ca3af; /* Change all text inside to a lighter gray */
+        }
+        .deactivated-card h2, .deactivated-card .text-indigo-400 {
+            color: #9ca3af; /* Override title color */
+        }
+        .deactivated-card .text-gray-300 {
+            color: #6b7280; /* Override strong text color */
         }
     </style>
 </head>
@@ -146,7 +155,7 @@
                     const isDeactivated = item['停用'] && item['停用'] !== '';
                     
                     const card = document.createElement('div');
-                    const cardBgClass = isDeactivated ? 'bg-gray-700' : 'bg-gray-800';
+                    const cardBgClass = isDeactivated ? 'bg-gray-700 deactivated-card' : 'bg-gray-800';
                     const cardHoverClass = isDeactivated ? 'hover:bg-gray-600' : 'hover:bg-gray-700';
 
                     card.className = `${cardBgClass} p-6 rounded-2xl shadow-lg transition-transform transform hover:scale-105 ${cardHoverClass}`;
@@ -166,9 +175,14 @@
                         </a>` :
                         `<p class="mt-4 text-sm text-gray-500">無位置資訊</p>`;
 
+                    const deactivatedBadge = isDeactivated ? `<span class="bg-red-500 text-white text-xs font-semibold px-2 py-1 rounded-full ml-2">已停用</span>` : '';
+
                     card.innerHTML = `
                         <div class="flex flex-col sm:flex-row sm:items-baseline sm:space-x-2 mb-2">
-                            <h2 class="text-xl font-bold text-indigo-400">${item['平交道名稱']}${oldName}</h2>
+                            <div class="flex items-center">
+                                <h2 class="text-xl font-bold text-indigo-400">${item['平交道名稱']}${oldName}</h2>
+                                ${deactivatedBadge}
+                            </div>
                             <p class="text-sm text-gray-400">編號：${item['編號']}</p>
                         </div>
                         <div class="space-y-2 text-sm">
