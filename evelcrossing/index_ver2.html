@@ -348,33 +348,41 @@
             return shareText;
         }
 
-        // 分享功能主函數：處理 Web Share API 與 Fallback
+        // **主要分享功能主函數：優化 Web Share API 與 Fallback 邏輯**
         async function shareCrossingDetails(item) {
             const shareText = formatCrossingShareText(item);
             const title = `平交道資訊：${item['平交道名稱']}`;
             // 如果有地圖連結，則將其作為 URL 分享；否則使用當前頁面 URL
             const url = item['Google地圖'] || window.location.href;
             
+            // 1. 嘗試使用 Web Share API
             if (navigator.share) {
-                // 支援 Web Share API (適用於 Android, iOS, Windows 10+ 瀏覽器)
                 try {
                     await navigator.share({
                         title: title,
                         text: shareText,
                         url: url
                     });
-                    // 分享成功通常不會顯示通知
+                    // 分享成功，結束
+                    return; 
                 } catch (error) {
-                    // 使用者取消分享 (AbortError) 或其他錯誤
+                    // 如果錯誤不是使用者取消 (AbortError)
                     if (error.name !== 'AbortError') {
-                        // 如果原生分享失敗，退回使用複製剪貼簿
-                        copyToClipboardFallback(shareText);
-                        showNotification('分享介面失敗，已複製資訊到剪貼簿。', 'error');
+                        console.error('Web Share API 呼叫失敗，將退回複製剪貼簿:', error);
+                        // 繼續執行 Fallback 複製
+                    } else {
+                        // 使用者取消分享，不執行任何操作
+                        return; 
                     }
                 }
+            } 
+            
+            // 2. Fallback: 複製到剪貼簿 (如果原生分享失敗或不支援)
+            copyToClipboardFallback(shareText);
+            // 根據是否支援原生分享顯示不同的通知
+            if (navigator.share) {
+                showNotification('分享功能無法啟動，已複製資訊到剪貼簿。', 'error');
             } else {
-                // 不支援 Web Share API (Fallback for desktop browsers)
-                copyToClipboardFallback(shareText);
                 showNotification('已複製資訊到剪貼簿！ (您的裝置不支援原生分享)', 'success');
             }
         }
