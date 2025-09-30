@@ -450,4 +450,230 @@
                             <p class="flex items-start">
                                 <span class="font-medium text-gray-400 min-w-[4rem]">🏢 單位：</span>
                                 <span class="text-gray-300">${electricSectionDisplay}電務段${stationDisplay}分駐所</span>
-  
+                            </p>
+                        </div>
+                        <div class="flex justify-between items-center mt-4 pt-4 border-t border-gray-700">
+                            <div>${googleMapLink}</div>
+                            ${shareButtonHTML}
+                        </div>
+                    `;
+                    resultsContainer.appendChild(card);
+                    
+                    // 掛載分享按鈕的事件監聽器
+                    card.querySelector('.share-btn').onclick = () => shareCrossingDetails(item);
+                });
+            }
+        }
+
+        // 填充下拉選單選項 (此函數保持不變)
+        function populateFilter(selectElement, data, key) {
+            const currentValue = selectElement.value;
+            selectElement.innerHTML = '';
+            
+            const uniqueValues = new Set();
+            let hasUnknown = false;
+            
+            data.forEach(item => {
+                let value = item[key];
+                if (isUnknownValue(value, key)) {
+                    hasUnknown = true;
+                } else if (value !== '' && value !== 0) {
+                    uniqueValues.add(value);
+                }
+            });
+            
+            const allOption = document.createElement('option');
+            allOption.value = '';
+            allOption.textContent = '全部';
+            selectElement.appendChild(allOption);
+
+            if (hasUnknown) {
+                const unknownOption = document.createElement('option');
+                unknownOption.value = '不明';
+                unknownOption.textContent = '不明';
+                selectElement.appendChild(unknownOption);
+            }
+            
+            Array.from(uniqueValues).sort().forEach(value => {
+                const option = document.createElement('option');
+                option.value = value;
+                option.textContent = value;
+                selectElement.appendChild(option);
+            });
+            
+            if (currentValue && (Array.from(uniqueValues).includes(currentValue) || (hasUnknown && currentValue === '不明') || currentValue === '')) {
+                selectElement.value = currentValue;
+            }
+        }
+
+        // 更新已套用篩選標籤 (此函數保持不變)
+        function updateActiveFilters() {
+            const filters = [];
+            
+            if (searchInput.value) filters.push({ label: `搜尋: ${searchInput.value}`, type: 'search' });
+            if (electricSectionFilter.value) filters.push({ label: `電務段: ${electricSectionFilter.value}`, type: 'electric' });
+            if (stationFilter.value) filters.push({ label: `分駐所: ${stationFilter.value}`, type: 'station' });
+            if (cityFilter.value) filters.push({ label: `縣市: ${cityFilter.value}`, type: 'city' });
+            if (sectionFilter.value) filters.push({ label: `區間: ${sectionFilter.value}`, type: 'section' });
+            if (lineFilter.value) filters.push({ label: `路線: ${lineFilter.value}`, type: 'line' });
+
+            activeFiltersContainer.innerHTML = '';
+            
+            if (filters.length > 0) {
+                clearFiltersBtn.classList.remove('hidden');
+                filters.forEach(filter => {
+                    const badge = document.createElement('span');
+                    badge.className = 'filter-badge cursor-pointer';
+                    badge.innerHTML = `
+                        ${filter.label}
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    `;
+                    badge.onclick = () => {
+                        if (filter.type === 'search') searchInput.value = '';
+                        else if (filter.type === 'electric') electricSectionFilter.value = '';
+                        else if (filter.type === 'station') stationFilter.value = '';
+                        else if (filter.type === 'city') cityFilter.value = '';
+                        else if (filter.type === 'section') sectionFilter.value = '';
+                        else if (filter.type === 'line') lineFilter.value = '';
+                        filterAndRender();
+                    };
+                    activeFiltersContainer.appendChild(badge);
+                });
+            } else {
+                clearFiltersBtn.classList.add('hidden');
+            }
+        }
+
+        // 主要篩選與渲染函數 (此函數保持不變)
+        function filterAndRender() {
+            const searchTerm = searchInput.value.toLowerCase();
+            const selectedElectricSection = electricSectionFilter.value;
+            const selectedCity = cityFilter.value;
+            const selectedStation = stationFilter.value;
+            const selectedSection = sectionFilter.value;
+            const selectedLine = lineFilter.value;
+
+            let filteredData = fullCrossingData.filter(item => {
+                const nameMatch = item['平交道名稱'].toLowerCase().includes(searchTerm) || 
+                                 (item['舊名或別名'] && item['舊名或別名'].toLowerCase().includes(searchTerm));
+                
+                const electricSectionValue = getDisplayValue(item['電務段'], '電務段');
+                const electricSectionMatch = !selectedElectricSection || electricSectionValue === selectedElectricSection;
+                
+                const stationValue = getDisplayValue(item['分駐所'], '分駐所');
+                const stationMatch = !selectedStation || stationValue === selectedStation;
+
+                const cityMatch = !selectedCity || item['所在縣市'] === selectedCity;
+                const sectionMatch = !selectedSection || item['區間'] === selectedSection;
+                const lineMatch = !selectedLine || item['路線別'] === selectedLine;
+
+                return nameMatch && electricSectionMatch && cityMatch && stationMatch && sectionMatch && lineMatch;
+            });
+            
+            renderCrossings(filteredData);
+            updateActiveFilters();
+            
+            // 動態更新下拉選單
+            const filterConditions = (item) => ({
+                electric: !selectedElectricSection || getDisplayValue(item['電務段'], '電務段') === selectedElectricSection,
+                station: !selectedStation || getDisplayValue(item['分駐所'], '分駐所') === selectedStation,
+                city: !selectedCity || item['所在縣市'] === selectedCity,
+                section: !selectedSection || item['區間'] === selectedSection,
+                line: !selectedLine || item['路線別'] === selectedLine
+            });
+
+            populateFilter(electricSectionFilter, fullCrossingData.filter(item => {
+                const c = filterConditions(item);
+                return c.city && c.station && c.section && c.line;
+            }), '電務段');
+
+            populateFilter(stationFilter, fullCrossingData.filter(item => {
+                const c = filterConditions(item);
+                return c.electric && c.city && c.section && c.line;
+            }), '分駐所');
+
+            populateFilter(cityFilter, fullCrossingData.filter(item => {
+                const c = filterConditions(item);
+                return c.electric && c.station && c.section && c.line;
+            }), '所在縣市');
+
+            populateFilter(sectionFilter, fullCrossingData.filter(item => {
+                const c = filterConditions(item);
+                return c.electric && c.city && c.station && c.line;
+            }), '區間');
+
+            populateFilter(lineFilter, fullCrossingData.filter(item => {
+                const c = filterConditions(item);
+                return c.electric && c.city && c.station && c.section;
+            }), '路線別');
+        }
+
+        // Debounce 搜尋 (此函數保持不變)
+        function debounceSearch() {
+            clearTimeout(debounceTimer);
+            debounceTimer = setTimeout(filterAndRender, 300);
+        }
+
+        // 清除所有篩選 (此函數保持不變)
+        function clearAllFilters() {
+            searchInput.value = '';
+            electricSectionFilter.value = '';
+            cityFilter.value = '';
+            stationFilter.value = '';
+            sectionFilter.value = '';
+            lineFilter.value = '';
+            filterAndRender();
+        }
+
+        // 事件監聽器 (此部分保持不變)
+        searchInput.addEventListener('input', debounceSearch);
+        electricSectionFilter.addEventListener('change', filterAndRender);
+        cityFilter.addEventListener('change', filterAndRender);
+        stationFilter.addEventListener('change', filterAndRender);
+        sectionFilter.addEventListener('change', filterAndRender);
+        lineFilter.addEventListener('change', filterAndRender);
+        clearFiltersBtn.addEventListener('click', clearAllFilters);
+
+        // 滾動到頂端功能 (此部分保持不變)
+        window.addEventListener('scroll', () => {
+            if (window.scrollY > 300) {
+                scrollToTopBtn.classList.add('show');
+            } else {
+                scrollToTopBtn.classList.remove('show');
+            }
+        });
+
+        scrollToTopBtn.addEventListener('click', () => {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        });
+
+        // 載入資料 (此部分保持不變)
+        window.addEventListener('load', () => {
+            fetch('evelcrossing.json')
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Network response was not ok');
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    fullCrossingData = data;
+                    loadingMessage.classList.add('hidden');
+                    filterAndRender();
+                })
+                .catch(error => {
+                    console.error('Error fetching data:', error);
+                    loadingMessage.innerHTML = `
+                        <div class="text-red-400">
+                            <div class="text-4xl mb-3">⚠️</div>
+                            <p class="text-lg">載入資料失敗</p>
+                            <p class="text-sm text-gray-500 mt-2">請檢查檔案是否存在或網路連線</p>
+                        </div>
+                    `;
+                });
+        });
+    </script>
+</body>
+</html>
