@@ -13,9 +13,7 @@
             color: #e2e8f0;
             min-height: 100vh;
         }
-        
-        /* ... (現有的 CSS 樣式保持不變，略過) ... */
-        
+
         .scroll-to-top {
             position: fixed;
             bottom: 6rem;
@@ -279,9 +277,7 @@
         function getDisplayValue(value, key) {
             return isUnknownValue(value, key) ? '不明' : value;
         }
-        
-        // --- 新增：分享功能相關函數 ---
-        
+                
         // 輔助函數：顯示通知訊息
         function showNotification(message, type = 'success') {
             notificationBox.textContent = message;
@@ -332,18 +328,17 @@
             const location = `${item['所在縣市']} / ${item['區間']}間`;
             const unit = `${getDisplayValue(item['電務段'], '電務段')}電務段${getDisplayValue(item['分駐所'], '分駐所')}分駐所`;
             const line = `${item['路線別']} (${item['平交道種類']})`;
-            const status = item['停用'] ? `【已停用】原因: ${item['停用']}` : '【正常運作】';
+            const status = item['停用'] ? `
+            已停用，原因: ${item['停用']}` : '';
 
             let shareText = `
-【平交道資訊分享】
-名稱: ${name} (編號: ${number})
-狀態: ${status}
+【${name}平交道】
+名稱:  (編號: ${number})${status}
 位置: ${location}
 路線: ${line}
 維護單位: ${unit}
 ---
-更多資訊請查詢平交道資訊網頁。
-            `.trim();
+`.trim();
 
             return shareText;
         }
