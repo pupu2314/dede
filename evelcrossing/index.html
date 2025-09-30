@@ -9,106 +9,223 @@
     <style>
         body {
             font-family: 'Inter', sans-serif;
-            background-color: #1a202c;
+            background: linear-gradient(135deg, #1a202c 0%, #2d3748 100%);
             color: #e2e8f0;
-            padding-bottom: 4rem; /* Add padding to body to prevent footer from covering content */
+            min-height: 100vh;
         }
+        
         .scroll-to-top {
             position: fixed;
-            bottom: 6rem; /* Adjust position to be above the new footer */
+            bottom: 6rem;
             right: 2rem;
             width: 3.5rem;
             height: 3.5rem;
-            background-color: #6366f1;
+            background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
             color: white;
             border-radius: 9999px;
             display: flex;
             align-items: center;
             justify-content: center;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-            transition: opacity 0.3s, transform 0.3s;
+            box-shadow: 0 10px 25px rgba(99, 102, 241, 0.3);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
             transform: translateY(100px);
             opacity: 0;
             cursor: pointer;
             z-index: 1000;
         }
+        
         .scroll-to-top.show {
             transform: translateY(0);
             opacity: 1;
         }
+        
+        .scroll-to-top:hover {
+            transform: translateY(0) scale(1.1);
+            box-shadow: 0 15px 35px rgba(99, 102, 241, 0.4);
+        }
+        
         .deactivated-card {
-            color: #9ca3af; /* Change all text inside to a lighter gray */
+            opacity: 0.6;
+            position: relative;
+            overflow: hidden;
         }
-        .deactivated-card h2, .deactivated-card .text-indigo-400 {
-            color: #9ca3af; /* Override title color */
+        
+        .deactivated-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: repeating-linear-gradient(
+                45deg,
+                transparent,
+                transparent 10px,
+                rgba(255, 255, 255, 0.03) 10px,
+                rgba(255, 255, 255, 0.03) 20px
+            );
+            pointer-events: none;
         }
-        .deactivated-card .text-gray-300 {
-            color: #6b7280; /* Override strong text color */
+        
+        .deactivated-card h2, 
+        .deactivated-card .text-indigo-400 {
+            color: #9ca3af !important;
+        }
+        
+        .card-enter {
+            animation: cardEnter 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        
+        @keyframes cardEnter {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .skeleton {
+            background: linear-gradient(90deg, #2d3748 25%, #4a5568 50%, #2d3748 75%);
+            background-size: 200% 100%;
+            animation: loading 1.5s infinite;
+        }
+        
+        @keyframes loading {
+            0% { background-position: 200% 0; }
+            100% { background-position: -200% 0; }
+        }
+        
+        .filter-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 1rem;
+            background: rgba(99, 102, 241, 0.2);
+            border: 1px solid rgba(99, 102, 241, 0.4);
+            border-radius: 9999px;
+            font-size: 0.875rem;
+            transition: all 0.2s;
+        }
+        
+        .filter-badge:hover {
+            background: rgba(99, 102, 241, 0.3);
+            border-color: rgba(99, 102, 241, 0.6);
+        }
+        
+        .clear-btn {
+            background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+            transition: all 0.3s;
+        }
+        
+        .clear-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(239, 68, 68, 0.3);
+        }
+
+        .header-gradient {
+            background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #ec4899 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
         }
     </style>
 </head>
 <body class="p-4 sm:p-8">
 
-    <div class="max-w-7xl mx-auto">
-        <h1 class="text-3xl sm:text-4xl font-extrabold text-center mb-6 text-indigo-400">平交道資訊查詢</h1>
-        
-        <!-- 篩選器與搜尋欄 -->
-        <div class="bg-gray-800 p-6 rounded-2xl shadow-xl mb-8 flex flex-col md:flex-row md:items-end md:space-x-4 space-y-4 md:space-y-0">
-            <!-- 名稱搜尋 -->
-            <div class="flex-1">
-                <label for="search-input" class="block text-sm font-medium text-gray-400 mb-1">平交道名稱</label>
-                <input type="text" id="search-input" placeholder="如：「成功路」或「成」" class="w-full px-4 py-2 bg-gray-700 text-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-colors">
-            </div>
-
-            <!-- 下拉式篩選器 -->
-            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 flex-grow">
-                <div>
-                    <label for="electric-section-filter" class="block text-sm font-medium text-gray-400 mb-1">電務段</label>
-                    <select id="electric-section-filter" class="w-full px-4 py-2 bg-gray-700 text-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-colors">
-                        <option value="">全部</option>
-                    </select>
-                </div>
-                <div>
-                    <label for="station-filter" class="block text-sm font-medium text-gray-400 mb-1">分駐所</label>
-                    <select id="station-filter" class="w-full px-4 py-2 bg-gray-700 text-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-colors">
-                        <option value="">全部</option>
-                    </select>
-                </div>
-                <div>
-                    <label for="city-filter" class="block text-sm font-medium text-gray-400 mb-1">所在縣市</label>
-                    <select id="city-filter" class="w-full px-4 py-2 bg-gray-700 text-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-colors">
-                        <option value="">全部</option>
-                    </select>
-                </div>
-                <div>
-                    <label for="section-filter" class="block text-sm font-medium text-gray-400 mb-1">區間</label>
-                    <select id="section-filter" class="w-full px-4 py-2 bg-gray-700 text-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-ring-indigo-500 transition-colors">
-                        <option value="">全部</option>
-                    </select>
-                </div>
-                <div>
-                    <label for="line-filter" class="block text-sm font-medium text-gray-400 mb-1">路線別</label>
-                    <select id="line-filter" class="w-full px-4 py-2 bg-gray-700 text-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-colors">
-                        <option value="">全部</option>
-                    </select>
-                </div>
-            </div>
+    <div class="max-w-7xl mx-auto pb-20">
+        <!-- Header -->
+        <div class="text-center mb-8">
+            <h1 class="text-4xl sm:text-5xl font-extrabold mb-3 header-gradient">
+                平交道資訊查詢
+            </h1>
+            <p class="text-gray-400 text-sm">快速搜尋全台灣平交道資訊</p>
         </div>
         
-        <!-- 符合筆數顯示區 -->
-        <p id="results-count" class="text-sm text-gray-400 mb-4 text-center"></p>
+        <!-- 搜尋與篩選區 -->
+        <div class="bg-gray-800/80 backdrop-blur-sm p-6 rounded-2xl shadow-2xl mb-6 border border-gray-700">
+            <!-- 搜尋欄 -->
+            <div class="mb-4">
+                <label for="search-input" class="block text-sm font-medium text-gray-400 mb-2">
+                    🔍 平交道名稱搜尋
+                </label>
+                <input 
+                    type="text" 
+                    id="search-input" 
+                    placeholder="例如：「成功路」或「成」" 
+                    class="w-full px-4 py-3 bg-gray-700/50 text-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all border border-gray-600 focus:border-indigo-500">
+            </div>
 
-        <!-- 顯示結果區塊 -->
+            <!-- 篩選器網格 -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4 mb-4">
+                <div>
+                    <label for="electric-section-filter" class="block text-sm font-medium text-gray-400 mb-2">電務段</label>
+                    <select id="electric-section-filter" class="w-full px-4 py-3 bg-gray-700/50 text-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all border border-gray-600 focus:border-indigo-500 cursor-pointer">
+                        <option value="">全部</option>
+                    </select>
+                </div>
+                <div>
+                    <label for="station-filter" class="block text-sm font-medium text-gray-400 mb-2">分駐所</label>
+                    <select id="station-filter" class="w-full px-4 py-3 bg-gray-700/50 text-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all border border-gray-600 focus:border-indigo-500 cursor-pointer">
+                        <option value="">全部</option>
+                    </select>
+                </div>
+                <div>
+                    <label for="city-filter" class="block text-sm font-medium text-gray-400 mb-2">所在縣市</label>
+                    <select id="city-filter" class="w-full px-4 py-3 bg-gray-700/50 text-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all border border-gray-600 focus:border-indigo-500 cursor-pointer">
+                        <option value="">全部</option>
+                    </select>
+                </div>
+                <div>
+                    <label for="section-filter" class="block text-sm font-medium text-gray-400 mb-2">區間</label>
+                    <select id="section-filter" class="w-full px-4 py-3 bg-gray-700/50 text-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all border border-gray-600 focus:border-indigo-500 cursor-pointer">
+                        <option value="">全部</option>
+                    </select>
+                </div>
+                <div>
+                    <label for="line-filter" class="block text-sm font-medium text-gray-400 mb-2">路線別</label>
+                    <select id="line-filter" class="w-full px-4 py-3 bg-gray-700/50 text-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all border border-gray-600 focus:border-indigo-500 cursor-pointer">
+                        <option value="">全部</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- 清除按鈕與結果計數 -->
+            <div class="flex flex-col sm:flex-row justify-between items-center gap-3">
+                <p id="results-count" class="text-sm text-gray-400"></p>
+                <button id="clear-filters-btn" class="clear-btn text-white px-6 py-2 rounded-xl font-medium shadow-lg hidden">
+                    ✕ 清除所有篩選
+                </button>
+            </div>
+        </div>
+
+        <!-- 已套用篩選標籤 -->
+        <div id="active-filters" class="flex flex-wrap gap-2 mb-6"></div>
+
+        <!-- 結果容器 -->
         <div id="results-container" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             <!-- 動態生成的平交道卡片會顯示在這裡 -->
         </div>
 
-        <div id="loading-message" class="text-center text-gray-400 mt-12 text-lg">
-            正在載入資料...
+        <!-- 載入中訊息 -->
+        <div id="loading-message" class="text-center mt-12">
+            <div class="inline-block">
+                <div class="flex space-x-2">
+                    <div class="w-3 h-3 bg-indigo-500 rounded-full animate-bounce" style="animation-delay: 0s"></div>
+                    <div class="w-3 h-3 bg-indigo-500 rounded-full animate-bounce" style="animation-delay: 0.2s"></div>
+                    <div class="w-3 h-3 bg-indigo-500 rounded-full animate-bounce" style="animation-delay: 0.4s"></div>
+                </div>
+                <p class="text-gray-400 mt-4">正在載入資料...</p>
+            </div>
         </div>
 
-        <div id="no-results-message" class="hidden text-center text-gray-400 mt-12 text-lg">
-            沒有找到符合條件的平交道資訊。
+        <!-- 無結果訊息 -->
+        <div id="no-results-message" class="hidden text-center mt-12">
+            <div class="text-6xl mb-4">🔍</div>
+            <p class="text-gray-400 text-lg">沒有找到符合條件的平交道資訊</p>
+            <p class="text-gray-500 text-sm mt-2">試試調整篩選條件或搜尋關鍵字</p>
         </div>
 
     </div>
@@ -121,15 +238,16 @@
     </div>
 
     <!-- 置底浮動版權視窗 -->
-    <div class="fixed bottom-0 left-0 right-0 bg-gray-900 text-center p-4 text-gray-400 text-xs z-20 shadow-lg">
+    <div class="fixed bottom-0 left-0 right-0 bg-gray-900/95 backdrop-blur-sm text-center p-4 text-gray-400 text-xs z-20 shadow-lg border-t border-gray-800">
         駿展工程有限公司 ©2025 All Rights Reserved
     </div>
 
     <script>
-        // Store the full, unfiltered dataset
+        // 全域變數
         let fullCrossingData = [];
+        let debounceTimer;
 
-        // Get DOM elements
+        // DOM 元素
         const searchInput = document.getElementById('search-input');
         const electricSectionFilter = document.getElementById('electric-section-filter');
         const cityFilter = document.getElementById('city-filter');
@@ -141,8 +259,20 @@
         const noResultsMessage = document.getElementById('no-results-message');
         const resultsCountElement = document.getElementById('results-count');
         const scrollToTopBtn = document.getElementById('scroll-to-top-btn');
+        const clearFiltersBtn = document.getElementById('clear-filters-btn');
+        const activeFiltersContainer = document.getElementById('active-filters');
 
-        // Render the crossing cards
+        // 輔助函數：判斷是否為「不明」
+        function isUnknownValue(value, key) {
+            return (key === '電務段' || key === '分駐所') && (value === '' || value === 0);
+        }
+
+        // 輔助函數：取得顯示值
+        function getDisplayValue(value, key) {
+            return isUnknownValue(value, key) ? '不明' : value;
+        }
+
+        // 渲染平交道卡片
         function renderCrossings(data) {
             resultsContainer.innerHTML = '';
             resultsCountElement.textContent = `共 ${data.length} 筆符合的平交道資訊`;
@@ -151,44 +281,50 @@
                 noResultsMessage.classList.remove('hidden');
             } else {
                 noResultsMessage.classList.add('hidden');
-                data.forEach(item => {
+                data.forEach((item, index) => {
                     const isDeactivated = item['停用'] && item['停用'] !== '';
                     
                     const card = document.createElement('div');
-                    const cardBgClass = isDeactivated ? 'bg-gray-800 deactivated-card' : 'bg-gray-800';
-                    const cardHoverClass = isDeactivated ? 'hover:bg-gray-700' : 'hover:bg-gray-700';
-
-                    card.className = `${cardBgClass} p-6 rounded-2xl shadow-lg transition-transform transform hover:scale-105 ${cardHoverClass}`;
+                    card.className = `bg-gray-800/80 backdrop-blur-sm p-6 rounded-2xl shadow-xl transition-all transform hover:scale-105 hover:shadow-2xl border border-gray-700 hover:border-indigo-500 card-enter ${isDeactivated ? 'deactivated-card' : ''}`;
+                    card.style.animationDelay = `${index * 0.05}s`;
 
                     const oldName = item['舊名或別名'] ? ` （${item['舊名或別名']}）` : '';
-                    const electricSectionDisplay = (item['電務段'] === '' || item['電務段'] === 0) ? '不明' : item['電務段'];
-                    const stationDisplay = (item['分駐所'] === '' || item['分駐所'] === 0) ? '不明' : item['分駐所'];
+                    const electricSectionDisplay = getDisplayValue(item['電務段'], '電務段');
+                    const stationDisplay = getDisplayValue(item['分駐所'], '分駐所');
 
                     const googleMapContent = item['Google地圖'] ? 
-                        `<a href="${item['Google地圖']}" target="_blank" class="mt-4 inline-block text-indigo-300 hover:text-indigo-200 transition-colors">
-                            <div class="flex items-center space-x-1">
-                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-                                    <path fill-rule="evenodd" d="M5.057 5.057a7 7 0 119.886 9.886L10 18.886l-4.943-4.943a7 7 0 010-9.886zM10 11a2 2 1000-4 2 2 0 000 4z" clip-rule="evenodd" />
-                                </svg>
-                                <span>Google 地圖</span>
-                            </div>
+                        `<a href="${item['Google地圖']}" target="_blank" class="mt-4 inline-flex items-center space-x-2 text-indigo-400 hover:text-indigo-300 transition-colors group">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 group-hover:scale-110 transition-transform" viewBox="0 0 20 20" fill="currentColor">
+                                <path fill-rule="evenodd" d="M5.057 5.057a7 7 0 119.886 9.886L10 18.886l-4.943-4.943a7 7 0 010-9.886zM10 11a2 2 1000-4 2 2 0 000 4z" clip-rule="evenodd" />
+                            </svg>
+                            <span class="font-medium">查看地圖位置</span>
                         </a>` :
-                        `<p class="mt-4 text-sm text-gray-500">無位置資訊</p>`;
+                        `<p class="mt-4 text-sm text-gray-500 italic">📍 無位置資訊</p>`;
 
-                    const deactivatedBadge = isDeactivated ? `<span class="bg-red-500 text-white text-xs font-semibold px-2 py-1 rounded-full ml-2" title="${item['停用']}">已停用</span>` : '';
+                    const deactivatedBadge = isDeactivated ? 
+                        `<span class="bg-red-500/90 text-white text-xs font-semibold px-3 py-1 rounded-full ml-2 shadow-lg" title="${item['停用']}">已停用</span>` : '';
 
                     card.innerHTML = `
-                        <div class="flex flex-col sm:flex-row sm:items-baseline sm:space-x-2 mb-2">
-                            <div class="flex items-center">
+                        <div class="flex flex-col sm:flex-row sm:items-baseline sm:justify-between mb-3">
+                            <div class="flex items-center flex-wrap">
                                 <h2 class="text-xl font-bold text-indigo-400">${item['平交道名稱']}${oldName}</h2>
                                 ${deactivatedBadge}
                             </div>
-                            <p class="text-sm text-gray-400">編號：${item['編號']}</p>
+                            <p class="text-sm text-gray-500 mt-1 sm:mt-0">編號：${item['編號']}</p>
                         </div>
                         <div class="space-y-2 text-sm">
-                            <p><span class="font-medium text-gray-300">位置：</span>${item['所在縣市']} / ${item['區間']}間</p>
-                            <p><span class="font-medium text-gray-300">路線別：</span>${item['路線別']} （${item['平交道種類']}）</p>
-                            <p><span class="font-medium text-gray-300">隸屬單位：</span>${electricSectionDisplay}電務段${stationDisplay}分駐所</p>
+                            <p class="flex items-start">
+                                <span class="font-medium text-gray-400 min-w-[4rem]">📍 位置：</span>
+                                <span class="text-gray-300">${item['所在縣市']} / ${item['區間']}間</span>
+                            </p>
+                            <p class="flex items-start">
+                                <span class="font-medium text-gray-400 min-w-[4rem]">🚂 路線：</span>
+                                <span class="text-gray-300">${item['路線別']} （${item['平交道種類']}）</span>
+                            </p>
+                            <p class="flex items-start">
+                                <span class="font-medium text-gray-400 min-w-[4rem]">🏢 單位：</span>
+                                <span class="text-gray-300">${electricSectionDisplay}電務段${stationDisplay}分駐所</span>
+                            </p>
                         </div>
                         ${googleMapContent}
                     `;
@@ -197,30 +333,28 @@
             }
         }
 
-        // Populates the dropdown options for a given filter
+        // 填充下拉選單選項
         function populateFilter(selectElement, data, key) {
-            const currentValue = selectElement.value; // Save the current selection
-            selectElement.innerHTML = ''; // Clear existing options
+            const currentValue = selectElement.value;
+            selectElement.innerHTML = '';
             
             const uniqueValues = new Set();
             let hasUnknown = false;
             
             data.forEach(item => {
                 let value = item[key];
-                if ((key === '電務段' || key === '分駐所') && (value === '' || value === 0)) {
+                if (isUnknownValue(value, key)) {
                     hasUnknown = true;
                 } else if (value !== '' && value !== 0) {
                     uniqueValues.add(value);
                 }
             });
             
-            // Add "全部" option first
             const allOption = document.createElement('option');
             allOption.value = '';
             allOption.textContent = '全部';
             selectElement.appendChild(allOption);
 
-            // Add "不明" option if it exists in the data
             if (hasUnknown) {
                 const unknownOption = document.createElement('option');
                 unknownOption.value = '不明';
@@ -228,7 +362,6 @@
                 selectElement.appendChild(unknownOption);
             }
             
-            // Add all other unique, sorted values
             Array.from(uniqueValues).sort().forEach(value => {
                 const option = document.createElement('option');
                 option.value = value;
@@ -236,15 +369,53 @@
                 selectElement.appendChild(option);
             });
             
-            // Restore the previous selection if it still exists
             if (currentValue && (Array.from(uniqueValues).includes(currentValue) || (hasUnknown && currentValue === '不明') || currentValue === '')) {
                 selectElement.value = currentValue;
             }
         }
 
-        // Main function to filter data and update the display/filters
+        // 更新已套用篩選標籤
+        function updateActiveFilters() {
+            const filters = [];
+            
+            if (searchInput.value) filters.push({ label: `搜尋: ${searchInput.value}`, type: 'search' });
+            if (electricSectionFilter.value) filters.push({ label: `電務段: ${electricSectionFilter.value}`, type: 'electric' });
+            if (stationFilter.value) filters.push({ label: `分駐所: ${stationFilter.value}`, type: 'station' });
+            if (cityFilter.value) filters.push({ label: `縣市: ${cityFilter.value}`, type: 'city' });
+            if (sectionFilter.value) filters.push({ label: `區間: ${sectionFilter.value}`, type: 'section' });
+            if (lineFilter.value) filters.push({ label: `路線: ${lineFilter.value}`, type: 'line' });
+
+            activeFiltersContainer.innerHTML = '';
+            
+            if (filters.length > 0) {
+                clearFiltersBtn.classList.remove('hidden');
+                filters.forEach(filter => {
+                    const badge = document.createElement('span');
+                    badge.className = 'filter-badge cursor-pointer';
+                    badge.innerHTML = `
+                        ${filter.label}
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    `;
+                    badge.onclick = () => {
+                        if (filter.type === 'search') searchInput.value = '';
+                        else if (filter.type === 'electric') electricSectionFilter.value = '';
+                        else if (filter.type === 'station') stationFilter.value = '';
+                        else if (filter.type === 'city') cityFilter.value = '';
+                        else if (filter.type === 'section') sectionFilter.value = '';
+                        else if (filter.type === 'line') lineFilter.value = '';
+                        filterAndRender();
+                    };
+                    activeFiltersContainer.appendChild(badge);
+                });
+            } else {
+                clearFiltersBtn.classList.add('hidden');
+            }
+        }
+
+        // 主要篩選與渲染函數
         function filterAndRender() {
-            // Get all current filter values
             const searchTerm = searchInput.value.toLowerCase();
             const selectedElectricSection = electricSectionFilter.value;
             const selectedCity = cityFilter.value;
@@ -252,15 +423,14 @@
             const selectedSection = sectionFilter.value;
             const selectedLine = lineFilter.value;
 
-            // Apply all filters sequentially
             let filteredData = fullCrossingData.filter(item => {
                 const nameMatch = item['平交道名稱'].toLowerCase().includes(searchTerm) || 
                                  (item['舊名或別名'] && item['舊名或別名'].toLowerCase().includes(searchTerm));
                 
-                const electricSectionValue = (item['電務段'] === '' || item['電務段'] === 0) ? '不明' : item['電務段'];
+                const electricSectionValue = getDisplayValue(item['電務段'], '電務段');
                 const electricSectionMatch = !selectedElectricSection || electricSectionValue === selectedElectricSection;
                 
-                const stationValue = (item['分駐所'] === '' || item['分駐所'] === 0) ? '不明' : item['分駐所'];
+                const stationValue = getDisplayValue(item['分駐所'], '分駐所');
                 const stationMatch = !selectedStation || stationValue === selectedStation;
 
                 const cityMatch = !selectedCity || item['所在縣市'] === selectedCity;
@@ -270,55 +440,71 @@
                 return nameMatch && electricSectionMatch && cityMatch && stationMatch && sectionMatch && lineMatch;
             });
             
-            // Renders the final filtered list of crossings
             renderCrossings(filteredData);
+            updateActiveFilters();
             
-            // Dynamically update each dropdown based on the currently filtered data
-            populateFilter(electricSectionFilter, fullCrossingData.filter(item => 
-                (!selectedCity || item['所在縣市'] === selectedCity) &&
-                (!selectedStation || ((item['分駐所'] === '' || item['分駐所'] === 0) ? '不明' : item['分駐所']) === selectedStation) &&
-                (!selectedSection || item['區間'] === selectedSection) &&
-                (!selectedLine || item['路線別'] === selectedLine)
-            ), '電務段');
+            // 動態更新下拉選單
+            const filterConditions = (item) => ({
+                electric: !selectedElectricSection || getDisplayValue(item['電務段'], '電務段') === selectedElectricSection,
+                station: !selectedStation || getDisplayValue(item['分駐所'], '分駐所') === selectedStation,
+                city: !selectedCity || item['所在縣市'] === selectedCity,
+                section: !selectedSection || item['區間'] === selectedSection,
+                line: !selectedLine || item['路線別'] === selectedLine
+            });
 
-            populateFilter(stationFilter, fullCrossingData.filter(item => 
-                (!selectedElectricSection || ((item['電務段'] === '' || item['電務段'] === 0) ? '不明' : item['電務段']) === selectedElectricSection) &&
-                (!selectedCity || item['所在縣市'] === selectedCity) &&
-                (!selectedSection || item['區間'] === selectedSection) &&
-                (!selectedLine || item['路線別'] === selectedLine)
-            ), '分駐所');
+            populateFilter(electricSectionFilter, fullCrossingData.filter(item => {
+                const c = filterConditions(item);
+                return c.city && c.station && c.section && c.line;
+            }), '電務段');
 
-            populateFilter(cityFilter, fullCrossingData.filter(item => 
-                (!selectedElectricSection || ((item['電務段'] === '' || item['電務段'] === 0) ? '不明' : item['電務段']) === selectedElectricSection) &&
-                (!selectedStation || ((item['分駐所'] === '' || item['分駐所'] === 0) ? '不明' : item['分駐所']) === selectedStation) &&
-                (!selectedSection || item['區間'] === selectedSection) &&
-                (!selectedLine || item['路線別'] === selectedLine)
-            ), '所在縣市');
+            populateFilter(stationFilter, fullCrossingData.filter(item => {
+                const c = filterConditions(item);
+                return c.electric && c.city && c.section && c.line;
+            }), '分駐所');
 
-            populateFilter(sectionFilter, fullCrossingData.filter(item => 
-                (!selectedElectricSection || ((item['電務段'] === '' || item['電務段'] === 0) ? '不明' : item['電務段']) === selectedElectricSection) &&
-                (!selectedCity || item['所在縣市'] === selectedCity) &&
-                (!selectedStation || ((item['分駐所'] === '' || item['分駐所'] === 0) ? '不明' : item['分駐所']) === selectedStation) &&
-                (!selectedLine || item['路線別'] === selectedLine)
-            ), '區間');
+            populateFilter(cityFilter, fullCrossingData.filter(item => {
+                const c = filterConditions(item);
+                return c.electric && c.station && c.section && c.line;
+            }), '所在縣市');
 
-            populateFilter(lineFilter, fullCrossingData.filter(item => 
-                (!selectedElectricSection || ((item['電務段'] === '' || item['電務段'] === 0) ? '不明' : item['電務段']) === selectedElectricSection) &&
-                (!selectedCity || item['所在縣市'] === selectedCity) &&
-                (!selectedStation || ((item['分駐所'] === '' || item['分駐所'] === 0) ? '不明' : item['分駐所']) === selectedStation) &&
-                (!selectedSection || item['區間'] === selectedSection)
-            ), '路線別');
+            populateFilter(sectionFilter, fullCrossingData.filter(item => {
+                const c = filterConditions(item);
+                return c.electric && c.city && c.station && c.line;
+            }), '區間');
+
+            populateFilter(lineFilter, fullCrossingData.filter(item => {
+                const c = filterConditions(item);
+                return c.electric && c.city && c.station && c.section;
+            }), '路線別');
         }
 
-        // Attach event listeners to all filter controls
-        searchInput.addEventListener('input', filterAndRender);
+        // Debounce 搜尋
+        function debounceSearch() {
+            clearTimeout(debounceTimer);
+            debounceTimer = setTimeout(filterAndRender, 300);
+        }
+
+        // 清除所有篩選
+        function clearAllFilters() {
+            searchInput.value = '';
+            electricSectionFilter.value = '';
+            cityFilter.value = '';
+            stationFilter.value = '';
+            sectionFilter.value = '';
+            lineFilter.value = '';
+            filterAndRender();
+        }
+
+        // 事件監聽器
+        searchInput.addEventListener('input', debounceSearch);
         electricSectionFilter.addEventListener('change', filterAndRender);
         cityFilter.addEventListener('change', filterAndRender);
         stationFilter.addEventListener('change', filterAndRender);
         sectionFilter.addEventListener('change', filterAndRender);
         lineFilter.addEventListener('change', filterAndRender);
+        clearFiltersBtn.addEventListener('click', clearAllFilters);
 
-        // Scroll to top functionality
+        // 滾動到頂端功能
         window.addEventListener('scroll', () => {
             if (window.scrollY > 300) {
                 scrollToTopBtn.classList.add('show');
@@ -331,7 +517,7 @@
             window.scrollTo({ top: 0, behavior: 'smooth' });
         });
 
-        // Fetch data on page load
+        // 載入資料
         window.addEventListener('load', () => {
             fetch('evelcrossing.json')
                 .then(response => {
@@ -347,10 +533,15 @@
                 })
                 .catch(error => {
                     console.error('Error fetching data:', error);
-                    loadingMessage.textContent = '載入資料失敗。請檢查檔案。';
+                    loadingMessage.innerHTML = `
+                        <div class="text-red-400">
+                            <div class="text-4xl mb-3">⚠️</div>
+                            <p class="text-lg">載入資料失敗</p>
+                            <p class="text-sm text-gray-500 mt-2">請檢查檔案是否存在或網路連線</p>
+                        </div>
+                    `;
                 });
         });
-
     </script>
 </body>
 </html>
