@@ -329,11 +329,11 @@
             const unit = `${getDisplayValue(item['電務段'], '電務段')}電務段${getDisplayValue(item['分駐所'], '分駐所')}分駐所`;
             const line = `${item['路線別']} (${item['平交道種類']})`;
             const status = item['停用'] ? `
-            已停用，原因: ${item['停用']}` : '';
+已停用，備註: ${item['停用']}` : '';
 
             let shareText = `
 【${name}平交道】
-名稱:  (編號: ${number})${status}
+編號: ${number}${status}
 位置: ${location}
 路線: ${line}
 維護單位: ${unit}
