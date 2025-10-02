@@ -1,0 +1,1590 @@
+<!DOCTYPE html>
+<html lang="zh-Hant-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>加班費計算機 v2.0</title>
+    <meta name="theme-color" content="#007bff"/>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <style>
+:root {
+	--primary-color: #007bff;
+	--secondary-color: #6c757d;
+	--bg-color: #f8f9fa;
+	--text-color: #333;
+	--border-color: #dee2e6;
+	--success-color: #28a745;
+	--danger-color: #dc3545;
+	--warning-color: #ffc107;
+	--white-color: #fff;
+	--font-family: 'Segoe UI', 'Microsoft JhengHei', sans-serif;
+}
+body {
+	font-family: var(--font-family);
+	background-color: var(--bg-color);
+	color: var(--text-color);
+	margin: 0;
+	padding: 1rem;
+	line-height: 1.6;
+}
+.container {
+	max-width: 1000px;
+	margin: auto;
+	background: var(--white-color);
+	padding: 1.5rem;
+	border-radius: 8px;
+	box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+h1, h2 {
+	color: var(--primary-color);
+	border-bottom: 2px solid var(--border-color);
+	padding-bottom: 0.5rem;
+	margin-top: 0;
+}
+summary {
+	font-size: 1.5rem;
+	font-weight: bold;
+	cursor: pointer;
+}
+details>div {
+	margin-top: 1rem;
+}
+.grid-container {
+	display: grid;
+	grid-template-columns: 1fr;
+	gap: 2rem;
+}
+@media (min-width: 768px) {
+	.grid-container {
+		grid-template-columns: repeat(2, 1fr);
+	}
+}
+@media (min-width: 768px) {
+	.grid-container.single-column-grid {
+		grid-template-columns: 1fr;
+	}
+}
+.card {
+	background: #fff;
+	padding: 1.5rem;
+	border: 1px solid var(--border-color);
+	border-radius: 8px;
+}
+.form-group {
+	margin-bottom: 1rem;
+}
+.time-input-group {
+	display: grid;
+	grid-template-columns: repeat(2, 1fr);
+	gap: 0.5rem;
+	align-items: center;
+}
+label {
+	display: block;
+	margin-bottom: 0.5rem;
+	font-weight: bold;
+}
+input[type="number"], input[type="datetime-local"], input[type="text"], input[type="time"], textarea, input[type="month"] {
+	width: 100%;
+	padding: 0.75rem;
+	border: 1px solid var(--border-color);
+	border-radius: 4px;
+	box-sizing: border-box;
+	font-size: 1rem;
+}
+.radio-group label, .checkbox-group label {
+	display: inline-flex;
+	align-items: center;
+	margin-right: 1rem;
+	font-weight: normal;
+	cursor: pointer;
+}
+.checkbox-group input {
+	margin-right: 0.5rem;
+}
+button {
+	background-color: var(--primary-color);
+	color: var(--white-color);
+	border: none;
+	padding: 0.75rem 1.5rem;
+	border-radius: 4px;
+	cursor: pointer;
+	font-size: 1rem;
+	transition: background-color 0.3s;
+}
+button:hover {
+	background-color: #0056b3;
+}
+button:disabled {
+	background-color: #ccc;
+	cursor: not-allowed;
+}
+.btn-secondary {
+	background-color: var(--secondary-color);
+}
+.btn-secondary:hover {
+	background-color: #545b62;
+}
+.btn-danger {
+	background-color: var(--danger-color);
+}
+.btn-danger:hover {
+	background-color: #c82333;
+}
+.btn-small {
+	padding: 0.4rem 0.8rem;
+	font-size: 0.9rem;
+}
+table {
+	width: 100%;
+	border-collapse: collapse;
+	margin-top: 1rem;
+}
+th, td {
+	border-bottom: 1px solid var(--border-color);
+	padding: 0.75rem;
+	text-align: left;
+	word-break: break-word;
+}
+th {
+	background-color: #f2f2f2;
+}
+.summary {
+	background: #e9f5ff;
+	border: 1px solid #b3d7ff;
+	padding: 1.5rem;
+	margin-top: 1rem;
+	border-radius: 8px;
+}
+.summary-value {
+	font-size: 1.5rem;
+	font-weight: bold;
+	color: var(--success-color);
+}
+.error-message {
+	margin-top: 0.5rem;
+	font-weight: bold;
+	padding: 0.75rem;
+	border-radius: 4px;
+	color: var(--danger-color);
+	background-color: #f8d7da;
+	border: 1px solid #f5c6cb;
+	white-space: pre-line;
+}
+.info-message {
+	margin-top: 0.5rem;
+	font-weight: bold;
+	padding: 0.75rem;
+	border-radius: 4px;
+	color: #0c5460;
+	background-color: #d1ecf1;
+	border: 1px solid #bee5eb;
+}
+.warning-message {
+	margin-top: 0.5rem;
+	font-weight: bold;
+	padding: 0.75rem;
+	border-radius: 4px;
+	color: #856404;
+	background-color: #fff3cd;
+	border: 1px solid #ffeaa7;
+}
+#punch-status {
+	font-size: 1.1rem;
+	line-height: 1.8;
+}
+.mode-switcher {
+	display: flex;
+	gap: 0.5rem;
+	margin-bottom: 1rem;
+	border-bottom: 1px solid var(--border-color);
+	padding-bottom: 1rem;
+}
+.mode-switcher button {
+	flex: 1;
+}
+.mode-switcher button.active {
+	background-color: #0056b3;
+	font-weight: bold;
+}
+.daily-group-header {
+	background-color: #f2f2f2;
+	font-weight: bold;
+}
+.record-detail-row td, .formula-detail-row td {
+	padding-left: 2rem;
+	font-size: 0.9rem;
+	color: #555;
+	border-top: 1px dotted #ccc;
+}
+.formula-detail-row td {
+	background-color: #f9f9f9;
+	padding: 1rem;
+	font-family: monospace;
+	color: #0056b3;
+}
+.actions-container {
+	display: flex;
+	justify-content: flex-end;
+	align-items: center;
+	gap: 0.5rem;
+	min-width: 140px;
+}
+#export-container {
+	position: absolute;
+	left: -9999px;
+	top: auto;
+	width: 1000px;
+	background: white;
+	padding: 2rem;
+	box-sizing: border-box;
+	font-family: var(--font-family);
+	color: var(--text-color);
+}
+#export-container h2, #export-container h3 {
+	color: var(--primary-color);
+	border-bottom: 2px solid var(--border-color);
+	padding-bottom: 0.5rem;
+	margin-top: 0;
+}
+#export-container table {
+	width: 100%;
+	border-collapse: collapse;
+}
+#export-container th, #export-container td {
+	border: 1px solid var(--border-color);
+	padding: 0.75rem;
+	text-align: left;
+}
+#export-container th {
+	background-color: #f2f2f2;
+}
+#export-container .summary {
+	margin-top: 2rem;
+	text-align: right;
+	background: #e9f5ff;
+	border: 1px solid #b3d7ff;
+	padding: 1.5rem;
+	border-radius: 8px;
+}
+#export-container .summary-value {
+	font-size: 1.8rem;
+	color: var(--success-color);
+}
+#export-container thead {
+	display: table-header-group !important;
+}
+#export-container tr {
+	display: table-row !important;
+}
+#export-container td {
+	display: table-cell !important;
+}
+#export-container td::before {
+	content: none !important;
+}
+.modal {
+	display: none;
+	position: fixed;
+	z-index: 1000;
+	left: 0;
+	top: 0;
+	width: 100%;
+	height: 100%;
+	background-color: rgba(0,0,0,0.5);
+}
+.modal.show {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+}
+.modal-content {
+	background-color: white;
+	padding: 2rem;
+	border-radius: 8px;
+	max-width: 500px;
+	width: 90%;
+	box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+}
+.modal-buttons {
+	display: flex;
+	gap: 1rem;
+	margin-top: 1.5rem;
+	justify-content: flex-end;
+}
+@media (max-width: 768px) {
+	thead {
+		display: none;
+	}
+	tr:not(.formula-detail-row) {
+		display: block;
+		border: 1px solid var(--border-color);
+		border-radius: 8px;
+		margin-bottom: 1rem;
+		padding: 1rem;
+		box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+	}
+	tr.daily-group-header {
+		display: grid;
+		grid-template-columns: 1fr 1fr;
+		gap: 0.5rem;
+		padding: 0.5rem;
+		margin-bottom: 0.5rem;
+		background-color: #e9f5ff;
+	}
+	td {
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		padding: 0.5rem 0;
+		border-bottom: 1px dotted var(--border-color);
+		text-align: right;
+	}
+	td:last-child {
+		border-bottom: none;
+	}
+	td::before {
+		content: attr(data-label);
+		font-weight: bold;
+		text-align: left;
+		margin-right: 1rem;
+	}
+	.formula-detail-row {
+		display: block;
+	}
+	.formula-detail-row td {
+		display: block;
+		text-align: left;
+	}
+}
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h1>加班費計算機 v2.0</h1>
+        
+        <div class="grid-container single-column-grid">
+            <div class="card">
+                <details id="settings-details">
+                    <summary>1. 基本設定</summary>
+                    <div>
+                        <div class="form-group"><label>薪資類型</label><div class="radio-group"><label><input type="radio" name="salaryType" value="monthly" checked> 月薪</label><label><input type="radio" name="salaryType" value="hourly"> 時薪</label></div></div>
+                        <div class="form-group"><label for="salary">薪資金額 (NTD)</label><input type="number" id="salary" min="0" step="1" placeholder="例如:40000" aria-label="薪資金額"></div>
+                        <div class="form-group"><label for="hourly-rate">換算時薪 (自動)</label><input type="number" id="hourly-rate" readonly aria-label="換算後的時薪"></div>
+                        <div class="form-group">
+                            <label for="payday">發薪日期 (每月幾號)</label>
+                            <input type="number" id="payday" min="1" max="31" value="1" placeholder="例如:15" aria-label="發薪日期">
+                            <small style="color: var(--secondary-color); display: block; margin-top: 0.25rem;">
+                                💡 設定發薪日用於計算加班費區間。例如:15日發薪代表前月15日至該月14日為一個計薪週期
+                            </small>
+                        </div>
+                        <hr>
+                        <div class="form-group">
+                            <label>正常工作/午休時間 (僅於「平日」加班時自動排除)</label>
+                            <div class="time-input-group">
+                                <label>上班</label><input type="time" id="work-start" value="09:00" aria-label="上班時間">
+                                <label>下班</label><input type="time" id="work-end" value="18:00" aria-label="下班時間">
+                                <label>午休</label><input type="time" id="break-start" value="12:00" aria-label="午休開始時間">
+                                <label>結束</label><input type="time" id="break-end" value="13:00" aria-label="午休結束時間">
+                            </div>
+                        </div>
+                        <button id="save-settings">儲存設定</button>
+                    </div>
+                </details>
+            </div>
+
+            <div class="card">
+                <h2>2. 新增加班紀錄</h2>
+                <div class="mode-switcher">
+                    <button id="mode-punch" class="active" aria-pressed="true">即時打卡</button>
+                    <button id="mode-manual" aria-pressed="false">補登紀錄</button>
+                </div>
+                <div id="punch-mode-content">
+                    <div style="display: flex; gap: 1rem;">
+                        <button id="punch-start" style="flex: 1;" aria-label="開始加班打卡">開始加班</button>
+                        <button id="punch-end" style="flex: 1;" disabled aria-label="結束加班打卡">結束加班</button>
+                    </div>
+                    <div id="punch-status" class="info-message" style="display: none; margin-top: 1rem; text-align: center;">
+                        <div><strong>加班開始時間:</strong> <span id="punch-start-time-display"></span></div>
+                        <div><strong>目前已過時間:</strong> <span id="punch-elapsed-time-display">00:00:00</span></div>
+                    </div>
+                </div>
+                <div id="manual-mode-content" style="display: none;">
+                    <input type="hidden" id="edit-id">
+                    <div class="form-group"><label for="start-time">開始時間</label><input type="datetime-local" id="start-time" aria-label="加班開始時間"></div>
+                    <div class="form-group"><label for="end-time">結束時間</label><input type="datetime-local" id="end-time" aria-label="加班結束時間"></div>
+                </div>
+                <div class="form-group" style="margin-top: 1rem;"><label for="overtime-reason">加班事由 (選填)</label><input type="text" id="overtime-reason" placeholder="例如:專案A上線支援" aria-label="加班事由"></div>
+                <div class="form-group">
+                    <label>加班類型</label>
+                    <div class="radio-group"><label><input type="radio" name="overtimeType" value="weekday" checked> 平日</label><label><input type="radio" name="overtimeType" value="restday"> 休息日</label><label><input type="radio" name="overtimeType" value="holiday"> 國定假日</label></div>
+                </div>
+                 <div class="form-group checkbox-group" style="background: #f9f9f9; padding: 0.75rem; border-radius: 4px;">
+                    <label><input type="checkbox" id="force-full-calc-toggle"> <strong>強制計算完整時長</strong> (用於補休時加班等情境)</label>
+                </div>
+                <button id="add-record">新增/更新紀錄</button><button id="clear-form" class="btn-secondary">清除表單</button>
+                <div id="restore-message" class="info-message" style="display: none;"></div>
+                <div id="form-error" class="error-message" style="display: none;"></div>
+            </div>
+        </div>
+
+        <div id="capture-area" class="card" style="margin-top: 2rem;">
+            <h2>3. 加班紀錄與總覽</h2>
+            <div class="controls-container" style="display: flex; flex-wrap: wrap; gap: 1rem; align-items: flex-end;">
+                <div class="form-group" style="flex: 1 1 200px;">
+                    <label for="month-filter">篩選發薪月份</label>
+                    <input type="month" id="month-filter" aria-label="選擇要篩選的月份">
+                    <small id="pay-period-hint" style="color: var(--secondary-color); display: block; margin-top: 0.25rem;"></small>
+                </div>
+                <button id="export-image" class="btn-secondary" style="flex: 1 1 150px;">匯出本月圖片</button>
+                <button id="export-csv" class="btn-secondary" style="flex: 1 1 150px;">匯出 CSV</button>
+            </div>
+            <table role="table" aria-label="加班記錄列表"><thead><tr><th>日期</th><th>類型</th><th>總時長(H)</th><th>加班費($)</th><th>操作</th></tr></thead><tbody id="records-body"></tbody></table>
+            <div class="summary">
+                <h3 id="summary-title">篩選月份總計</h3>
+                <p>期間:<span id="summary-period"></span></p>
+                <span id="total-overtime-pay" class="summary-value">0</span> 元
+            </div>
+        </div>
+        
+        <div class="card" style="margin-top: 2rem;">
+            <h2>4. 資料管理</h2>
+            <div id="backup-reminder" class="warning-message" style="display: none; margin-bottom: 1rem;">
+                <strong>⚠️ 備份提醒</strong><br>
+                <span id="backup-reminder-text"></span>
+                <div style="margin-top: 0.5rem;">
+                    <button id="backup-now" class="btn-secondary btn-small">立即備份</button>
+                    <button id="backup-remind-later" class="btn-secondary btn-small">稍後提醒</button>
+                </div>
+            </div>
+            <div class="grid-container">
+                <div>
+                    <h3>匯出所有資料</h3>
+                    <button id="export-text">匯出為文字(JSON)</button>
+                    <div id="export-output" style="display:none; margin-top: 1rem;">
+                        <label>請複製以下所有文字:</label>
+                        <textarea id="export-textarea" readonly rows="5" aria-label="匯出的資料"></textarea>
+                    </div>
+                </div>
+                <div>
+                    <h3>匯入所有資料</h3>
+                    <textarea id="import-textarea" placeholder="在此貼上您備份的 JSON 文字" rows="5" aria-label="要匯入的資料"></textarea>
+                    <button id="import-text" style="margin-top: 0.5rem;">確認匯入</button>
+                </div>
+            </div>
+        </div>
+        <div class="disclaimer" style="font-size: 0.8rem; color: var(--secondary-color); margin-top: 1.5rem; border-top: 1px solid var(--border-color); padding-top: 1rem;">
+            <h4>免責聲明與計算依據</h4>
+            <p>本工具計算結果僅供參考,實際加班費請以公司人資或會計部門計算為準。</p>
+            <p><strong>計算依據:</strong> 依據勞動基準法第24條,加班費率如下:<br>
+            • 平日延長工時: 前2小時 × 1.34倍,第3小時起 × 1.67倍<br>
+            • 休息日: 前2小時 × 1.34倍,第3-8小時 × 1.67倍,第9小時起 × 2.67倍<br>
+            • 國定假日: × 1倍(另給工資)<br>
+            • 月薪換算時薪: 月薪 ÷ 240小時</p>
+        </div>
+    </div>
+
+    <!-- 備份提醒彈窗 -->
+    <div id="backup-modal" class="modal" role="dialog" aria-labelledby="backup-modal-title">
+        <div class="modal-content">
+            <h3 id="backup-modal-title">🔔 重要提醒:請定期備份資料</h3>
+            <p>您已經有 <strong id="backup-days-count"></strong> 天沒有備份資料了!</p>
+            <p>為了避免資料遺失,建議您定期匯出備份。</p>
+            <div class="modal-buttons">
+                <button id="modal-backup-now" class="btn-secondary">立即備份</button>
+                <button id="modal-remind-later">稍後提醒</button>
+            </div>
+        </div>
+    </div>
+
+<script>
+/**
+ * 加班費計算機 v2.0
+ * 改進項目:
+ * 1. 資料驗證與錯誤處理
+ * 2. 程式碼結構優化(常數定義、函數抽取)
+ * 3. 效能優化(節流處理)
+ * 4. 無障礙改善(ARIA標籤)
+ * 5. 安全性改善(XSS防護、輸入驗證)
+ * 6. 自動備份提醒功能
+ * 7. 發薪日設定與計薪週期計算
+ */
+
+(function() {
+    'use strict';
+
+    // ==================== 常數定義 ====================
+    /**
+     * 勞動基準法第24條規定的加班費率
+     */
+    const LABOR_STANDARDS = {
+        MONTHLY_WORK_HOURS: 240,      // 月薪換算時薪基準
+        WEEKDAY_RATE_1: 1.34,          // 平日前2小時
+        WEEKDAY_RATE_2: 1.67,          // 平日第3小時起
+        RESTDAY_RATE_1: 1.34,          // 休息日前2小時
+        RESTDAY_RATE_2: 1.67,          // 休息日第3-8小時
+        RESTDAY_RATE_3: 2.67,          // 休息日第9小時起
+        HOLIDAY_RATE: 1.0,             // 國定假日(另給工資)
+        RESTDAY_TIER_1: 2,             // 休息日第一階段小時數
+        RESTDAY_TIER_2: 8,             // 休息日第二階段小時數
+    };
+
+    const STORAGE_KEYS = {
+        SETTINGS: 'overtimeSettingsV10',
+        RECORDS: 'overtimeRecordsV10',
+        TEMP_RECORD: 'tempOvertimeRecordV10.2',
+        LAST_BACKUP: 'lastBackupDateV10',
+    };
+
+    const BACKUP_REMINDER_DAYS = 7; // 7天提醒一次備份
+    
+    // DOM Elements
+    const salaryInput = document.getElementById('salary');
+    const hourlyRateInput = document.getElementById('hourly-rate');
+    const addRecordBtn = document.getElementById('add-record');
+    const recordsBody = document.getElementById('records-body');
+    const totalOvertimePayEl = document.getElementById('total-overtime-pay');
+    const summaryTitleEl = document.getElementById('summary-title');
+    const summaryPeriodEl = document.getElementById('summary-period');
+    const monthFilter = document.getElementById('month-filter');
+    const formError = document.getElementById('form-error');
+    const editIdInput = document.getElementById('edit-id');
+    const punchStartBtn = document.getElementById('punch-start');
+    const punchEndBtn = document.getElementById('punch-end');
+    const forceFullCalcToggle = document.getElementById('force-full-calc-toggle');
+
+    // App State
+    let settings = {};
+    let records = [];
+    let punchTimerInterval = null;
+
+    // ==================== 工具函數 ====================
+    
+    /**
+     * 安全的HTML轉義,防止XSS攻擊
+     */
+    const escapeHtml = (unsafe) => {
+        if (unsafe === null || unsafe === undefined) return '';
+        return String(unsafe)
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;")
+            .replace(/'/g, "&#039;");
+    };
+
+    /**
+     * 格式化日期時間為 datetime-local 輸入格式
+     */
+    const formatDateTimeLocal = (date) => {
+        return new Date(date.getTime() - (date.getTimezoneOffset() * 60000))
+            .toISOString().slice(0, 16);
+    };
+
+    /**
+     * 格式化時間顯示
+     */
+    const formatTime = (date) => {
+        return new Intl.DateTimeFormat('zh-TW', {
+            hour: '2-digit',
+            minute: '2-digit',
+            hour12: false
+        }).format(date);
+    };
+
+    /**
+     * 顯示錯誤訊息
+     */
+    const showError = (message) => {
+        formError.textContent = message;
+        formError.style.display = 'block';
+        setTimeout(() => hideError(), 5000);
+    };
+
+    /**
+     * 隱藏錯誤訊息
+     */
+    const hideError = () => {
+        formError.style.display = 'none';
+    };
+
+    /**
+     * 驗證數字是否有效
+     */
+    const isValidNumber = (value) => {
+        return typeof value === 'number' && !isNaN(value) && isFinite(value) && value >= 0;
+    };
+
+    /**
+     * 驗證日期是否有效
+     */
+    const isValidDate = (dateString) => {
+        const date = new Date(dateString);
+        return date instanceof Date && !isNaN(date);
+    };
+
+    /**
+     * 節流函數
+     */
+    const throttle = (func, delay) => {
+        let lastCall = 0;
+        return function(...args) {
+            const now = Date.now();
+            if (now - lastCall >= delay) {
+                lastCall = now;
+                return func.apply(this, args);
+            }
+        };
+    };
+
+    /**
+     * 根據發薪日計算該月份的計薪週期
+     * @param {string} monthValue - 格式: YYYY-MM
+     * @returns {Object} { start: Date, end: Date, displayText: string }
+     */
+    const getPayPeriod = (monthValue) => {
+        const payday = settings.payday || 1;
+        const [year, month] = monthValue.split('-').map(Number);
+        
+        let periodStart, periodEnd;
+        
+        if (payday === 1) {
+            // 發薪日是1號,計薪週期就是當月1號到月底
+            periodStart = new Date(year, month - 1, 1, 0, 0, 0);
+            periodEnd = new Date(year, month, 0, 23, 59, 59); // 當月最後一天
+        } else {
+            // 發薪日在其他日期,計薪週期是前月發薪日到該月發薪日前一天
+            periodStart = new Date(year, month - 2, payday, 0, 0, 0); // 前一個月的發薪日
+            periodEnd = new Date(year, month - 1, payday - 1, 23, 59, 59); // 該月發薪日前一天
+        }
+        
+        const formatDate = (date) => {
+            return `${date.getFullYear()}/${(date.getMonth() + 1).toString().padStart(2, '0')}/${date.getDate().toString().padStart(2, '0')}`;
+        };
+        
+        return {
+            start: periodStart,
+            end: periodEnd,
+            displayText: `${formatDate(periodStart)} ~ ${formatDate(periodEnd)}`
+        };
+    };
+
+    /**
+     * 更新發薪週期提示文字
+     */
+    const updatePayPeriodHint = () => {
+        const monthValue = monthFilter.value;
+        if (!monthValue) return;
+        
+        const period = getPayPeriod(monthValue);
+        const hintEl = document.getElementById('pay-period-hint');
+        hintEl.textContent = `📅 計薪週期: ${period.displayText}`;
+    };
+
+    // ==================== 設定管理 ====================
+    
+    /**
+     * 載入設定
+     */
+    function loadSettings() {
+        try {
+            const savedSettings = JSON.parse(localStorage.getItem(STORAGE_KEYS.SETTINGS));
+            settings = {
+                salaryType: 'monthly',
+                salary: 0,
+                workStart: "09:00",
+                workEnd: "18:00",
+                breakStart: "12:00",
+                breakEnd: "13:00",
+                payday: 1,
+                ...savedSettings
+            };
+
+            // 驗證設定
+            if (!isValidNumber(settings.salary)) {
+                settings.salary = 0;
+            }
+
+            const settingsDetails = document.getElementById('settings-details');
+            settingsDetails.open = !(savedSettings && settings.salary > 0);
+            
+            salaryInput.value = settings.salary || '';
+            document.querySelector(`input[name="salaryType"][value="${settings.salaryType}"]`).checked = true;
+            document.getElementById('payday').value = settings.payday || 1;
+            document.getElementById('work-start').value = settings.workStart;
+            document.getElementById('work-end').value = settings.workEnd;
+            document.getElementById('break-start').value = settings.breakStart;
+            document.getElementById('break-end').value = settings.breakEnd;
+            
+            calculateHourlyRate();
+        } catch (error) {
+            console.error('載入設定時發生錯誤:', error);
+            showError('載入設定時發生錯誤,已使用預設值。');
+        }
+    }
+
+    /**
+     * 儲存設定
+     */
+    function saveSettings() {
+        try {
+            const salary = parseFloat(salaryInput.value) || 0;
+            
+            // 驗證薪資
+            if (salary < 0) {
+                showError('錯誤:薪資不能為負數。');
+                return;
+            }
+            
+            if (salary > 0 && salary < 1000) {
+                if (!confirm('您輸入的薪資似乎偏低,確定要儲存嗎?')) {
+                    return;
+                }
+            }
+
+            settings = {
+                salaryType: document.querySelector('input[name="salaryType"]:checked').value,
+                salary: salary,
+                payday: parseInt(document.getElementById('payday').value) || 1,
+                workStart: document.getElementById('work-start').value,
+                workEnd: document.getElementById('work-end').value,
+                breakStart: document.getElementById('break-start').value,
+                breakEnd: document.getElementById('break-end').value,
+            };
+            
+            localStorage.setItem(STORAGE_KEYS.SETTINGS, JSON.stringify(settings));
+            calculateHourlyRate();
+            updatePayPeriodHint();
+            render();
+            alert('設定已儲存!');
+            document.getElementById('settings-details').open = false;
+        } catch (error) {
+            console.error('儲存設定時發生錯誤:', error);
+            showError('儲存設定時發生錯誤,請重試。');
+        }
+    }
+
+    /**
+     * 計算時薪
+     */
+    function calculateHourlyRate() {
+        if (settings.salaryType === 'monthly') {
+            if (!isValidNumber(settings.salary) || settings.salary <= 0) {
+                settings.hourlyRate = 0;
+            } else {
+                settings.hourlyRate = Math.round((settings.salary / LABOR_STANDARDS.MONTHLY_WORK_HOURS) * 100) / 100;
+            }
+        } else {
+            settings.hourlyRate = parseFloat(settings.salary) || 0;
+        }
+        hourlyRateInput.value = settings.hourlyRate || 0;
+    }
+
+    // ==================== 記錄管理 ====================
+    
+    /**
+     * 載入記錄
+     */
+    function loadRecords() {
+        try {
+            const savedRecords = JSON.parse(localStorage.getItem(STORAGE_KEYS.RECORDS)) || [];
+            // 驗證記錄格式
+            records = savedRecords.filter(rec => {
+                return rec.id && isValidDate(rec.start) && isValidDate(rec.end) && rec.type;
+            });
+            records.sort((a, b) => new Date(b.start) - new Date(a.start));
+        } catch (error) {
+            console.error('載入記錄時發生錯誤:', error);
+            records = [];
+            showError('載入記錄時發生錯誤,已重置為空。');
+        }
+    }
+
+    /**
+     * 儲存記錄 (使用節流)
+     */
+    const saveRecords = throttle(() => {
+        try {
+            localStorage.setItem(STORAGE_KEYS.RECORDS, JSON.stringify(records));
+        } catch (error) {
+            console.error('儲存記錄時發生錯誤:', error);
+            showError('儲存記錄時發生錯誤,可能是儲存空間不足。');
+        }
+    }, 500);
+
+    /**
+     * 清除表單
+     */
+    function clearForm() {
+        ['start-time', 'end-time', 'overtime-reason', 'edit-id'].forEach(id => {
+            document.getElementById(id).value = '';
+        });
+        document.querySelector('input[name="overtimeType"][value="weekday"]').checked = true;
+        forceFullCalcToggle.checked = false;
+        addRecordBtn.textContent = '新增紀錄';
+        hideError();
+        localStorage.removeItem(STORAGE_KEYS.TEMP_RECORD);
+        
+        const restoreMsgEl = document.getElementById('restore-message');
+        restoreMsgEl.style.display = 'none';
+        restoreMsgEl.textContent = '';
+        
+        stopTimer();
+        updatePunchUI(false);
+    }
+
+    /**
+     * 檢查時間重疊 (改進版:提供詳細衝突資訊)
+     */
+    function isOverlapping(newRecord) {
+        const newStart = new Date(newRecord.start).getTime();
+        const newEnd = new Date(newRecord.end).getTime();
+        
+        const conflicts = records.filter(rec => {
+            if (rec.id === newRecord.id) return false;
+            const recStart = new Date(rec.start).getTime();
+            const recEnd = new Date(rec.end).getTime();
+            return newStart < recEnd && newEnd > recStart;
+        });
+        
+        if (conflicts.length > 0) {
+            const conflictInfo = conflicts.map(rec => {
+                const start = new Date(rec.start);
+                const end = new Date(rec.end);
+                return `• ${start.toLocaleDateString()} ${formatTime(start)} - ${formatTime(end)}`;
+            }).join('\n');
+            showError(`錯誤:時間段與以下記錄重疊:\n${conflictInfo}`);
+            return true;
+        }
+        return false;
+    }
+
+    /**
+     * 新增記錄
+     */
+    function addRecord() {
+        hideError();
+        
+        const startTime = document.getElementById('start-time').value;
+        const endTime = document.getElementById('end-time').value;
+        const type = document.querySelector('input[name="overtimeType"]:checked').value;
+        const reason = document.getElementById('overtime-reason').value;
+        const editId = editIdInput.value;
+
+        // 驗證
+        if (!startTime || !endTime) {
+            showError('錯誤:請填寫開始與結束時間。');
+            return;
+        }
+        
+        if (!isValidDate(startTime) || !isValidDate(endTime)) {
+            showError('錯誤:日期格式不正確。');
+            return;
+        }
+        
+        if (new Date(endTime) <= new Date(startTime)) {
+            showError('錯誤:結束時間必須晚於開始時間。');
+            return;
+        }
+        
+        if (!settings.hourlyRate || settings.hourlyRate <= 0) {
+            showError('錯誤:請先完成有效薪資設定。');
+            return;
+        }
+        
+        const newRecord = {
+            id: editId || `rec_${Date.now()}`,
+            start: startTime,
+            end: endTime,
+            type,
+            reason: escapeHtml(reason),
+            forceFullCalculation: forceFullCalcToggle.checked
+        };
+        
+        const netHours = calculateNetOvertimeHours(newRecord);
+        if (netHours <= 0) {
+            if (!confirm("此筆紀錄計算出的加班時數為0,確定要新增嗎?")) return;
+        }
+
+        if (isOverlapping(newRecord)) return;
+        
+        if (editId) {
+            const index = records.findIndex(rec => rec.id === editId);
+            if (index > -1) records[index] = newRecord;
+        } else {
+            records.push(newRecord);
+        }
+        
+        saveRecords();
+        loadRecords();
+        render();
+        clearForm();
+    }
+
+    /**
+     * 刪除記錄
+     */
+    function deleteRecord(id) {
+        if (confirm('確定要刪除這筆紀錄嗎?')) {
+            records = records.filter(record => record.id !== id);
+            saveRecords();
+            render();
+        }
+    }
+
+    /**
+     * 編輯記錄
+     */
+    function editRecord(id) {
+        const record = records.find(rec => rec.id === id);
+        if (record) {
+            switchMode('manual', false);
+            document.getElementById('start-time').value = record.start;
+            document.getElementById('end-time').value = record.end;
+            document.getElementById('overtime-reason').value = record.reason || '';
+            document.querySelector(`input[name="overtimeType"][value="${record.type}"]`).checked = true;
+            editIdInput.value = record.id;
+            forceFullCalcToggle.checked = !!record.forceFullCalculation;
+            addRecordBtn.textContent = '更新紀錄';
+            window.scrollTo(0, 0);
+        }
+    }
+
+    // ==================== 計時器 & 打卡功能 ====================
+    
+    /**
+     * 開始計時器
+     */
+    function startTimer(startTime) {
+        if (punchTimerInterval) clearInterval(punchTimerInterval);
+        
+        const startTimeDisplay = document.getElementById('punch-start-time-display');
+        const elapsedTimeDisplay = document.getElementById('punch-elapsed-time-display');
+        const statusContainer = document.getElementById('punch-status');
+
+        startTimeDisplay.textContent = startTime.toLocaleString('zh-TW', { hour12: false });
+        statusContainer.style.display = 'block';
+
+        punchTimerInterval = setInterval(() => {
+            const now = new Date();
+            const elapsedSeconds = Math.floor((now - startTime) / 1000);
+            const hours = Math.floor(elapsedSeconds / 3600).toString().padStart(2, '0');
+            const minutes = Math.floor((elapsedSeconds % 3600) / 60).toString().padStart(2, '0');
+            const seconds = (elapsedSeconds % 60).toString().padStart(2, '0');
+            elapsedTimeDisplay.textContent = `${hours}:${minutes}:${seconds}`;
+        }, 1000);
+    }
+
+    /**
+     * 停止計時器
+     */
+    function stopTimer() {
+        if (punchTimerInterval) clearInterval(punchTimerInterval);
+        punchTimerInterval = null;
+        document.getElementById('punch-status').style.display = 'none';
+    }
+
+    /**
+     * 切換模式
+     */
+    function switchMode(mode, fromUserInteraction = false) {
+        document.getElementById('punch-mode-content').style.display = mode === 'punch' ? 'block' : 'none';
+        document.getElementById('manual-mode-content').style.display = mode === 'manual' ? 'block' : 'none';
+        
+        const punchBtn = document.getElementById('mode-punch');
+        const manualBtn = document.getElementById('mode-manual');
+        
+        punchBtn.classList.toggle('active', mode === 'punch');
+        manualBtn.classList.toggle('active', mode === 'manual');
+        punchBtn.setAttribute('aria-pressed', mode === 'punch');
+        manualBtn.setAttribute('aria-pressed', mode === 'manual');
+        
+        if (fromUserInteraction) {
+            clearForm();
+        }
+    }
+
+    /**
+     * 開始打卡
+     */
+    function startPunch() {
+        const tempRecord = {
+            start: new Date().toISOString(),
+            end: null,
+            reason: document.getElementById('overtime-reason').value,
+            type: document.querySelector('input[name="overtimeType"]:checked').value,
+            forceFullCalculation: forceFullCalcToggle.checked
+        };
+        localStorage.setItem(STORAGE_KEYS.TEMP_RECORD, JSON.stringify(tempRecord));
+        updatePunchUI(true);
+        startTimer(new Date(tempRecord.start));
+    }
+
+    /**
+     * 結束打卡
+     */
+    function endPunch() {
+        const tempRecordJSON = localStorage.getItem(STORAGE_KEYS.TEMP_RECORD);
+        if (!tempRecordJSON) return;
+        
+        const tempRecord = JSON.parse(tempRecordJSON);
+        
+        if (tempRecord.start && !tempRecord.end) {
+            stopTimer();
+            tempRecord.end = new Date().toISOString();
+            tempRecord.reason = document.getElementById('overtime-reason').value;
+            tempRecord.type = document.querySelector('input[name="overtimeType"]:checked').value;
+            tempRecord.forceFullCalculation = forceFullCalcToggle.checked;
+            localStorage.setItem(STORAGE_KEYS.TEMP_RECORD, JSON.stringify(tempRecord));
+            updatePunchUI(false);
+            restoreState();
+        }
+    }
+
+    /**
+     * 更新打卡UI
+     */
+    function updatePunchUI(isPunchedIn) {
+        punchStartBtn.disabled = isPunchedIn;
+        punchEndBtn.disabled = !isPunchedIn;
+        punchStartBtn.setAttribute('aria-pressed', isPunchedIn);
+        punchEndBtn.setAttribute('aria-pressed', !isPunchedIn);
+        document.getElementById('mode-manual').disabled = isPunchedIn;
+        document.getElementById('mode-punch').disabled = isPunchedIn;
+    }
+
+    // ==================== 計算邏輯 ====================
+    
+    /**
+     * 計算淨加班時數
+     */
+    function calculateNetOvertimeHours(record) {
+        let recordStart = new Date(record.start).getTime();
+        let recordEnd = new Date(record.end).getTime();
+        let totalMillis = recordEnd - recordStart;
+        
+        if (record.type === 'weekday' && !record.forceFullCalculation) {
+            const d = new Date(record.start);
+            const [workStartH, workStartM] = settings.workStart.split(':').map(Number);
+            const [workEndH, workEndM] = settings.workEnd.split(':').map(Number);
+            const [breakStartH, breakStartM] = settings.breakStart.split(':').map(Number);
+            const [breakEndH, breakEndM] = settings.breakEnd.split(':').map(Number);
+            
+            const workStart = new Date(d).setHours(workStartH, workStartM, 0, 0);
+            const workEnd = new Date(d).setHours(workEndH, workEndM, 0, 0);
+            const breakStart = new Date(d).setHours(breakStartH, breakStartM, 0, 0);
+            const breakEnd = new Date(d).setHours(breakEndH, breakEndM, 0, 0);
+            
+            let workOverlap = Math.max(0, Math.min(recordEnd, workEnd) - Math.max(recordStart, workStart));
+            let breakOverlap = Math.max(0, Math.min(recordEnd, breakEnd) - Math.max(recordStart, breakStart));
+            
+            totalMillis -= (workOverlap - breakOverlap);
+        }
+        
+        return Math.max(0, totalMillis / 3600000);
+    }
+
+    /**
+     * 計算每日加班費與公式
+     */
+    function getDailyPayAndFormula(totalHours, type) {
+        let pay = 0;
+        let formula = "";
+        const rate = settings.hourlyRate;
+        const h = (val) => val.toFixed(2);
+        const f_rate = (val) => val.toFixed(2);
+        
+        const {
+            WEEKDAY_RATE_1, WEEKDAY_RATE_2,
+            RESTDAY_RATE_1, RESTDAY_RATE_2, RESTDAY_RATE_3,
+            RESTDAY_TIER_1, RESTDAY_TIER_2,
+            HOLIDAY_RATE
+        } = LABOR_STANDARDS;
+        
+        switch (type) {
+            case 'weekday':
+                if (totalHours <= RESTDAY_TIER_1) {
+                    pay = totalHours * rate * WEEKDAY_RATE_1;
+                    formula = `(${h(totalHours)}H × ${f_rate(rate)} × ${WEEKDAY_RATE_1})`;
+                } else {
+                    pay = (RESTDAY_TIER_1 * rate * WEEKDAY_RATE_1) + ((totalHours - RESTDAY_TIER_1) * rate * WEEKDAY_RATE_2);
+                    formula = `(${RESTDAY_TIER_1}H × ${f_rate(rate)} × ${WEEKDAY_RATE_1}) + (${h(totalHours - RESTDAY_TIER_1)}H × ${f_rate(rate)} × ${WEEKDAY_RATE_2})`;
+                }
+                break;
+                
+            case 'restday':
+                if (totalHours <= RESTDAY_TIER_1) {
+                    pay = totalHours * rate * RESTDAY_RATE_1;
+                    formula = `(${h(totalHours)}H × ${f_rate(rate)} × ${RESTDAY_RATE_1})`;
+                } else if (totalHours <= RESTDAY_TIER_2) {
+                    pay = (RESTDAY_TIER_1 * rate * RESTDAY_RATE_1) + ((totalHours - RESTDAY_TIER_1) * rate * RESTDAY_RATE_2);
+                    formula = `(${RESTDAY_TIER_1}H × ${f_rate(rate)} × ${RESTDAY_RATE_1}) + (${h(totalHours - RESTDAY_TIER_1)}H × ${f_rate(rate)} × ${RESTDAY_RATE_2})`;
+                } else {
+                    pay = (RESTDAY_TIER_1 * rate * RESTDAY_RATE_1) + ((RESTDAY_TIER_2 - RESTDAY_TIER_1) * rate * RESTDAY_RATE_2) + ((totalHours - RESTDAY_TIER_2) * rate * RESTDAY_RATE_3);
+                    formula = `(${RESTDAY_TIER_1}H × ${f_rate(rate)} × ${RESTDAY_RATE_1}) + (${RESTDAY_TIER_2 - RESTDAY_TIER_1}H × ${f_rate(rate)} × ${RESTDAY_RATE_2}) + (${h(totalHours - RESTDAY_TIER_2)}H × ${f_rate(rate)} × ${RESTDAY_RATE_3})`;
+                }
+                break;
+                
+            case 'holiday':
+                pay = totalHours * rate * HOLIDAY_RATE;
+                formula = `(${h(totalHours)}H × ${f_rate(rate)} × ${HOLIDAY_RATE})`;
+                break;
+        }
+        
+        return { pay: Math.ceil(pay), formula: `${formula} = ${Math.ceil(pay)} 元` };
+    }
+
+    // ==================== 渲染邏輯 ====================
+    
+    /**
+     * 渲染函數
+     */
+    function render() {
+        const filteredRecords = filterRecords(monthFilter.value);
+        const dailyGroups = groupRecordsByDay(filteredRecords);
+        renderTable(recordsBody, dailyGroups);
+        renderSummary(dailyGroups, monthFilter.value);
+        updatePayPeriodHint();
+    }
+
+    /**
+     * 根據發薪週期篩選記錄
+     */
+    function filterRecords(filterValue) {
+        if (!filterValue) return records;
+        
+        const period = getPayPeriod(filterValue);
+        
+        return records.filter(rec => {
+            const recDate = new Date(rec.start);
+            return recDate >= period.start && recDate <= period.end;
+        });
+    }
+
+    /**
+     * 將記錄按日分組
+     */
+    function groupRecordsByDay(records) {
+        const groups = {};
+        
+        records.forEach(rec => {
+            const dateKey = new Date(rec.start).toLocaleDateString();
+            if (!groups[dateKey]) {
+                groups[dateKey] = {
+                    date: new Date(rec.start),
+                    type: rec.type,
+                    records: []
+                };
+            }
+            groups[dateKey].records.push(rec);
+        });
+        
+        return Object.values(groups).map(group => {
+            const totalHours = group.records.reduce((sum, rec) => sum + calculateNetOvertimeHours(rec), 0);
+            const { pay, formula } = getDailyPayAndFormula(totalHours, group.type);
+            return { ...group, totalHours, pay, formula };
+        }).sort((a, b) => b.date - a.date);
+    }
+
+    /**
+     * 渲染表格
+     */
+    function renderTable(tbody, dailyGroups) {
+        tbody.innerHTML = '';
+        
+        if (dailyGroups.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;">該期間尚無紀錄</td></tr>`;
+            return;
+        }
+        
+        dailyGroups.forEach(group => {
+            const dateStr = group.date.toLocaleDateString();
+            const typeText = { weekday: '平日', restday: '休息日', holiday: '國定假日' }[group.type];
+            
+            const headerRow = tbody.insertRow();
+            headerRow.className = 'daily-group-header';
+            headerRow.innerHTML = `<td data-label="日期">${escapeHtml(dateStr)}</td><td data-label="類型">${escapeHtml(typeText)}</td><td data-label="總時長(H)">${group.totalHours.toFixed(2)}</td><td data-label="加班費($)">${group.pay}</td><td data-label="操作"><div class="actions-container"><button class="btn-small btn-secondary" onclick="app.toggleDetails(this)">展開</button></div></td>`;
+            
+            group.records.sort((a, b) => new Date(a.start) - new Date(b.start)).forEach(rec => {
+                const detailRow = tbody.insertRow();
+                detailRow.className = 'record-detail-row';
+                detailRow.style.display = 'none';
+                detailRow.setAttribute('data-group-date', dateStr);
+                
+                const startTime = formatTime(new Date(rec.start));
+                const endTime = formatTime(new Date(rec.end));
+                let reasonText = `${escapeHtml(rec.reason) || '-'}`;
+                if (rec.forceFullCalculation) {
+                    reasonText += ' <strong style="color:var(--danger-color);">(強制計算)</strong>';
+                }
+                
+                detailRow.innerHTML = `<td data-label="時間" colspan="3">${startTime} - ${endTime} (${reasonText})</td><td data-label="時長">${calculateNetOvertimeHours(rec).toFixed(2)} H</td><td data-label="操作"><div class="actions-container"><button class="btn-small" onclick="app.editRecord('${rec.id}')">編輯</button> <button class="btn-small btn-danger" onclick="app.deleteRecord('${rec.id}')">刪除</button></div></td>`;
+            });
+            
+            const formulaRow = tbody.insertRow();
+            formulaRow.className = 'formula-detail-row';
+            formulaRow.style.display = 'none';
+            formulaRow.setAttribute('data-group-date', dateStr);
+            formulaRow.innerHTML = `<td colspan="5"><strong>計算式:</strong> ${group.formula}</td>`;
+        });
+    }
+
+    /**
+     * 渲染總結
+     */
+    function renderSummary(dailyGroups, filterValue) {
+        const totalPay = dailyGroups.reduce((sum, group) => sum + group.pay, 0);
+        totalOvertimePayEl.textContent = totalPay;
+        
+        if (filterValue) {
+            const [year, month] = filterValue.split('-');
+            const period = getPayPeriod(filterValue);
+            summaryTitleEl.textContent = `${year}年${month}月發薪 - 加班費總計`;
+            summaryPeriodEl.textContent = `計薪週期: ${period.displayText} | 共 ${dailyGroups.length} 個加班日`;
+        } else {
+            summaryTitleEl.textContent = '所有記錄總計';
+            summaryPeriodEl.textContent = `共 ${dailyGroups.length} 個加班日`;
+        }
+    }
+
+    /**
+     * 切換詳細資訊顯示
+     */
+    function toggleDetails(button) {
+        const date = button.closest('tr').querySelector('[data-label="日期"]').textContent;
+        const isExpanding = button.textContent === '展開';
+        
+        button.textContent = isExpanding ? '收合' : '展開';
+        
+        document.querySelectorAll(`tr[data-group-date="${date}"]`).forEach(row => {
+            row.style.display = isExpanding ? '' : 'none';
+        });
+    }
+
+    // ==================== 匯入/匯出功能 ====================
+    
+    /**
+     * 生成匯出HTML
+     */
+    function generateExportHTML(dailyGroups, title) {
+        let tableHTML = `<h2>${escapeHtml(title)}</h2><table><thead><tr><th>日期</th><th>類型</th><th>總時長(H)</th><th>加班費($)</th><th>詳細資料</th></tr></thead><tbody>`;
+        
+        if (dailyGroups.length === 0) {
+            tableHTML += `<tr><td colspan="5" style="text-align:center;">該期間尚無紀錄</td></tr>`;
+        } else {
+            dailyGroups.forEach(group => {
+                const typeText = { weekday: '平日', restday: '休息日', holiday: '國定假日' }[group.type];
+                const recordDetails = group.records.sort((a, b) => new Date(a.start) - new Date(b.start)).map(rec => {
+                    const startTime = formatTime(new Date(rec.start));
+                    const endTime = formatTime(new Date(rec.end));
+                    let reasonText = `${escapeHtml(rec.reason) || '-'}`;
+                    if (rec.forceFullCalculation) {
+                        reasonText += ' <strong style="color:var(--danger-color);">(強制計算)</strong>';
+                    }
+                    return `${startTime} - ${endTime}: ${calculateNetOvertimeHours(rec).toFixed(2)}H (${reasonText})`;
+                }).join('<br>');
+                
+                tableHTML += `<tr><td>${escapeHtml(group.date.toLocaleDateString())}</td><td>${escapeHtml(typeText)}</td><td>${group.totalHours.toFixed(2)}</td><td>${group.pay}</td><td style="font-size: 0.9em;">${recordDetails}<br><hr style="border-top: 1px dotted #ccc; margin: 4px 0;"><strong>計算式:</strong> ${group.formula}</td></tr>`;
+            });
+        }
+        
+        tableHTML += `</tbody></table>`;
+        return tableHTML;
+    }
+
+    /**
+     * 匯出為圖片
+     */
+    async function exportResultsAsImage() {
+        const monthValue = monthFilter.value || new Date().toISOString().substring(0, 7);
+        const [year, month] = monthValue.split('-');
+        const period = getPayPeriod(monthValue);
+        const dailyGroups = groupRecordsByDay(filterRecords(monthValue));
+        const totalPay = dailyGroups.reduce((sum, group) => sum + group.pay, 0);
+        
+        const exportContainer = document.createElement('div');
+        exportContainer.id = 'export-container';
+        
+        const title = `${year}年 ${month}月發薪 加班記錄 (${period.displayText})`;
+        const tableHTML = generateExportHTML(dailyGroups, title);
+        const summaryHTML = `<div class="summary"><h3>總金額: <span class="summary-value">${totalPay}</span> 元</h3></div>`;
+        
+        exportContainer.innerHTML = tableHTML + summaryHTML;
+        document.body.appendChild(exportContainer);
+        
+        try {
+            const canvas = await html2canvas(exportContainer, { scale: 2, useCORS: true, windowWidth: 1000 });
+            const link = document.createElement('a');
+            link.download = `加班記錄-${year}-${month}.png`;
+            link.href = canvas.toDataURL("image/png");
+            link.click();
+        } catch (error) {
+            console.error('匯出圖片失敗:', error);
+            alert('匯出圖片時發生錯誤。');
+        } finally {
+            document.body.removeChild(exportContainer);
+        }
+    }
+
+    /**
+     * 匯出為 CSV
+     */
+    function exportCSV() {
+        const monthValue = monthFilter.value || new Date().toISOString().substring(0, 7);
+        const [year, month] = monthValue.split('-');
+        const period = getPayPeriod(monthValue);
+        const dailyGroups = groupRecordsByDay(filterRecords(monthValue));
+        
+        let csv = '\uFEFF'; // UTF-8 BOM for Excel
+        csv += `${year}年${month}月發薪加班記錄,計薪週期: ${period.displayText}\n\n`;
+        csv += '日期,類型,開始時間,結束時間,加班事由,時長(小時),加班費(元)\n';
+        
+        dailyGroups.forEach(group => {
+            const typeText = { weekday: '平日', restday: '休息日', holiday: '國定假日' }[group.type];
+            group.records.sort((a, b) => new Date(a.start) - new Date(b.start)).forEach(rec => {
+                const date = new Date(rec.start).toLocaleDateString();
+                const startTime = formatTime(new Date(rec.start));
+                const endTime = formatTime(new Date(rec.end));
+                const reason = (rec.reason || '-').replace(/,/g, '，');
+                const hours = calculateNetOvertimeHours(rec).toFixed(2);
+                csv += `${date},${typeText},${startTime},${endTime},${reason},${hours},\n`;
+            });
+        });
+        
+        const totalPay = dailyGroups.reduce((sum, group) => sum + group.pay, 0);
+        csv += `\n總計,,,,,,${totalPay}\n`;
+        
+        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = `加班記錄-${year}-${month}.csv`;
+        link.click();
+    }
+
+    // ==================== 備份提醒功能 ====================
+    
+    /**
+     * 檢查是否需要備份提醒
+     */
+    function checkBackupReminder() {
+        const lastBackup = localStorage.getItem(STORAGE_KEYS.LAST_BACKUP);
+        const now = Date.now();
+        
+        if (!lastBackup) {
+            localStorage.setItem(STORAGE_KEYS.LAST_BACKUP, now.toString());
+            return;
+        }
+        
+        const daysSinceBackup = Math.floor((now - parseInt(lastBackup)) / (1000 * 60 * 60 * 24));
+        
+        if (daysSinceBackup >= BACKUP_REMINDER_DAYS && records.length > 0) {
+            showBackupReminder(daysSinceBackup);
+        }
+    }
+
+    /**
+     * 顯示備份提醒
+     */
+    function showBackupReminder(days) {
+        const reminderEl = document.getElementById('backup-reminder');
+        const reminderText = document.getElementById('backup-reminder-text');
+        
+        reminderText.textContent = `您已經有 ${days} 天沒有備份資料了！為避免資料遺失，建議立即匯出備份。`;
+        reminderEl.style.display = 'block';
+        
+        if (days >= BACKUP_REMINDER_DAYS * 2) {
+            const modal = document.getElementById('backup-modal');
+            document.getElementById('backup-days-count').textContent = days;
+            modal.classList.add('show');
+        }
+    }
+
+    /**
+     * 執行備份
+     */
+    function performBackup() {
+        const outputArea = document.getElementById('export-output');
+        const textarea = document.getElementById('export-textarea');
+        
+        textarea.value = JSON.stringify({ settings, records }, null, 2);
+        outputArea.style.display = 'block';
+        
+        localStorage.setItem(STORAGE_KEYS.LAST_BACKUP, Date.now().toString());
+        
+        document.getElementById('backup-reminder').style.display = 'none';
+        document.getElementById('backup-modal').classList.remove('show');
+        
+        outputArea.scrollIntoView({ behavior: 'smooth' });
+        
+        alert('已生成備份資料，請複製並保存到安全的地方！');
+    }
+
+    /**
+     * 稍後提醒
+     */
+    function remindLater() {
+        const threeDaysLater = Date.now() - ((BACKUP_REMINDER_DAYS - 3) * 24 * 60 * 60 * 1000);
+        localStorage.setItem(STORAGE_KEYS.LAST_BACKUP, threeDaysLater.toString());
+        
+        document.getElementById('backup-reminder').style.display = 'none';
+        document.getElementById('backup-modal').classList.remove('show');
+    }
+
+    // ==================== 事件監聽器設定 ====================
+    
+    /**
+     * 設定所有事件監聽器
+     */
+    function setupEventListeners() {
+        document.getElementById('save-settings').addEventListener('click', saveSettings);
+        addRecordBtn.addEventListener('click', addRecord);
+        document.getElementById('clear-form').addEventListener('click', clearForm);
+        monthFilter.addEventListener('change', render);
+        
+        document.getElementById('mode-punch').addEventListener('click', () => switchMode('punch', true));
+        document.getElementById('mode-manual').addEventListener('click', () => switchMode('manual', true));
+        
+        punchStartBtn.addEventListener('click', startPunch);
+        punchEndBtn.addEventListener('click', endPunch);
+        
+        document.getElementById('export-image').addEventListener('click', exportResultsAsImage);
+        document.getElementById('export-csv').addEventListener('click', exportCSV);
+        
+        document.getElementById('export-text').addEventListener('click', () => {
+            const outputArea = document.getElementById('export-output');
+            const textarea = document.getElementById('export-textarea');
+            textarea.value = JSON.stringify({ settings, records }, null, 2);
+            outputArea.style.display = 'block';
+            localStorage.setItem(STORAGE_KEYS.LAST_BACKUP, Date.now().toString());
+        });
+        
+        document.getElementById('import-text').addEventListener('click', () => {
+            const importText = document.getElementById('import-textarea').value;
+            
+            if (!importText) {
+                showError('請先貼上要匯入的資料。');
+                return;
+            }
+            
+            if (!confirm('警告：匯入將會覆蓋所有現存資料，確定要繼續嗎？')) return;
+            
+            try {
+                const data = JSON.parse(importText);
+                
+                if (!data.settings || !Array.isArray(data.records)) {
+                    showError('匯入失敗：資料格式不正確。');
+                    return;
+                }
+                
+                if (!isValidNumber(data.settings.salary) || data.settings.salary < 0) {
+                    showError('匯入失敗：薪資設定無效。');
+                    return;
+                }
+                
+                const validRecords = data.records.filter(rec => {
+                    return rec.id && isValidDate(rec.start) && isValidDate(rec.end) && rec.type;
+                });
+                
+                if (validRecords.length !== data.records.length) {
+                    if (!confirm(`偵測到 ${data.records.length - validRecords.length} 筆無效記錄將被忽略，是否繼續匯入？`)) {
+                        return;
+                    }
+                }
+                
+                localStorage.setItem(STORAGE_KEYS.SETTINGS, JSON.stringify(data.settings));
+                localStorage.setItem(STORAGE_KEYS.RECORDS, JSON.stringify(validRecords));
+                localStorage.setItem(STORAGE_KEYS.LAST_BACKUP, Date.now().toString());
+                
+                init();
+                alert(`資料匯入成功！共匯入 ${validRecords.length} 筆記錄。`);
+                document.getElementById('import-textarea').value = '';
+            } catch (error) {
+                console.error('匯入錯誤:', error);
+                showError('匯入失敗：無效的 JSON 格式。');
+            }
+        });
+        
+        document.getElementById('backup-now').addEventListener('click', performBackup);
+        document.getElementById('backup-remind-later').addEventListener('click', remindLater);
+        document.getElementById('modal-backup-now').addEventListener('click', performBackup);
+        document.getElementById('modal-remind-later').addEventListener('click', remindLater);
+        
+        document.getElementById('backup-modal').addEventListener('click', (e) => {
+            if (e.target.id === 'backup-modal') {
+                remindLater();
+            }
+        });
+    }
+
+    // ==================== 狀態恢復 ====================
+    
+    /**
+     * 恢復未完成的打卡狀態
+     */
+    function restoreState() {
+        const tempRecordJSON = localStorage.getItem(STORAGE_KEYS.TEMP_RECORD);
+        if (!tempRecordJSON) {
+            updatePunchUI(false);
+            return;
+        }
+        
+        const tempRecord = JSON.parse(tempRecordJSON);
+        const restoreMsgEl = document.getElementById('restore-message');
+
+        const restoreFormFields = () => {
+            document.getElementById('overtime-reason').value = tempRecord.reason || '';
+            document.querySelector(`input[name="overtimeType"][value="${tempRecord.type}"]`).checked = true;
+            forceFullCalcToggle.checked = !!tempRecord.forceFullCalculation;
+        };
+
+        if (tempRecord.start && !tempRecord.end) {
+            switchMode('punch', false);
+            updatePunchUI(true);
+            restoreFormFields();
+            startTimer(new Date(tempRecord.start));
+            restoreMsgEl.textContent = '已為您還原上次的打卡上班狀態。';
+            restoreMsgEl.style.display = 'block';
+        } else if (tempRecord.start && tempRecord.end) {
+            switchMode('manual', false);
+            updatePunchUI(false);
+            document.getElementById('start-time').value = formatDateTimeLocal(new Date(tempRecord.start));
+            document.getElementById('end-time').value = formatDateTimeLocal(new Date(tempRecord.end));
+            restoreFormFields();
+            restoreMsgEl.textContent = '您有未儲存的打卡紀錄，已為您還原。';
+            restoreMsgEl.style.display = 'block';
+        }
+    }
+
+    // ==================== 初始化 ====================
+    
+    /**
+     * 初始化應用程式
+     */
+    function init() {
+        loadSettings();
+        loadRecords();
+        
+        monthFilter.value = new Date().toISOString().substring(0, 7);
+        
+        render();
+        setupEventListeners();
+        restoreState();
+        
+        setTimeout(() => checkBackupReminder(), 2000);
+    }
+
+    // 暴露給全域的函數
+    window.app = {
+        deleteRecord,
+        editRecord,
+        toggleDetails
+    };
+
+    // 啟動應用程式
+    init();
+})();
+</script>
+
+</body>
+</html>
