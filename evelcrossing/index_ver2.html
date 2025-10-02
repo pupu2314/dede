@@ -131,11 +131,33 @@
             -webkit-text-fill-color: transparent;
             background-clip: text;
         }
+
+        @keyframes slideDown {
+            from {
+                transform: translate(-50%, -100%);
+                opacity: 0;
+            }
+            to {
+                transform: translate(-50%, 0);
+                opacity: 1;
+            }
+        }
+
+        @keyframes slideUp {
+            from {
+                transform: translate(-50%, 0);
+                opacity: 1;
+            }
+            to {
+                transform: translate(-50%, -100%);
+                opacity: 0;
+            }
+        }
     </style>
 </head>
 <body class="p-4 sm:p-8">
 
-    <div class="max-w-7xl mx-auto">
+    <div class="max-w-7xl mx-auto pb-20">
         <!-- Header -->
         <div class="text-center mb-8">
             <h1 class="text-4xl sm:text-5xl font-extrabold mb-3 header-gradient">
@@ -239,7 +261,7 @@
 
     <!-- 置底浮動版權視窗 -->
     <div class="fixed bottom-0 left-0 right-0 bg-gray-900/95 backdrop-blur-sm text-center p-4 text-gray-400 text-xs z-20 shadow-lg border-t border-gray-800">
-        TaiXiong ©2025 All Rights Reserved
+        駿展工程有限公司 ©2025 All Rights Reserved
     </div>
 
     <script>
@@ -293,13 +315,13 @@
                     const stationDisplay = getDisplayValue(item['分駐所'], '分駐所');
 
                     const googleMapContent = item['Google地圖'] ? 
-                        `<a href="${item['Google地圖']}" target="_blank" class="mt-4 inline-flex items-center space-x-2 text-indigo-400 hover:text-indigo-300 transition-colors group">
+                        `<a href="${item['Google地圖']}" target="_blank" class="inline-flex items-center space-x-2 text-indigo-400 hover:text-indigo-300 transition-colors group">
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 group-hover:scale-110 transition-transform" viewBox="0 0 20 20" fill="currentColor">
                                 <path fill-rule="evenodd" d="M5.057 5.057a7 7 0 119.886 9.886L10 18.886l-4.943-4.943a7 7 0 010-9.886zM10 11a2 2 1000-4 2 2 0 000 4z" clip-rule="evenodd" />
                             </svg>
                             <span class="font-medium">查看地圖位置</span>
                         </a>` :
-                        `<p class="mt-4 text-sm text-gray-500 italic">📍 無位置資訊</p>`;
+                        `<span class="text-sm text-gray-500 italic">📍 無位置資訊</span>`;
 
                     const deactivatedBadge = isDeactivated ? 
                         `<span class="bg-red-500/90 text-white text-xs font-semibold px-3 py-1 rounded-full ml-2 shadow-lg" title="${item['停用']}">已停用</span>` : '';
@@ -326,7 +348,15 @@
                                 <span class="text-gray-300">${electricSectionDisplay}電務段${stationDisplay}分駐所</span>
                             </p>
                         </div>
-                        ${googleMapContent}
+                        <div class="mt-4 flex flex-wrap items-center gap-3">
+                            ${googleMapContent}
+                            <button class="share-btn inline-flex items-center space-x-2 text-green-400 hover:text-green-300 transition-colors group" data-item='${JSON.stringify(item).replace(/'/g, "&#39;")}'>
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 group-hover:scale-110 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
+                                </svg>
+                                <span class="font-medium">分享</span>
+                            </button>
+                        </div>
                     `;
                     resultsContainer.appendChild(card);
                 });
@@ -516,6 +546,84 @@
         scrollToTopBtn.addEventListener('click', () => {
             window.scrollTo({ top: 0, behavior: 'smooth' });
         });
+
+        // 分享功能
+        document.addEventListener('click', (e) => {
+            if (e.target.closest('.share-btn')) {
+                const btn = e.target.closest('.share-btn');
+                const item = JSON.parse(btn.getAttribute('data-item'));
+                
+                const shareText = `🚂 ${item['平交道名稱']}\n` +
+                    `📍 位置：${item['所在縣市']} / ${item['區間']}間\n` +
+                    `🚉 路線：${item['路線別']} (${item['平交道種類']})\n` +
+                    `🏢 單位：${getDisplayValue(item['電務段'], '電務段')}電務段${getDisplayValue(item['分駐所'], '分駐所')}分駐所\n` +
+                    `📝 編號：${item['編號']}` +
+                    (item['Google地圖'] ? `\n🗺️ 地圖：${item['Google地圖']}` : '');
+
+                // 檢查是否支援 Web Share API
+                if (navigator.share) {
+                    navigator.share({
+                        title: `平交道資訊 - ${item['平交道名稱']}`,
+                        text: shareText
+                    }).then(() => {
+                        showToast('✅ 分享成功！');
+                    }).catch((error) => {
+                        if (error.name !== 'AbortError') {
+                            copyToClipboard(shareText);
+                        }
+                    });
+                } else {
+                    // 降級方案：複製到剪貼簿
+                    copyToClipboard(shareText);
+                }
+            }
+        });
+
+        // 複製到剪貼簿
+        function copyToClipboard(text) {
+            if (navigator.clipboard) {
+                navigator.clipboard.writeText(text).then(() => {
+                    showToast('📋 已複製到剪貼簿！');
+                }).catch(() => {
+                    fallbackCopy(text);
+                });
+            } else {
+                fallbackCopy(text);
+            }
+        }
+
+        // 備用複製方法
+        function fallbackCopy(text) {
+            const textarea = document.createElement('textarea');
+            textarea.value = text;
+            textarea.style.position = 'fixed';
+            textarea.style.opacity = '0';
+            document.body.appendChild(textarea);
+            textarea.select();
+            try {
+                document.execCommand('copy');
+                showToast('📋 已複製到剪貼簿！');
+            } catch (err) {
+                showToast('❌ 複製失敗，請手動複製');
+            }
+            document.body.removeChild(textarea);
+        }
+
+        // 顯示提示訊息
+        function showToast(message) {
+            const toast = document.createElement('div');
+            toast.className = 'fixed top-20 left-1/2 transform -translate-x-1/2 bg-gray-800 text-white px-6 py-3 rounded-xl shadow-2xl z-50 animate-bounce';
+            toast.style.animation = 'slideDown 0.3s ease-out';
+            toast.textContent = message;
+            document.body.appendChild(toast);
+            
+            setTimeout(() => {
+                toast.style.animation = 'slideUp 0.3s ease-in';
+                setTimeout(() => {
+                    document.body.removeChild(toast);
+                }, 300);
+            }, 2000);
+        }
 
         // 載入資料
         window.addEventListener('load', () => {
