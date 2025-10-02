@@ -6,6 +6,7 @@
 	--border-color: #dee2e6;
 	--success-color: #28a745;
 	--danger-color: #dc3545;
+	--warning-color: #ffc107;
 	--white-color: #fff;
 	--font-family: 'Segoe UI', 'Microsoft JhengHei', sans-serif;
 }
@@ -74,7 +75,7 @@ label {
 	margin-bottom: 0.5rem;
 	font-weight: bold;
 }
-input[type="number"], input[type="datetime-local"], input[type="text"], input[type="time"], textarea {
+input[type="number"], input[type="datetime-local"], input[type="text"], input[type="time"], textarea, input[type="month"] {
 	width: 100%;
 	padding: 0.75rem;
 	border: 1px solid var(--border-color);
@@ -115,6 +116,16 @@ button:disabled {
 .btn-secondary:hover {
 	background-color: #545b62;
 }
+.btn-danger {
+	background-color: var(--danger-color);
+}
+.btn-danger:hover {
+	background-color: #c82333;
+}
+.btn-small {
+	padding: 0.4rem 0.8rem;
+	font-size: 0.9rem;
+}
 table {
 	width: 100%;
 	border-collapse: collapse;
@@ -149,6 +160,7 @@ th {
 	color: var(--danger-color);
 	background-color: #f8d7da;
 	border: 1px solid #f5c6cb;
+	white-space: pre-line;
 }
 .info-message {
 	margin-top: 0.5rem;
@@ -158,6 +170,15 @@ th {
 	color: #0c5460;
 	background-color: #d1ecf1;
 	border: 1px solid #bee5eb;
+}
+.warning-message {
+	margin-top: 0.5rem;
+	font-weight: bold;
+	padding: 0.75rem;
+	border-radius: 4px;
+	color: #856404;
+	background-color: #fff3cd;
+	border: 1px solid #ffeaa7;
 }
 #punch-status {
 	font-size: 1.1rem;
@@ -252,6 +273,35 @@ th {
 }
 #export-container td::before {
 	content: none !important;
+}
+.modal {
+	display: none;
+	position: fixed;
+	z-index: 1000;
+	left: 0;
+	top: 0;
+	width: 100%;
+	height: 100%;
+	background-color: rgba(0,0,0,0.5);
+}
+.modal.show {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+}
+.modal-content {
+	background-color: white;
+	padding: 2rem;
+	border-radius: 8px;
+	max-width: 500px;
+	width: 90%;
+	box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+}
+.modal-buttons {
+	display: flex;
+	gap: 1rem;
+	margin-top: 1.5rem;
+	justify-content: flex-end;
 }
 @media (max-width: 768px) {
 	thead {
