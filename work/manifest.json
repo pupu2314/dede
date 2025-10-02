@@ -1,25 +1,51 @@
 {
-"name": "加班費計算機",
-"short_name": "加班計算",
-"description": "方便記錄與計算加班費的工具",
-"start_url": "/dede/work/index.html",
-"display": "standalone",
-"background_color": "#f8f9fa",
-"theme_color": "#007bff",
-"icons": [
-{
-"src": "/dede/work/work_512.png",
-"sizes": "512x512",
-"type": "image/png"
-},
-{
-"src": "/dede/work/work_192.png",
-"sizes": "192x192",
-"type": "image/png"
-}
-],
-"id": "worktime",
-"dir": "auto",
-"lang": "zh",
-"orientation": "any"
+  "name": "加班費計算機",
+  "short_name": "加班計算",
+  "description": "方便記錄與計算加班費的工具",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#f8f9fa",
+  "theme_color": "#007bff",
+  "icons": [
+    {
+      "src": "work_512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    },
+    {
+      "src": "work_192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    }
+  ],
+  "id": "worktime",
+  "dir": "auto",
+  "lang": "zh",
+  "orientation": "any",
+  "shortcuts": [
+    {
+      "name": "開始加班打卡",
+      "short_name": "打卡",
+      "description": "快速開始加班打卡",
+      "url": "./index.html#punch",
+      "icons": [
+        {
+          "src": "work_192.png",
+          "sizes": "192x192"
+        }
+      ]
+    },
+    {
+      "name": "查看記錄",
+      "short_name": "記錄",
+      "description": "查看加班記錄",
+      "url": "./index.html#records",
+      "icons": [
+        {
+          "src": "work_192.png",
+          "sizes": "192x192"
+        }
+      ]
+    }
+  ]
 }
