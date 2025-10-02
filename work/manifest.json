@@ -21,31 +21,5 @@
   "id": "worktime",
   "dir": "auto",
   "lang": "zh",
-  "orientation": "any",
-  "shortcuts": [
-    {
-      "name": "開始加班打卡",
-      "short_name": "打卡",
-      "description": "快速開始加班打卡",
-      "url": "./index.html#punch",
-      "icons": [
-        {
-          "src": "work_192.png",
-          "sizes": "192x192"
-        }
-      ]
-    },
-    {
-      "name": "查看記錄",
-      "short_name": "記錄",
-      "description": "查看加班記錄",
-      "url": "./index.html#records",
-      "icons": [
-        {
-          "src": "work_192.png",
-          "sizes": "192x192"
-        }
-      ]
-    }
-  ]
+  "orientation": "any"
 }
