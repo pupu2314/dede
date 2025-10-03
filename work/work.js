@@ -1,4 +1,87 @@
-function startTimer(startTime) {
+function restoreState() {
+        const tempRecordJSON = localStorage.getItem(STORAGE_KEYS.TEMP_RECORD);
+        if (!tempRecordJSON) {
+            updatePunchUI(false);
+            return;
+        }
+        
+        const tempRecord = JSON.parse(tempRecordJSON);
+        const restoreMsgEl = document.getElementById('restore-message');
+
+        const restoreFormFields = () => {
+            document.getElementById('overtime-reason').value = tempRecord.reason || '';
+            document.querySelector(`input[name="overtimeType"][value="${tempRecord.type}"]`).checked = true;
+            forceFullCalcToggle.checked = !!tempRecord.forceFullCalculation;
+        };
+
+        if (tempRecord.start && !tempRecord.end) {
+            switchMode('punch', false);
+            updatePunchUI(true);
+            restoreFormFields();
+            startTimer(new Date(tempRecord.start));
+            restoreMsgEl.textContent = '已為您還原上次的打卡上班狀態。';
+            restoreMsgEl.style.display = 'block';
+        } else if (tempRecord.start && tempRecord.end) {
+            switchMode('manual', false);
+            updatePunchUI(false);
+            document.getElementById('start-time').value = formatDateTimeLocal(new Date(tempRecord.start));
+            document.getElementById('end-time').value = formatDateTimeLocal(new Date(tempRecord.end));
+            restoreFormFields();
+            restoreMsgEl.textContent = '您有未儲存的打卡紀錄，已為您還原。';
+            restoreMsgEl.style.display = 'block';
+        }
+    }
+
+    function handleUrlHash() {
+        const hash = window.location.hash;
+        
+        if (hash === '#punch') {
+            switchMode('punch', false);
+            document.getElementById('mode-punch').scrollIntoView({ behavior: 'smooth', block: 'center' });
+        } else if (hash === '#records') {
+            document.getElementById('capture-area').scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+        
+        if (hash) {
+            setTimeout(() => {
+                history.replaceState(null, null, ' ');
+            }, 1000);
+        }
+    }
+
+    function init() {
+        loadSettings();
+        loadRecords();
+        
+        monthFilter.value = new Date().toISOString().substring(0, 7);
+        
+        render();
+        setupEventListeners();
+        restoreState();
+        showWelcomeMessage();
+        
+        setTimeout(() => checkBackupReminder(), 2000);
+        handleUrlHash();
+    }
+
+    window.app = {
+        deleteRecord,
+        editRecord,
+        toggleDetails
+    };
+
+    init();
+})();
+
+if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+        navigator.serviceWorker.register('sw.js').then(registration => {
+            console.log('ServiceWorker registration successful with scope: ', registration.scope);
+        }).catch(err => {
+            console.log('ServiceWorker registration failed: ', err);
+        });
+    });
+} startTimer(startTime) {
         if (punchTimerInterval) clearInterval(punchTimerInterval);
         
         const startTimeDisplay = document.getElementById('punch-start-time-display');
@@ -997,3 +1080,5 @@ if ('serviceWorker' in navigator) {
             window.scrollTo(0, 0);
         }
     }
+
+    function
