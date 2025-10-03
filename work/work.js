@@ -997,5 +997,3 @@ if ('serviceWorker' in navigator) {
             window.scrollTo(0, 0);
         }
     }
-
-    function
