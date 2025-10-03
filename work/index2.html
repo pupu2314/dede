@@ -1546,7 +1546,6 @@ th {
                     successMsg.style.display = 'none';
                 }, 2000);
             } catch (err) {
-                // 備用方法：選擇文字
                 textarea.select();
                 document.execCommand('copy');
                 alert('已複製到剪貼簿！');
@@ -1567,6 +1566,7 @@ th {
             link.click();
         });
         
+        // 匯入資料
         document.getElementById('import-text').addEventListener('click', () => {
             const importText = document.getElementById('import-textarea').value;
             
@@ -1613,11 +1613,13 @@ th {
             }
         });
         
+        // 備份提醒按鈕
         document.getElementById('backup-now').addEventListener('click', performBackup);
         document.getElementById('backup-remind-later').addEventListener('click', remindLater);
         document.getElementById('modal-backup-now').addEventListener('click', performBackup);
         document.getElementById('modal-remind-later').addEventListener('click', remindLater);
         
+        // 點擊彈窗外部關閉
         document.getElementById('backup-modal').addEventListener('click', (e) => {
             if (e.target.id === 'backup-modal') {
                 remindLater();
