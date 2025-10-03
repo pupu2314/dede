@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>加班費計算機 v34</title>
+    <title>加班費計算機</title>
     <meta name="theme-color" content="#007bff"/>
     <link rel="manifest" href="manifest.json">
     <meta name="mobile-web-app-capable" content="yes">
@@ -15,7 +15,7 @@
 </head>
 <body>
     <div class="container">
-        <h1>加班費計算機 v2.0</h1>
+        <h1>加班費計算機</h1>
         
         <div id="welcome-message" class="info-message" style="display: none;">
             <h3>👋 歡迎使用加班費計算機！</h3>
@@ -152,6 +152,8 @@
                     <h3>匯入所有資料</h3>
                     <textarea id="import-textarea" placeholder="在此貼上您備份的 JSON 文字" rows="5" aria-label="要匯入的資料"></textarea>
                     <button id="import-text" style="margin-top: 0.5rem;">確認匯入</button>
+                    <button id="import-file-btn" class="btn btn-secondary">從檔案匯入</button>
+                    <input type="file" id="import-file-input" accept=".json" style="display: none;">
                 </div>
             </div>
         </div>
