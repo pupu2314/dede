@@ -6,6 +6,7 @@
     <title>加班費計算機 v2.0</title>
     <meta name="theme-color" content="#007bff"/>
     <link rel="manifest" href="manifest.json">
+    <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
     <meta name="apple-mobile-web-app-title" content="加班費計算機">
@@ -1754,13 +1755,10 @@ th {
         setupEventListeners();
         restoreState();
         
-        // 顯示新使用者歡迎訊息
         showWelcomeMessage();
         
-        // 檢查備份提醒
         setTimeout(() => checkBackupReminder(), 2000);
         
-        // 處理 URL hash (PWA 捷徑)
         handleUrlHash();
     }
 
@@ -1771,15 +1769,12 @@ th {
         const hash = window.location.hash;
         
         if (hash === '#punch') {
-            // 導航到打卡模式
             switchMode('punch', false);
             document.getElementById('mode-punch').scrollIntoView({ behavior: 'smooth', block: 'center' });
         } else if (hash === '#records') {
-            // 導航到記錄區域
             document.getElementById('capture-area').scrollIntoView({ behavior: 'smooth', block: 'start' });
         }
         
-        // 清除 hash
         if (hash) {
             setTimeout(() => {
                 history.replaceState(null, null, ' ');
@@ -1787,14 +1782,12 @@ th {
         }
     }
 
-    // 暴露給全域的函數
     window.app = {
         deleteRecord,
         editRecord,
         toggleDetails
     };
 
-    // 啟動應用程式
     init();
 })();
 
