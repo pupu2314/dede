@@ -862,6 +862,54 @@
         }
     }
 
+    function importData(jsonString) {
+        if (!jsonString) {
+            showError('請先提供要匯入的資料。');
+            return;
+        }
+        
+        if (!confirm('警告：匯入將會覆蓋所有現存資料，確定要繼續嗎？')) return;
+        
+        try {
+            const data = JSON.parse(jsonString);
+            
+            if (!data.settings || !Array.isArray(data.records)) {
+                showError('匯入失敗：資料格式不正確。');
+                return;
+            }
+            
+            if (!isValidNumber(data.settings.salary) || data.settings.salary < 0) {
+                showError('匯入失敗：薪資設定無效。');
+                return;
+            }
+            
+            const validRecords = data.records.filter(rec => {
+                return rec.id && isValidDate(rec.start) && isValidDate(rec.end) && rec.type;
+            });
+            
+            if (validRecords.length !== data.records.length) {
+                if (!confirm(`偵測到 ${data.records.length - validRecords.length} 筆無效記錄將被忽略，是否繼續匯入？`)) {
+                    return;
+                }
+            }
+            
+            localStorage.setItem(STORAGE_KEYS.SETTINGS, JSON.stringify(data.settings));
+            localStorage.setItem(STORAGE_KEYS.RECORDS, JSON.stringify(validRecords));
+            localStorage.setItem(STORAGE_KEYS.LAST_BACKUP, Date.now().toString());
+            
+            // 重新載入資料並渲染，但不重新綁定事件，以修復重複下載問題
+            loadSettings();
+            loadRecords();
+            render();
+
+            alert(`資料匯入成功！共匯入 ${validRecords.length} 筆記錄。`);
+            document.getElementById('import-textarea').value = '';
+        } catch (error) {
+            console.error('匯入錯誤:', error);
+            showError('匯入失敗：無效的 JSON 格式。');
+        }
+    }
+
     // --- 事件監聽器設定 ---
     function setupEventListeners() {
         document.getElementById('save-settings').addEventListener('click', saveSettings);
@@ -919,48 +967,38 @@
         
         document.getElementById('import-text').addEventListener('click', () => {
             const importText = document.getElementById('import-textarea').value;
-            
-            if (!importText) {
-                showError('請先貼上要匯入的資料。');
+            importData(importText);
+        });
+
+        // 監聽新的 "從檔案匯入" 按鈕
+        document.getElementById('import-file-btn').addEventListener('click', () => {
+            document.getElementById('import-file-input').click();
+        });
+
+        // 處理檔案選擇
+        document.getElementById('import-file-input').addEventListener('change', (event) => {
+            const file = event.target.files[0];
+            if (!file) {
                 return;
             }
-            
-            if (!confirm('警告：匯入將會覆蓋所有現存資料，確定要繼續嗎？')) return;
-            
-            try {
-                const data = JSON.parse(importText);
-                
-                if (!data.settings || !Array.isArray(data.records)) {
-                    showError('匯入失敗：資料格式不正確。');
-                    return;
-                }
-                
-                if (!isValidNumber(data.settings.salary) || data.settings.salary < 0) {
-                    showError('匯入失敗：薪資設定無效。');
-                    return;
-                }
-                
-                const validRecords = data.records.filter(rec => {
-                    return rec.id && isValidDate(rec.start) && isValidDate(rec.end) && rec.type;
-                });
-                
-                if (validRecords.length !== data.records.length) {
-                    if (!confirm(`偵測到 ${data.records.length - validRecords.length} 筆無效記錄將被忽略，是否繼續匯入？`)) {
-                        return;
-                    }
-                }
-                
-                localStorage.setItem(STORAGE_KEYS.SETTINGS, JSON.stringify(data.settings));
-                localStorage.setItem(STORAGE_KEYS.RECORDS, JSON.stringify(validRecords));
-                localStorage.setItem(STORAGE_KEYS.LAST_BACKUP, Date.now().toString());
-                
-                init();
-                alert(`資料匯入成功！共匯入 ${validRecords.length} 筆記錄。`);
-                document.getElementById('import-textarea').value = '';
-            } catch (error) {
-                console.error('匯入錯誤:', error);
-                showError('匯入失敗：無效的 JSON 格式。');
+
+            if (file.type !== 'application/json') {
+                showError('錯誤：請選擇一個 .json 檔案。');
+                event.target.value = ''; // 清空選擇
+                return;
             }
+
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                importData(e.target.result);
+            };
+            reader.onerror = () => {
+                showError('讀取檔案時發生錯誤。');
+            };
+            reader.readAsText(file);
+            
+            // 清空 input 的值，這樣才能再次選擇同一個檔案
+            event.target.value = '';
         });
         
         document.getElementById('backup-now').addEventListener('click', performBackup);
