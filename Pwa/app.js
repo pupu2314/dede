@@ -319,15 +319,26 @@ function initCalculatorPage() {
     }
 
     function filterServices() {
-        const query = dom.searchInput.value.toLowerCase().trim();
+        const rawQuery = dom.searchInput.value.toLowerCase().trim();
+        // 修正：僅以逗號分割搜尋詞組，以處理包含空格的服務名稱
+        const searchPhrases = rawQuery.split(',')
+                                      .map(phrase => phrase.trim())
+                                      .filter(phrase => phrase.length > 0);
+
         dom.serviceListContainer.querySelectorAll('fieldset').forEach(fieldset => {
             let hasVisibleItem = false;
             fieldset.querySelectorAll('.service-item').forEach(item => {
                 const itemName = item.querySelector('label').textContent.toLowerCase();
-                const isMatch = itemName.includes(query);
+                // 如果沒有搜尋詞，則顯示所有項目；
+                // 否則，檢查項目名稱是否包含任一搜尋詞組
+                const isMatch = searchPhrases.length === 0 || searchPhrases.some(phrase => itemName.includes(phrase));
+                
                 item.style.display = isMatch ? 'flex' : 'none';
-                if (isMatch) hasVisibleItem = true;
+                if (isMatch) {
+                    hasVisibleItem = true;
+                }
             });
+            // 如果分類中沒有任何可見項目，則隱藏該分類
             fieldset.style.display = hasVisibleItem ? 'block' : 'none';
         });
     }
@@ -450,57 +461,4 @@ function initCalculatorPage() {
     dom.clearBtn.addEventListener('click', () => clearSelections(true));
     dom.shareLinkBtn.addEventListener('click', generateShareableLink);
     dom.screenshotBtn.addEventListener('click', exportAsPNG);
-}
-
-// --- 促銷檢查頁面 (check.html) 的邏輯 ---
-function initCheckPage() {
-    const container = document.getElementById('promo-container');
-    function getTaipeiDateString() { return new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Taipei' }).format(new Date()); }
-    function getPromoStatus(promo, todayString) {
-        if (todayString < promo.start) return { text: '尚未開始', class: 'upcoming' };
-        if (todayString > promo.end) return { text: '已過期', class: 'expired' };
-        return { text: '生效中', class: 'active' };
-    }
-    const today = getTaipeiDateString();
-    container.innerHTML = `<h1>促銷設定總覽</h1><p class="note">此報告僅供內部檢查設定使用。所有日期的判斷基準日 (台北時間): <strong>${today}</strong></p>`;
-    serviceData.categories.forEach(category => {
-        let tableHtml = `<h2>${category.name}</h2><table><thead><tr><th>服務項目</th><th>原價</th><th>促銷活動</th><th>促銷價</th><th>折扣</th><th>開始日期</th><th>結束日期</th><th>狀態</th></tr></thead><tbody>`;
-        category.items.forEach(item => {
-            if (!item.promotions || item.promotions.length === 0) {
-                tableHtml += `<tr><td data-label="服務項目">${item.name}</td><td data-label="原價" style="text-align: right;">${item.price.toLocaleString()}</td><td colspan="6" class="no-promo">無</td></tr>`;
-            } else {
-                item.promotions.forEach((promo, index) => {
-                    const status = getPromoStatus(promo, today);
-                    const discountAmount = item.price - promo.price;
-                    const discountPercentage = (discountAmount / item.price) * 100;
-                    const discountText = `省 ${discountAmount.toLocaleString()} (${discountPercentage.toFixed(1)}%)`;
-                    tableHtml += `<tr>
-                        ${index === 0 ? `<td data-label="服務項目" rowspan="${item.promotions.length}">${item.name}</td><td data-label="原價" rowspan="${item.promotions.length}" style="text-align: right;">${item.price.toLocaleString()}</td>` : ''}
-                        <td data-label="促銷活動">${promo.label}</td><td data-label="促銷價" style="text-align: right;">${promo.price.toLocaleString()}</td><td data-label="折扣" class="discount-info">${discountText}</td><td data-label="開始日期">${promo.start}</td><td data-label="結束日期">${promo.end}</td><td data-label="狀態"><span class="status ${status.class}">${status.text}</span></td>
-                    </tr>`;
-                });
-            }
-        });
-        tableHtml += '</tbody></table>';
-        container.innerHTML += tableHtml;
-    });
-    let comboTableHtml = `<h2>組合優惠</h2><table><thead><tr><th>組合名稱</th><th>包含項目</th><th>原價</th><th>促銷活動</th><th>促銷價</th><th>折扣</th><th>開始日期</th><th>結束日期</th><th>狀態</th></tr></thead><tbody>`;
-    serviceData.combos.forEach(combo => {
-         if (combo.promotions && combo.promotions.length > 0) {
-            const itemNames = combo.itemIds.map(id => allServices.get(id)?.name || '<span style="color:red;">錯誤ID</span>').join('<br>');
-            const comboOriginalPrice = combo.itemIds.reduce((sum, id) => sum + (allServices.get(id)?.price || 0), 0);
-            combo.promotions.forEach((promo, index) => {
-                const status = getPromoStatus(promo, today);
-                const discountAmount = comboOriginalPrice - promo.price;
-                const discountPercentage = comboOriginalPrice > 0 ? (discountAmount / comboOriginalPrice) * 100 : 0;
-                const discountText = `省 ${discountAmount.toLocaleString()} (${discountPercentage.toFixed(1)}%)`;
-                comboTableHtml += `<tr>
-                    ${index === 0 ? `<td data-label="組合名稱" rowspan="${combo.promotions.length}">${combo.name}</td><td data-label="包含項目" rowspan="${combo.promotions.length}">${itemNames}</td><td data-label="原價" rowspan="${combo.promotions.length}" style="text-align: right;">${comboOriginalPrice.toLocaleString()}</td>` : ''}
-                    <td data-label="促銷活動">${promo.label}</td><td data-label="促銷價" style="text-align: right;">${promo.price.toLocaleString()}</td><td data-label="折扣" class="discount-info">${discountText}</td><td data-label="開始日期">${promo.start}</td><td data-label="結束日期">${promo.end}</td><td data-label="狀態"><span class="status ${status.class}">${status.text}</span></td>
-                </tr>`;
-            });
-         }
-    });
-    comboTableHtml += '</tbody></table>';
-    container.innerHTML += comboTableHtml;
 }
