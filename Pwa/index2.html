@@ -172,7 +172,7 @@
 
     <div class="search-container">
         <label for="search-input" class="sr-only">搜尋服務項目</label>
-        <input type="search" id="search-input" placeholder="可輸入多個關鍵字，用「,」或「空格」隔開">
+        <input type="search" id="search-input" placeholder="可輸入多個服務名稱，用「,」分隔">
     </div>
 
     <fieldset>
@@ -552,15 +552,18 @@ function initCalculatorPage() {
 
     function filterServices() {
         const rawQuery = dom.searchInput.value.toLowerCase().trim();
-        // 以逗號或空白分割關鍵字，並過濾掉空字串
-        const keywords = rawQuery.split(/[\s,]+/).filter(k => k.length > 0);
+        // 修正：僅以逗號分割搜尋詞組，以處理包含空格的服務名稱
+        const searchPhrases = rawQuery.split(',')
+                                      .map(phrase => phrase.trim())
+                                      .filter(phrase => phrase.length > 0);
 
         dom.serviceListContainer.querySelectorAll('fieldset').forEach(fieldset => {
             let hasVisibleItem = false;
             fieldset.querySelectorAll('.service-item').forEach(item => {
                 const itemName = item.querySelector('label').textContent.toLowerCase();
-                // 如果沒有關鍵字，則顯示所有項目；否則，檢查項目名稱是否包含任一關鍵字
-                const isMatch = keywords.length === 0 || keywords.some(keyword => itemName.includes(keyword));
+                // 如果沒有搜尋詞，則顯示所有項目；
+                // 否則，檢查項目名稱是否包含任一搜尋詞組
+                const isMatch = searchPhrases.length === 0 || searchPhrases.some(phrase => itemName.includes(phrase));
                 
                 item.style.display = isMatch ? 'flex' : 'none';
                 if (isMatch) {
@@ -708,3 +711,4 @@ function initCalculatorPage() {
 
 </body>
 </html>
+
