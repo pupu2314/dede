@@ -131,5 +131,12 @@
         .final-totals { text-align: right; }
         .final-totals p { font-size: 0.9em; font-weight: bold; margin: 2px 0; }
         .final-totals #floating-discounted-total, .final-totals #floating-total { color: #dc3545; font-size: 1.2em; }
-        .discount-note { color: #28a745; font-weight: bold; font-size: 0.8em; }
+        .discount-note {
+             background-color: #28a745;
+             color: white;
+             padding: 2px 6px;
+             border-radius: 4px;
+             font-size: 0.8rem;
+             font-weight: bold;
+        }
         .savings-note { color: #28a745; font-weight: bold; font-size: 1em; margin: 2px 0; }
