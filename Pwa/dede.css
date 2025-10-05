@@ -41,10 +41,13 @@
         }
         .service-item label {
             font-weight: normal;
+            flex-grow: 1;
+            cursor: pointer;
         }
         .price-info {
             margin-left: auto;
             text-align: right;
+            min-width: 120px;
         }
         .promotion-price { color: #dc3545; font-weight: bold; }
         .original-price { text-decoration: line-through; color: #999; font-size: 0.9em; margin-left: 5px; }
@@ -66,6 +69,33 @@
             padding: 0; margin: -1px; overflow: hidden;
             clip: rect(0, 0, 0, 0); white-space: nowrap; border-width: 0;
         }
+
+        /* --- 搜尋結果快速操作按鈕 --- */
+        #search-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+            justify-content: flex-end;
+        }
+        #search-actions button {
+            padding: 5px 12px;
+            font-size: 0.9em;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        #search-actions button:hover {
+            opacity: 0.9;
+        }
+        #select-all-filtered-btn {
+            background-color: #28a745;
+        }
+        #deselect-all-filtered-btn {
+            background-color: #6c757d;
+        }
+
 
         /* --- Toast & 懸浮視窗 --- */
         .toast-notification {
@@ -110,13 +140,22 @@
             flex-shrink: 0;
         }
         .details-header h3 { margin: 0; padding: 0; border: none; color: #0056b3; }
-        .header-actions { display: inline-block; }
-        .header-actions button {
-            background: #e9ecef; border: 1px solid #ced4da; border-radius: 5px; cursor: pointer;
-            padding: 0; width: 64px; height: 32px; font-size: 16px; line-height: 32px;
-            text-align: center; color: #495057;
+        .header-actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            justify-content: center;
         }
-        .header-actions button:hover { background: #dee2e6; }
+        .header-actions button {
+            padding: 8px 15px;
+            border: 1px solid #ced4da;
+            background-color: #f8f9fa;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: background-color 0.2s;
+        }
+        .header-actions button:hover { background: #e9ecef; }
 
         #floating-selected-items-list {
             overflow-y: auto; flex-grow: 1;
@@ -130,7 +169,12 @@
         .item-price-detail { white-space: nowrap; margin-left: 15px; }
         .final-totals { text-align: right; }
         .final-totals p { font-size: 0.9em; font-weight: bold; margin: 2px 0; }
-        .final-totals #floating-discounted-total, .final-totals #floating-total { color: #dc3545; font-size: 1.2em; }
+        #discounted-total-p { font-size: 1.2rem !important; }
+        #discounted-total-p span { color: #dc3545; }
+        #original-total-p {
+             text-decoration: line-through;
+             color: #6c757d;
+        }
         .discount-note {
              background-color: #28a745;
              color: white;
@@ -138,5 +182,7 @@
              border-radius: 4px;
              font-size: 0.8rem;
              font-weight: bold;
+             display: inline-block;
+             margin-top: 4px;
         }
         .savings-note { color: #28a745; font-weight: bold; font-size: 1em; margin: 2px 0; }
