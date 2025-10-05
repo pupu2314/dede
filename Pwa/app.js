@@ -1,105 +1,69 @@
-// 全域變數，供 dede.html 和 check.html 共用
+// 全域變數
 let serviceData = null;
 let allServices = new Map();
 
 /**
  * 載入服務資料的核心函式
- * 採用網路優先，若失敗則讀取 PWA 快取的策略 (Network-first, cache fallback)
- * @returns {Promise<object|null>} 成功時回傳服務資料物件，全部失敗時回傳 null
  */
 async function loadServiceData() {
-    // 策略1：網路優先 (Network First)
     try {
-        // 使用 'reload' 選項繞過瀏覽器 HTTP 快取，確保向網路發送請求。
-        // 這能讓 Service Worker 有機會攔截並提供最新的快取或更新快取。
         const response = await fetch('services.json', { cache: 'reload' });
-        if (!response.ok) {
-            // 如果伺服器回傳錯誤 (如 404, 500)，也應視為網路失敗，轉而嘗試快取
-            throw new Error(`伺服器回應錯誤: ${response.status} ${response.statusText}`);
-        }
-        const data = await response.json();
-        console.log('成功從網路載入 services.json');
-        return data;
+        if (!response.ok) throw new Error(`伺服器回應錯誤: ${response.status}`);
+        return await response.json();
     } catch (networkError) {
-        console.warn('網路請求 services.json 失敗:', networkError.message);
-        console.log('嘗試從 PWA 快取中讀取...');
-
-        // 策略2：讀取快取 (Cache Fallback)
+        console.warn('網路請求 services.json 失敗:', networkError.message, '嘗試從快取讀取...');
         try {
-            // 確保 Service Worker 使用的快取名稱與這裡一致
             const cache = await caches.open('price-calculator-v5.1');
-            // 查詢沒有 cache-busting 參數的原始 URL，這才是 Service Worker 快取的鍵
             const cachedResponse = await cache.match('services.json');
-            if (cachedResponse) {
-                console.log('成功從 PWA 快取載入 services.json');
-                return await cachedResponse.json();
-            } else {
-                console.error('PWA 快取中也找不到 services.json');
-                return null; // 快取中也沒有資料
-            }
+            if (cachedResponse) return await cachedResponse.json();
+            throw new Error('快取中也找不到 services.json');
         } catch (cacheError) {
-            console.error('讀取 PWA 快取時發生錯誤:', cacheError);
-            return null; // 讀取快取也失敗
+            console.error('讀取快取失敗:', cacheError);
+            return null;
         }
     }
 }
 
 /**
- * 根據載入的資料初始化頁面通用邏輯
+ * 初始化頁面通用邏輯
  */
 function initializePage() {
-    // 將所有服務項目扁平化存入 Map，方便快速查找
     allServices = new Map(serviceData.categories.flatMap(cat => cat.items).map(item => [item.id, item]));
-
-    // 根據目前在哪個頁面，執行不同的初始化函式
-    if (document.getElementById('promo-container')) {
-        initCheckPage();
-    }
     if (document.getElementById('service-list')) {
         initCalculatorPage();
     }
 }
 
 /**
- * 應用程式進入點 (DOM 載入完成後執行)
+ * 應用程式進入點
  */
 document.addEventListener('DOMContentLoaded', async () => {
     showLoadingOverlay();
     try {
         serviceData = await loadServiceData();
-
         if (serviceData) {
             initializePage();
         } else {
-            // 網路和快取都載入失敗，才顯示最終錯誤
-            throw new Error('無法從網路或快取載入服務資料，請檢查您的網路連線後再試。');
+            throw new Error('無法從網路或快取載入服務資料。');
         }
     } catch (error) {
         console.error('初始化應用程式失敗:', error);
-        // 顯示最終的錯誤訊息給使用者
-        document.body.innerHTML = `<div style="padding: 20px; text-align: center;"><h1>載入錯誤</h1><p>無法載入必要的服務資料。</p><p><em>${error.message}</em></p></div>`;
+        document.body.innerHTML = `<div style="padding: 20px; text-align: center;"><h1>載入錯誤</h1><p>${error.message}</p></div>`;
     } finally {
-        // 無論成功或失敗，最後都必須移除載入畫面，避免卡住
         removeLoadingOverlay();
     }
 });
-
-
-// --- 以下為原有函式，保持不變 ---
 
 function showLoadingOverlay() {
     const overlay = document.createElement('div');
     overlay.id = 'loading-overlay';
     overlay.style.cssText = 'position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255, 255, 255, 0.9); display: flex; justify-content: center; align-items: center; z-index: 1000;';
-    overlay.innerHTML = '<div style="text-align: center;"><p style="font-size: 1.2em; color: #333;">正在載入服務項目...</p></div>';
+    overlay.innerHTML = '<p style="font-size: 1.2em; color: #333;">正在載入服務項目...</p>';
     document.body.appendChild(overlay);
 }
 
 function removeLoadingOverlay() {
-    const overlay = document.getElementById('loading-overlay');
-    if (overlay) {
-        overlay.remove();
-    }
+    document.getElementById('loading-overlay')?.remove();
 }
 
 // --- 價格計算器頁面 (dede.html) 的邏輯 ---
@@ -110,6 +74,9 @@ function initCalculatorPage() {
     const dom = {
         serviceListContainer: document.getElementById('service-list'),
         searchInput: document.getElementById('search-input'),
+        searchActionsContainer: document.getElementById('search-actions'),
+        selectAllFilteredBtn: document.getElementById('select-all-filtered-btn'),
+        deselectAllFilteredBtn: document.getElementById('deselect-all-filtered-btn'),
         isBirthdayPerson: document.getElementById('isBirthdayPerson'),
         isStudent: document.getElementById('isStudent'),
         toast: document.getElementById('toast-notification'),
@@ -126,28 +93,23 @@ function initCalculatorPage() {
         discountedTotalSpan: document.getElementById('floating-discounted-total'),
         savingsContainer: document.getElementById('savings-container'),
         savingsSpan: document.getElementById('floating-savings'),
-        pointsContainer: document.getElementById('points-container'), // 新增：點數容器
-        pointsSpan: document.getElementById('floating-points'), // 新增：點數顯示 span
+        pointsContainer: document.getElementById('points-container'),
+        pointsSpan: document.getElementById('floating-points'),
         selectedItemsListUl: document.querySelector('#floating-selected-items-list ul'),
         discountNoteContainer: document.getElementById('discount-note-container'),
         discountNoteSpan: document.querySelector('#discount-note-container .discount-note')
     };
 
     // --- 輔助函式 ---
-    function getTaipeiDate() {
-        const now = new Date();
-        const taipeiDateString = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Taipei' }).format(now);
-        return new Date(taipeiDateString);
-    }
-
+    const getTaipeiDate = () => new Date(new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Taipei' }).format(new Date()));
+    
     function getActivePromotion(item, today) {
-        if (!item.promotions || item.promotions.length === 0) return null;
-        for (const promo of item.promotions) {
+        if (!item.promotions) return null;
+        return item.promotions.find(promo => {
             const startDate = new Date(promo.start);
             const endDate = new Date(promo.end);
-            if (today >= startDate && today <= endDate) return promo;
-        }
-        return null;
+            return today >= startDate && today <= endDate;
+        });
     }
 
     function showToast(message) {
@@ -159,32 +121,23 @@ function initCalculatorPage() {
     // --- 核心渲染與計算邏輯 ---
     function renderServices() {
         const today = getTaipeiDate();
-        dom.serviceListContainer.innerHTML = '';
-        serviceData.categories.forEach(category => {
-            const fieldset = document.createElement('fieldset');
-            const legend = document.createElement('legend');
-            legend.textContent = category.name;
-            fieldset.appendChild(legend);
-            category.items.forEach(service => {
-                const div = document.createElement('div');
-                div.className = 'service-item';
-                const checkbox = document.createElement('input');
-                checkbox.type = 'checkbox'; checkbox.id = service.id; checkbox.value = service.id;
-                const label = document.createElement('label');
-                label.htmlFor = service.id; label.textContent = service.name;
-                const priceDiv = document.createElement('div');
-                priceDiv.className = 'price-info';
-                
-                const activePromo = getActivePromotion(service, today);
-                priceDiv.innerHTML = activePromo ?
-                    `<span class="promotion-price">$${activePromo.price.toLocaleString()}</span> <span class="original-price">$${service.price.toLocaleString()}</span>` :
-                    `<span>$${service.price.toLocaleString()}</span>`;
-
-                div.appendChild(checkbox); div.appendChild(label); div.appendChild(priceDiv);
-                fieldset.appendChild(div);
-            });
-            dom.serviceListContainer.appendChild(fieldset);
-        });
+        dom.serviceListContainer.innerHTML = serviceData.categories.map(category => `
+            <fieldset>
+                <legend>${category.name}</legend>
+                ${category.items.map(service => {
+                    const activePromo = getActivePromotion(service, today);
+                    const priceHtml = activePromo 
+                        ? `<span class="promotion-price">$${activePromo.price.toLocaleString()}</span> <span class="original-price">$${service.price.toLocaleString()}</span>`
+                        : `<span>$${service.price.toLocaleString()}</span>`;
+                    return `
+                        <div class="service-item">
+                            <input type="checkbox" id="${service.id}" value="${service.id}">
+                            <label for="${service.id}">${service.name}</label>
+                            <div class="price-info">${priceHtml}</div>
+                        </div>`;
+                }).join('')}
+            </fieldset>
+        `).join('');
     }
 
     function calculatePrices() {
@@ -192,6 +145,7 @@ function initCalculatorPage() {
         const today = getTaipeiDate();
         let originalTotal = 0, promoTotal = 0;
         const processedIds = new Set(), displayItems = [], appliedPromoLabels = new Set();
+        
         serviceData.combos.forEach(combo => {
             const activeComboPromo = getActivePromotion(combo, today);
             if (activeComboPromo && combo.itemIds.every(id => selectedIds.has(id))) {
@@ -203,6 +157,7 @@ function initCalculatorPage() {
                 combo.itemIds.forEach(id => processedIds.add(id));
             }
         });
+
         selectedIds.forEach(id => {
             if (!processedIds.has(id)) {
                 const service = allServices.get(id);
@@ -216,16 +171,14 @@ function initCalculatorPage() {
                 }
             }
         });
-        let finalPrice = promoTotal;
-        let discountType = appliedPromoLabels.size > 0 ? [...appliedPromoLabels].join(', ') : '無';
-        const potentialDiscounts = [{ price: finalPrice, type: discountType }];
+        
+        const potentialDiscounts = [{ price: promoTotal, type: appliedPromoLabels.size > 0 ? [...appliedPromoLabels].join(', ') : '無' }];
         if (dom.isBirthdayPerson.checked) potentialDiscounts.push({ price: originalTotal * 0.5, type: '壽星原價 5 折' });
         if (dom.isStudent.checked) potentialDiscounts.push({ price: originalTotal * 0.8, type: '學生原價 8 折' });
-        const bestDiscount = potentialDiscounts.reduce((best, current) => current.price < best.price ? current : best, potentialDiscounts[0]);
-        finalPrice = bestDiscount.price;
-        discountType = bestDiscount.type;
-
-        // 新增：計算點數 (每 1500 元一點)
+        const bestDiscount = potentialDiscounts.reduce((best, current) => current.price < best.price ? current : best);
+        
+        const finalPrice = bestDiscount.price;
+        const discountType = bestDiscount.type;
         const points = Math.floor(finalPrice / 1500);
 
         return {
@@ -234,54 +187,41 @@ function initCalculatorPage() {
             savedAmount: Math.round(originalTotal - finalPrice),
             appliedDiscount: discountType,
             displayItems,
-            points: points // 新增：回傳點數
+            points
         };
     }
 
     function updateDisplay(result) {
-        if (result.savedAmount > 0) {
-            dom.originalTotalP.style.display = 'block';
-            dom.savingsContainer.style.display = 'block';
-            dom.discountNoteContainer.style.display = 'block';
+        const hasSavings = result.savedAmount > 0;
+        dom.originalTotalP.style.display = hasSavings ? 'block' : 'none';
+        dom.savingsContainer.style.display = hasSavings ? 'block' : 'none';
+        dom.discountNoteContainer.style.display = hasSavings ? 'block' : 'none';
+
+        if(hasSavings) {
             dom.originalTotalSpan.textContent = result.originalTotal.toLocaleString();
             dom.savingsSpan.textContent = result.savedAmount.toLocaleString();
-            dom.discountNoteSpan.textContent = `套用最佳優惠方案： ${result.appliedDiscount}`;
-        } else {
-            dom.originalTotalP.style.display = 'none';
-            dom.savingsContainer.style.display = 'none';
-            dom.discountNoteContainer.style.display = 'none';
+            dom.discountNoteSpan.textContent = `套用優惠：${result.appliedDiscount}`;
         }
+        
         dom.discountedTotalSpan.textContent = result.finalTotal.toLocaleString();
-        dom.discountedTotalP.firstChild.nodeValue = result.savedAmount > 0 ? '折扣後總金額：' : '總金額：';
+        dom.discountedTotalP.firstChild.nodeValue = hasSavings ? '折扣後總金額：' : '總金額：';
+        dom.pointsContainer.style.display = result.points > 0 ? 'block' : 'none';
+        dom.pointsSpan.textContent = result.points.toLocaleString();
 
-        // 新增：更新點數顯示
-        if (result.points > 0 && dom.pointsContainer) {
-            dom.pointsContainer.style.display = 'block';
-            dom.pointsSpan.textContent = result.points.toLocaleString();
-        } else if (dom.pointsContainer) {
-            dom.pointsContainer.style.display = 'none';
-        }
-
-        dom.selectedItemsListUl.innerHTML = '';
         const isIdentityDiscount = result.appliedDiscount.includes('壽星') || result.appliedDiscount.includes('學生');
-        result.displayItems.forEach(item => {
+        
+        dom.selectedItemsListUl.innerHTML = result.displayItems.flatMap(item => {
             if (isIdentityDiscount) {
-                const servicesToRender = item.type === 'service' ? [item.serviceInfo] : item.comboInfo.itemIds.map(id => allServices.get(id));
-                servicesToRender.forEach(service => {
-                    const li = document.createElement('li');
-                    li.innerHTML = `<span class="item-name">${service.name}</span><span class="item-price-detail"><span>$${service.price.toLocaleString()}</span></span>`;
-                    dom.selectedItemsListUl.appendChild(li);
-                });
+                const services = item.type === 'service' ? [item.serviceInfo] : item.comboInfo.itemIds.map(id => allServices.get(id));
+                return services.map(service => `<li><span class="item-name">${service.name}</span><span class="item-price-detail"><span>$${service.price.toLocaleString()}</span></span></li>`);
             } else {
-                const li = document.createElement('li');
                 const name = item.type === 'combo' ? item.comboInfo.name : item.serviceInfo.name;
-                const priceHtml = item.promo ?
-                    `<span class="promotion-price">$${item.finalPrice.toLocaleString()}</span> <span class="original-price">$${item.originalPrice.toLocaleString()}</span>` :
-                    `<span>$${item.originalPrice.toLocaleString()}</span>`;
-                li.innerHTML = `<span class="item-name">${name}</span><span class="item-price-detail">${priceHtml}</span>`;
-                dom.selectedItemsListUl.appendChild(li);
+                const priceHtml = item.promo
+                    ? `<span class="promotion-price">$${item.finalPrice.toLocaleString()}</span> <span class="original-price">$${item.originalPrice.toLocaleString()}</span>`
+                    : `<span>$${item.originalPrice.toLocaleString()}</span>`;
+                return `<li><span class="item-name">${name}</span><span class="item-price-detail">${priceHtml}</span></li>`;
             }
-        });
+        }).join('');
     }
 
     // --- 功能函式 ---
@@ -317,30 +257,38 @@ function initCalculatorPage() {
         handleInteraction();
         if (showMsg) showToast('已清除所有選項。');
     }
+    
+    function toggleSearchActionButtons() {
+        const hasQuery = dom.searchInput.value.trim().length > 0;
+        dom.searchActionsContainer.style.display = hasQuery ? 'flex' : 'none';
+    }
+
+    function selectFiltered(select) {
+        dom.serviceListContainer.querySelectorAll('.service-item').forEach(item => {
+            if (item.style.display !== 'none') {
+                const checkbox = item.querySelector('input[type="checkbox"]');
+                if (checkbox) checkbox.checked = select;
+            }
+        });
+        handleInteraction();
+        showToast(select ? '已全選篩選結果' : '已取消全選篩選結果');
+    }
 
     function filterServices() {
         const rawQuery = dom.searchInput.value.toLowerCase().trim();
-        // 修正：僅以逗號分割搜尋詞組，以處理包含空格的服務名稱
-        const searchPhrases = rawQuery.split(',')
-                                      .map(phrase => phrase.trim())
-                                      .filter(phrase => phrase.length > 0);
+        const searchPhrases = rawQuery.split(',').map(p => p.trim()).filter(Boolean);
 
         dom.serviceListContainer.querySelectorAll('fieldset').forEach(fieldset => {
             let hasVisibleItem = false;
             fieldset.querySelectorAll('.service-item').forEach(item => {
                 const itemName = item.querySelector('label').textContent.toLowerCase();
-                // 如果沒有搜尋詞，則顯示所有項目；
-                // 否則，檢查項目名稱是否包含任一搜尋詞組
                 const isMatch = searchPhrases.length === 0 || searchPhrases.some(phrase => itemName.includes(phrase));
-                
                 item.style.display = isMatch ? 'flex' : 'none';
-                if (isMatch) {
-                    hasVisibleItem = true;
-                }
+                if (isMatch) hasVisibleItem = true;
             });
-            // 如果分類中沒有任何可見項目，則隱藏該分類
             fieldset.style.display = hasVisibleItem ? 'block' : 'none';
         });
+        toggleSearchActionButtons();
     }
 
     function generateShareableLink() {
@@ -354,36 +302,37 @@ function initCalculatorPage() {
         url.search = `?c=${base64String}`;
         
         navigator.clipboard.writeText(url.href)
-            .then(() => showToast('分享網址已複製到剪貼簿！'))
-            .catch(() => showToast('複製失敗，請手動複製網址。'));
+            .then(() => showToast('分享網址已複製！'))
+            .catch(() => showToast('複製失敗。'));
     }
 
     function exportAsPNG() {
         const result = calculatePrices();
         if (result.displayItems.length === 0) {
-            showToast('請先選擇服務項目再輸出。');
+            showToast('請先選擇服務項目。');
             return;
         }
 
         const imageSource = document.createElement('div');
         imageSource.style.cssText = 'width: 450px; padding: 25px; background-color: #ffffff; font-family: sans-serif; color: #333; position: absolute; left: -9999px; border: 1px solid #ddd;';
         const isIdentityDiscount = result.appliedDiscount.includes('壽星') || result.appliedDiscount.includes('學生');
-        let itemsHtml = result.displayItems.map(item => {
-            let itemHtml = '';
+        
+        const itemsHtml = result.displayItems.flatMap(item => {
             if (item.type === 'combo' && !isIdentityDiscount && item.promo) {
                  return `<div style="display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px dotted #eee;"><span>${item.comboInfo.name}</span><span style="white-space: nowrap; margin-left: 15px;"><strong style="color: #dc3545;">$${item.finalPrice.toLocaleString()}</strong><span style="text-decoration: line-through; color: #999; font-size: 0.9em; margin-left: 5px;">$${item.originalPrice.toLocaleString()}</span></span></div>`;
             }
             const servicesToRender = (item.type === 'service') ? [item.serviceInfo] : item.comboInfo.itemIds.map(id => allServices.get(id));
-            servicesToRender.forEach(service => {
+            return servicesToRender.map(service => {
                 const activePromo = getActivePromotion(service, getTaipeiDate());
                 const priceHtml = isIdentityDiscount ? `<span>$${service.price.toLocaleString()}</span>` : (activePromo && !isIdentityDiscount ? `<strong style="color: #dc3545;">$${activePromo.price.toLocaleString()}</strong> <span style="text-decoration: line-through; color: #999; font-size: 0.9em; margin-left: 5px;">$${service.price.toLocaleString()}</span>` : `<span>$${service.price.toLocaleString()}</span>`);
-                itemHtml += `<div style="display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px dotted #eee;"><span>${service.name}</span><span style="white-space: nowrap; margin-left: 15px;">${priceHtml}</span></div>`;
+                return `<div style="display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px dotted #eee;"><span>${service.name}</span><span style="white-space: nowrap; margin-left: 15px;">${priceHtml}</span></div>`;
             });
-            return itemHtml;
         }).join('');
-        let totalsHtml = result.savedAmount > 0 ? `<p style="margin: 4px 0;">原始總金額: ${result.originalTotal.toLocaleString()} 元</p><p style="margin: 4px 0; font-size: 0.9em; color: #28a745;"><strong>套用最佳優惠方案： ${result.appliedDiscount}</strong></p><p style="margin: 4px 0; font-size: 1.1em; color: #28a745;"><strong>共節省: ${result.savedAmount.toLocaleString()} 元</strong></p><p style="margin: 10px 0 0 0; font-size: 1.3em;"><strong>折扣後總金額: <span style="color: #dc3545;">${result.finalTotal.toLocaleString()}</span> 元</strong></p>` : `<p style="margin: 10px 0 0 0; font-size: 1.3em;"><strong>總金額: <span style="color: #dc3545;">${result.finalTotal.toLocaleString()}</span> 元</strong></p>`;
+
+        let totalsHtml = result.savedAmount > 0 
+            ? `<p style="margin: 4px 0;">原始總金額: ${result.originalTotal.toLocaleString()} 元</p><p style="margin: 4px 0; font-size: 0.9em; color: #28a745;"><strong>套用優惠：${result.appliedDiscount}</strong></p><p style="margin: 4px 0; font-size: 1.1em; color: #28a745;"><strong>共節省: ${result.savedAmount.toLocaleString()} 元</strong></p><p style="margin: 10px 0 0 0; font-size: 1.3em;"><strong>折扣後總金額: <span style="color: #dc3545;">${result.finalTotal.toLocaleString()}</span> 元</strong></p>` 
+            : `<p style="margin: 10px 0 0 0; font-size: 1.3em;"><strong>總金額: <span style="color: #dc3545;">${result.finalTotal.toLocaleString()}</span> 元</strong></p>`;
         
-        // 將點數資訊加入圖片中
         if (result.points > 0) {
             totalsHtml += `<p style="margin: 10px 0 0 0; font-size: 1.1em; color: #007bff;"><strong>🎁 獲得點數: ${result.points.toLocaleString()} 點</strong></p>`;
         }
@@ -394,39 +343,37 @@ function initCalculatorPage() {
         const day = String(now.getDate()).padStart(2, '0');
         imageSource.innerHTML = `<h3 style="color: #0056b3; border-bottom: 2px solid #007bff; padding-bottom: 10px; margin: 0 0 15px 0;">德德美體美容中心 - 消費明細</h3><div style="margin-bottom: 20px;">${itemsHtml}</div><div style="text-align: right;">${totalsHtml}</div><p style="text-align: center; font-size: 0.7em; color: #999; margin-top: 20px;">價格版本: ${rocYear}年${month}月版</p>`;
         document.body.appendChild(imageSource);
+        
         html2canvas(imageSource, { scale: 2 }).then(canvas => {
             const link = document.createElement('a');
-            link.href = canvas.toDataURL('image/png');
             const hours = String(now.getHours()).padStart(2, '0');
             const minutes = String(now.getMinutes()).padStart(2, '0');
             const seconds = String(now.getSeconds()).padStart(2, '0');
             link.download = `德德美體-${rocYear}${month}${day}${hours}${minutes}${seconds}.png`;
+            link.href = canvas.toDataURL('image/png');
             link.click();
-            document.body.removeChild(imageSource);
             showToast('圖片已開始下載！');
         }).catch(err => {
-            console.error('oops, something went wrong!', err);
-            document.body.removeChild(imageSource);
+            console.error('圖片輸出失敗:', err);
             showToast('圖片輸出失敗，請稍後再試。');
+        }).finally(() => {
+            document.body.removeChild(imageSource);
         });
     }
     
     function applyState(state) {
         if (!state) return;
-        if (state.services) {
-            state.services.forEach(id => {
-                const checkbox = document.getElementById(id);
-                if (checkbox) checkbox.checked = true;
-            });
-        }
+        state.services?.forEach(id => {
+            const checkbox = document.getElementById(id);
+            if (checkbox) checkbox.checked = true;
+        });
         dom.isBirthdayPerson.checked = state.isBirthday || false;
         dom.isStudent.checked = state.isStudent || false;
         handleInteraction();
     }
     
     function applyStateFromURL() {
-        const params = new URLSearchParams(window.location.search);
-        const config = params.get('c');
+        const config = new URLSearchParams(window.location.search).get('c');
         if (config) {
             try {
                 applyState(JSON.parse(atob(config)));
@@ -441,6 +388,7 @@ function initCalculatorPage() {
     renderServices();
     applyStateFromURL();
     handleInteraction();
+    toggleSearchActionButtons();
 
     const observer = new ResizeObserver(entries => {
         document.body.style.paddingBottom = `${entries[0].contentRect.height}px`;
@@ -461,4 +409,6 @@ function initCalculatorPage() {
     dom.clearBtn.addEventListener('click', () => clearSelections(true));
     dom.shareLinkBtn.addEventListener('click', generateShareableLink);
     dom.screenshotBtn.addEventListener('click', exportAsPNG);
+    dom.selectAllFilteredBtn.addEventListener('click', () => selectFiltered(true));
+    dom.deselectAllFilteredBtn.addEventListener('click', () => selectFiltered(false));
 }
