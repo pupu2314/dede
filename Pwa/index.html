@@ -30,6 +30,10 @@
     <div class="search-container">
         <label for="search-input" class="sr-only">搜尋服務項目</label>
         <input type="search" id="search-input" placeholder="可輸入多個服務名稱，用「,」分隔">
+        <div id="search-actions" style="display: none;">
+            <button id="select-all-filtered-btn" title="全選目前篩選出的項目">✔️ 全選篩選結果</button>
+            <button id="deselect-all-filtered-btn" title="取消全選目前篩選出的項目">❌ 取消全選</button>
+        </div>
     </div>
 
     <fieldset>
@@ -68,8 +72,8 @@
             <div id="points-container" style="display: none; color: #007bff; font-weight: bold; margin-top: 8px;">
               <span>🎁 獲得點數：</span>
               <span id="floating-points">0</span>
-            <span> 點</span>
-        </div>
+              <span> 點</span>
+            </div>
         </div>
     </div>
     <div id="summary-details" aria-hidden="true">
@@ -90,16 +94,13 @@
 <script>
     // PWA: 註冊 Service Worker
     if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.register('./service-worker.js', { scope: './' })
-    .then(registration => {
-        console.log('ServiceWorker 註冊成功: ', registration.scope);
-    })
-    .catch(error => {
-        console.log('ServiceWorker 註冊失敗: ', error);
-    });
+        window.addEventListener('load', () => {
+            navigator.serviceWorker.register('./service-worker.js', { scope: './' })
+                .then(reg => console.log('ServiceWorker 註冊成功:', reg.scope))
+                .catch(err => console.log('ServiceWorker 註冊失敗:', err));
+        });
     }
 </script>
 
 </body>
 </html>
-
