@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>摩托車輛資訊記錄</title>
+    <title>摩托車輛資訊記錄 Enhanced</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         :root {
@@ -78,18 +78,19 @@
         #jsonImportInput { display: none; }
         .cancel-edit-btn { background-color: var(--secondary-color); display: none; }
         .filter-section { background-color: var(--light-bg); padding: 15px; border-radius: 5px; margin-bottom: 15px; }
-        .filter-section input, .filter-section select { width: auto; display: inline-block; margin-right: 10px; }
-        .search-box { width: 200px !important; }
-        .statistics-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 15px; margin: 20px 0; }
-        .stat-card { background: white; padding: 15px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); text-align: center; }
-        .stat-card h4 { margin: 0 0 10px 0; color: var(--secondary-color); font-size: 0.9em; }
-        .stat-card p { margin: 0; font-size: 1.5em; font-weight: bold; color: var(--primary-color); }
+        .radio-group label { margin-bottom: 0; font-weight: normal; }
+        .radio-group input[type="radio"] { width: auto; margin-right: 5px; }
+        .radio-group-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 5px; text-align: center; }
+        .radio-group-grid label { margin-bottom: 0; font-weight: normal; display: block; cursor: pointer; padding: 5px; border-radius: 4px; border: 1px solid var(--border-color); }
+        .radio-group-grid input[type="radio"] { display: none; }
+        .radio-group-grid input[type="radio"]:checked + label { background-color: var(--primary-color); color: var(--white); border-color: var(--primary-color); }
+
     </style>
 </head>
 <body>
 
 <div class="container">
-    <h1>🏍️ 摩托車輛資訊記錄</h1>
+    <h1>🏍️ 摩托車輛資訊記錄 Enhanced</h1>
 
     <div class="summary">
         <p>上次保養: <span id="lastMaintenance">尚未記錄</span> | 里程: <span id="lastMaintOdo">N/A</span></p>
@@ -108,14 +109,41 @@
         <h3 id="chargeFormTitle">記錄充電</h3>
         <form id="chargeForm" class="form-section">
             <input type="hidden" id="editingChargeId">
-            <div class="input-group"><label for="cDate">日期:</label><input type="date" id="cDate" required><button type="button" class="now-btn" onclick="fillNow('cDate', 'cTime')">現在</button></div>
-            <div class="input-group"><label for="cTime">時間:</label><input type="time" id="cTime" required></div>
+            <div class="input-group"><label for="cDate">日期:</label><input type="date" id="cDate" required><button type="button" class="now-btn" onclick="fillNow('cDate')">今天</button></div>
+            <div class="input-group"><label for="cStartTime">開始時間:</label><input type="time" id="cStartTime" required><button type="button" class="now-btn" onclick="fillNowTime('cStartTime')">現在</button></div>
+            <div class="input-group"><label for="cEndTime">結束時間:</label><input type="time" id="cEndTime" required><button type="button" class="now-btn" onclick="fillNowTime('cEndTime')">現在</button></div>
             <div class="input-group"><label for="cOdo">總里程 (ODO):</label><input type="number" id="cOdo" placeholder="公里" required><small>記錄當下儀表板的總里程數</small></div>
             <div class="input-group"><label for="cKwh">充電度數 (kWh):</label><input type="number" step="0.01" id="cKwh" placeholder="例如:1.5" required></div>
             <div class="input-group"><label for="cCost">充電費用 (NT$):</label><input type="number" id="cCost" placeholder="例如:30"></div>
-            <div class="input-group"><label for="cStation">充電站/標記:</label><input type="text" id="cStation" placeholder="例如:家裡、公司、Gogoro換電站"></div>
-            <div class="input-group"><label for="cBatteryStart">充電前電量 (%):</label><input type="number" id="cBatteryStart" placeholder="例如:20"></div>
-            <div class="input-group"><label for="cBatteryEnd">充電後電量 (%):</label><input type="number" id="cBatteryEnd" placeholder="例如:100"></div>
+            <div class="input-group">
+                <label>充電站/標記:</label>
+                <div class="radio-group">
+                    <input type="radio" id="station_company" name="cStationRadio" value="公司" checked onchange="toggleStationInput()"><label for="station_company">公司</label>
+                    <input type="radio" id="station_public" name="cStationRadio" value="充電站" onchange="toggleStationInput()"><label for="station_public">充電站</label>
+                    <input type="radio" id="station_other" name="cStationRadio" value="其他" onchange="toggleStationInput()"><label for="station_other">其他</label>
+                </div>
+                <input type="text" id="cStation" placeholder="請輸入地點" style="display:none; margin-top: 10px;">
+            </div>
+            <div class="input-group"><label>充電前電量 (格):</label>
+                <div class="radio-group-grid">
+                    <input type="radio" id="bs0" name="cBatteryStart" value="0"><label for="bs0">0</label>
+                    <input type="radio" id="bs1" name="cBatteryStart" value="1" checked><label for="bs1">1</label>
+                    <input type="radio" id="bs2" name="cBatteryStart" value="2"><label for="bs2">2</label>
+                    <input type="radio" id="bs3" name="cBatteryStart" value="3"><label for="bs3">3</label>
+                    <input type="radio" id="bs4" name="cBatteryStart" value="4"><label for="bs4">4</label>
+                    <input type="radio" id="bs5" name="cBatteryStart" value="5"><label for="bs5">5</label>
+                </div>
+            </div>
+            <div class="input-group"><label>充電後電量 (格):</label>
+                <div class="radio-group-grid">
+                    <input type="radio" id="be0" name="cBatteryEnd" value="0"><label for="be0">0</label>
+                    <input type="radio" id="be1" name="cBatteryEnd" value="1"><label for="be1">1</label>
+                    <input type="radio" id="be2" name="cBatteryEnd" value="2"><label for="be2">2</label>
+                    <input type="radio" id="be3" name="cBatteryEnd" value="3"><label for="be3">3</label>
+                    <input type="radio" id="be4" name="cBatteryEnd" value="4"><label for="be4">4</label>
+                    <input type="radio" id="be5" name="cBatteryEnd" value="5" checked><label for="be5">5</label>
+                </div>
+            </div>
             <div class="input-group"><label for="cTrip">本次里程 (TRIP):</label><input type="number" id="cTrip" placeholder="公里"><small>非必填</small></div>
             <div class="input-group"><label for="cRange">預估里程 (RANGE):</label><input type="number" id="cRange" placeholder="公里"><small>非必填</small></div>
             <div class="input-group"><label for="cNotes">備註:</label><textarea id="cNotes" rows="2" placeholder="其他記錄事項"></textarea></div>
@@ -199,7 +227,7 @@
         </div>
         <div class="table-container">
             <table class="history-table">
-                <thead><tr><th>日期</th><th>ODO</th><th>kWh</th><th>費用</th><th>效率</th><th>電量</th><th>操作</th></tr></thead>
+                <thead><tr><th>日期</th><th>地點</th><th>ODO</th><th>費用</th><th>效率</th><th>電量</th><th>時長</th><th>操作</th></tr></thead>
                 <tbody id="chargeHistoryTable"></tbody>
             </table>
         </div>
@@ -311,11 +339,26 @@ function openTab(evt, tabName) {
     evt.currentTarget.classList.add("active");
 }
 
+function toggleStationInput() {
+    const isOther = document.getElementById('station_other').checked;
+    const input = document.getElementById('cStation');
+    input.style.display = isOther ? 'block' : 'none';
+    if (!isOther) {
+        input.value = '';
+    }
+}
+
 function fillNow(dateId, timeId) {
     const now = new Date();
     const localDate = new Date(now.getTime() - (now.getTimezoneOffset() * 60000)).toISOString();
     document.getElementById(dateId).value = localDate.slice(0, 10);
-    document.getElementById(timeId).value = localDate.slice(11, 16);
+    if(timeId) document.getElementById(timeId).value = localDate.slice(11, 16);
+}
+
+function fillNowTime(timeId) {
+    const now = new Date();
+    const localTime = new Date(now.getTime() - (now.getTimezoneOffset() * 60000)).toISOString().slice(11, 16);
+    document.getElementById(timeId).value = localTime;
 }
 
 function addPartItem(name = '', cost = '') {
@@ -342,16 +385,39 @@ function updateTotalCost() {
 document.getElementById('chargeForm').addEventListener('submit', function(e) {
     e.preventDefault();
     const editingId = document.getElementById('editingChargeId').value;
+    
+    let stationValue = document.querySelector('input[name="cStationRadio"]:checked').value;
+    if (stationValue === '其他') {
+        stationValue = document.getElementById('cStation').value;
+    }
+
+    const startTime = document.getElementById('cStartTime').value;
+    const endTime = document.getElementById('cEndTime').value;
+    let duration = 'N/A';
+    if (startTime && endTime) {
+        const start = new Date(`1970-01-01T${startTime}`);
+        const end = new Date(`1970-01-01T${endTime}`);
+        let diff = end - start;
+        if (diff < 0) { // Handles overnight charging
+            diff += 24 * 60 * 60 * 1000;
+        }
+        const hours = Math.floor(diff / (1000 * 60 * 60));
+        const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+        duration = `${hours}小時 ${minutes}分`;
+    }
+
     const record = {
         id: editingId ? parseInt(editingId) : Date.now(),
         date: document.getElementById('cDate').value,
-        time: document.getElementById('cTime').value,
+        startTime: startTime,
+        endTime: endTime,
+        duration: duration,
         odo: parseFloat(document.getElementById('cOdo').value),
         kwh: parseFloat(document.getElementById('cKwh').value),
         cost: parseFloat(document.getElementById('cCost').value) || 0,
-        station: document.getElementById('cStation').value,
-        batteryStart: document.getElementById('cBatteryStart').value,
-        batteryEnd: document.getElementById('cBatteryEnd').value,
+        station: stationValue,
+        batteryStart: document.querySelector('input[name="cBatteryStart"]:checked').value,
+        batteryEnd: document.querySelector('input[name="cBatteryEnd"]:checked').value,
         trip: document.getElementById('cTrip').value,
         range: document.getElementById('cRange').value,
         notes: document.getElementById('cNotes').value
@@ -427,13 +493,28 @@ function editRecord(key, id) {
     if (key === 'chargeLog') {
         document.getElementById('editingChargeId').value = record.id;
         document.getElementById('cDate').value = record.date;
-        document.getElementById('cTime').value = record.time;
+        document.getElementById('cStartTime').value = record.startTime || '';
+        document.getElementById('cEndTime').value = record.endTime || '';
         document.getElementById('cOdo').value = record.odo;
         document.getElementById('cKwh').value = record.kwh;
         document.getElementById('cCost').value = record.cost || '';
-        document.getElementById('cStation').value = record.station || '';
-        document.getElementById('cBatteryStart').value = record.batteryStart || '';
-        document.getElementById('cBatteryEnd').value = record.batteryEnd || '';
+
+        const stationInput = document.getElementById('cStation');
+        const stationOptions = ["公司", "充電站"];
+
+        if (stationOptions.includes(record.station)) {
+            document.querySelector(`input[name="cStationRadio"][value="${record.station}"]`).checked = true;
+            stationInput.style.display = 'none';
+            stationInput.value = '';
+        } else {
+            document.getElementById('station_other').checked = true;
+            stationInput.value = record.station || '';
+            stationInput.style.display = 'block';
+        }
+
+        if(record.batteryStart) document.querySelector(`input[name="cBatteryStart"][value="${record.batteryStart}"]`).checked = true;
+        if(record.batteryEnd) document.querySelector(`input[name="cBatteryEnd"][value="${record.batteryEnd}"]`).checked = true;
+        
         document.getElementById('cTrip').value = record.trip || '';
         document.getElementById('cRange').value = record.range || '';
         document.getElementById('cNotes').value = record.notes || '';
@@ -485,6 +566,7 @@ function cancelEdit(type) {
         document.getElementById('editingChargeId').value = '';
         document.getElementById('chargeFormTitle').textContent = '記錄充電';
         document.getElementById('cancelChargeEdit').style.display = 'none';
+        toggleStationInput();
     } else if (type === 'maint') {
         document.getElementById('maintenanceForm').reset();
         document.getElementById('editingMaintId').value = '';
@@ -514,11 +596,12 @@ function loadChargeHistory() {
         const row = tableBody.insertRow();
         row.innerHTML = `
             <td>${record.date.slice(5)}</td>
+            <td>${record.station}</td>
             <td>${record.odo}</td>
-            <td>${record.kwh}</td>
             <td>${record.cost || '-'}</td>
             <td>${record.efficiency}</td>
-            <td>${record.batteryStart || ''}→${record.batteryEnd || ''}</td>
+            <td>${record.batteryStart || '?'}→${record.batteryEnd || '?'}格</td>
+            <td>${record.duration || '-'}</td>
             <td class="action-buttons">
                 <button class="edit-btn" onclick="editRecord('chargeLog', ${record.id})">編輯</button>
                 <button class="delete-btn" onclick="deleteRecord('chargeLog', ${record.id})">刪除</button>
