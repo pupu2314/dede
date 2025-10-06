@@ -110,9 +110,9 @@
     </div>
 
     <div class="tabs" id="formTabs">
-        <button class="tab-button" onclick="openTab(event, 'chargeFormTab')">記錄充電</button>
-        <button class="tab-button" onclick="openTab(event, 'maintenanceFormTab')">記錄保養</button>
-        <button class="tab-button" onclick="openTab(event, 'expenseFormTab')">其他花費</button>
+        <button class="tab-button" data-tab="chargeFormTab">記錄充電</button>
+        <button class="tab-button" data-tab="maintenanceFormTab">記錄保養</button>
+        <button class="tab-button" data-tab="expenseFormTab">其他花費</button>
     </div>
 
     <div id="chargeFormTab" class="tab-content">
@@ -133,9 +133,9 @@
                 <div class="input-group">
                     <label>充電站/標記:</label>
                     <div class="radio-group">
-                        <input type="radio" id="station_company" name="cStationRadio" value="公司" checked onchange="toggleStationInput()"><label for="station_company">公司</label>
-                        <input type="radio" id="station_public" name="cStationRadio" value="充電站" onchange="toggleStationInput()"><label for="station_public">充電站</label>
-                        <input type="radio" id="station_other" name="cStationRadio" value="其他" onchange="toggleStationInput()"><label for="station_other">其他</label>
+                        <input type="radio" id="station_company" name="cStationRadio" value="公司" checked><label for="station_company">公司</label>
+                        <input type="radio" id="station_public" name="cStationRadio" value="充電站"><label for="station_public">充電站</label>
+                        <input type="radio" id="station_other" name="cStationRadio" value="其他"><label for="station_other">其他</label>
                     </div>
                     <input type="text" id="cStation" placeholder="請輸入地點" style="display:none; margin-top: 10px;">
                 </div>
@@ -171,7 +171,7 @@
         <h3 id="maintFormTitle">記錄保養</h3>
         <form id="maintenanceForm" class="form-section">
             <input type="hidden" id="editingMaintId">
-            <div class="input-group"><label for="mDate">日期:</label><input type="date" id="mDate" required><button type="button" class="now-btn" onclick="fillNow('mDate', 'mTime')">現在</button></div>
+            <div class="input-group"><label for="mDate">日期:</label><input type="date" id="mDate" required><button type="button" class="now-btn" id="maintNowBtn">現在</button></div>
             <div class="input-group"><label for="mTime">時間:</label><input type="time" id="mTime" required></div>
             <div class="input-group"><label for="mOdo">總里程 (ODO):</label><input type="number" id="mOdo" placeholder="公里" required></div>
             <div class="input-group"><label for="mLocation">地點:</label><input type="text" id="mLocation" placeholder="保養地點"></div>
@@ -187,11 +187,11 @@
             <div class="input-group"><label for="mNotes">服務/備註:</label><textarea id="mNotes" rows="3" placeholder="例如:大保養、檢查電路"></textarea></div>
             <h3>保養項目/零件</h3>
             <div id="partsList"></div>
-            <button type="button" class="main-btn add-part-btn" onclick="addPartItem()">新增項目</button>
+            <button type="button" class="main-btn add-part-btn" id="addPartBtn">新增項目</button>
             <hr>
             <p style="text-align: right; font-size: 1.2em; font-weight: bold;">總費用: NT$ <span id="totalCost">0</span></p>
             <button type="submit" class="main-btn">儲存記錄</button>
-            <button type="button" class="main-btn cancel-edit-btn" id="cancelMaintEdit" onclick="cancelEdit('maint')">取消編輯</button>
+            <button type="button" class="main-btn cancel-edit-btn" id="cancelMaintEdit">取消編輯</button>
         </form>
     </div>
 
@@ -199,7 +199,7 @@
         <h3 id="expenseFormTitle">記錄其他花費</h3>
         <form id="expenseForm" class="form-section">
             <input type="hidden" id="editingExpenseId">
-            <div class="input-group"><label for="eDate">日期:</label><input type="date" id="eDate" required><button type="button" class="now-btn" onclick="fillNow('eDate', 'eTime')">現在</button></div>
+            <div class="input-group"><label for="eDate">日期:</label><input type="date" id="eDate" required><button type="button" class="now-btn" id="expenseNowBtn">現在</button></div>
             <div class="input-group"><label for="eTime">時間:</label><input type="time" id="eTime" required></div>
             <div class="input-group"><label for="eOdo">總里程 (ODO):</label><input type="number" id="eOdo" placeholder="公里"></div>
             <div class="input-group"><label for="eCategory">類別:</label>
@@ -215,22 +215,22 @@
             <div class="input-group"><label for="eAmount">金額 (NT$):</label><input type="number" id="eAmount" placeholder="費用" required></div>
             <div class="input-group"><label for="eDescription">說明:</label><textarea id="eDescription" rows="3" placeholder="詳細說明"></textarea></div>
             <button type="submit" class="main-btn">儲存記錄</button>
-            <button type="button" class="main-btn cancel-edit-btn" id="cancelExpenseEdit" onclick="cancelEdit('expense')">取消編輯</button>
+            <button type="button" class="main-btn cancel-edit-btn" id="cancelExpenseEdit">取消編輯</button>
         </form>
     </div>
 
     <h2 style="margin-top: 40px;">歷史記錄與分析</h2>
     <div class="tabs" id="historyTabs">
-        <button class="tab-button" onclick="openTab(event, 'chargeHistoryTab')">充電歷史</button>
-        <button class="tab-button" onclick="openTab(event, 'maintenanceHistoryTab')">保養歷史</button>
-        <button class="tab-button" onclick="openTab(event, 'expenseHistoryTab')">花費記錄</button>
-        <button class="tab-button" onclick="openTab(event, 'statisticsTab')">統計分析</button>
+        <button class="tab-button" data-tab="chargeHistoryTab">充電歷史</button>
+        <button class="tab-button" data-tab="maintenanceHistoryTab">保養歷史</button>
+        <button class="tab-button" data-tab="expenseHistoryTab">花費記錄</button>
+        <button class="tab-button" data-tab="statisticsTab">統計分析</button>
     </div>
 
     <div id="chargeHistoryTab" class="tab-content">
         <div class="filter-section">
-            <input type="text" class="search-box" id="chargeSearch" placeholder="搜尋充電站..." onkeyup="filterTable('chargeHistoryTable', this.value)">
-            <select id="chargeMonthFilter" onchange="filterByMonth('charge')">
+            <input type="text" class="search-box" id="chargeSearch" placeholder="搜尋充電站...">
+            <select id="chargeMonthFilter">
                 <option value="">所有月份</option>
             </select>
         </div>
@@ -251,11 +251,11 @@
 
     <div id="maintenanceHistoryTab" class="tab-content">
         <div class="filter-section">
-            <input type="text" class="search-box" id="maintSearch" placeholder="搜尋內容..." onkeyup="filterTable('maintenanceHistoryTable', this.value)">
-            <select id="maintMonthFilter" onchange="filterByMonth('maint')">
+            <input type="text" class="search-box" id="maintSearch" placeholder="搜尋內容...">
+            <select id="maintMonthFilter">
                 <option value="">所有月份</option>
             </select>
-            <select id="maintTypeFilter" onchange="filterByType()">
+            <select id="maintTypeFilter">
                 <option value="">所有類型</option>
                 <option value="定期保養">定期保養</option>
                 <option value="大保養">大保養</option>
@@ -275,7 +275,7 @@
 
     <div id="expenseHistoryTab" class="tab-content">
         <div class="filter-section">
-            <select id="expenseCategoryFilter" onchange="filterByCategory()">
+            <select id="expenseCategoryFilter">
                 <option value="">所有類別</option>
                 <option value="保險">保險</option>
                 <option value="牌照稅">牌照稅</option>
@@ -284,7 +284,7 @@
                 <option value="清潔">清潔</option>
                 <option value="其他">其他</option>
             </select>
-            <select id="expenseMonthFilter" onchange="filterByMonth('expense')">
+            <select id="expenseMonthFilter">
                 <option value="">所有月份</option>
             </select>
         </div>
@@ -315,13 +315,13 @@
     
     <div class="data-management-section">
         <h3>資料管理</h3>
-        <input type="file" id="jsonImportInput" accept=".json" onchange="handleJsonImport(event)">
-        <button onclick="document.getElementById('jsonImportInput').click();">匯入 JSON</button>
-        <button onclick="exportData('chargeLog', 'json')">匯出充電 JSON</button>
-        <button onclick="exportData('maintenanceLog', 'json')">匯出保養 JSON</button>
-        <button onclick="exportData('expenseLog', 'json')">匯出花費 JSON</button>
-        <button onclick="exportAllData()">匯出全部資料</button>
-        <button onclick="if(confirm('確定要清除所有資料嗎?此操作無法復原!')) { clearAllData(); }" style="color: var(--danger-color); border-color: var(--danger-color);">清除所有資料</button>
+        <input type="file" id="jsonImportInput" accept=".json">
+        <button id="importBtn">匯入 JSON</button>
+        <button id="exportChargeBtn">匯出充電 JSON</button>
+        <button id="exportMaintBtn">匯出保養 JSON</button>
+        <button id="exportExpenseBtn">匯出花費 JSON</button>
+        <button id="exportAllBtn">匯出全部資料</button>
+        <button id="clearAllBtn" style="color: var(--danger-color); border-color: var(--danger-color);">清除所有資料</button>
     </div>
 </div>
 
@@ -341,7 +341,7 @@
             <div class="input-group"><label for="edit_cCost">充電費用 (NT$):</label><input type="number" id="edit_cCost"></div>
             <div class="input-group"><label for="edit_cNotes">備註:</label><textarea id="edit_cNotes" rows="2"></textarea></div>
             <button type="submit" class="main-btn">儲存變更</button>
-            <button type="button" class="main-btn" onclick="closeEditChargeModal()" style="background-color: var(--secondary-color);">取消</button>
+            <button type="button" class="main-btn" id="cancelEditChargeBtn" style="background-color: var(--secondary-color);">取消</button>
         </form>
     </div>
 </div>
@@ -353,17 +353,65 @@ const SERVICE_INTERVAL_DAYS = 60;
 let chargeChartInstance, maintenanceChartInstance, expenseChartInstance, monthlyExpenseChartInstance, categoryPieChartInstance;
 
 document.addEventListener('DOMContentLoaded', function() {
-    document.querySelector('#formTabs .tab-button').click();
-    document.querySelector('#historyTabs .tab-button').click();
-    loadAllData();
-    populateMonthFilters();
-
-    // Event Listeners
+    // --- Event Listeners ---
+    
+    // Forms
     document.getElementById('startChargeForm').addEventListener('submit', startCharging);
     document.getElementById('endChargeForm').addEventListener('submit', endCharging);
     document.getElementById('maintenanceForm').addEventListener('submit', handleMaintenanceSubmit);
     document.getElementById('expenseForm').addEventListener('submit', handleExpenseSubmit);
     document.getElementById('editChargeForm').addEventListener('submit', handleChargeEditSubmit);
+
+    // Tabs
+    document.querySelectorAll('.tab-button').forEach(button => {
+        button.addEventListener('click', (event) => {
+            const tabName = button.dataset.tab;
+            if (tabName) {
+                openTab(event, tabName);
+            }
+        });
+    });
+
+    // Data Management
+    document.getElementById('importBtn').addEventListener('click', () => document.getElementById('jsonImportInput').click());
+    document.getElementById('jsonImportInput').addEventListener('change', handleJsonImport);
+    document.getElementById('exportChargeBtn').addEventListener('click', () => exportData('chargeLog', 'json'));
+    document.getElementById('exportMaintBtn').addEventListener('click', () => exportData('maintenanceLog', 'json'));
+    document.getElementById('exportExpenseBtn').addEventListener('click', () => exportData('expenseLog', 'json'));
+    document.getElementById('exportAllBtn').addEventListener('click', exportAllData);
+    document.getElementById('clearAllBtn').addEventListener('click', () => {
+        if(confirm('確定要清除所有資料嗎?此操作無法復原!')) {
+            clearAllData();
+        }
+    });
+
+    // Form interactions
+    document.getElementById('maintNowBtn').addEventListener('click', () => fillNow('mDate', 'mTime'));
+    document.getElementById('expenseNowBtn').addEventListener('click', () => fillNow('eDate', 'eTime'));
+    document.getElementById('addPartBtn').addEventListener('click', addPartItem);
+    document.getElementById('cancelMaintEdit').addEventListener('click', () => cancelEdit('maint'));
+    document.getElementById('cancelExpenseEdit').addEventListener('click', () => cancelEdit('expense'));
+    document.querySelectorAll('input[name="cStationRadio"]').forEach(radio => {
+        radio.addEventListener('change', toggleStationInput);
+    });
+
+    // Modal
+    document.getElementById('cancelEditChargeBtn').addEventListener('click', closeEditChargeModal);
+
+    // Filters
+    document.getElementById('chargeSearch').addEventListener('keyup', (e) => filterTable('chargeHistoryTable', e.target.value));
+    document.getElementById('chargeMonthFilter').addEventListener('change', () => filterByMonth('charge'));
+    document.getElementById('maintSearch').addEventListener('keyup', (e) => filterTable('maintenanceHistoryTable', e.target.value));
+    document.getElementById('maintMonthFilter').addEventListener('change', () => filterByMonth('maint'));
+    document.getElementById('maintTypeFilter').addEventListener('change', filterByType);
+    document.getElementById('expenseCategoryFilter').addEventListener('change', filterByCategory);
+    document.getElementById('expenseMonthFilter').addEventListener('change', () => filterByMonth('expense'));
+
+    // --- Initial Load ---
+    document.querySelector('#formTabs .tab-button').click();
+    document.querySelector('#historyTabs .tab-button').click();
+    loadAllData();
+    populateMonthFilters();
 });
 
 function loadAllData() {
@@ -378,7 +426,14 @@ function loadAllData() {
 
 function openTab(evt, tabName) {
     const parentTabs = evt.currentTarget.parentElement;
-    parentTabs.parentElement.querySelectorAll('.tab-content').forEach(tc => tc.style.display = "none");
+    // Hide all tab content within the same container as the tabs
+    let contentContainer = parentTabs.parentElement;
+    contentContainer.querySelectorAll('.tab-content').forEach(tc => {
+        if(tc.parentElement === contentContainer) {
+            tc.style.display = "none";
+        }
+    });
+
     parentTabs.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove("active"));
     document.getElementById(tabName).style.display = "block";
     evt.currentTarget.classList.add("active");
@@ -637,7 +692,7 @@ function editRecord(key, id) {
         updateTotalCost();
         document.getElementById('maintFormTitle').textContent = '編輯保養記錄';
         document.getElementById('cancelMaintEdit').style.display = 'block';
-        document.querySelector('#formTabs button:nth-child(2)').click();
+        document.querySelector('#formTabs button[data-tab="maintenanceFormTab"]').click();
         window.scrollTo(0, 0);
     } else if (key === 'expenseLog') {
         document.getElementById('editingExpenseId').value = record.id;
@@ -649,7 +704,7 @@ function editRecord(key, id) {
         document.getElementById('eDescription').value = record.description || '';
         document.getElementById('expenseFormTitle').textContent = '編輯花費記錄';
         document.getElementById('cancelExpenseEdit').style.display = 'block';
-        document.querySelector('#formTabs button:nth-child(3)').click();
+        document.querySelector('#formTabs button[data-tab="expenseFormTab"]').click();
         window.scrollTo(0, 0);
     }
 }
@@ -910,21 +965,9 @@ function filterByMonth(type) {
 
     for (let i = 0; i < tableBody.rows.length; i++) {
         const row = tableBody.rows[i];
-        // The first cell contains the date/period
         const dateCellText = row.cells[0].textContent; 
-        const recordDate = new Date(row.dataset.date).toISOString().slice(0, 7);
         row.style.display = (!selectedMonth || dateCellText.includes(selectedMonth)) ? '' : 'none';
     }
-     // Re-implementing filter logic to be more robust
-    const rows = tableBody.querySelectorAll('tr');
-    rows.forEach(row => {
-        const date = row.getAttribute('data-date');
-        if (!selectedMonth || (date && date.startsWith(selectedMonth))) {
-            row.style.display = '';
-        } else {
-            row.style.display = 'none';
-        }
-    });
 }
 
 
@@ -933,7 +976,7 @@ function filterByType() {
     const tableBody = document.getElementById('maintenanceHistoryTable');
     const rows = tableBody.querySelectorAll('tr');
     rows.forEach(row => {
-        const type = row.getAttribute('data-type');
+        const type = row.cells[2].textContent;
         if (!selectedType || type === selectedType) {
             row.style.display = '';
         } else {
@@ -947,7 +990,7 @@ function filterByCategory() {
     const tableBody = document.getElementById('expenseHistoryTable');
     const rows = tableBody.querySelectorAll('tr');
     rows.forEach(row => {
-        const category = row.getAttribute('data-category');
+        const category = row.cells[1].textContent;
         if (!selectedCategory || category === selectedCategory) {
             row.style.display = '';
         } else {
@@ -1114,9 +1157,9 @@ function renderCharts() {
 }
 
 function renderMonthlyExpenseChart() {
-    const maintData = JSON.parse(localStorage.getItem('maintenanceLog') || '[]');
-    const chargeData = JSON.parse(localStorage.getItem('chargeLog') || '[]');
-    const expenseData = JSON.parse(localStorage.getItem('expenseLog') || '[]');
+    const maintData = JSON.parse(localStorage.getItem('maintenanceLog')) || [];
+    const chargeData = JSON.parse(localStorage.getItem('chargeLog')) || [];
+    const expenseData = JSON.parse(localStorage.getItem('expenseLog')) || [];
     
     const monthlyData = {};
     
@@ -1159,9 +1202,9 @@ function renderMonthlyExpenseChart() {
 }
 
 function renderCategoryPieChart() {
-    const maintData = JSON.parse(localStorage.getItem('maintenanceLog')) || [];
-    const chargeData = JSON.parse(localStorage.getItem('chargeLog')) || [];
-    const expenseData = JSON.parse(localStorage.getItem('expenseLog')) || '[]');
+    const maintData = JSON.parse(localStorage.getItem('maintenanceLog') || '[]');
+    const chargeData = JSON.parse(localStorage.getItem('chargeLog') || '[]');
+    const expenseData = JSON.parse(localStorage.getItem('expenseLog') || '[]');
     
     const categoryData = { '保養': 0, '充電': 0 };
     
@@ -1201,4 +1244,3 @@ function renderCategoryPieChart() {
 </script>
 </body>
 </html>
-
