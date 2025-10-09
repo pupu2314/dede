@@ -119,7 +119,7 @@
         <div id="startChargeSection">
             <h3>開始充電</h3>
             <form id="startChargeForm" class="form-section">
-                <div class="input-group"><label for="cOdo">目前總里程 (ODO):</label><input type="number" id="cOdo" placeholder="公里" required><small>記錄當下儀表板的總里程數</small></div>
+                <div class="input-group"><label for="cOdo">目前總里程 (ODO):</label><input type="number" step="0.1" id="cOdo" placeholder="公里" required><small>記錄當下儀表板的總里程數</small></div>
                 <div class="input-group"><label>充電前電量 (格):</label>
                     <div class="radio-group-grid">
                         <input type="radio" id="bs0" name="cBatteryStart" value="0"><label for="bs0">0</label>
@@ -139,7 +139,7 @@
                     </div>
                     <input type="text" id="cStation" placeholder="請輸入地點" style="display:none; margin-top: 10px;">
                 </div>
-                <div class="input-group"><label for="cTrip">本次里程 (TRIP):</label><input type="number" id="cTrip" placeholder="公里"><small>非必填</small></div>
+                <div class="input-group"><label for="cTrip">本次里程 (TRIP):</label><input type="number" step="0.1" id="cTrip" placeholder="公里"><small>非必填</small></div>
                 <div class="input-group"><label for="cNotes">備註:</label><textarea id="cNotes" rows="2" placeholder="其他記錄事項"></textarea></div>
                 <button type="submit" class="main-btn" style="background-color: var(--success-color);">開始充電</button>
             </form>
@@ -159,9 +159,9 @@
                         <input type="radio" id="be5" name="cBatteryEnd" value="5" checked><label for="be5">5</label>
                     </div>
                 </div>
-                 <div class="input-group"><label for="cKwh">充電度數 (kWh):</label><input type="number" step="0.01" id="cKwh" placeholder="例如:1.5" required></div>
-                <div class="input-group"><label for="cCost">充電費用 (NT$):</label><input type="number" id="cCost" placeholder="例如:30" required></div>
-                <div class="input-group"><label for="cRange">預估里程 (RANGE):</label><input type="number" id="cRange" placeholder="公里"><small>非必填</small></div>
+                 <div class="input-group" id="kwh-input-group"><label for="cKwh">充電度數 (kWh):</label><input type="number" step="0.01" id="cKwh" placeholder="例如:1.5"></div>
+                 <div class="input-group" id="cost-input-group"><label for="cCost">充電費用 (NT$):</label><input type="number" id="cCost" placeholder="例如:30"></div>
+                <div class="input-group"><label for="cRange">預估里程 (RANGE):</label><input type="number" step="0.1" id="cRange" placeholder="公里"><small>非必填</small></div>
                 <button type="submit" class="main-btn">結束充電並儲存</button>
             </form>
         </div>
@@ -173,7 +173,7 @@
             <input type="hidden" id="editingMaintId">
             <div class="input-group"><label for="mDate">日期:</label><input type="date" id="mDate" required><button type="button" class="now-btn" id="maintNowBtn">現在</button></div>
             <div class="input-group"><label for="mTime">時間:</label><input type="time" id="mTime" required></div>
-            <div class="input-group"><label for="mOdo">總里程 (ODO):</label><input type="number" id="mOdo" placeholder="公里" required></div>
+            <div class="input-group"><label for="mOdo">總里程 (ODO):</label><input type="number" step="0.1" id="mOdo" placeholder="公里" required></div>
             <div class="input-group"><label for="mLocation">地點:</label><input type="text" id="mLocation" placeholder="保養地點"></div>
             <div class="input-group"><label for="mType">保養類型:</label>
                 <select id="mType">
@@ -201,7 +201,7 @@
             <input type="hidden" id="editingExpenseId">
             <div class="input-group"><label for="eDate">日期:</label><input type="date" id="eDate" required><button type="button" class="now-btn" id="expenseNowBtn">現在</button></div>
             <div class="input-group"><label for="eTime">時間:</label><input type="time" id="eTime" required></div>
-            <div class="input-group"><label for="eOdo">總里程 (ODO):</label><input type="number" id="eOdo" placeholder="公里"></div>
+            <div class="input-group"><label for="eOdo">總里程 (ODO):</label><input type="number" step="0.1" id="eOdo" placeholder="公里"></div>
             <div class="input-group"><label for="eCategory">類別:</label>
                 <select id="eCategory">
                     <option value="保險">保險</option>
@@ -333,7 +333,7 @@
             <input type="hidden" id="editingChargeId">
             <div class="input-group"><label for="edit_cStartTime">開始時間:</label><input type="datetime-local" id="edit_cStartTime" required></div>
             <div class="input-group"><label for="edit_cEndTime">結束時間:</label><input type="datetime-local" id="edit_cEndTime" required></div>
-            <div class="input-group"><label for="edit_cOdo">總里程 (ODO):</label><input type="number" id="edit_cOdo" required></div>
+            <div class="input-group"><label for="edit_cOdo">總里程 (ODO):</label><input type="number" step="0.1" id="edit_cOdo" required></div>
             <div class="input-group"><label for="edit_cStation">充電站:</label><input type="text" id="edit_cStation"></div>
             <div class="input-group"><label for="edit_cBatteryStart">開始電量 (格):</label><input type="number" id="edit_cBatteryStart"></div>
             <div class="input-group"><label for="edit_cBatteryEnd">結束電量 (格):</label><input type="number" id="edit_cBatteryEnd"></div>
@@ -351,6 +351,7 @@
 const SERVICE_INTERVAL_KM = 1000;
 const SERVICE_INTERVAL_DAYS = 60;
 let chargeChartInstance, maintenanceChartInstance, expenseChartInstance, monthlyExpenseChartInstance, categoryPieChartInstance;
+let chargeTimerInterval = null;
 
 document.addEventListener('DOMContentLoaded', function() {
     // --- Event Listeners ---
@@ -388,7 +389,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // Form interactions
     document.getElementById('maintNowBtn').addEventListener('click', () => fillNow('mDate', 'mTime'));
     document.getElementById('expenseNowBtn').addEventListener('click', () => fillNow('eDate', 'eTime'));
-    document.getElementById('addPartBtn').addEventListener('click', addPartItem);
+    document.getElementById('addPartBtn').addEventListener('click', () => addPartItem());
     document.getElementById('cancelMaintEdit').addEventListener('click', () => cancelEdit('maint'));
     document.getElementById('cancelExpenseEdit').addEventListener('click', () => cancelEdit('expense'));
     document.querySelectorAll('input[name="cStationRadio"]').forEach(radio => {
@@ -426,7 +427,6 @@ function loadAllData() {
 
 function openTab(evt, tabName) {
     const parentTabs = evt.currentTarget.parentElement;
-    // Hide all tab content within the same container as the tabs
     let contentContainer = parentTabs.parentElement;
     contentContainer.querySelectorAll('.tab-content').forEach(tc => {
         if(tc.parentElement === contentContainer) {
@@ -484,8 +484,9 @@ function updateTotalCost() {
 // --- Charging Flow ---
 function startCharging(e) {
     e.preventDefault();
-    let stationValue = document.querySelector('input[name="cStationRadio"]:checked').value;
-    if (stationValue === '其他') {
+    const stationType = document.querySelector('input[name="cStationRadio"]:checked').value;
+    let stationValue = stationType;
+    if (stationType === '其他') {
         stationValue = document.getElementById('cStation').value;
     }
 
@@ -495,6 +496,7 @@ function startCharging(e) {
         odo: parseFloat(document.getElementById('cOdo').value),
         batteryStart: document.querySelector('input[name="cBatteryStart"]:checked').value,
         station: stationValue,
+        stationType: stationType,
         trip: document.getElementById('cTrip').value,
         notes: document.getElementById('cNotes').value
     };
@@ -507,6 +509,11 @@ function startCharging(e) {
 
 function endCharging(e) {
     e.preventDefault();
+    if (chargeTimerInterval) {
+        clearInterval(chargeTimerInterval);
+        chargeTimerInterval = null;
+    }
+    
     const session = JSON.parse(localStorage.getItem('currentChargingSession'));
     if (!session) return;
 
@@ -523,7 +530,7 @@ function endCharging(e) {
         date: session.startTime.slice(0, 10),
         duration: duration,
         batteryEnd: document.querySelector('input[name="cBatteryEnd"]:checked').value,
-        kwh: parseFloat(document.getElementById('cKwh').value),
+        kwh: parseFloat(document.getElementById('cKwh').value) || 0,
         cost: parseFloat(document.getElementById('cCost').value) || 0,
         range: document.getElementById('cRange').value,
     };
@@ -540,6 +547,11 @@ function updateChargeUI() {
     const startSection = document.getElementById('startChargeSection');
     const endSection = document.getElementById('endChargeSection');
 
+    if (chargeTimerInterval) {
+        clearInterval(chargeTimerInterval);
+        chargeTimerInterval = null;
+    }
+
     if (session) {
         startSection.style.display = 'none';
         endSection.style.display = 'block';
@@ -548,7 +560,59 @@ function updateChargeUI() {
             <p><strong>開始里程:</strong> ${session.odo} km</p>
             <p><strong>開始電量:</strong> ${session.batteryStart} 格</p>
             <p><strong>充電站:</strong> ${session.station}</p>
+            <p><strong>已充電時長:</strong> <span id="chargeDurationTimer">計算中...</span></p>
         `;
+        
+        const kwhGroup = document.getElementById('kwh-input-group');
+        const costGroup = document.getElementById('cost-input-group');
+        const kwhInput = document.getElementById('cKwh');
+        const costInput = document.getElementById('cCost');
+
+        kwhInput.value = '';
+        costInput.value = '';
+
+        switch (session.stationType) {
+            case '公司':
+                kwhGroup.style.display = 'block';
+                costGroup.style.display = 'none';
+                kwhInput.required = true;
+                costInput.required = false;
+                break;
+            case '充電站':
+                kwhGroup.style.display = 'none';
+                costGroup.style.display = 'block';
+                kwhInput.required = false;
+                costInput.required = true;
+                break;
+            default: // '其他'
+                kwhGroup.style.display = 'block';
+                costGroup.style.display = 'block';
+                kwhInput.required = true;
+                costInput.required = true;
+                break;
+        }
+
+        const startTime = new Date(session.startTime);
+        const timerElement = document.getElementById('chargeDurationTimer');
+
+        chargeTimerInterval = setInterval(() => {
+            const now = new Date();
+            const diff = now - startTime;
+            const hours = Math.floor(diff / 3600000);
+            const minutes = Math.floor((diff % 3600000) / 60000);
+            const seconds = Math.floor((diff % 60000) / 1000);
+
+            const formattedTime = [
+                hours.toString().padStart(2, '0'),
+                minutes.toString().padStart(2, '0'),
+                seconds.toString().padStart(2, '0')
+            ].join(':');
+            
+            if(timerElement) {
+                timerElement.textContent = formattedTime;
+            }
+        }, 1000);
+
     } else {
         startSection.style.display = 'block';
         endSection.style.display = 'none';
@@ -876,7 +940,7 @@ function updateSummary() {
         document.getElementById('statCostPerKm').textContent = `0 NT$`;
     }
     
-    const allData = [...chargeData, ...maintData, ...expenseData];
+    const allData = [...chargeData, ...maintData, ...expenseData].filter(d => d.date);
     if (allData.length > 1) {
         const firstDate = new Date(allData.sort((a,b) => new Date(a.date) - new Date(b.date))[0].date);
         const lastDate = new Date();
@@ -1202,8 +1266,8 @@ function renderMonthlyExpenseChart() {
 }
 
 function renderCategoryPieChart() {
-    const maintData = JSON.parse(localStorage.getItem('maintenanceLog') || '[]');
-    const chargeData = JSON.parse(localStorage.getItem('chargeLog') || '[]');
+    const maintData = JSON.parse(localStorage.getItem('maintenanceLog')) || [];
+    const chargeData = JSON.parse(localStorage.getItem('chargeLog')) || [];
     const expenseData = JSON.parse(localStorage.getItem('expenseLog') || '[]');
     
     const categoryData = { '保養': 0, '充電': 0 };
