@@ -139,7 +139,7 @@
                     </div>
                     <input type="text" id="cStation" placeholder="請輸入地點" style="display:none; margin-top: 10px;">
                 </div>
-                <div class="input-group"><label for="cTrip">本次里程 (TRIP):</label><input type="number" step="0.1" id="cTrip" placeholder="公里"><small>非必填</small></div>
+                <div class="input-group"><label for="cTrip">本次里程 (TRIP):</label><input type="number" step="0.1" id="cTrip" placeholder="公里"><small>上次充飽電後到現在的里程</small></div>
                 <div class="input-group"><label for="cNotes">備註:</label><textarea id="cNotes" rows="2" placeholder="其他記錄事項"></textarea></div>
                 <button type="submit" class="main-btn" style="background-color: var(--success-color);">開始充電</button>
             </form>
@@ -159,9 +159,9 @@
                         <input type="radio" id="be5" name="cBatteryEnd" value="5" checked><label for="be5">5</label>
                     </div>
                 </div>
-                 <div class="input-group" id="kwh-input-group"><label for="cKwh">充電度數 (kWh):</label><input type="number" step="0.01" id="cKwh" placeholder="例如:1.5"></div>
+                 <div class="input-group" id="kwh-input-group"><label for="cKwh">充電度數 (kWh):</label><input type="number" step="0.01" id="cKwh" placeholder="例如:1.5"><small>插座端量測值，非必填</small></div>
                  <div class="input-group" id="cost-input-group"><label for="cCost">充電費用 (NT$):</label><input type="number" id="cCost" placeholder="例如:30"></div>
-                <div class="input-group"><label for="cRange">預估里程 (RANGE):</label><input type="number" step="0.1" id="cRange" placeholder="公里"><small>非必填</small></div>
+                <div class="input-group"><label for="cRange">預估里程 (RANGE):</label><input type="number" step="0.1" id="cRange" placeholder="公里"><small>儀表板預估值，非必填</small></div>
                 <button type="submit" class="main-btn">結束充電並儲存</button>
             </form>
         </div>
@@ -235,14 +235,14 @@
             </select>
         </div>
         <div class="analytics-section">
-            <div class="analytics-item"><h4>平均效率</h4><p id="avgKwh">N/A</p></div>
-            <div class="analytics-item"><h4>最佳效率</h4><p id="bestKwh">N/A</p></div>
-            <div class="analytics-item"><h4>最差效率</h4><p id="worstKwh">N/A</p></div>
+            <div class="analytics-item"><h4>平均每格效率</h4><p id="avgEfficiency">N/A</p></div>
+            <div class="analytics-item"><h4>最佳每格效率</h4><p id="bestEfficiency">N/A</p></div>
+            <div class="analytics-item"><h4>最差每格效率</h4><p id="worstEfficiency">N/A</p></div>
             <div class="analytics-item"><h4>總充電次數</h4><p id="totalCharges">0</p></div>
         </div>
         <div class="table-container">
             <table class="history-table">
-                <thead><tr><th>期間</th><th>地點</th><th>ODO</th><th>費用</th><th>效率</th><th>電量</th><th>時長</th><th>操作</th></tr></thead>
+                <thead><tr><th>期間</th><th>地點</th><th>TRIP</th><th>費用</th><th>每格效率<br>(km/格)</th><th>電量</th><th>時長</th><th>操作</th></tr></thead>
                 <tbody id="chargeHistoryTable"></tbody>
             </table>
         </div>
@@ -334,6 +334,7 @@
             <div class="input-group"><label for="edit_cStartTime">開始時間:</label><input type="datetime-local" id="edit_cStartTime" required></div>
             <div class="input-group"><label for="edit_cEndTime">結束時間:</label><input type="datetime-local" id="edit_cEndTime" required></div>
             <div class="input-group"><label for="edit_cOdo">總里程 (ODO):</label><input type="number" step="0.1" id="edit_cOdo" required></div>
+            <div class="input-group"><label for="edit_cTrip">本次里程 (TRIP):</label><input type="number" step="0.1" id="edit_cTrip"></div>
             <div class="input-group"><label for="edit_cStation">充電站:</label><input type="text" id="edit_cStation"></div>
             <div class="input-group"><label for="edit_cBatteryStart">開始電量 (格):</label><input type="number" id="edit_cBatteryStart"></div>
             <div class="input-group"><label for="edit_cBatteryEnd">結束電量 (格):</label><input type="number" id="edit_cBatteryEnd"></div>
@@ -348,8 +349,12 @@
 
 
 <script>
-const SERVICE_INTERVAL_KM = 1000;
-const SERVICE_INTERVAL_DAYS = 60;
+// --- 保養週期設定 (根據車主手冊) ---
+const FIRST_SERVICE_KM = 300;       // 首次保養里程
+const FIRST_SERVICE_DAYS = 30;      // 首次保養時間 (約1個月)
+const REGULAR_SERVICE_KM = 3000;    // 定期保養里程
+const REGULAR_SERVICE_DAYS = 180;   // 定期保養時間 (約6個月)
+
 let chargeChartInstance, maintenanceChartInstance, expenseChartInstance, monthlyExpenseChartInstance, categoryPieChartInstance;
 let chargeTimerInterval = null;
 
@@ -494,10 +499,10 @@ function startCharging(e) {
         id: Date.now(),
         startTime: new Date().toISOString(),
         odo: parseFloat(document.getElementById('cOdo').value),
-        batteryStart: document.querySelector('input[name="cBatteryStart"]:checked').value,
+        batteryStart: parseInt(document.querySelector('input[name="cBatteryStart"]:checked').value),
         station: stationValue,
         stationType: stationType,
-        trip: document.getElementById('cTrip').value,
+        trip: parseFloat(document.getElementById('cTrip').value) || 0,
         notes: document.getElementById('cNotes').value
     };
 
@@ -529,7 +534,7 @@ function endCharging(e) {
         endTime: endTime.toISOString(),
         date: session.startTime.slice(0, 10),
         duration: duration,
-        batteryEnd: document.querySelector('input[name="cBatteryEnd"]:checked').value,
+        batteryEnd: parseInt(document.querySelector('input[name="cBatteryEnd"]:checked').value),
         kwh: parseFloat(document.getElementById('cKwh').value) || 0,
         cost: parseFloat(document.getElementById('cCost').value) || 0,
         range: document.getElementById('cRange').value,
@@ -570,25 +575,25 @@ function updateChargeUI() {
 
         kwhInput.value = '';
         costInput.value = '';
+        
+        // In the new logic, kWh is not required for efficiency.
+        kwhInput.required = false; 
 
         switch (session.stationType) {
             case '公司':
                 kwhGroup.style.display = 'block';
                 costGroup.style.display = 'none';
-                kwhInput.required = true;
                 costInput.required = false;
                 break;
             case '充電站':
                 kwhGroup.style.display = 'none';
                 costGroup.style.display = 'block';
-                kwhInput.required = false;
                 costInput.required = true;
                 break;
             default: // '其他'
                 kwhGroup.style.display = 'block';
                 costGroup.style.display = 'block';
-                kwhInput.required = true;
-                costInput.required = true;
+                costInput.required = false; 
                 break;
         }
 
@@ -622,9 +627,7 @@ function updateChargeUI() {
 function handleChargeEditSubmit(e) {
     e.preventDefault();
     const editingId = parseInt(document.getElementById('editingChargeId').value);
-    const chargeLog = JSON.parse(localStorage.getItem('chargeLog')) || [];
-    const originalRecord = chargeLog.find(r => r.id === editingId) || {};
-
+    
     const endTime = new Date(document.getElementById('edit_cEndTime').value);
     const startTime = new Date(document.getElementById('edit_cStartTime').value);
     let diff = endTime - startTime;
@@ -639,14 +642,14 @@ function handleChargeEditSubmit(e) {
         date: startTime.toISOString().slice(0, 10),
         duration: duration,
         odo: parseFloat(document.getElementById('edit_cOdo').value),
+        trip: parseFloat(document.getElementById('edit_cTrip').value),
         station: document.getElementById('edit_cStation').value,
-        batteryStart: document.getElementById('edit_cBatteryStart').value,
-        batteryEnd: document.getElementById('edit_cBatteryEnd').value,
+        batteryStart: parseInt(document.getElementById('edit_cBatteryStart').value),
+        batteryEnd: parseInt(document.getElementById('edit_cBatteryEnd').value),
         kwh: parseFloat(document.getElementById('edit_cKwh').value),
         cost: parseFloat(document.getElementById('edit_cCost').value),
         notes: document.getElementById('edit_cNotes').value,
-        trip: originalRecord.trip,
-        range: originalRecord.range
+        range: 0 // Retain schema consistency
     };
     
     saveData('chargeLog', record, true);
@@ -734,6 +737,7 @@ function editRecord(key, id) {
         document.getElementById('edit_cStartTime').value = toLocalISO(record.startTime);
         document.getElementById('edit_cEndTime').value = toLocalISO(record.endTime);
         document.getElementById('edit_cOdo').value = record.odo;
+        document.getElementById('edit_cTrip').value = record.trip;
         document.getElementById('edit_cStation').value = record.station;
         document.getElementById('edit_cBatteryStart').value = record.batteryStart;
         document.getElementById('edit_cBatteryEnd').value = record.batteryEnd;
@@ -797,22 +801,32 @@ function cancelEdit(type) {
     }
 }
 
+function calculateEfficiencies(data) {
+    const chronologicalData = [...data].sort((a, b) => new Date(a.startTime) - new Date(b.startTime));
+    const efficiencyMap = {};
+
+    for (let i = 1; i < chronologicalData.length; i++) {
+        const currentRecord = chronologicalData[i];
+        const prevRecord = chronologicalData[i - 1];
+
+        const trip = currentRecord.trip;
+        const barsConsumed = prevRecord.batteryEnd - currentRecord.batteryStart;
+
+        if (trip > 0 && barsConsumed > 0) {
+            efficiencyMap[currentRecord.id] = (trip / barsConsumed).toFixed(2);
+        }
+    }
+    return efficiencyMap;
+}
+
+
 function loadChargeHistory() {
     const data = JSON.parse(localStorage.getItem('chargeLog')) || [];
     const tableBody = document.getElementById('chargeHistoryTable');
     tableBody.innerHTML = '';
     
     const sortedData = [...data].sort((a, b) => new Date(b.startTime) - new Date(a.startTime));
-    
-    const chronologicalData = [...data].sort((a, b) => new Date(a.startTime) - new Date(b.startTime));
-    const efficiencyMap = {};
-    for(let i = 1; i < chronologicalData.length; i++) {
-        const odoDiff = chronologicalData[i].odo - chronologicalData[i-1].odo;
-        const kwh = chronologicalData[i].kwh;
-        if (kwh > 0 && odoDiff > 0) {
-            efficiencyMap[chronologicalData[i].id] = (odoDiff / kwh).toFixed(2);
-        }
-    }
+    const efficiencyMap = calculateEfficiencies(data);
 
     sortedData.forEach(record => {
         const row = tableBody.insertRow();
@@ -822,7 +836,7 @@ function loadChargeHistory() {
         row.innerHTML = `
             <td>${period}</td>
             <td>${record.station}</td>
-            <td>${record.odo}</td>
+            <td>${record.trip || '-'}</td>
             <td>${record.cost || '-'}</td>
             <td>${efficiency}</td>
             <td>${record.batteryStart || '?'}→${record.batteryEnd || '?'}格</td>
@@ -833,6 +847,7 @@ function loadChargeHistory() {
             </td>`;
     });
 }
+
 
 function loadMaintenanceHistory() {
     const data = JSON.parse(localStorage.getItem('maintenanceLog')) || [];
@@ -880,6 +895,7 @@ function loadExpenseHistory() {
 }
 
 function daysBetween(date1, date2) {
+    if (!date1 || !date2) return 0;
     return Math.round(Math.abs((new Date(date1) - new Date(date2)) / (24 * 60 * 60 * 1000)));
 }
 
@@ -889,6 +905,7 @@ function updateSummary() {
     const expenseData = JSON.parse(localStorage.getItem('expenseLog')) || [];
     const today = new Date().toISOString().slice(0, 10);
 
+    // --- 總里程 & 總花費 ---
     let totalMileage = 0;
     const allOdoData = [...chargeData, ...maintData, ...expenseData].filter(d => d.odo > 0);
     if(allOdoData.length > 0) {
@@ -901,27 +918,57 @@ function updateSummary() {
     chargeData.forEach(c => totalExpense += c.cost || 0);
     expenseData.forEach(e => totalExpense += e.amount || 0);
     document.getElementById('totalExpense').textContent = totalExpense.toFixed(0);
+    
+    // --- 下次保養預估 (新邏輯) ---
+    const maintDataSorted = [...maintData].sort((a,b) => new Date(a.date) - new Date(b.date));
+    const currentOdo = totalMileage;
 
-    if (maintData.length > 0) {
-        const last = [...maintData].sort((a,b) => new Date(a.date) - new Date(b.date)).pop();
+    if (maintData.length === 0) {
+        // 首次保養邏輯 (300km / 1個月)
+        const allData = [...chargeData, ...expenseData];
+        if (allData.length === 0) {
+            document.getElementById('nextService').textContent = `首次保養: 300 km 或 1 個月`;
+            document.getElementById('nextService').style.color = 'inherit';
+        } else {
+            const firstRecord = allData.sort((a,b) => new Date(a.date || a.startTime) - new Date(b.date || b.startTime))[0];
+            const firstRecordDate = firstRecord.date || firstRecord.startTime.slice(0,10);
+            const daysSinceFirstRecord = daysBetween(firstRecordDate, today);
+            
+            const kmLeft = FIRST_SERVICE_KM - currentOdo;
+            const daysLeft = FIRST_SERVICE_DAYS - daysSinceFirstRecord;
+
+            if (kmLeft <= 0 || daysLeft <= 0) {
+                document.getElementById('nextService').textContent = `已超過首次保養里程/時間`;
+                document.getElementById('nextService').style.color = 'var(--danger-color)';
+            } else {
+                document.getElementById('nextService').textContent = `首次保養: 約 ${kmLeft.toFixed(0)} km 或 ${daysLeft} 天後`;
+                document.getElementById('nextService').style.color = 'var(--success-color)';
+            }
+        }
+        document.getElementById('lastMaintenance').textContent = `尚未記錄`;
+        document.getElementById('lastMaintOdo').textContent = `N/A`;
+
+    } else { // maintData.length >= 1
+        // 定期保養邏輯 (每 3000km / 6個月 from last)
+        const last = maintDataSorted[maintDataSorted.length - 1];
         const daysAgo = daysBetween(last.date, today);
         document.getElementById('lastMaintenance').textContent = `${last.date} (${daysAgo}天前)`;
         document.getElementById('lastMaintOdo').textContent = `${last.odo} km`;
 
-        const currentOdo = totalMileage;
         const kmSince = currentOdo - last.odo;
-        const kmLeft = SERVICE_INTERVAL_KM - kmSince;
-        const daysLeft = SERVICE_INTERVAL_DAYS - daysAgo;
+        const kmLeft = REGULAR_SERVICE_KM - kmSince;
+        const daysLeft = REGULAR_SERVICE_DAYS - daysAgo;
 
         if (kmLeft <= 0 || daysLeft <= 0) {
-            document.getElementById('nextService').textContent = `已超過保養里程/時間`;
+            document.getElementById('nextService').textContent = `已超過定期保養里程/時間`;
             document.getElementById('nextService').style.color = 'var(--danger-color)';
         } else {
-            document.getElementById('nextService').textContent = `約 ${kmLeft.toFixed(0)} km 或 ${daysLeft} 天後`;
+            document.getElementById('nextService').textContent = `下次定期保養: 約 ${kmLeft.toFixed(0)} km 或 ${daysLeft} 天後`;
             document.getElementById('nextService').style.color = 'var(--success-color)';
         }
     }
 
+    // --- 上次充電 ---
     if (chargeData.length > 0) {
         const last = [...chargeData].sort((a,b) => new Date(a.startTime) - new Date(b.startTime)).pop();
         const daysAgo = daysBetween(last.date, today);
@@ -929,6 +976,7 @@ function updateSummary() {
         document.getElementById('lastChargeOdo').textContent = `${last.odo} km`;
     }
 
+    // --- 統計頁面 ---
     document.getElementById('statTotalMileage').textContent = `${totalMileage} km`;
     document.getElementById('statTotalCost').textContent = `${totalExpense.toFixed(0)} NT$`;
     document.getElementById('statMaintCount').textContent = maintData.length;
@@ -940,9 +988,9 @@ function updateSummary() {
         document.getElementById('statCostPerKm').textContent = `0 NT$`;
     }
     
-    const allData = [...chargeData, ...maintData, ...expenseData].filter(d => d.date);
-    if (allData.length > 1) {
-        const firstDate = new Date(allData.sort((a,b) => new Date(a.date) - new Date(b.date))[0].date);
+    const allRecordsWithDate = [...chargeData, ...maintData, ...expenseData].filter(d => d.date);
+    if (allRecordsWithDate.length > 1) {
+        const firstDate = new Date(allRecordsWithDate.sort((a,b) => new Date(a.date) - new Date(b.date))[0].date);
         const lastDate = new Date();
         const days = daysBetween(firstDate, lastDate) || 1;
         const avgDaily = totalMileage / days;
@@ -952,32 +1000,26 @@ function updateSummary() {
     }
 }
 
+
 function updateAnalytics() {
     const data = JSON.parse(localStorage.getItem('chargeLog')) || [];
     document.getElementById('totalCharges').textContent = data.length;
     
-    if (data.length < 2) {
-        document.getElementById('avgKwh').textContent = 'N/A';
-        document.getElementById('bestKwh').textContent = 'N/A';
-        document.getElementById('worstKwh').textContent = 'N/A';
-        return;
-    }
-    
-    const chronologicalData = [...data].sort((a, b) => new Date(a.startTime) - new Date(b.startTime));
-    let efficiencies = [];
-    for(let i = 1; i < chronologicalData.length; i++) {
-        const odoDiff = chronologicalData[i].odo - chronologicalData[i-1].odo;
-        const kwh = chronologicalData[i].kwh;
-        if (kwh > 0 && odoDiff > 0) efficiencies.push(odoDiff / kwh);
-    }
-    
+    const efficiencyMap = calculateEfficiencies(data);
+    const efficiencies = Object.values(efficiencyMap).map(v => parseFloat(v));
+
     if (efficiencies.length > 0) {
         const total = efficiencies.reduce((a, b) => a + b, 0);
-        document.getElementById('avgKwh').textContent = `${(total / efficiencies.length).toFixed(2)} km/kWh`;
-        document.getElementById('bestKwh').textContent = `${Math.max(...efficiencies).toFixed(2)} km/kWh`;
-        document.getElementById('worstKwh').textContent = `${Math.min(...efficiencies).toFixed(2)} km/kWh`;
+        document.getElementById('avgEfficiency').textContent = `${(total / efficiencies.length).toFixed(2)} km/格`;
+        document.getElementById('bestEfficiency').textContent = `${Math.max(...efficiencies).toFixed(2)} km/格`;
+        document.getElementById('worstEfficiency').textContent = `${Math.min(...efficiencies).toFixed(2)} km/格`;
+    } else {
+        document.getElementById('avgEfficiency').textContent = 'N/A';
+        document.getElementById('bestEfficiency').textContent = 'N/A';
+        document.getElementById('worstEfficiency').textContent = 'N/A';
     }
 }
+
 
 function populateMonthFilters() {
     const allData = [
@@ -1106,7 +1148,7 @@ function exportData(key, format) {
     }
     const dataToExport = {
         type: key,
-        version: '2.0',
+        version: '2.1',
         exportDate: new Date().toISOString(),
         data: data
     };
@@ -1122,7 +1164,7 @@ function exportData(key, format) {
 function exportAllData() {
     const allData = {
         type: 'all',
-        version: '2.0',
+        version: '2.1',
         exportDate: new Date().toISOString(),
         chargeLog: JSON.parse(localStorage.getItem('chargeLog') || '[]'),
         maintenanceLog: JSON.parse(localStorage.getItem('maintenanceLog') || '[]'),
@@ -1170,24 +1212,29 @@ function renderCharts() {
 
     if (chargeChartInstance) chargeChartInstance.destroy();
     if (chargeData.length > 1) {
+        const efficiencyMap = calculateEfficiencies(chargeData);
+        const efficiencies = Object.entries(efficiencyMap).map(([id, value]) => ({
+            id: parseInt(id),
+            value: parseFloat(value)
+        }));
+        
+        // Ensure chart data is also in chronological order
         const chronologicalData = [...chargeData].sort((a,b) => new Date(a.startTime) - new Date(b.startTime));
-        const efficiencies = [];
-        for(let i = 1; i < chronologicalData.length; i++) {
-            const odoDiff = chronologicalData[i].odo - chronologicalData[i-1].odo;
-            const kwh = chronologicalData[i].kwh;
-            efficiencies.push({
-                label: chronologicalData[i].date.slice(5),
-                value: (kwh > 0 && odoDiff > 0) ? (odoDiff / kwh) : 0
-            });
-        }
+        const chartData = chronologicalData
+            .map(record => {
+                const efficiency = efficiencies.find(e => e.id === record.id);
+                return efficiency ? { label: record.date.slice(5), value: efficiency.value } : null;
+            })
+            .filter(item => item !== null);
+
         const ctx = document.getElementById('chargeChart').getContext('2d');
         chargeChartInstance = new Chart(ctx, {
             type: 'bar',
             data: {
-                labels: efficiencies.map(e => e.label),
+                labels: chartData.map(d => d.label),
                 datasets: [{
-                    label: '充電效率 (km/kWh)',
-                    data: efficiencies.map(e => e.value),
+                    label: '每格效率 (km/格)',
+                    data: chartData.map(d => d.value),
                     backgroundColor: 'rgba(54, 162, 235, 0.5)',
                     borderColor: 'rgba(54, 162, 235, 1)',
                     borderWidth: 1
