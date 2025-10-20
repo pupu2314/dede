@@ -235,14 +235,14 @@
             </select>
         </div>
         <div class="analytics-section">
-            <div class="analytics-item"><h4>平均每格效率</h4><p id="avgEfficiency">N/A</p></div>
-            <div class="analytics-item"><h4>最佳每格效率</h4><p id="bestEfficiency">N/A</p></div>
-            <div class="analytics-item"><h4>最差每格效率</h4><p id="worstEfficiency">N/A</p></div>
+            <div class="analytics-item"><h4>平均效率</h4><p id="avgEfficiency">N/A</p></div>
+            <div class="analytics-item"><h4>最佳效率</h4><p id="bestEfficiency">N/A</p></div>
+            <div class="analytics-item"><h4>最差效率</h4><p id="worstEfficiency">N/A</p></div>
             <div class="analytics-item"><h4>總充電次數</h4><p id="totalCharges">0</p></div>
         </div>
         <div class="table-container">
             <table class="history-table">
-                <thead><tr><th>期間</th><th>地點</th><th>TRIP</th><th>費用</th><th>每格效率<br>(km/格)</th><th>電量</th><th>時長</th><th>操作</th></tr></thead>
+                <thead><tr><th>期間</th><th>地點</th><th>TRIP</th><th>費用</th><th>效率<br>(km/kWh)</th><th>電量</th><th>時長</th><th>操作</th></tr></thead>
                 <tbody id="chargeHistoryTable"></tbody>
             </table>
         </div>
@@ -576,7 +576,6 @@ function updateChargeUI() {
         kwhInput.value = '';
         costInput.value = '';
         
-        // In the new logic, kWh is not required for efficiency.
         kwhInput.required = false; 
 
         switch (session.stationType) {
@@ -809,16 +808,15 @@ function calculateEfficiencies(data) {
         const currentRecord = chronologicalData[i];
         const prevRecord = chronologicalData[i - 1];
 
-        const trip = currentRecord.trip;
-        const barsConsumed = prevRecord.batteryEnd - currentRecord.batteryStart;
+        const mileage = currentRecord.odo - prevRecord.odo;
+        const kwh = currentRecord.kwh;
 
-        if (trip > 0 && barsConsumed > 0) {
-            efficiencyMap[currentRecord.id] = (trip / barsConsumed).toFixed(2);
+        if (mileage > 0 && kwh > 0) {
+            efficiencyMap[currentRecord.id] = (mileage / kwh).toFixed(2);
         }
     }
     return efficiencyMap;
 }
-
 
 function loadChargeHistory() {
     const data = JSON.parse(localStorage.getItem('chargeLog')) || [];
@@ -1010,9 +1008,9 @@ function updateAnalytics() {
 
     if (efficiencies.length > 0) {
         const total = efficiencies.reduce((a, b) => a + b, 0);
-        document.getElementById('avgEfficiency').textContent = `${(total / efficiencies.length).toFixed(2)} km/格`;
-        document.getElementById('bestEfficiency').textContent = `${Math.max(...efficiencies).toFixed(2)} km/格`;
-        document.getElementById('worstEfficiency').textContent = `${Math.min(...efficiencies).toFixed(2)} km/格`;
+        document.getElementById('avgEfficiency').textContent = `${(total / efficiencies.length).toFixed(2)} km/kWh`;
+        document.getElementById('bestEfficiency').textContent = `${Math.max(...efficiencies).toFixed(2)} km/kWh`;
+        document.getElementById('worstEfficiency').textContent = `${Math.min(...efficiencies).toFixed(2)} km/kWh`;
     } else {
         document.getElementById('avgEfficiency').textContent = 'N/A';
         document.getElementById('bestEfficiency').textContent = 'N/A';
@@ -1233,7 +1231,7 @@ function renderCharts() {
             data: {
                 labels: chartData.map(d => d.label),
                 datasets: [{
-                    label: '每格效率 (km/格)',
+                    label: '效率 (km/kWh)',
                     data: chartData.map(d => d.value),
                     backgroundColor: 'rgba(54, 162, 235, 0.5)',
                     borderColor: 'rgba(54, 162, 235, 1)',
