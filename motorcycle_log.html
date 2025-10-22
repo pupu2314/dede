@@ -113,6 +113,7 @@
         <button class="tab-button" data-tab="chargeFormTab">記錄充電</button>
         <button class="tab-button" data-tab="maintenanceFormTab">記錄保養</button>
         <button class="tab-button" data-tab="expenseFormTab">其他花費</button>
+        <button class="tab-button" data-tab="quickUpdateTab">快速更新</button>
     </div>
 
     <div id="chargeFormTab" class="tab-content">
@@ -218,6 +219,29 @@
             <button type="button" class="main-btn cancel-edit-btn" id="cancelExpenseEdit">取消編輯</button>
         </form>
     </div>
+    
+    <div id="quickUpdateTab" class="tab-content">
+        <h3>快速更新狀態</h3>
+        <form id="quickUpdateForm" class="form-section">
+            <div class="input-group">
+                <label for="qOdo">目前總里程 (ODO):</label>
+                <input type="number" step="0.1" id="qOdo" placeholder="公里" required>
+                <small>記錄當下儀表板的總里程數</small>
+            </div>
+            <div class="input-group">
+                <label>目前電量 (格):</label>
+                <div class="radio-group-grid">
+                    <input type="radio" id="qb0" name="qBattery" value="0"><label for="qb0">0</label>
+                    <input type="radio" id="qb1" name="qBattery" value="1" checked><label for="qb1">1</label>
+                    <input type="radio" id="qb2" name="qBattery" value="2"><label for="qb2">2</label>
+                    <input type="radio" id="qb3" name="qBattery" value="3"><label for="qb3">3</label>
+                    <input type="radio" id="qb4" name="qBattery" value="4"><label for="qb4">4</label>
+                    <input type="radio" id="qb5" name="qBattery" value="5"><label for="qb5">5</label>
+                </div>
+            </div>
+            <button type="submit" class="main-btn">儲存更新</button>
+        </form>
+    </div>
 
     <h2 style="margin-top: 40px;">歷史記錄與分析</h2>
     <div class="tabs" id="historyTabs">
@@ -282,6 +306,7 @@
                 <option value="停車費">停車費</option>
                 <option value="配件">配件</option>
                 <option value="清潔">清潔</option>
+                <option value="狀態更新">狀態更新</option>
                 <option value="其他">其他</option>
             </select>
             <select id="expenseMonthFilter">
@@ -366,6 +391,7 @@ document.addEventListener('DOMContentLoaded', function() {
     document.getElementById('endChargeForm').addEventListener('submit', endCharging);
     document.getElementById('maintenanceForm').addEventListener('submit', handleMaintenanceSubmit);
     document.getElementById('expenseForm').addEventListener('submit', handleExpenseSubmit);
+    document.getElementById('quickUpdateForm').addEventListener('submit', handleQuickUpdateSubmit);
     document.getElementById('editChargeForm').addEventListener('submit', handleChargeEditSubmit);
 
     // Tabs
@@ -704,6 +730,35 @@ function handleExpenseSubmit(e) {
     cancelEdit('expense');
     alert('花費記錄已儲存!');
     loadAllData();
+}
+
+function handleQuickUpdateSubmit(e) {
+    e.preventDefault();
+    
+    const now = new Date();
+    const localDate = new Date(now.getTime() - (now.getTimezoneOffset() * 60000)).toISOString();
+    const currentOdo = parseFloat(document.getElementById('qOdo').value);
+    const currentBattery = parseInt(document.querySelector('input[name="qBattery"]:checked').value);
+
+    if (!currentOdo) {
+        alert('請輸入總里程 (ODO)');
+        return;
+    }
+
+    const record = {
+        id: Date.now(),
+        date: localDate.slice(0, 10),
+        time: localDate.slice(11, 16),
+        odo: currentOdo,
+        category: '狀態更新',
+        amount: 0,
+        description: `電量: ${currentBattery} 格`
+    };
+    
+    saveData('expenseLog', record, false); // Save as an expense log
+    document.getElementById('quickUpdateForm').reset();
+    alert('狀態已更新!');
+    loadAllData(); // Reload all data to update summary
 }
 
 function saveData(key, newRecord, isEdit = false) {
