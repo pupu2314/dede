@@ -3,700 +3,972 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>摩托車輛資訊記錄</title>
+    <title>電動摩托車紀錄系統</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         :root {
-            --primary-color: #007bff; --secondary-color: #6c757d; --light-bg: #f8f9fa;
-            --border-color: #dee2e6; --text-color: #343a40; --white: #fff;
-            --danger-color: #dc3545; --success-color: #28a745; --warning-color: #ffc107;
-            --info-bg: #e2f3ff; --info-border: #b8e2fc;
+            --primary: #2563eb;
+            --primary-dark: #1e40af;
+            --secondary: #64748b;
+            --success: #10b981;
+            --danger: #ef4444;
+            --warning: #f59e0b;
+            --light: #f8fafc;
+            --dark: #1e293b;
+            --border: #e2e8f0;
         }
+        
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
         body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-            margin: 0; padding: 15px; background-color: var(--light-bg); color: var(--text-color);
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+            color: var(--dark);
         }
+        
         .container {
-            max-width: 800px; margin: 0 auto; background-color: var(--white);
-            padding: 20px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            max-width: 1200px;
+            margin: 0 auto;
+            background: var(--light);
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            overflow: hidden;
         }
-        h1, h2, h3 { color: var(--primary-color); text-align: center; }
-        .summary {
-            background-color: #e7f3ff; padding: 15px; border-radius: 8px;
-            margin-bottom: 25px; border-left: 5px solid var(--primary-color);
+        
+        .header {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
         }
-        .summary p { margin: 8px 0; font-size: 1em; }
-        .summary span { font-weight: bold; color: #004085; }
-        .tabs { display: flex; border-bottom: 2px solid var(--border-color); margin-bottom: 20px; flex-wrap: wrap; }
+        
+        .header h1 { font-size: 2rem; margin-bottom: 10px; }
+        
+        .dashboard {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            padding: 30px;
+            background: white;
+        }
+        
+        .stat-card {
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            padding: 20px;
+            border-radius: 15px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            transition: transform 0.2s;
+        }
+        
+        .stat-card:hover { transform: translateY(-5px); }
+        
+        .stat-card h3 {
+            font-size: 0.9rem;
+            color: var(--secondary);
+            margin-bottom: 10px;
+            text-transform: uppercase;
+        }
+        
+        .stat-card .value {
+            font-size: 1.8rem;
+            font-weight: bold;
+            color: var(--primary);
+        }
+        
+        .stat-card .subtitle {
+            font-size: 0.85rem;
+            color: var(--secondary);
+            margin-top: 5px;
+        }
+        
+        .content { padding: 30px; }
+        
+        .tabs {
+            display: flex;
+            gap: 10px;
+            border-bottom: 2px solid var(--border);
+            margin-bottom: 30px;
+            overflow-x: auto;
+        }
+        
         .tab-button {
-            padding: 10px 15px; cursor: pointer; border: none; background-color: transparent;
-            font-size: 1.1em; margin-bottom: -2px; border-bottom: 3px solid transparent;
+            padding: 12px 24px;
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 1rem;
+            color: var(--secondary);
+            border-bottom: 3px solid transparent;
+            transition: all 0.3s;
+            white-space: nowrap;
         }
-        .tab-button.active { font-weight: bold; color: var(--primary-color); border-bottom: 3px solid var(--primary-color); }
+        
+        .tab-button:hover { color: var(--primary); }
+        .tab-button.active {
+            color: var(--primary);
+            border-bottom-color: var(--primary);
+            font-weight: 600;
+        }
+        
         .tab-content { display: none; }
-        .tab-content.active { display: block; }
-        .form-section { padding: 10px 0; }
-        label { display: block; margin-bottom: 5px; font-weight: bold; }
-        .input-group { position: relative; margin-bottom: 15px; }
-        .input-group small { color: var(--secondary-color); font-size: 0.8em; }
-        input, textarea, select {
-            width: 100%; padding: 10px; border: 1px solid var(--border-color);
-            border-radius: 4px; box-sizing: border-box;
+        .tab-content.active { display: block; animation: fadeIn 0.3s; }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
         }
-        .now-btn {
-            position: absolute; right: 5px; top: 28px; padding: 5px 8px;
-            background-color: var(--secondary-color); color: var(--white); border: none;
-            border-radius: 4px; cursor: pointer; font-size: 0.8em;
-        }
-        .main-btn {
-            width: 100%; padding: 12px; background-color: var(--primary-color); color: var(--white);
-            border: none; border-radius: 4px; cursor: pointer; font-size: 1.1em; margin-top: 10px;
-        }
-        .main-btn:hover { background-color: #0056b3; }
-        #partsList .part-item { display: flex; align-items: center; margin-bottom: 10px; gap: 10px; }
-        #partsList .part-item input { margin-bottom: 0; }
-        .remove-part-btn { padding: 8px 12px; background-color: var(--danger-color); color: var(--white); border: none; border-radius: 4px; cursor: pointer; }
-        .add-part-btn { margin-top: 10px; background-color: var(--success-color); }
-        .analytics-section {
-            display: flex; flex-wrap: wrap; justify-content: space-around; background-color: var(--light-bg);
-            padding: 15px; border-radius: 5px; margin: 20px 0; text-align: center; gap: 10px;
-        }
-        .analytics-item h4 { margin: 0 0 5px 0; color: var(--secondary-color); font-size: 0.9em; }
-        .analytics-item p { margin: 0; font-size: 1.2em; font-weight: bold; }
-        .history-table { width: 100%; border-collapse: collapse; margin-top: 15px; }
-        .history-table th, .history-table td { border: 1px solid var(--border-color); padding: 8px; text-align: left; vertical-align: middle;}
-        .history-table th { background-color: var(--light-bg); }
-        .table-container { overflow-x: auto; }
-        .action-buttons button { font-size: 0.8em; padding: 4px 8px; margin-right: 5px; border-radius: 4px; cursor: pointer; border: none; color: white;}
-        .edit-btn { background-color: var(--warning-color); }
-        .delete-btn { background-color: var(--danger-color); }
-        .data-management-section { margin-top: 30px; padding: 15px; border: 1px dashed var(--secondary-color); border-radius: 5px; }
-        .data-management-section button {
-            padding: 8px 12px; border-radius: 4px; cursor: pointer; margin-right: 10px; margin-bottom: 10px;
-            border: 1px solid var(--primary-color); background-color: var(--white); color: var(--primary-color);
-        }
-        .data-management-section button:hover { background-color: #e7f3ff; }
-        #jsonImportInput { display: none; }
-        .cancel-edit-btn { background-color: var(--secondary-color); display: none; }
-        .filter-section { background-color: var(--light-bg); padding: 15px; border-radius: 5px; margin-bottom: 15px; }
-        .radio-group label { margin-bottom: 0; font-weight: normal; }
-        .radio-group input[type="radio"] { width: auto; margin-right: 5px; }
-        .radio-group-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 5px; text-align: center; }
-        .radio-group-grid label { margin-bottom: 0; font-weight: normal; display: block; cursor: pointer; padding: 5px; border-radius: 4px; border: 1px solid var(--border-color); }
-        .radio-group-grid input[type="radio"] { display: none; }
-        .radio-group-grid input[type="radio"]:checked + label { background-color: var(--primary-color); color: var(--white); border-color: var(--primary-color); }
-        .current-charge-info {
-            background-color: var(--info-bg);
-            border: 1px solid var(--info-border);
-            padding: 15px;
-            border-radius: 8px;
+        
+        .form-card {
+            background: white;
+            padding: 25px;
+            border-radius: 15px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
             margin-bottom: 20px;
         }
-        .current-charge-info p { margin: 5px 0; }
-        .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.5); }
-        .modal-content { background-color: #fefefe; margin: 10% auto; padding: 20px; border: 1px solid #888; width: 90%; max-width: 500px; border-radius: 8px; }
+        
+        .form-card h3 { color: var(--primary); margin-bottom: 20px; }
+        .form-group { margin-bottom: 20px; }
+        .form-group label { display: block; margin-bottom: 8px; font-weight: 600; }
+        .form-group small { display: block; color: var(--secondary); font-size: 0.85rem; margin-top: 5px; }
+        
+        input, select, textarea {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid var(--border);
+            border-radius: 8px;
+            font-size: 1rem;
+            transition: all 0.3s;
+        }
+        
+        input:focus, select:focus, textarea:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+        }
+        
+        .battery-selector {
+            display: grid;
+            grid-template-columns: repeat(6, 1fr);
+            gap: 10px;
+            margin-top: 10px;
+        }
+        
+        .battery-option input { display: none; }
+        .battery-option label {
+            display: block;
+            padding: 15px;
+            text-align: center;
+            border: 2px solid var(--border);
+            border-radius: 10px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s;
+            background: white;
+        }
+        
+        .battery-option input:checked + label {
+            background: var(--primary);
+            color: white;
+            border-color: var(--primary);
+            transform: scale(1.05);
+        }
+        
+        .quick-stations {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+            gap: 10px;
+            margin: 15px 0;
+        }
+        
+        .station-btn {
+            padding: 12px;
+            border: 2px solid var(--border);
+            background: white;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-align: center;
+            font-weight: 600;
+        }
+        
+        .station-btn:hover { border-color: var(--primary); background: var(--light); }
+        .station-btn.active { background: var(--primary); color: white; border-color: var(--primary); }
+        
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .btn-primary { background: var(--primary); color: white; }
+        .btn-primary:hover { background: var(--primary-dark); transform: translateY(-2px); }
+        .btn-success { background: var(--success); color: white; }
+        .btn-danger { background: var(--danger); color: white; }
+        .btn-secondary { background: var(--secondary); color: white; }
+        .btn-warning { background: var(--warning); color: white; }
+        .btn-full { width: 100%; justify-content: center; }
+        
+        .charging-status {
+            background: linear-gradient(135deg, #e0f2f1 0%, #b2dfdb 100%);
+            padding: 25px;
+            border-radius: 15px;
+            margin-bottom: 20px;
+            border-left: 5px solid var(--success);
+        }
+        
+        .charging-timer {
+            font-size: 2.5rem;
+            font-weight: bold;
+            color: var(--success);
+            text-align: center;
+            margin: 20px 0;
+            font-family: 'Courier New', monospace;
+        }
+        
+        .part-item {
+            display: grid;
+            grid-template-columns: 2fr 1fr auto;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+        
+        .total-cost {
+            text-align: right;
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: var(--primary);
+            margin: 20px 0;
+            padding: 15px;
+            background: var(--light);
+            border-radius: 8px;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background: white;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        
+        th {
+            background: var(--primary);
+            color: white;
+            padding: 15px;
+            text-align: left;
+            font-weight: 600;
+        }
+        
+        td { padding: 12px 15px; border-bottom: 1px solid var(--border); }
+        tr:hover { background: var(--light); }
+        
+        .action-btns { display: flex; gap: 5px; }
+        .action-btns button { padding: 6px 12px; font-size: 0.85rem; }
+        
+        .filter-bar {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+        
+        .filter-bar input, .filter-bar select { flex: 1; min-width: 200px; }
+        
+        .chart-container {
+            background: white;
+            padding: 25px;
+            border-radius: 15px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            margin: 20px 0;
+        }
+        
+        .analytics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+        
+        .analytics-card {
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+        }
+        
+        .analytics-card h4 { color: var(--secondary); font-size: 0.9rem; margin-bottom: 10px; }
+        .analytics-card p { font-size: 1.5rem; font-weight: bold; color: var(--primary); }
+        
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .modal.active { display: flex; }
+        
+        .modal-content {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            max-width: 500px;
+            width: 90%;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+        
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        
+        .data-management {
+            background: white;
+            padding: 25px;
+            border-radius: 15px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            margin-top: 30px;
+        }
+        
+        .data-btns {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 10px;
+        }
+        
+        .toast {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: var(--success);
+            color: white;
+            padding: 15px 25px;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.2);
+            display: none;
+            z-index: 2000;
+        }
+        
+        .toast.show { display: block; animation: slideIn 0.3s; }
+        
+        @keyframes slideIn {
+            from { transform: translateX(400px); }
+            to { transform: translateX(0); }
+        }
+        
+        @media (max-width: 768px) {
+            .dashboard { grid-template-columns: 1fr; padding: 20px; }
+            .battery-selector { grid-template-columns: repeat(3, 1fr); }
+            .part-item { grid-template-columns: 1fr; }
+        }
     </style>
 </head>
 <body>
-
-<div class="container">
-    <h1>🏍️ 摩托車輛資訊記錄</h1>
-
-    <div class="summary">
-        <p>上次保養: <span id="lastMaintenance">尚未記錄</span> | 里程: <span id="lastMaintOdo">N/A</span></p>
-        <p>上次充電: <span id="lastCharge">尚未記錄</span> | 里程: <span id="lastChargeOdo">N/A</span></p>
-        <p>下次保養預估: <span id="nextService">請先記錄保養</span></p>
-        <p>總里程: <span id="totalMileage">0</span> km | 總花費: <span id="totalExpense">0</span> NT$</p>
-    </div>
-
-    <div class="tabs" id="formTabs">
-        <button class="tab-button" data-tab="chargeFormTab">記錄充電</button>
-        <button class="tab-button" data-tab="maintenanceFormTab">記錄保養</button>
-        <button class="tab-button" data-tab="expenseFormTab">其他花費</button>
-        <button class="tab-button" data-tab="quickUpdateTab">快速更新</button>
-    </div>
-
-    <div id="chargeFormTab" class="tab-content">
-        <div id="startChargeSection">
-            <h3>開始充電</h3>
-            <form id="startChargeForm" class="form-section">
-                <div class="input-group"><label for="cOdo">目前總里程 (ODO):</label><input type="number" step="0.1" id="cOdo" placeholder="公里" required><small>記錄當下儀表板的總里程數</small></div>
-                <div class="input-group"><label>充電前電量 (格):</label>
-                    <div class="radio-group-grid">
-                        <input type="radio" id="bs0" name="cBatteryStart" value="0"><label for="bs0">0</label>
-                        <input type="radio" id="bs1" name="cBatteryStart" value="1" checked><label for="bs1">1</label>
-                        <input type="radio" id="bs2" name="cBatteryStart" value="2"><label for="bs2">2</label>
-                        <input type="radio" id="bs3" name="cBatteryStart" value="3"><label for="bs3">3</label>
-                        <input type="radio" id="bs4" name="cBatteryStart" value="4"><label for="bs4">4</label>
-                        <input type="radio" id="bs5" name="cBatteryStart" value="5"><label for="bs5">5</label>
+    <div class="container">
+        <div class="header">
+            <h1>🏍️ 電動摩托車紀錄系統</h1>
+            <p>智能管理您的電動車充電、保養與費用</p>
+        </div>
+        
+        <div class="dashboard">
+            <div class="stat-card">
+                <h3>總里程</h3>
+                <div class="value" id="totalMileage">0</div>
+                <div class="subtitle">公里</div>
+            </div>
+            <div class="stat-card">
+                <h3>上次充電</h3>
+                <div class="value" id="lastChargeDays">-</div>
+                <div class="subtitle" id="lastChargeDate">尚未記錄</div>
+            </div>
+            <div class="stat-card">
+                <h3>下次保養</h3>
+                <div class="value" id="nextServiceKm">-</div>
+                <div class="subtitle" id="nextServiceDate">請先記錄保養</div>
+            </div>
+            <div class="stat-card">
+                <h3>總花費</h3>
+                <div class="value" id="totalExpense">0</div>
+                <div class="subtitle">NT$</div>
+            </div>
+        </div>
+        
+        <div class="content">
+            <div class="tabs">
+                <button class="tab-button active" data-tab="charge">充電紀錄</button>
+                <button class="tab-button" data-tab="maintenance">保養維修</button>
+                <button class="tab-button" data-tab="expense">其他費用</button>
+                <button class="tab-button" data-tab="status">快速更新</button>
+                <button class="tab-button" data-tab="statistics">統計分析</button>
+            </div>
+            
+            <!-- 充電紀錄 -->
+            <div id="chargeTab" class="tab-content active">
+                <div id="startChargeSection">
+                    <div class="form-card">
+                        <h3>開始充電</h3>
+                        <form id="startChargeForm">
+                            <div class="form-group">
+                                <label>充電站快速選擇</label>
+                                <div class="quick-stations">
+                                    <button type="button" class="station-btn" data-station="公司">🏢 公司</button>
+                                    <button type="button" class="station-btn" data-station="充電站">⚡ 充電站</button>
+                                    <button type="button" class="station-btn" data-station="家裡">🏠 家裡</button>
+                                    <button type="button" class="station-btn" data-station="其他">📍 其他</button>
+                                </div>
+                                <input type="text" id="cStation" placeholder="自訂地點" style="display:none; margin-top:10px;">
+                            </div>
+                            
+                            <div class="form-group">
+                                <label>目前總里程 (ODO)</label>
+                                <input type="number" step="0.1" id="cOdo" placeholder="公里" required>
+                                <small>記錄儀表板的總里程數</small>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label>充電前電量 (格)</label>
+                                <div class="battery-selector">
+                                    <div class="battery-option"><input type="radio" id="bs0" name="cBatteryStart" value="0"><label for="bs0">0</label></div>
+                                    <div class="battery-option"><input type="radio" id="bs1" name="cBatteryStart" value="1" checked><label for="bs1">1</label></div>
+                                    <div class="battery-option"><input type="radio" id="bs2" name="cBatteryStart" value="2"><label for="bs2">2</label></div>
+                                    <div class="battery-option"><input type="radio" id="bs3" name="cBatteryStart" value="3"><label for="bs3">3</label></div>
+                                    <div class="battery-option"><input type="radio" id="bs4" name="cBatteryStart" value="4"><label for="bs4">4</label></div>
+                                    <div class="battery-option"><input type="radio" id="bs5" name="cBatteryStart" value="5"><label for="bs5">5</label></div>
+                                </div>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label>本次里程 (TRIP)</label>
+                                <input type="number" step="0.1" id="cTrip" placeholder="公里">
+                                <small>上次充飽電後到現在的里程</small>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label>備註</label>
+                                <textarea id="cNotes" rows="2" placeholder="其他記錄事項"></textarea>
+                            </div>
+                            
+                            <button type="submit" class="btn btn-success btn-full">⚡ 開始充電</button>
+                        </form>
                     </div>
                 </div>
-                <div class="input-group">
-                    <label>充電站/標記:</label>
-                    <div class="radio-group">
-                        <input type="radio" id="station_company" name="cStationRadio" value="公司" checked><label for="station_company">公司</label>
-                        <input type="radio" id="station_public" name="cStationRadio" value="充電站"><label for="station_public">充電站</label>
-                        <input type="radio" id="station_other" name="cStationRadio" value="其他"><label for="station_other">其他</label>
+                
+                <div id="endChargeSection" style="display:none;">
+                    <div class="charging-status">
+                        <h3>⚡ 充電進行中...</h3>
+                        <div id="currentChargeInfo"></div>
+                        <div class="charging-timer" id="chargingTimer">00:00:00</div>
                     </div>
-                    <input type="text" id="cStation" placeholder="請輸入地點" style="display:none; margin-top: 10px;">
+                    
+                    <div class="form-card">
+                        <h3>結束充電</h3>
+                        <form id="endChargeForm">
+                            <div class="form-group">
+                                <label>充電後電量 (格)</label>
+                                <div class="battery-selector">
+                                    <div class="battery-option"><input type="radio" id="be0" name="cBatteryEnd" value="0"><label for="be0">0</label></div>
+                                    <div class="battery-option"><input type="radio" id="be1" name="cBatteryEnd" value="1"><label for="be1">1</label></div>
+                                    <div class="battery-option"><input type="radio" id="be2" name="cBatteryEnd" value="2"><label for="be2">2</label></div>
+                                    <div class="battery-option"><input type="radio" id="be3" name="cBatteryEnd" value="3"><label for="be3">3</label></div>
+                                    <div class="battery-option"><input type="radio" id="be4" name="cBatteryEnd" value="4"><label for="be4">4</label></div>
+                                    <div class="battery-option"><input type="radio" id="be5" name="cBatteryEnd" value="5" checked><label for="be5">5</label></div>
+                                </div>
+                            </div>
+                            
+                            <div class="form-group" id="kwhGroup">
+                                <label>充電度數 (kWh)</label>
+                                <input type="number" step="0.01" id="cKwh" placeholder="例如: 1.5">
+                                <small>插座端量測值,非必填</small>
+                            </div>
+                            
+                            <div class="form-group" id="costGroup">
+                                <label>充電費用 (NT$)</label>
+                                <input type="number" id="cCost" placeholder="例如: 30">
+                            </div>
+                            
+                            <div class="form-group">
+                                <label>預估里程 (RANGE)</label>
+                                <input type="number" step="0.1" id="cRange" placeholder="公里">
+                                <small>儀表板預估值,非必填</small>
+                            </div>
+                            
+                            <button type="submit" class="btn btn-primary btn-full">✅ 結束充電並儲存</button>
+                        </form>
+                    </div>
                 </div>
-                <div class="input-group"><label for="cTrip">本次里程 (TRIP):</label><input type="number" step="0.1" id="cTrip" placeholder="公里"><small>上次充飽電後到現在的里程</small></div>
-                <div class="input-group"><label for="cNotes">備註:</label><textarea id="cNotes" rows="2" placeholder="其他記錄事項"></textarea></div>
-                <button type="submit" class="main-btn" style="background-color: var(--success-color);">開始充電</button>
+                
+                <div class="analytics-grid">
+                    <div class="analytics-card"><h4>平均效率</h4><p id="avgEfficiency">-</p></div>
+                    <div class="analytics-card"><h4>最佳效率</h4><p id="bestEfficiency">-</p></div>
+                    <div class="analytics-card"><h4>最差效率</h4><p id="worstEfficiency">-</p></div>
+                    <div class="analytics-card"><h4>總充電次數</h4><p id="totalCharges">0</p></div>
+                </div>
+                
+                <div class="filter-bar">
+                    <input type="text" id="chargeSearch" placeholder="🔍 搜尋充電站...">
+                    <select id="chargeMonthFilter"><option value="">所有月份</option></select>
+                </div>
+                
+                <div style="overflow-x: auto;">
+                    <table>
+                        <thead><tr><th>期間</th><th>地點</th><th>TRIP</th><th>費用</th><th>效率</th><th>電量</th><th>時長</th><th>操作</th></tr></thead>
+                        <tbody id="chargeTable"></tbody>
+                    </table>
+                </div>
+                
+                <div class="chart-container"><h3>充電效率趨勢</h3><canvas id="chargeChart"></canvas></div>
+            </div>
+            
+            <!-- 保養維修 -->
+            <div id="maintenanceTab" class="tab-content">
+                <div class="form-card">
+                    <h3 id="maintTitle">記錄保養</h3>
+                    <form id="maintenanceForm">
+                        <input type="hidden" id="editingMaintId">
+                        <div class="form-group"><label>日期</label><input type="date" id="mDate" required></div>
+                        <div class="form-group"><label>時間</label><input type="time" id="mTime" required></div>
+                        <button type="button" class="btn btn-secondary" id="maintNowBtn" style="margin-bottom: 20px; padding: 8px 12px;">📅 填入現在時間</button>
+                        <div class="form-group"><label>總里程 (ODO)</label><input type="number" step="0.1" id="mOdo" placeholder="公里" required></div>
+                        <div class="form-group"><label>地點</label><input type="text" id="mLocation" placeholder="保養地點"></div>
+                        <div class="form-group">
+                            <label>保養類型</label>
+                            <select id="mType">
+                                <option value="定期保養">定期保養</option>
+                                <option value="大保養">大保養</option>
+                                <option value="小保養">小保養</option>
+                                <option value="維修">維修</option>
+                                <option value="檢查">檢查</option>
+                            </select>
+                        </div>
+                        <div class="form-group"><label>服務/備註</label><textarea id="mNotes" rows="3" placeholder="例如: 大保養、檢查電路"></textarea></div>
+                        
+                        <h3>保養項目/零件</h3>
+                        <div id="partsList"></div>
+                        <button type="button" class="btn btn-success" id="addPartBtn">➕ 新增項目</button>
+                        
+                        <div class="total-cost">總費用: NT$ <span id="totalCost">0</span></div>
+                        
+                        <button type="submit" class="btn btn-primary btn-full">💾 儲存記錄</button>
+                        <button type="button" class="btn btn-secondary btn-full" id="cancelMaintEdit" style="display:none; margin-top:10px;">❌ 取消編輯</button>
+                    </form>
+                </div>
+                
+                <div class="filter-bar">
+                    <input type="text" id="maintSearch" placeholder="🔍 搜尋內容...">
+                    <select id="maintMonthFilter"><option value="">所有月份</option></select>
+                    <select id="maintTypeFilter">
+                        <option value="">所有類型</option>
+                        <option value="定期保養">定期保養</option>
+                        <option value="大保養">大保養</option>
+                        <option value="小保養">小保養</option>
+                        <option value="維修">維修</option>
+                        <option value="檢查">檢查</option>
+                    </select>
+                </div>
+                
+                <div style="overflow-x: auto;">
+                    <table>
+                        <thead><tr><th>日期</th><th>ODO</th><th>類型</th><th>項目/備註</th><th>費用</th><th>操作</th></tr></thead>
+                        <tbody id="maintTable"></tbody>
+                    </table>
+                </div>
+                
+                <div class="chart-container"><h3>保養費用趨勢</h3><canvas id="maintChart"></canvas></div>
+            </div>
+            
+            <!-- 其他費用 -->
+            <div id="expenseTab" class="tab-content">
+                <div class="form-card">
+                    <h3 id="expenseTitle">記錄其他花費</h3>
+                    <form id="expenseForm">
+                        <input type="hidden" id="editingExpenseId">
+                        <div class="form-group"><label>日期</label><input type="date" id="eDate" required></div>
+                        <div class="form-group"><label>時間</label><input type="time" id="eTime" required></div>
+                        <button type="button" class="btn btn-secondary" id="expenseNowBtn" style="margin-bottom: 20px; padding: 8px 12px;">📅 填入現在時間</button>
+                        <div class="form-group"><label>總里程 (ODO)</label><input type="number" step="0.1" id="eOdo" placeholder="公里 (選填)"></div>
+                        <div class="form-group">
+                            <label>類別</label>
+                            <select id="eCategory">
+                                <option value="保險">保險</option>
+                                <option value="牌照稅">牌照稅</option>
+                                <option value="停車費">停車費</option>
+                                <option value="配件">配件</option>
+                                <option value="清潔">清潔</option>
+                                <option value="其他">其他</option>
+                            </select>
+                        </div>
+                        <div class="form-group"><label>金額 (NT$)</label><input type="number" id="eAmount" placeholder="費用" required></div>
+                        <div class="form-group"><label>說明</label><textarea id="eDescription" rows="3" placeholder="詳細說明"></textarea></div>
+                        
+                        <button type="submit" class="btn btn-primary btn-full">💾 儲存記錄</button>
+                        <button type="button" class="btn btn-secondary btn-full" id="cancelExpenseEdit" style="display:none; margin-top:10px;">❌ 取消編輯</button>
+                    </form>
+                </div>
+                
+                <div class="filter-bar">
+                    <select id="expenseCategoryFilter">
+                        <option value="">所有類別</option>
+                        <option value="保險">保險</option>
+                        <option value="牌照稅">牌照稅</option>
+                        <option value="停車費">停車費</option>
+                        <option value="配件">配件</option>
+                        <option value="清潔">清潔</option>
+                        <option value="其他">其他</option>
+                    </select>
+                    <select id="expenseMonthFilter"><option value="">所有月份</option></select>
+                </div>
+                
+                <div style="overflow-x: auto;">
+                    <table>
+                        <thead><tr><th>日期</th><th>類別</th><th>金額</th><th>說明</th><th>操作</th></tr></thead>
+                        <tbody id="expenseTable"></tbody>
+                    </table>
+                </div>
+                
+                <div class="chart-container"><h3>費用趨勢</h3><canvas id="expenseChart"></canvas></div>
+            </div>
+            
+            <!-- 快速更新 -->
+            <div id="statusTab" class="tab-content">
+                <div class="form-card">
+                    <h3 id="statusTitle">快速更新狀態</h3>
+                    <form id="statusForm">
+                        <!-- 移除隱藏的日期和時間欄位 -->
+                        
+                        <div class="form-group"><label>目前總里程 (ODO)</label><input type="number" step="0.1" id="sOdo" placeholder="公里" required></div>
+                        <div class="form-group">
+                            <label>目前電量 (格)</label>
+                            <div class="battery-selector">
+                                <div class="battery-option"><input type="radio" id="sb0" name="sBattery" value="0"><label for="sb0">0</label></div>
+                                <div class="battery-option"><input type="radio" id="sb1" name="sBattery" value="1" checked><label for="sb1">1</label></div>
+                                <div class="battery-option"><input type="radio" id="sb2" name="sBattery" value="2"><label for="sb2">2</label></div>
+                                <div class="battery-option"><input type="radio" id="sb3" name="sBattery" value="3"><label for="sb3">3</label></div>
+                                <div class="battery-option"><input type="radio" id="sb4" name="sBattery" value="4"><label for="sb4">4</label></div>
+                                <div class="battery-option"><input type="radio" id="sb5" name="sBattery" value="5"><label for="sb5">5</label></div>
+                            </div>
+                        </div>
+                        <div class="form-group"><label>備註</label><textarea id="sNotes" rows="3" placeholder="例如: 剛洗完車"></textarea></div>
+                        
+                        <button type="submit" class="btn btn-primary btn-full">💾 儲存狀態</button>
+                        <!-- 移除取消編輯按鈕 -->
+                    </form>
+                </div>
+                
+                <div class="filter-bar">
+                    <select id="statusMonthFilter"><option value="">所有月份</option></select>
+                </div>
+                
+                <div style="overflow-x: auto;">
+                    <table>
+                        <thead><tr><th>日期</th><th>時間</th><th>ODO</th><th>電量(格)</th><th>備註</th></tr></thead>
+                        <tbody id="statusTable"></tbody>
+                    </table>
+                </div>
+            </div>
+            
+            <!-- 統計分析 -->
+            <div id="statisticsTab" class="tab-content">
+                <div class="analytics-grid">
+                    <div class="analytics-card"><h4>總里程</h4><p id="statTotalMileage">0 km</p></div>
+                    <div class="analytics-card"><h4>平均日里程</h4><p id="statAvgDaily">0 km</p></div>
+                    <div class="analytics-card"><h4>總花費</h4><p id="statTotalCost">0 NT$</p></div>
+                    <div class="analytics-card"><h4>每公里成本</h4><p id="statCostPerKm">0 NT$</p></div>
+                    <div class="analytics-card"><h4>保養次數</h4><p id="statMaintCount">0</p></div>
+                    <div class="analytics-card"><h4>充電次數</h4><p id="statChargeCount">0</p></div>
+                </div>
+                
+                <div class="chart-container"><h3>月度花費分析</h3><canvas id="monthlyChart"></canvas></div>
+                <div class="chart-container"><h3>花費類別分布</h3><canvas id="categoryChart"></canvas></div>
+            </div>
+            
+            <!-- 資料管理 -->
+            <div class="data-management">
+                <h3>📦 資料管理</h3>
+                <input type="file" id="jsonImport" accept=".json" style="display:none;">
+                <div class="data-btns">
+                    <button class="btn btn-primary" id="importBtn">📥 匯入</button>
+                    <button class="btn btn-secondary" id="exportChargeBtn">⚡ 充電</button>
+                    <button class="btn btn-secondary" id="exportMaintBtn">🔧 保養</button>
+                    <button class="btn btn-secondary" id="exportExpenseBtn">💰 費用</button>
+                    <button class="btn btn-secondary" id="exportStatusBtn">📊 狀態</button>
+                    <button class="btn btn-success" id="exportAllBtn">📦 全部</button>
+                    <button class="btn btn-danger" id="clearAllBtn">🗑️ 清除</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 編輯充電Modal -->
+    <div id="editChargeModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>編輯充電記錄</h3>
+                <button class="btn btn-secondary" id="closeEditModal" style="padding:8px 12px;">✖️</button>
+            </div>
+            <form id="editChargeForm">
+                <input type="hidden" id="editingChargeId">
+                <div class="form-group"><label>開始時間</label><input type="datetime-local" id="edit_cStartTime" required></div>
+                <div class="form-group"><label>結束時間</label><input type="datetime-local" id="edit_cEndTime" required></div>
+                <div class="form-group"><label>總里程 (ODO)</label><input type="number" step="0.1" id="edit_cOdo" required></div>
+                <div class="form-group"><label>本次里程 (TRIP)</label><input type="number" step="0.1" id="edit_cTrip"></div>
+                <div class="form-group"><label>充電站</label><input type="text" id="edit_cStation"></div>
+                <div class="form-group"><label>開始電量 (格)</label><input type="number" id="edit_cBatteryStart" min="0" max="5"></div>
+                <div class="form-group"><label>結束電量 (格)</label><input type="number" id="edit_cBatteryEnd" min="0" max="5"></div>
+                <div class="form-group"><label>充電度數 (kWh)</label><input type="number" step="0.01" id="edit_cKwh"></div>
+                <div class="form-group"><label>充電費用 (NT$)</label><input type="number" id="edit_cCost"></div>
+                <div class="form-group"><label>備註</label><textarea id="edit_cNotes" rows="2"></textarea></div>
+                <button type="submit" class="btn btn-primary btn-full">💾 儲存變更</button>
             </form>
         </div>
-
-        <div id="endChargeSection" style="display: none;">
-            <h3>充電進行中...</h3>
-            <div id="currentChargeInfo" class="current-charge-info"></div>
-            <form id="endChargeForm" class="form-section">
-                <div class="input-group"><label>充電後電量 (格):</label>
-                    <div class="radio-group-grid">
-                        <input type="radio" id="be0" name="cBatteryEnd" value="0"><label for="be0">0</label>
-                        <input type="radio" id="be1" name="cBatteryEnd" value="1"><label for="be1">1</label>
-                        <input type="radio" id="be2" name="cBatteryEnd" value="2"><label for="be2">2</label>
-                        <input type="radio" id="be3" name="cBatteryEnd" value="3"><label for="be3">3</label>
-                        <input type="radio" id="be4" name="cBatteryEnd" value="4"><label for="be4">4</label>
-                        <input type="radio" id="be5" name="cBatteryEnd" value="5" checked><label for="be5">5</label>
-                    </div>
-                </div>
-                 <div class="input-group" id="kwh-input-group"><label for="cKwh">充電度數 (kWh):</label><input type="number" step="0.01" id="cKwh" placeholder="例如:1.5"><small>插座端量測值，非必填</small></div>
-                 <div class="input-group" id="cost-input-group"><label for="cCost">充電費用 (NT$):</label><input type="number" id="cCost" placeholder="例如:30"></div>
-                <div class="input-group"><label for="cRange">預估里程 (RANGE):</label><input type="number" step="0.1" id="cRange" placeholder="公里"><small>儀表板預估值，非必填</small></div>
-                <button type="submit" class="main-btn">結束充電並儲存</button>
-            </form>
-        </div>
-    </div>
-
-    <div id="maintenanceFormTab" class="tab-content">
-        <h3 id="maintFormTitle">記錄保養</h3>
-        <form id="maintenanceForm" class="form-section">
-            <input type="hidden" id="editingMaintId">
-            <div class="input-group"><label for="mDate">日期:</label><input type="date" id="mDate" required><button type="button" class="now-btn" id="maintNowBtn">現在</button></div>
-            <div class="input-group"><label for="mTime">時間:</label><input type="time" id="mTime" required></div>
-            <div class="input-group"><label for="mOdo">總里程 (ODO):</label><input type="number" step="0.1" id="mOdo" placeholder="公里" required></div>
-            <div class="input-group"><label for="mLocation">地點:</label><input type="text" id="mLocation" placeholder="保養地點"></div>
-            <div class="input-group"><label for="mType">保養類型:</label>
-                <select id="mType">
-                    <option value="定期保養">定期保養</option>
-                    <option value="大保養">大保養</option>
-                    <option value="小保養">小保養</option>
-                    <option value="維修">維修</option>
-                    <option value="檢查">檢查</option>
-                </select>
-            </div>
-            <div class="input-group"><label for="mNotes">服務/備註:</label><textarea id="mNotes" rows="3" placeholder="例如:大保養、檢查電路"></textarea></div>
-            <h3>保養項目/零件</h3>
-            <div id="partsList"></div>
-            <button type="button" class="main-btn add-part-btn" id="addPartBtn">新增項目</button>
-            <hr>
-            <p style="text-align: right; font-size: 1.2em; font-weight: bold;">總費用: NT$ <span id="totalCost">0</span></p>
-            <button type="submit" class="main-btn">儲存記錄</button>
-            <button type="button" class="main-btn cancel-edit-btn" id="cancelMaintEdit">取消編輯</button>
-        </form>
-    </div>
-
-    <div id="expenseFormTab" class="tab-content">
-        <h3 id="expenseFormTitle">記錄其他花費</h3>
-        <form id="expenseForm" class="form-section">
-            <input type="hidden" id="editingExpenseId">
-            <div class="input-group"><label for="eDate">日期:</label><input type="date" id="eDate" required><button type="button" class="now-btn" id="expenseNowBtn">現在</button></div>
-            <div class="input-group"><label for="eTime">時間:</label><input type="time" id="eTime" required></div>
-            <div class="input-group"><label for="eOdo">總里程 (ODO):</label><input type="number" step="0.1" id="eOdo" placeholder="公里"></div>
-            <div class="input-group"><label for="eCategory">類別:</label>
-                <select id="eCategory">
-                    <option value="保險">保險</option>
-                    <option value="牌照稅">牌照稅</option>
-                    <option value="停車費">停車費</option>
-                    <option value="配件">配件</option>
-                    <option value="清潔">清潔</option>
-                    <option value="其他">其他</option>
-                </select>
-            </div>
-            <div class="input-group"><label for="eAmount">金額 (NT$):</label><input type="number" id="eAmount" placeholder="費用" required></div>
-            <div class="input-group"><label for="eDescription">說明:</label><textarea id="eDescription" rows="3" placeholder="詳細說明"></textarea></div>
-            <button type="submit" class="main-btn">儲存記錄</button>
-            <button type="button" class="main-btn cancel-edit-btn" id="cancelExpenseEdit">取消編輯</button>
-        </form>
     </div>
     
-    <div id="quickUpdateTab" class="tab-content">
-        <h3>快速更新狀態</h3>
-        <form id="quickUpdateForm" class="form-section">
-            <div class="input-group">
-                <label for="qOdo">目前總里程 (ODO):</label>
-                <input type="number" step="0.1" id="qOdo" placeholder="公里" required>
-                <small>記錄當下儀表板的總里程數</small>
-            </div>
-            <div class="input-group">
-                <label>目前電量 (格):</label>
-                <div class="radio-group-grid">
-                    <input type="radio" id="qb0" name="qBattery" value="0"><label for="qb0">0</label>
-                    <input type="radio" id="qb1" name="qBattery" value="1" checked><label for="qb1">1</label>
-                    <input type="radio" id="qb2" name="qBattery" value="2"><label for="qb2">2</label>
-                    <input type="radio" id="qb3" name="qBattery" value="3"><label for="qb3">3</label>
-                    <input type="radio" id="qb4" name="qBattery" value="4"><label for="qb4">4</label>
-                    <input type="radio" id="qb5" name="qBattery" value="5"><label for="qb5">5</label>
-                </div>
-            </div>
-            <button type="submit" class="main-btn">儲存更新</button>
-        </form>
-    </div>
-
-    <h2 style="margin-top: 40px;">歷史記錄與分析</h2>
-    <div class="tabs" id="historyTabs">
-        <button class="tab-button" data-tab="chargeHistoryTab">充電歷史</button>
-        <button class="tab-button" data-tab="maintenanceHistoryTab">保養歷史</button>
-        <button class="tab-button" data-tab="expenseHistoryTab">花費記錄</button>
-        <button class="tab-button" data-tab="statisticsTab">統計分析</button>
-    </div>
-
-    <div id="chargeHistoryTab" class="tab-content">
-        <div class="filter-section">
-            <input type="text" class="search-box" id="chargeSearch" placeholder="搜尋充電站...">
-            <select id="chargeMonthFilter">
-                <option value="">所有月份</option>
-            </select>
-        </div>
-        <div class="analytics-section">
-            <div class="analytics-item"><h4>平均效率</h4><p id="avgEfficiency">N/A</p></div>
-            <div class="analytics-item"><h4>最佳效率</h4><p id="bestEfficiency">N/A</p></div>
-            <div class="analytics-item"><h4>最差效率</h4><p id="worstEfficiency">N/A</p></div>
-            <div class="analytics-item"><h4>總充電次數</h4><p id="totalCharges">0</p></div>
-        </div>
-        <div class="table-container">
-            <table class="history-table">
-                <thead><tr><th>期間</th><th>地點</th><th>TRIP</th><th>費用</th><th>效率<br>(km/kWh)</th><th>電量</th><th>時長</th><th>操作</th></tr></thead>
-                <tbody id="chargeHistoryTable"></tbody>
-            </table>
-        </div>
-        <div class="chart-container" style="margin-top:20px;"><canvas id="chargeChart"></canvas></div>
-    </div>
-
-    <div id="maintenanceHistoryTab" class="tab-content">
-        <div class="filter-section">
-            <input type="text" class="search-box" id="maintSearch" placeholder="搜尋內容...">
-            <select id="maintMonthFilter">
-                <option value="">所有月份</option>
-            </select>
-            <select id="maintTypeFilter">
-                <option value="">所有類型</option>
-                <option value="定期保養">定期保養</option>
-                <option value="大保養">大保養</option>
-                <option value="小保養">小保養</option>
-                <option value="維修">維修</option>
-                <option value="檢查">檢查</option>
-            </select>
-        </div>
-        <div class="table-container">
-            <table class="history-table">
-                <thead><tr><th>日期</th><th>ODO</th><th>類型</th><th>項目/備註</th><th>費用</th><th>操作</th></tr></thead>
-                <tbody id="maintenanceHistoryTable"></tbody>
-            </table>
-        </div>
-        <div class="chart-container" style="margin-top:20px;"><canvas id="maintenanceChart"></canvas></div>
-    </div>
-
-    <div id="expenseHistoryTab" class="tab-content">
-        <div class="filter-section">
-            <select id="expenseCategoryFilter">
-                <option value="">所有類別</option>
-                <option value="保險">保險</option>
-                <option value="牌照稅">牌照稅</option>
-                <option value="停車費">停車費</option>
-                <option value="配件">配件</option>
-                <option value="清潔">清潔</option>
-                <option value="狀態更新">狀態更新</option>
-                <option value="其他">其他</option>
-            </select>
-            <select id="expenseMonthFilter">
-                <option value="">所有月份</option>
-            </select>
-        </div>
-        <div class="table-container">
-            <table class="history-table">
-                <thead><tr><th>日期</th><th>類別</th><th>金額</th><th>說明</th><th>操作</th></tr></thead>
-                <tbody id="expenseHistoryTable"></tbody>
-            </table>
-        </div>
-        <div class="chart-container" style="margin-top:20px;"><canvas id="expenseChart"></canvas></div>
-    </div>
-
-    <div id="statisticsTab" class="tab-content">
-        <h3>整體統計</h3>
-        <div class="statistics-grid">
-            <div class="stat-card"><h4>總里程</h4><p id="statTotalMileage">0 km</p></div>
-            <div class="stat-card"><h4>平均日里程</h4><p id="statAvgDaily">0 km</p></div>
-            <div class="stat-card"><h4>總花費</h4><p id="statTotalCost">0 NT$</p></div>
-            <div class="stat-card"><h4>每公里成本</h4><p id="statCostPerKm">0 NT$</p></div>
-            <div class="stat-card"><h4>保養次數</h4><p id="statMaintCount">0</p></div>
-            <div class="stat-card"><h4>充電次數</h4><p id="statChargeCount">0</p></div>
-        </div>
-        <h3>月度花費分析</h3>
-        <div class="chart-container"><canvas id="monthlyExpenseChart"></canvas></div>
-        <h3>花費類別分布</h3>
-        <div class="chart-container"><canvas id="categoryPieChart"></canvas></div>
-    </div>
+    <div class="toast" id="toast"></div>
     
-    <div class="data-management-section">
-        <h3>資料管理</h3>
-        <input type="file" id="jsonImportInput" accept=".json">
-        <button id="importBtn">匯入 JSON</button>
-        <button id="exportChargeBtn">匯出充電 JSON</button>
-        <button id="exportMaintBtn">匯出保養 JSON</button>
-        <button id="exportExpenseBtn">匯出花費 JSON</button>
-        <button id="exportAllBtn">匯出全部資料</button>
-        <button id="clearAllBtn" style="color: var(--danger-color); border-color: var(--danger-color);">清除所有資料</button>
-    </div>
-</div>
+    <script>
+const FIRST_SERVICE_KM = 300;
+const FIRST_SERVICE_DAYS = 30;
+const REGULAR_SERVICE_KM = 3000;
+const REGULAR_SERVICE_DAYS = 180;
 
-<!-- Edit Charge Modal -->
-<div id="editChargeModal" class="modal">
-    <div class="modal-content">
-        <h3>編輯充電記錄</h3>
-        <form id="editChargeForm">
-            <input type="hidden" id="editingChargeId">
-            <div class="input-group"><label for="edit_cStartTime">開始時間:</label><input type="datetime-local" id="edit_cStartTime" required></div>
-            <div class="input-group"><label for="edit_cEndTime">結束時間:</label><input type="datetime-local" id="edit_cEndTime" required></div>
-            <div class="input-group"><label for="edit_cOdo">總里程 (ODO):</label><input type="number" step="0.1" id="edit_cOdo" required></div>
-            <div class="input-group"><label for="edit_cTrip">本次里程 (TRIP):</label><input type="number" step="0.1" id="edit_cTrip"></div>
-            <div class="input-group"><label for="edit_cStation">充電站:</label><input type="text" id="edit_cStation"></div>
-            <div class="input-group"><label for="edit_cBatteryStart">開始電量 (格):</label><input type="number" id="edit_cBatteryStart"></div>
-            <div class="input-group"><label for="edit_cBatteryEnd">結束電量 (格):</label><input type="number" id="edit_cBatteryEnd"></div>
-            <div class="input-group"><label for="edit_cKwh">充電度數 (kWh):</label><input type="number" step="0.01" id="edit_cKwh"></div>
-            <div class="input-group"><label for="edit_cCost">充電費用 (NT$):</label><input type="number" id="edit_cCost"></div>
-            <div class="input-group"><label for="edit_cNotes">備註:</label><textarea id="edit_cNotes" rows="2"></textarea></div>
-            <button type="submit" class="main-btn">儲存變更</button>
-            <button type="button" class="main-btn" id="cancelEditChargeBtn" style="background-color: var(--secondary-color);">取消</button>
-        </form>
-    </div>
-</div>
+let chargeTimer = null;
+let charts = {};
+let selectedStation = '';
 
-
-<script>
-// --- 保養週期設定 (根據車主手冊) ---
-const FIRST_SERVICE_KM = 300;       // 首次保養里程
-const FIRST_SERVICE_DAYS = 30;      // 首次保養時間 (約1個月)
-const REGULAR_SERVICE_KM = 3000;    // 定期保養里程
-const REGULAR_SERVICE_DAYS = 180;   // 定期保養時間 (約6個月)
-
-let chargeChartInstance, maintenanceChartInstance, expenseChartInstance, monthlyExpenseChartInstance, categoryPieChartInstance;
-let chargeTimerInterval = null;
-
-document.addEventListener('DOMContentLoaded', function() {
-    // --- Event Listeners ---
-    
-    // Forms
-    document.getElementById('startChargeForm').addEventListener('submit', startCharging);
-    document.getElementById('endChargeForm').addEventListener('submit', endCharging);
-    document.getElementById('maintenanceForm').addEventListener('submit', handleMaintenanceSubmit);
-    document.getElementById('expenseForm').addEventListener('submit', handleExpenseSubmit);
-    document.getElementById('quickUpdateForm').addEventListener('submit', handleQuickUpdateSubmit);
-    document.getElementById('editChargeForm').addEventListener('submit', handleChargeEditSubmit);
-
-    // Tabs
-    document.querySelectorAll('.tab-button').forEach(button => {
-        button.addEventListener('click', (event) => {
-            const tabName = button.dataset.tab;
-            if (tabName) {
-                openTab(event, tabName);
-            }
-        });
-    });
-
-    // Data Management
-    document.getElementById('importBtn').addEventListener('click', () => document.getElementById('jsonImportInput').click());
-    document.getElementById('jsonImportInput').addEventListener('change', handleJsonImport);
-    document.getElementById('exportChargeBtn').addEventListener('click', () => exportData('chargeLog', 'json'));
-    document.getElementById('exportMaintBtn').addEventListener('click', () => exportData('maintenanceLog', 'json'));
-    document.getElementById('exportExpenseBtn').addEventListener('click', () => exportData('expenseLog', 'json'));
-    document.getElementById('exportAllBtn').addEventListener('click', exportAllData);
-    document.getElementById('clearAllBtn').addEventListener('click', () => {
-        if(confirm('確定要清除所有資料嗎?此操作無法復原!')) {
-            clearAllData();
-        }
-    });
-
-    // Form interactions
-    document.getElementById('maintNowBtn').addEventListener('click', () => fillNow('mDate', 'mTime'));
-    document.getElementById('expenseNowBtn').addEventListener('click', () => fillNow('eDate', 'eTime'));
-    document.getElementById('addPartBtn').addEventListener('click', () => addPartItem());
-    document.getElementById('cancelMaintEdit').addEventListener('click', () => cancelEdit('maint'));
-    document.getElementById('cancelExpenseEdit').addEventListener('click', () => cancelEdit('expense'));
-    document.querySelectorAll('input[name="cStationRadio"]').forEach(radio => {
-        radio.addEventListener('change', toggleStationInput);
-    });
-
-    // Modal
-    document.getElementById('cancelEditChargeBtn').addEventListener('click', closeEditChargeModal);
-
-    // Filters
-    document.getElementById('chargeSearch').addEventListener('keyup', (e) => filterTable('chargeHistoryTable', e.target.value));
-    document.getElementById('chargeMonthFilter').addEventListener('change', () => filterByMonth('charge'));
-    document.getElementById('maintSearch').addEventListener('keyup', (e) => filterTable('maintenanceHistoryTable', e.target.value));
-    document.getElementById('maintMonthFilter').addEventListener('change', () => filterByMonth('maint'));
-    document.getElementById('maintTypeFilter').addEventListener('change', filterByType);
-    document.getElementById('expenseCategoryFilter').addEventListener('change', filterByCategory);
-    document.getElementById('expenseMonthFilter').addEventListener('change', () => filterByMonth('expense'));
-
-    // --- Initial Load ---
-    document.querySelector('#formTabs .tab-button').click();
-    document.querySelector('#historyTabs .tab-button').click();
+document.addEventListener('DOMContentLoaded', () => {
+    initEventListeners();
     loadAllData();
     populateMonthFilters();
+    populateDateTime('mDate', 'mTime'); // 網頁載入時填入保養時間
+    populateDateTime('eDate', 'eTime'); // 網頁載入時填入費用時間
 });
 
-function loadAllData() {
-    updateChargeUI(); // Check for ongoing charge first
-    loadMaintenanceHistory();
-    loadChargeHistory();
-    loadExpenseHistory();
-    updateSummary();
-    updateAnalytics();
-    renderCharts();
-}
-
-function openTab(evt, tabName) {
-    const parentTabs = evt.currentTarget.parentElement;
-    let contentContainer = parentTabs.parentElement;
-    contentContainer.querySelectorAll('.tab-content').forEach(tc => {
-        if(tc.parentElement === contentContainer) {
-            tc.style.display = "none";
-        }
+function initEventListeners() {
+    document.querySelectorAll('.tab-button').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            document.querySelectorAll('.tab-button').forEach(b => b.classList.remove('active'));
+            e.target.classList.add('active');
+            const tabName = e.target.dataset.tab; // 取得 tab 名稱
+            const tabId = tabName + 'Tab';
+            document.querySelectorAll('.tab-content').forEach(tc => tc.classList.remove('active'));
+            document.getElementById(tabId).classList.add('active');
+            
+            // 移除 'status' 相關的自動填入
+        });
     });
-
-    parentTabs.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove("active"));
-    document.getElementById(tabName).style.display = "block";
-    evt.currentTarget.classList.add("active");
-}
-
-function formatDateTime(isoString) {
-    if (!isoString) return '';
-    return new Date(isoString).toLocaleString('zh-TW', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }).replace(/\//g, '-');
-}
-
-function toggleStationInput() {
-    const isOther = document.getElementById('station_other').checked;
-    const input = document.getElementById('cStation');
-    input.style.display = isOther ? 'block' : 'none';
-    if (!isOther) {
-        input.value = '';
-    }
-}
-
-function fillNow(dateId, timeId) {
-    const now = new Date();
-    const localDate = new Date(now.getTime() - (now.getTimezoneOffset() * 60000)).toISOString();
-    document.getElementById(dateId).value = localDate.slice(0, 10);
-    if(timeId) document.getElementById(timeId).value = localDate.slice(11, 16);
-}
-
-function addPartItem(name = '', cost = '') {
-    const partsList = document.getElementById('partsList');
-    const newItem = document.createElement('div');
-    newItem.className = 'part-item';
-    newItem.innerHTML = `
-        <input type="text" class="part-name" placeholder="項目/零件名稱" value="${name}" oninput="updateTotalCost()">
-        <input type="number" class="part-cost" placeholder="費用" value="${cost}" oninput="updateTotalCost()">
-        <button type="button" class="remove-part-btn" onclick="this.parentElement.remove(); updateTotalCost();">X</button>
-    `;
-    partsList.appendChild(newItem);
-    updateTotalCost();
-}
-
-function updateTotalCost() {
-    let total = 0;
-    document.querySelectorAll('#partsList .part-cost').forEach(input => {
-        total += parseFloat(input.value) || 0;
+    
+    document.querySelectorAll('.station-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            e.preventDefault();
+            document.querySelectorAll('.station-btn').forEach(b => b.classList.remove('active'));
+            e.target.classList.add('active');
+            selectedStation = e.target.dataset.station;
+            const input = document.getElementById('cStation');
+            input.style.display = selectedStation === '其他' ? 'block' : 'none';
+            if (selectedStation !== '其他') input.value = '';
+        });
     });
-    document.getElementById('totalCost').textContent = total;
+    
+    document.getElementById('startChargeForm').addEventListener('submit', startCharging);
+    document.getElementById('endChargeForm').addEventListener('submit', endCharging);
+    document.getElementById('maintenanceForm').addEventListener('submit', saveMaintenance);
+    document.getElementById('expenseForm').addEventListener('submit', saveExpense);
+    document.getElementById('statusForm').addEventListener('submit', saveStatus);
+    document.getElementById('editChargeForm').addEventListener('submit', saveEditCharge);
+    
+    document.getElementById('addPartBtn').addEventListener('click', () => addPartItem());
+    document.getElementById('cancelMaintEdit').addEventListener('click', cancelMaintEdit);
+    document.getElementById('cancelExpenseEdit').addEventListener('click', cancelExpenseEdit);
+    // 移除 cancelStatusEdit 的監聽
+    document.getElementById('closeEditModal').addEventListener('click', closeEditModal);
+    
+    // 新增 "現在" 按鈕的監聽
+    document.getElementById('maintNowBtn').addEventListener('click', () => populateDateTime('mDate', 'mTime'));
+    document.getElementById('expenseNowBtn').addEventListener('click', () => populateDateTime('eDate', 'eTime'));
+
+    document.getElementById('importBtn').addEventListener('click', () => document.getElementById('jsonImport').click());
+    document.getElementById('jsonImport').addEventListener('change', importData);
+    document.getElementById('exportChargeBtn').addEventListener('click', () => exportData('chargeLog'));
+    document.getElementById('exportMaintBtn').addEventListener('click', () => exportData('maintenanceLog'));
+    document.getElementById('exportExpenseBtn').addEventListener('click', () => exportData('expenseLog'));
+    document.getElementById('exportStatusBtn').addEventListener('click', () => exportData('statusLog'));
+    document.getElementById('exportAllBtn').addEventListener('click', exportAllData);
+    document.getElementById('clearAllBtn').addEventListener('click', clearAllData);
+    
+    document.getElementById('chargeSearch').addEventListener('input', filterChargeTable);
+    document.getElementById('chargeMonthFilter').addEventListener('change', filterChargeTable);
+    document.getElementById('maintSearch').addEventListener('input', filterMaintTable);
+    document.getElementById('maintMonthFilter').addEventListener('change', filterMaintTable);
+    document.getElementById('maintTypeFilter').addEventListener('change', filterMaintTable);
+    document.getElementById('expenseCategoryFilter').addEventListener('change', filterExpenseTable);
+    document.getElementById('expenseMonthFilter').addEventListener('change', filterExpenseTable);
+    document.getElementById('statusMonthFilter').addEventListener('change', filterStatusTable);
 }
 
-// --- Charging Flow ---
+function showToast(message, type = 'success') {
+    const toast = document.getElementById('toast');
+    toast.textContent = message;
+    toast.style.background = type === 'success' ? 'var(--success)' : 'var(--danger)';
+    toast.classList.add('show');
+    setTimeout(() => toast.classList.remove('show'), 3000);
+}
+
 function startCharging(e) {
     e.preventDefault();
-    const stationType = document.querySelector('input[name="cStationRadio"]:checked').value;
-    let stationValue = stationType;
-    if (stationType === '其他') {
-        stationValue = document.getElementById('cStation').value;
-    }
-
+    const input = document.getElementById('cStation');
+    const station = selectedStation === '其他' ? input.value : selectedStation;
+    if (!station) { showToast('請選擇充電站', 'error'); return; }
+    
     const session = {
         id: Date.now(),
         startTime: new Date().toISOString(),
         odo: parseFloat(document.getElementById('cOdo').value),
         batteryStart: parseInt(document.querySelector('input[name="cBatteryStart"]:checked').value),
-        station: stationValue,
-        stationType: stationType,
+        station: station,
+        stationType: selectedStation,
         trip: parseFloat(document.getElementById('cTrip').value) || 0,
         notes: document.getElementById('cNotes').value
     };
-
+    
     localStorage.setItem('currentChargingSession', JSON.stringify(session));
     document.getElementById('startChargeForm').reset();
-    toggleStationInput();
+    selectedStation = '';
+    document.querySelectorAll('.station-btn').forEach(b => b.classList.remove('active'));
     updateChargeUI();
+    showToast('⚡ 充電已開始');
 }
 
 function endCharging(e) {
     e.preventDefault();
-    if (chargeTimerInterval) {
-        clearInterval(chargeTimerInterval);
-        chargeTimerInterval = null;
-    }
+    if (chargeTimer) { clearInterval(chargeTimer); chargeTimer = null; }
     
     const session = JSON.parse(localStorage.getItem('currentChargingSession'));
     if (!session) return;
-
+    
     const endTime = new Date();
     const startTime = new Date(session.startTime);
-    let diff = endTime - startTime;
-    const hours = Math.floor(diff / (1000 * 60 * 60));
-    const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-    const duration = `${hours}小時 ${minutes}分`;
-
+    const diff = endTime - startTime;
+    const hours = Math.floor(diff / 3600000);
+    const minutes = Math.floor((diff % 3600000) / 60000);
+    
     const record = {
         ...session,
         endTime: endTime.toISOString(),
         date: session.startTime.slice(0, 10),
-        duration: duration,
+        duration: `${hours}小時 ${minutes}分`,
         batteryEnd: parseInt(document.querySelector('input[name="cBatteryEnd"]:checked').value),
         kwh: parseFloat(document.getElementById('cKwh').value) || 0,
         cost: parseFloat(document.getElementById('cCost').value) || 0,
-        range: document.getElementById('cRange').value,
+        range: parseFloat(document.getElementById('cRange').value) || 0
     };
-
+    
     saveData('chargeLog', record);
     localStorage.removeItem('currentChargingSession');
     document.getElementById('endChargeForm').reset();
-    alert('充電記錄已儲存!');
+    updateChargeUI();
     loadAllData();
+    showToast('✅ 充電記錄已儲存');
 }
 
 function updateChargeUI() {
     const session = JSON.parse(localStorage.getItem('currentChargingSession'));
     const startSection = document.getElementById('startChargeSection');
     const endSection = document.getElementById('endChargeSection');
-
-    if (chargeTimerInterval) {
-        clearInterval(chargeTimerInterval);
-        chargeTimerInterval = null;
-    }
-
+    
+    if (chargeTimer) { clearInterval(chargeTimer); chargeTimer = null; }
+    
     if (session) {
         startSection.style.display = 'none';
         endSection.style.display = 'block';
+        
         document.getElementById('currentChargeInfo').innerHTML = `
             <p><strong>開始時間:</strong> ${formatDateTime(session.startTime)}</p>
             <p><strong>開始里程:</strong> ${session.odo} km</p>
             <p><strong>開始電量:</strong> ${session.batteryStart} 格</p>
             <p><strong>充電站:</strong> ${session.station}</p>
-            <p><strong>已充電時長:</strong> <span id="chargeDurationTimer">計算中...</span></p>
         `;
         
-        const kwhGroup = document.getElementById('kwh-input-group');
-        const costGroup = document.getElementById('cost-input-group');
+        const kwhGroup = document.getElementById('kwhGroup');
+        const costGroup = document.getElementById('costGroup');
         const kwhInput = document.getElementById('cKwh');
         const costInput = document.getElementById('cCost');
-
-        kwhInput.value = '';
-        costInput.value = '';
         
-        kwhInput.required = false; 
-
+        kwhInput.value = ''; costInput.value = '';
+        kwhInput.required = false; costInput.required = false;
+        
         switch (session.stationType) {
-            case '公司':
-                kwhGroup.style.display = 'block';
-                costGroup.style.display = 'none';
-                costInput.required = false;
-                break;
-            case '充電站':
-                kwhGroup.style.display = 'none';
-                costGroup.style.display = 'block';
-                costInput.required = true;
-                break;
-            default: // '其他'
-                kwhGroup.style.display = 'block';
-                costGroup.style.display = 'block';
-                costInput.required = false; 
-                break;
+            case '公司': kwhGroup.style.display = 'block'; costGroup.style.display = 'none'; break;
+            case '充電站': kwhGroup.style.display = 'none'; costGroup.style.display = 'block'; costInput.required = true; break;
+            default: kwhGroup.style.display = 'block'; costGroup.style.display = 'block'; break;
         }
-
-        const startTime = new Date(session.startTime);
-        const timerElement = document.getElementById('chargeDurationTimer');
-
-        chargeTimerInterval = setInterval(() => {
-            const now = new Date();
-            const diff = now - startTime;
-            const hours = Math.floor(diff / 3600000);
-            const minutes = Math.floor((diff % 3600000) / 60000);
-            const seconds = Math.floor((diff % 60000) / 1000);
-
-            const formattedTime = [
-                hours.toString().padStart(2, '0'),
-                minutes.toString().padStart(2, '0'),
-                seconds.toString().padStart(2, '0')
-            ].join(':');
-            
-            if(timerElement) {
-                timerElement.textContent = formattedTime;
-            }
-        }, 1000);
-
+        
+        updateChargingTimer(session.startTime);
     } else {
         startSection.style.display = 'block';
         endSection.style.display = 'none';
     }
 }
 
-function handleChargeEditSubmit(e) {
-    e.preventDefault();
-    const editingId = parseInt(document.getElementById('editingChargeId').value);
-    
-    const endTime = new Date(document.getElementById('edit_cEndTime').value);
-    const startTime = new Date(document.getElementById('edit_cStartTime').value);
-    let diff = endTime - startTime;
-    const hours = Math.floor(diff / (1000 * 60 * 60));
-    const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-    const duration = `${hours}小時 ${minutes}分`;
-
-    const record = {
-        id: editingId,
-        startTime: startTime.toISOString(),
-        endTime: endTime.toISOString(),
-        date: startTime.toISOString().slice(0, 10),
-        duration: duration,
-        odo: parseFloat(document.getElementById('edit_cOdo').value),
-        trip: parseFloat(document.getElementById('edit_cTrip').value),
-        station: document.getElementById('edit_cStation').value,
-        batteryStart: parseInt(document.getElementById('edit_cBatteryStart').value),
-        batteryEnd: parseInt(document.getElementById('edit_cBatteryEnd').value),
-        kwh: parseFloat(document.getElementById('edit_cKwh').value),
-        cost: parseFloat(document.getElementById('edit_cCost').value),
-        notes: document.getElementById('edit_cNotes').value,
-        range: 0 // Retain schema consistency
-    };
-    
-    saveData('chargeLog', record, true);
-    closeEditChargeModal();
-    alert('充電記錄已更新!');
-    loadAllData();
+function updateChargingTimer(startTime) {
+    const timerEl = document.getElementById('chargingTimer');
+    const start = new Date(startTime);
+    chargeTimer = setInterval(() => {
+        const now = new Date();
+        const diff = now - start;
+        const h = Math.floor(diff / 3600000);
+        const m = Math.floor((diff % 3600000) / 60000);
+        const s = Math.floor((diff % 60000) / 1000);
+        timerEl.textContent = `${pad(h)}:${pad(m)}:${pad(s)}`;
+    }, 1000);
 }
 
-function closeEditChargeModal() {
-    document.getElementById('editChargeModal').style.display = 'none';
+function pad(num) { return num.toString().padStart(2, '0'); }
+
+function addPartItem(name = '', cost = '') {
+    const list = document.getElementById('partsList');
+    const item = document.createElement('div');
+    item.className = 'part-item';
+    item.innerHTML = `
+        <input type="text" class="part-name" placeholder="項目/零件名稱" value="${name}" oninput="updateTotalCost()">
+        <input type="number" class="part-cost" placeholder="費用" value="${cost}" oninput="updateTotalCost()">
+        <button type="button" class="btn btn-danger" onclick="this.parentElement.remove(); updateTotalCost();" style="padding:8px 12px;">✖️</button>
+    `;
+    list.appendChild(item);
+    updateTotalCost();
 }
 
-function handleMaintenanceSubmit(e) {
+function updateTotalCost() {
+    let total = 0;
+    document.querySelectorAll('.part-cost').forEach(input => { total += parseFloat(input.value) || 0; });
+    document.getElementById('totalCost').textContent = total;
+}
+
+function saveMaintenance(e) {
     e.preventDefault();
-    const editingId = document.getElementById('editingMaintId').value;
     const parts = [];
-    document.querySelectorAll('#partsList .part-item').forEach(item => {
+    document.querySelectorAll('.part-item').forEach(item => {
         parts.push({
             name: item.querySelector('.part-name').value,
             cost: parseFloat(item.querySelector('.part-cost').value) || 0
         });
     });
+    
+    const editingId = document.getElementById('editingMaintId').value;
     const record = {
         id: editingId ? parseInt(editingId) : Date.now(),
         date: document.getElementById('mDate').value,
@@ -708,13 +980,24 @@ function handleMaintenanceSubmit(e) {
         parts: parts,
         totalCost: parseFloat(document.getElementById('totalCost').textContent)
     };
+    
     saveData('maintenanceLog', record, !!editingId);
-    cancelEdit('maint');
-    alert('保養記錄已儲存!');
+    cancelMaintEdit();
     loadAllData();
+    showToast('✅ 保養記錄已儲存');
 }
 
-function handleExpenseSubmit(e) {
+function cancelMaintEdit() {
+    document.getElementById('maintenanceForm').reset();
+    document.getElementById('editingMaintId').value = '';
+    document.getElementById('partsList').innerHTML = '';
+    document.getElementById('maintTitle').textContent = '記錄保養';
+    document.getElementById('cancelMaintEdit').style.display = 'none';
+    updateTotalCost();
+    populateDateTime('mDate', 'mTime'); // 重置時填入現在時間
+}
+
+function saveExpense(e) {
     e.preventDefault();
     const editingId = document.getElementById('editingExpenseId').value;
     const record = {
@@ -726,652 +1009,588 @@ function handleExpenseSubmit(e) {
         amount: parseFloat(document.getElementById('eAmount').value),
         description: document.getElementById('eDescription').value
     };
+    
     saveData('expenseLog', record, !!editingId);
-    cancelEdit('expense');
-    alert('花費記錄已儲存!');
+    cancelExpenseEdit();
     loadAllData();
+    showToast('✅ 費用記錄已儲存');
 }
 
-function handleQuickUpdateSubmit(e) {
+function cancelExpenseEdit() {
+    document.getElementById('expenseForm').reset();
+    document.getElementById('editingExpenseId').value = '';
+    document.getElementById('expenseTitle').textContent = '記錄其他花費';
+    document.getElementById('cancelExpenseEdit').style.display = 'none';
+    populateDateTime('eDate', 'eTime'); // 重置時填入現在時間
+}
+
+// 替換 populateStatusDateTime
+function populateDateTime(dateFieldId, timeFieldId) {
+    const now = new Date();
+    
+    // 轉換為 YYYY-MM-DD
+    const year = now.getFullYear();
+    const month = (now.getMonth() + 1).toString().padStart(2, '0');
+    const day = now.getDate().toString().padStart(2, '0');
+    
+    // 檢查元素是否存在
+    const dateEl = document.getElementById(dateFieldId);
+    if (dateEl) dateEl.value = `${year}-${month}-${day}`;
+    
+    // 轉換為 HH:MM
+    const hours = now.getHours().toString().padStart(2, '0');
+    const minutes = now.getMinutes().toString().padStart(2, '0');
+    
+    const timeEl = document.getElementById(timeFieldId);
+    if (timeEl) timeEl.value = `${hours}:${minutes}`;
+}
+
+function saveStatus(e) {
     e.preventDefault();
     
-    const now = new Date();
-    const localDate = new Date(now.getTime() - (now.getTimezoneOffset() * 60000)).toISOString();
-    const currentOdo = parseFloat(document.getElementById('qOdo').value);
-    const currentBattery = parseInt(document.querySelector('input[name="qBattery"]:checked').value);
-
-    if (!currentOdo) {
-        alert('請輸入總里程 (ODO)');
-        return;
-    }
+    const now = new Date(); // 儲存時抓取當前時間
+    const year = now.getFullYear();
+    const month = (now.getMonth() + 1).toString().padStart(2, '0');
+    const day = now.getDate().toString().padStart(2, '0');
+    const hours = now.getHours().toString().padStart(2, '0');
+    const minutes = now.getMinutes().toString().padStart(2, '0');
 
     const record = {
-        id: Date.now(),
-        date: localDate.slice(0, 10),
-        time: localDate.slice(11, 16),
-        odo: currentOdo,
-        category: '狀態更新',
-        amount: 0,
-        description: `電量: ${currentBattery} 格`
+        id: Date.now(), // 總是用新的ID
+        date: `${year}-${month}-${day}`, // 使用當前日期
+        time: `${hours}:${minutes}`, // 使用當前時間
+        odo: parseFloat(document.getElementById('sOdo').value),
+        battery: parseInt(document.querySelector('input[name="sBattery"]:checked').value),
+        notes: document.getElementById('sNotes').value
     };
     
-    saveData('expenseLog', record, false); // Save as an expense log
-    document.getElementById('quickUpdateForm').reset();
-    alert('狀態已更新!');
-    loadAllData(); // Reload all data to update summary
+    // 永遠只儲存一筆資料，直接覆蓋 localStorage
+    localStorage.setItem('statusLog', JSON.stringify([record]));
+    document.getElementById('statusForm').reset(); // 重置表單
+    
+    // 確保電量重置回 1 (reset() 可能會失效)
+    document.querySelector('input[name="sBattery"][value="1"]').checked = true;
+
+    loadAllData();
+    showToast('✅ 狀態已更新');
 }
 
-function saveData(key, newRecord, isEdit = false) {
+// *** 錯誤修復：還原 saveData 和 loadAllData 函式 ***
+function saveData(key, record, isEdit = false) {
     let data = JSON.parse(localStorage.getItem(key)) || [];
     if (isEdit) {
-        const index = data.findIndex(item => item.id === newRecord.id);
-        if (index > -1) data[index] = newRecord;
+        const index = data.findIndex(item => item.id === record.id);
+        if (index > -1) data[index] = record;
     } else {
-        data.push(newRecord);
+        data.push(record);
     }
-    data.sort((a, b) => new Date(b.date + 'T' + (b.time || b.startTime || '00:00')) - new Date(a.date + 'T' + (a.time || a.startTime || '00:00')));
+    data.sort((a, b) => {
+        // 修正排序邏輯：優先使用 startTime (ISO 格式)，否則組合 date 和 time
+        const dateStrA = a.startTime ? a.startTime : (a.date + 'T' + (a.time || '00:00'));
+        const dateStrB = b.startTime ? b.startTime : (b.date + 'T' + (b.time || '00:00'));
+        
+        const dateA = new Date(dateStrA);
+        const dateB = new Date(dateStrB);
+        
+        return dateB - dateA;
+    });
     localStorage.setItem(key, JSON.stringify(data));
 }
 
-function editRecord(key, id) {
-    const data = JSON.parse(localStorage.getItem(key)) || [];
-    const record = data.find(item => item.id === id);
-    if (!record) return;
-
-    if (key === 'chargeLog') {
-        document.getElementById('editingChargeId').value = record.id;
-        
-        const toLocalISO = (iso) => {
-            if (!iso) return '';
-            const d = new Date(iso);
-            d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
-            return d.toISOString().slice(0, 16);
-        };
-        
-        document.getElementById('edit_cStartTime').value = toLocalISO(record.startTime);
-        document.getElementById('edit_cEndTime').value = toLocalISO(record.endTime);
-        document.getElementById('edit_cOdo').value = record.odo;
-        document.getElementById('edit_cTrip').value = record.trip;
-        document.getElementById('edit_cStation').value = record.station;
-        document.getElementById('edit_cBatteryStart').value = record.batteryStart;
-        document.getElementById('edit_cBatteryEnd').value = record.batteryEnd;
-        document.getElementById('edit_cKwh').value = record.kwh;
-        document.getElementById('edit_cCost').value = record.cost;
-        document.getElementById('edit_cNotes').value = record.notes || '';
-
-        document.getElementById('editChargeModal').style.display = 'block';
-
-    } else if (key === 'maintenanceLog') {
-        document.getElementById('editingMaintId').value = record.id;
-        document.getElementById('mDate').value = record.date;
-        document.getElementById('mTime').value = record.time;
-        document.getElementById('mOdo').value = record.odo;
-        document.getElementById('mLocation').value = record.location || '';
-        document.getElementById('mType').value = record.type || '定期保養';
-        document.getElementById('mNotes').value = record.notes || '';
-        document.getElementById('partsList').innerHTML = '';
-        if (record.parts) record.parts.forEach(p => addPartItem(p.name, p.cost));
-        updateTotalCost();
-        document.getElementById('maintFormTitle').textContent = '編輯保養記錄';
-        document.getElementById('cancelMaintEdit').style.display = 'block';
-        document.querySelector('#formTabs button[data-tab="maintenanceFormTab"]').click();
-        window.scrollTo(0, 0);
-    } else if (key === 'expenseLog') {
-        document.getElementById('editingExpenseId').value = record.id;
-        document.getElementById('eDate').value = record.date;
-        document.getElementById('eTime').value = record.time;
-        document.getElementById('eOdo').value = record.odo || '';
-        document.getElementById('eCategory').value = record.category;
-        document.getElementById('eAmount').value = record.amount;
-        document.getElementById('eDescription').value = record.description || '';
-        document.getElementById('expenseFormTitle').textContent = '編輯花費記錄';
-        document.getElementById('cancelExpenseEdit').style.display = 'block';
-        document.querySelector('#formTabs button[data-tab="expenseFormTab"]').click();
-        window.scrollTo(0, 0);
-    }
+function loadAllData() {
+    updateChargeUI();
+    loadChargeHistory();
+    loadMaintenanceHistory();
+    loadExpenseHistory();
+    loadStatusHistory();
+    updateDashboard();
+    updateAnalytics();
+    renderCharts();
 }
+// *** 錯誤修復完畢 ***
 
-function deleteRecord(key, id) {
-    if (!confirm('確定要刪除這筆記錄嗎?此操作無法復原。')) return;
-    let data = JSON.parse(localStorage.getItem(key)) || [];
-    data = data.filter(item => item.id !== id);
-    localStorage.setItem(key, JSON.stringify(data));
-    loadAllData();
-}
-
-function cancelEdit(type) {
-    if (type === 'maint') {
-        document.getElementById('maintenanceForm').reset();
-        document.getElementById('editingMaintId').value = '';
-        document.getElementById('partsList').innerHTML = '';
-        updateTotalCost();
-        document.getElementById('maintFormTitle').textContent = '記錄保養';
-        document.getElementById('cancelMaintEdit').style.display = 'none';
-    } else if (type === 'expense') {
-        document.getElementById('expenseForm').reset();
-        document.getElementById('editingExpenseId').value = '';
-        document.getElementById('expenseFormTitle').textContent = '記錄其他花費';
-        document.getElementById('cancelExpenseEdit').style.display = 'none';
-    }
-}
-
-function calculateEfficiencies(data) {
-    const chronologicalData = [...data].sort((a, b) => new Date(a.startTime) - new Date(b.startTime));
-    const efficiencyMap = {};
-
-    for (let i = 1; i < chronologicalData.length; i++) {
-        const currentRecord = chronologicalData[i];
-        const prevRecord = chronologicalData[i - 1];
-
-        const mileage = currentRecord.odo - prevRecord.odo;
-        const kwh = currentRecord.kwh;
-
-        if (mileage > 0 && kwh > 0) {
-            efficiencyMap[currentRecord.id] = (mileage / kwh).toFixed(2);
-        }
-    }
-    return efficiencyMap;
-}
-
-function loadChargeHistory() {
-    const data = JSON.parse(localStorage.getItem('chargeLog')) || [];
-    const tableBody = document.getElementById('chargeHistoryTable');
-    tableBody.innerHTML = '';
-    
-    const sortedData = [...data].sort((a, b) => new Date(b.startTime) - new Date(a.startTime));
-    const efficiencyMap = calculateEfficiencies(data);
-
-    sortedData.forEach(record => {
-        const row = tableBody.insertRow();
-        const efficiency = efficiencyMap[record.id] || 'N/A';
-        const period = `${formatDateTime(record.startTime)}<br>~ ${formatDateTime(record.endTime)}`;
-
-        row.innerHTML = `
-            <td>${period}</td>
-            <td>${record.station}</td>
-            <td>${record.trip || '-'}</td>
-            <td>${record.cost || '-'}</td>
-            <td>${efficiency}</td>
-            <td>${record.batteryStart || '?'}→${record.batteryEnd || '?'}格</td>
-            <td>${record.duration || '-'}</td>
-            <td class="action-buttons">
-                <button class="edit-btn" onclick="editRecord('chargeLog', ${record.id})">編輯</button>
-                <button class="delete-btn" onclick="deleteRecord('chargeLog', ${record.id})">刪除</button>
-            </td>`;
-    });
-}
-
-
-function loadMaintenanceHistory() {
-    const data = JSON.parse(localStorage.getItem('maintenanceLog')) || [];
-    const tableBody = document.getElementById('maintenanceHistoryTable');
-    tableBody.innerHTML = '';
-    
-    const sortedData = [...data].sort((a, b) => new Date(b.date + 'T' + b.time) - new Date(a.date + 'T' + a.time));
-
-    sortedData.forEach(record => {
-        const row = tableBody.insertRow();
-        let itemsDesc = record.parts && record.parts.length > 0 ? record.parts.map(p => p.name).join(', ') : record.notes;
-        if (itemsDesc && itemsDesc.length > 30) itemsDesc = itemsDesc.substring(0, 30) + '...';
-        row.innerHTML = `
-            <td>${record.date.slice(5)}</td>
-            <td>${record.odo}</td>
-            <td>${record.type || '-'}</td>
-            <td>${itemsDesc || '-'}</td>
-            <td>${record.totalCost}</td>
-            <td class="action-buttons">
-                <button class="edit-btn" onclick="editRecord('maintenanceLog', ${record.id})">編輯</button>
-                <button class="delete-btn" onclick="deleteRecord('maintenanceLog', ${record.id})">刪除</button>
-            </td>`;
-    });
-}
-
-function loadExpenseHistory() {
-    const data = JSON.parse(localStorage.getItem('expenseLog')) || [];
-    const tableBody = document.getElementById('expenseHistoryTable');
-    tableBody.innerHTML = '';
-    
-    const sortedData = [...data].sort((a, b) => new Date(b.date + 'T' + b.time) - new Date(a.date + 'T' + a.time));
-
-    sortedData.forEach(record => {
-        const row = tableBody.insertRow();
-        row.innerHTML = `
-            <td>${record.date.slice(5)}</td>
-            <td>${record.category}</td>
-            <td>${record.amount}</td>
-            <td>${record.description || '-'}</td>
-            <td class="action-buttons">
-                <button class="edit-btn" onclick="editRecord('expenseLog', ${record.id})">編輯</button>
-                <button class="delete-btn" onclick="deleteRecord('expenseLog', ${record.id})">刪除</button>
-            </td>`;
-    });
-}
-
-function daysBetween(date1, date2) {
-    if (!date1 || !date2) return 0;
-    return Math.round(Math.abs((new Date(date1) - new Date(date2)) / (24 * 60 * 60 * 1000)));
-}
-
-function updateSummary() {
+function updateDashboard() {
     const maintData = JSON.parse(localStorage.getItem('maintenanceLog')) || [];
     const chargeData = JSON.parse(localStorage.getItem('chargeLog')) || [];
     const expenseData = JSON.parse(localStorage.getItem('expenseLog')) || [];
-    const today = new Date().toISOString().slice(0, 10);
-
-    // --- 總里程 & 總花費 ---
-    let totalMileage = 0;
-    const allOdoData = [...chargeData, ...maintData, ...expenseData].filter(d => d.odo > 0);
-    if(allOdoData.length > 0) {
-        totalMileage = Math.max(...allOdoData.map(d => d.odo));
-    }
-    document.getElementById('totalMileage').textContent = totalMileage;
-
+    const statusData = JSON.parse(localStorage.getItem('statusLog')) || [];
+    
+    const allOdo = [...chargeData, ...maintData, ...expenseData, ...statusData].filter(d => d.odo > 0).map(d => d.odo);
+    const totalMileage = allOdo.length > 0 ? Math.max(...allOdo) : 0;
+    document.getElementById('totalMileage').textContent = totalMileage.toFixed(1);
+    
     let totalExpense = 0;
     maintData.forEach(m => totalExpense += m.totalCost || 0);
     chargeData.forEach(c => totalExpense += c.cost || 0);
     expenseData.forEach(e => totalExpense += e.amount || 0);
     document.getElementById('totalExpense').textContent = totalExpense.toFixed(0);
     
-    // --- 下次保養預估 (新邏輯) ---
-    const maintDataSorted = [...maintData].sort((a,b) => new Date(a.date) - new Date(b.date));
-    const currentOdo = totalMileage;
-
-    if (maintData.length === 0) {
-        // 首次保養邏輯 (300km / 1個月)
-        const allData = [...chargeData, ...expenseData];
-        if (allData.length === 0) {
-            document.getElementById('nextService').textContent = `首次保養: 300 km 或 1 個月`;
-            document.getElementById('nextService').style.color = 'inherit';
-        } else {
-            const firstRecord = allData.sort((a,b) => new Date(a.date || a.startTime) - new Date(b.date || b.startTime))[0];
-            const firstRecordDate = firstRecord.date || firstRecord.startTime.slice(0,10);
-            const daysSinceFirstRecord = daysBetween(firstRecordDate, today);
-            
-            const kmLeft = FIRST_SERVICE_KM - currentOdo;
-            const daysLeft = FIRST_SERVICE_DAYS - daysSinceFirstRecord;
-
-            if (kmLeft <= 0 || daysLeft <= 0) {
-                document.getElementById('nextService').textContent = `已超過首次保養里程/時間`;
-                document.getElementById('nextService').style.color = 'var(--danger-color)';
-            } else {
-                document.getElementById('nextService').textContent = `首次保養: 約 ${kmLeft.toFixed(0)} km 或 ${daysLeft} 天後`;
-                document.getElementById('nextService').style.color = 'var(--success-color)';
-            }
-        }
-        document.getElementById('lastMaintenance').textContent = `尚未記錄`;
-        document.getElementById('lastMaintOdo').textContent = `N/A`;
-
-    } else { // maintData.length >= 1
-        // 定期保養邏輯 (每 3000km / 6個月 from last)
-        const last = maintDataSorted[maintDataSorted.length - 1];
-        const daysAgo = daysBetween(last.date, today);
-        document.getElementById('lastMaintenance').textContent = `${last.date} (${daysAgo}天前)`;
-        document.getElementById('lastMaintOdo').textContent = `${last.odo} km`;
-
-        const kmSince = currentOdo - last.odo;
-        const kmLeft = REGULAR_SERVICE_KM - kmSince;
-        const daysLeft = REGULAR_SERVICE_DAYS - daysAgo;
-
-        if (kmLeft <= 0 || daysLeft <= 0) {
-            document.getElementById('nextService').textContent = `已超過定期保養里程/時間`;
-            document.getElementById('nextService').style.color = 'var(--danger-color)';
-        } else {
-            document.getElementById('nextService').textContent = `下次定期保養: 約 ${kmLeft.toFixed(0)} km 或 ${daysLeft} 天後`;
-            document.getElementById('nextService').style.color = 'var(--success-color)';
-        }
-    }
-
-    // --- 上次充電 ---
     if (chargeData.length > 0) {
-        const last = [...chargeData].sort((a,b) => new Date(a.startTime) - new Date(b.startTime)).pop();
-        const daysAgo = daysBetween(last.date, today);
-        document.getElementById('lastCharge').textContent = `${last.date} (${daysAgo}天前)`;
-        document.getElementById('lastChargeOdo').textContent = `${last.odo} km`;
+        const last = chargeData[0];
+        const daysAgo = daysBetween(last.date, new Date().toISOString().slice(0, 10));
+        document.getElementById('lastChargeDays').textContent = daysAgo === 0 ? '今天' : `${daysAgo}天前`;
+        
+        // C-1: 計算充電後騎乘距離
+        const kmSinceCharge = totalMileage - last.odo;
+        
+        // C-2: 更新顯示
+        if (kmSinceCharge > 0 && last.odo > 0) {
+            document.getElementById('lastChargeDate').textContent = `${last.date} (已騎乘 ${kmSinceCharge.toFixed(1)} km)`;
+        } else {
+            document.getElementById('lastChargeDate').textContent = last.date;
+        }
     }
-
-    // --- 統計頁面 ---
-    document.getElementById('statTotalMileage').textContent = `${totalMileage} km`;
+    
+    if (maintData.length === 0) {
+        const kmLeft = FIRST_SERVICE_KM - totalMileage;
+        if (kmLeft > 0) {
+            document.getElementById('nextServiceKm').textContent = `${kmLeft.toFixed(0)} km`;
+            document.getElementById('nextServiceDate').textContent = '首次保養';
+        } else {
+            document.getElementById('nextServiceKm').textContent = '已超過';
+            document.getElementById('nextServiceDate').textContent = '請盡快保養';
+        }
+    } else {
+        const last = maintData[0];
+        const kmSince = totalMileage - last.odo;
+        const kmLeft = REGULAR_SERVICE_KM - kmSince;
+        const daysAgo = daysBetween(last.date, new Date().toISOString().slice(0, 10));
+        const daysLeft = REGULAR_SERVICE_DAYS - daysAgo;
+        
+        if (kmLeft > 0 && daysLeft > 0) {
+            document.getElementById('nextServiceKm').textContent = `${kmLeft.toFixed(0)} km`;
+            document.getElementById('nextServiceDate').textContent = `或 ${daysLeft} 天後`;
+        } else {
+            document.getElementById('nextServiceKm').textContent = '已超過';
+            document.getElementById('nextServiceDate').textContent = '請盡快保養';
+        }
+    }
+    
+    document.getElementById('statTotalMileage').textContent = `${totalMileage.toFixed(1)} km`;
     document.getElementById('statTotalCost').textContent = `${totalExpense.toFixed(0)} NT$`;
     document.getElementById('statMaintCount').textContent = maintData.length;
     document.getElementById('statChargeCount').textContent = chargeData.length;
     
     if (totalMileage > 0) {
         document.getElementById('statCostPerKm').textContent = `${(totalExpense / totalMileage).toFixed(2)} NT$`;
-    } else {
-        document.getElementById('statCostPerKm').textContent = `0 NT$`;
     }
     
-    const allRecordsWithDate = [...chargeData, ...maintData, ...expenseData].filter(d => d.date);
-    if (allRecordsWithDate.length > 1) {
-        const firstDate = new Date(allRecordsWithDate.sort((a,b) => new Date(a.date) - new Date(b.date))[0].date);
-        const lastDate = new Date();
-        const days = daysBetween(firstDate, lastDate) || 1;
+    const allRecords = [...chargeData, ...maintData, ...expenseData, ...statusData].filter(d => d.date).sort((a, b) => new Date(a.date) - new Date(b.date));
+    if (allRecords.length > 1) {
+        const days = daysBetween(allRecords[0].date, new Date().toISOString().slice(0, 10)) || 1;
         const avgDaily = totalMileage / days;
         document.getElementById('statAvgDaily').textContent = `${avgDaily.toFixed(1)} km`;
-    } else {
-        document.getElementById('statAvgDaily').textContent = `0 km`;
     }
 }
 
+function daysBetween(date1, date2) {
+    const d1 = new Date(date1);
+    const d2 = new Date(date2);
+    return Math.round(Math.abs((d2 - d1) / 86400000));
+}
+
+function loadChargeHistory() {
+    const data = JSON.parse(localStorage.getItem('chargeLog')) || [];
+    const tbody = document.getElementById('chargeTable');
+    tbody.innerHTML = '';
+    
+    const effMap = calculateEfficiencies(data);
+    
+    data.forEach(record => {
+        const row = tbody.insertRow();
+        const eff = effMap[record.id] || '-';
+        const period = `${formatDateTime(record.startTime)}<br>~ ${formatDateTime(record.endTime)}`;
+        
+        row.innerHTML = `
+            <td>${period}</td>
+            <td>${record.station}</td>
+            <td>${record.trip || '-'}</td>
+            <td>${record.cost || '-'}</td>
+            <td>${eff}</td>
+            <td>${record.batteryStart}→${record.batteryEnd}格</td>
+            <td>${record.duration || '-'}</td>
+            <td class="action-btns">
+                <button class="btn btn-warning" onclick="editCharge(${record.id})">編輯</button>
+                <button class="btn btn-danger" onclick="deleteRecord('chargeLog', ${record.id})">刪除</button>
+            </td>
+        `;
+    });
+}
+
+function calculateEfficiencies(data) {
+    const sorted = [...data].sort((a, b) => new Date(a.startTime) - new Date(b.startTime));
+    const effMap = {};
+    for (let i = 1; i < sorted.length; i++) {
+        const curr = sorted[i];
+        const prev = sorted[i - 1];
+        const mileage = curr.odo - prev.odo;
+        const kwh = curr.kwh;
+        if (mileage > 0 && kwh > 0) {
+            effMap[curr.id] = (mileage / kwh).toFixed(2);
+        }
+    }
+    return effMap;
+}
+
+function loadMaintenanceHistory() {
+    const data = JSON.parse(localStorage.getItem('maintenanceLog')) || [];
+    const tbody = document.getElementById('maintTable');
+    tbody.innerHTML = '';
+    
+    data.forEach(record => {
+        const row = tbody.insertRow();
+        let items = record.parts && record.parts.length > 0 ? record.parts.map(p => p.name).join(', ') : record.notes || '-';
+        if (items.length > 30) items = items.substring(0, 30) + '...';
+        
+        row.innerHTML = `
+            <td>${record.date.slice(5)}</td>
+            <td>${record.odo}</td>
+            <td>${record.type}</td>
+            <td>${items}</td>
+            <td>${record.totalCost}</td>
+            <td class="action-btns">
+                <button class="btn btn-warning" onclick="editMaintenance(${record.id})">編輯</button>
+                <button class="btn btn-danger" onclick="deleteRecord('maintenanceLog', ${record.id})">刪除</button>
+            </td>
+        `;
+    });
+}
+
+function loadExpenseHistory() {
+    const data = JSON.parse(localStorage.getItem('expenseLog')) || [];
+    const tbody = document.getElementById('expenseTable');
+    tbody.innerHTML = '';
+    
+    data.forEach(record => {
+        const row = tbody.insertRow();
+        row.innerHTML = `
+            <td>${record.date.slice(5)}</td>
+            <td>${record.category}</td>
+            <td>${record.amount}</td>
+            <td>${record.description || '-'}</td>
+            <td class="action-btns">
+                <button class="btn btn-warning" onclick="editExpense(${record.id})">編輯</button>
+                <button class="btn btn-danger" onclick="deleteRecord('expenseLog', ${record.id})">刪除</button>
+            </td>
+        `;
+    });
+}
+
+function loadStatusHistory() {
+    const data = JSON.parse(localStorage.getItem('statusLog')) || [];
+    const tbody = document.getElementById('statusTable');
+    tbody.innerHTML = '';
+    
+    data.forEach(record => {
+        const row = tbody.insertRow();
+        row.innerHTML = `
+            <td>${record.date.slice(5)}</td>
+            <td>${record.time}</td>
+            <td>${record.odo}</td>
+            <td>${record.battery}</td>
+            <td>${record.notes || '-'}</td>
+            <!-- 移除操作按鈕 -->
+        `;
+    });
+}
+
+window.editCharge = function(id) {
+    const data = JSON.parse(localStorage.getItem('chargeLog')) || [];
+    const record = data.find(r => r.id === id);
+    if (!record) return;
+    
+    document.getElementById('editingChargeId').value = record.id;
+    document.getElementById('edit_cStartTime').value = toLocalISO(record.startTime);
+    document.getElementById('edit_cEndTime').value = toLocalISO(record.endTime);
+    document.getElementById('edit_cOdo').value = record.odo;
+    document.getElementById('edit_cTrip').value = record.trip;
+    document.getElementById('edit_cStation').value = record.station;
+    document.getElementById('edit_cBatteryStart').value = record.batteryStart;
+    document.getElementById('edit_cBatteryEnd').value = record.batteryEnd;
+    document.getElementById('edit_cKwh').value = record.kwh;
+    document.getElementById('edit_cCost').value = record.cost;
+    document.getElementById('edit_cNotes').value = record.notes || '';
+    
+    document.getElementById('editChargeModal').classList.add('active');
+}
+
+function saveEditCharge(e) {
+    e.preventDefault();
+    const id = parseInt(document.getElementById('editingChargeId').value);
+    const startTime = new Date(document.getElementById('edit_cStartTime').value);
+    const endTime = new Date(document.getElementById('edit_cEndTime').value);
+    const diff = endTime - startTime;
+    const hours = Math.floor(diff / 3600000);
+    const minutes = Math.floor((diff % 3600000) / 60000);
+    
+    const record = {
+        id: id,
+        startTime: startTime.toISOString(),
+        endTime: endTime.toISOString(),
+        date: startTime.toISOString().slice(0, 10),
+        duration: `${hours}小時 ${minutes}分`,
+        odo: parseFloat(document.getElementById('edit_cOdo').value),
+        trip: parseFloat(document.getElementById('edit_cTrip').value),
+        station: document.getElementById('edit_cStation').value,
+        batteryStart: parseInt(document.getElementById('edit_cBatteryStart').value),
+        batteryEnd: parseInt(document.getElementById('edit_cBatteryEnd').value),
+        kwh: parseFloat(document.getElementById('edit_cKwh').value),
+        cost: parseFloat(document.getElementById('edit_cCost').value),
+        notes: document.getElementById('edit_cNotes').value,
+        range: 0
+    };
+    
+    saveData('chargeLog', record, true);
+    closeEditModal();
+    loadAllData();
+    showToast('✅ 充電記錄已更新');
+}
+
+function closeEditModal() {
+    document.getElementById('editChargeModal').classList.remove('active');
+}
+
+window.editMaintenance = function(id) {
+    const data = JSON.parse(localStorage.getItem('maintenanceLog')) || [];
+    const record = data.find(r => r.id === id);
+    if (!record) return;
+    
+    document.getElementById('editingMaintId').value = record.id;
+    document.getElementById('mDate').value = record.date;
+    document.getElementById('mTime').value = record.time;
+    document.getElementById('mOdo').value = record.odo;
+    document.getElementById('mLocation').value = record.location || '';
+    document.getElementById('mType').value = record.type;
+    document.getElementById('mNotes').value = record.notes || '';
+    document.getElementById('partsList').innerHTML = '';
+    if (record.parts) record.parts.forEach(p => addPartItem(p.name, p.cost));
+    updateTotalCost();
+    document.getElementById('maintTitle').textContent = '編輯保養記錄';
+    document.getElementById('cancelMaintEdit').style.display = 'block';
+    document.querySelector('[data-tab="maintenance"]').click();
+    window.scrollTo(0, 0);
+}
+
+window.editExpense = function(id) {
+    const data = JSON.parse(localStorage.getItem('expenseLog')) || [];
+    const record = data.find(r => r.id === id);
+    if (!record) return;
+    
+    document.getElementById('editingExpenseId').value = record.id;
+    document.getElementById('eDate').value = record.date;
+    document.getElementById('eTime').value = record.time;
+    document.getElementById('eOdo').value = record.odo || '';
+    document.getElementById('eCategory').value = record.category;
+    document.getElementById('eAmount').value = record.amount;
+    document.getElementById('eDescription').value = record.description || '';
+    document.getElementById('expenseTitle').textContent = '編輯費用記錄';
+    document.getElementById('cancelExpenseEdit').style.display = 'block';
+    document.querySelector('[data-tab="expense"]').click();
+    window.scrollTo(0, 0);
+}
+
+// 移除 editStatus 函式
+
+window.deleteRecord = function(key, id) {
+    if (!confirm('確定要刪除這筆記錄嗎？此操作無法復原。')) return;
+    let data = JSON.parse(localStorage.getItem(key)) || [];
+    data = data.filter(item => item.id !== id);
+    localStorage.setItem(key, JSON.stringify(data));
+    loadAllData();
+    showToast('🗑️ 記錄已刪除');
+}
+
+function filterChargeTable() {
+    const search = document.getElementById('chargeSearch').value.toLowerCase();
+    const month = document.getElementById('chargeMonthFilter').value;
+    const rows = document.getElementById('chargeTable').rows;
+    for (let row of rows) {
+        const text = row.textContent.toLowerCase();
+        const matchSearch = text.includes(search);
+        const matchMonth = !month || text.includes(month);
+        row.style.display = matchSearch && matchMonth ? '' : 'none';
+    }
+}
+
+function filterMaintTable() {
+    const search = document.getElementById('maintSearch').value.toLowerCase();
+    const month = document.getElementById('maintMonthFilter').value;
+    const type = document.getElementById('maintTypeFilter').value;
+    const rows = document.getElementById('maintTable').rows;
+    for (let row of rows) {
+        const text = row.textContent.toLowerCase();
+        const matchSearch = text.includes(search);
+        const matchMonth = !month || text.includes(month);
+        const matchType = !type || row.cells[2].textContent === type;
+        row.style.display = matchSearch && matchMonth && matchType ? '' : 'none';
+    }
+}
+
+function filterExpenseTable() {
+    const category = document.getElementById('expenseCategoryFilter').value;
+    const month = document.getElementById('expenseMonthFilter').value;
+    const rows = document.getElementById('expenseTable').rows;
+    for (let row of rows) {
+        const text = row.textContent;
+        const matchCategory = !category || row.cells[1].textContent === category;
+        const matchMonth = !month || text.includes(month);
+        row.style.display = matchCategory && matchMonth ? '' : 'none';
+    }
+}
+
+function filterStatusTable() {
+    const month = document.getElementById('statusMonthFilter').value;
+    const rows = document.getElementById('statusTable').rows;
+    for (let row of rows) {
+        const matchMonth = !month || row.textContent.includes(month);
+        row.style.display = matchMonth ? '' : 'none';
+    }
+}
 
 function updateAnalytics() {
     const data = JSON.parse(localStorage.getItem('chargeLog')) || [];
     document.getElementById('totalCharges').textContent = data.length;
     
-    const efficiencyMap = calculateEfficiencies(data);
-    const efficiencies = Object.values(efficiencyMap).map(v => parseFloat(v));
-
-    if (efficiencies.length > 0) {
-        const total = efficiencies.reduce((a, b) => a + b, 0);
-        document.getElementById('avgEfficiency').textContent = `${(total / efficiencies.length).toFixed(2)} km/kWh`;
-        document.getElementById('bestEfficiency').textContent = `${Math.max(...efficiencies).toFixed(2)} km/kWh`;
-        document.getElementById('worstEfficiency').textContent = `${Math.min(...efficiencies).toFixed(2)} km/kWh`;
+    const effMap = calculateEfficiencies(data);
+    const effs = Object.values(effMap).map(v => parseFloat(v));
+    
+    if (effs.length > 0) {
+        const avg = effs.reduce((a, b) => a + b, 0) / effs.length;
+        document.getElementById('avgEfficiency').textContent = `${avg.toFixed(2)} km/kWh`;
+        document.getElementById('bestEfficiency').textContent = `${Math.max(...effs).toFixed(2)} km/kWh`;
+        document.getElementById('worstEfficiency').textContent = `${Math.min(...effs).toFixed(2)} km/kWh`;
     } else {
-        document.getElementById('avgEfficiency').textContent = 'N/A';
-        document.getElementById('bestEfficiency').textContent = 'N/A';
-        document.getElementById('worstEfficiency').textContent = 'N/A';
+        document.getElementById('avgEfficiency').textContent = '-';
+        document.getElementById('bestEfficiency').textContent = '-';
+        document.getElementById('worstEfficiency').textContent = '-';
     }
-}
-
-
-function populateMonthFilters() {
-    const allData = [
-        ...JSON.parse(localStorage.getItem('chargeLog') || '[]'),
-        ...JSON.parse(localStorage.getItem('maintenanceLog') || '[]'),
-        ...JSON.parse(localStorage.getItem('expenseLog') || '[]')
-    ];
-    
-    const months = new Set();
-    allData.forEach(record => {
-        if (record.date) months.add(record.date.slice(0, 7));
-    });
-    
-    const sortedMonths = Array.from(months).sort().reverse();
-    
-    ['chargeMonthFilter', 'maintMonthFilter', 'expenseMonthFilter'].forEach(filterId => {
-        const select = document.getElementById(filterId);
-        select.innerHTML = '<option value="">所有月份</option>';
-        sortedMonths.forEach(month => {
-            const option = document.createElement('option');
-            option.value = month;
-            option.textContent = month;
-            select.appendChild(option);
-        });
-    });
-}
-
-function filterTable(tableId, searchText) {
-    const table = document.getElementById(tableId);
-    const rows = table.getElementsByTagName('tr');
-    
-    for (let i = 0; i < rows.length; i++) {
-        const row = rows[i];
-        const text = row.textContent.toLowerCase();
-        row.style.display = text.includes(searchText.toLowerCase()) ? '' : 'none';
-    }
-}
-
-function filterByMonth(type) {
-    const tableIdMap = {
-        charge: 'chargeHistoryTable',
-        maint: 'maintenanceHistoryTable',
-        expense: 'expenseHistoryTable'
-    };
-    
-    const filterId = `${type}MonthFilter`;
-    const selectedMonth = document.getElementById(filterId).value;
-    const tableBody = document.getElementById(tableIdMap[type]);
-
-    for (let i = 0; i < tableBody.rows.length; i++) {
-        const row = tableBody.rows[i];
-        const dateCellText = row.cells[0].textContent; 
-        row.style.display = (!selectedMonth || dateCellText.includes(selectedMonth)) ? '' : 'none';
-    }
-}
-
-
-function filterByType() {
-    const selectedType = document.getElementById('maintTypeFilter').value;
-    const tableBody = document.getElementById('maintenanceHistoryTable');
-    const rows = tableBody.querySelectorAll('tr');
-    rows.forEach(row => {
-        const type = row.cells[2].textContent;
-        if (!selectedType || type === selectedType) {
-            row.style.display = '';
-        } else {
-            row.style.display = 'none';
-        }
-    });
-}
-
-function filterByCategory() {
-    const selectedCategory = document.getElementById('expenseCategoryFilter').value;
-    const tableBody = document.getElementById('expenseHistoryTable');
-    const rows = tableBody.querySelectorAll('tr');
-    rows.forEach(row => {
-        const category = row.cells[1].textContent;
-        if (!selectedCategory || category === selectedCategory) {
-            row.style.display = '';
-        } else {
-            row.style.display = 'none';
-        }
-    });
-}
-
-function handleJsonImport(event) {
-    const file = event.target.files[0];
-    if (!file) return;
-
-    const reader = new FileReader();
-    reader.onload = function(e) {
-        try {
-            const importedData = JSON.parse(e.target.result);
-            
-            if (importedData.type === 'all') {
-                if (!confirm('確定要匯入完整資料嗎?這將會覆蓋現有的所有記錄。')) return;
-                if (importedData.chargeLog) localStorage.setItem('chargeLog', JSON.stringify(importedData.chargeLog));
-                if (importedData.maintenanceLog) localStorage.setItem('maintenanceLog', JSON.stringify(importedData.maintenanceLog));
-                if (importedData.expenseLog) localStorage.setItem('expenseLog', JSON.stringify(importedData.expenseLog));
-                alert('完整資料匯入成功!');
-            } else if (importedData.type && Array.isArray(importedData.data)) {
-                if (!confirm('確定要匯入資料嗎?這將會覆蓋現有的同類型記錄。')) return;
-                localStorage.setItem(importedData.type, JSON.stringify(importedData.data));
-                alert('資料匯入成功!');
-            } else {
-                alert('JSON 檔案格式不符!');
-                return;
-            }
-            
-            loadAllData();
-            populateMonthFilters();
-        } catch (error) {
-            alert('讀取檔案失敗,請確認是否為正確的 JSON 檔案。');
-        } finally {
-            event.target.value = '';
-        }
-    };
-    reader.readAsText(file);
-}
-
-function exportData(key, format) {
-    const data = JSON.parse(localStorage.getItem(key) || '[]');
-    if (data.length === 0) {
-        alert('沒有資料可以匯出!');
-        return;
-    }
-    const dataToExport = {
-        type: key,
-        version: '2.1',
-        exportDate: new Date().toISOString(),
-        data: data
-    };
-    const blob = new Blob([JSON.stringify(dataToExport, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `${key}_backup_${new Date().toISOString().slice(0,10)}.json`;
-    a.click();
-    URL.revokeObjectURL(url);
-}
-
-function exportAllData() {
-    const allData = {
-        type: 'all',
-        version: '2.1',
-        exportDate: new Date().toISOString(),
-        chargeLog: JSON.parse(localStorage.getItem('chargeLog') || '[]'),
-        maintenanceLog: JSON.parse(localStorage.getItem('maintenanceLog') || '[]'),
-        expenseLog: JSON.parse(localStorage.getItem('expenseLog') || '[]')
-    };
-    
-    const blob = new Blob([JSON.stringify(allData, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `motorcycle_all_data_${new Date().toISOString().slice(0,10)}.json`;
-    a.click();
-    URL.revokeObjectURL(url);
-}
-
-function clearAllData() {
-    localStorage.clear();
-    loadAllData();
-    alert('所有資料已清除!');
 }
 
 function renderCharts() {
-    const maintData = JSON.parse(localStorage.getItem('maintenanceLog')) || [];
-    const chargeData = JSON.parse(localStorage.getItem('chargeLog')) || [];
-    const expenseData = JSON.parse(localStorage.getItem('expenseLog')) || [];
-
-    if (maintenanceChartInstance) maintenanceChartInstance.destroy();
-    if (maintData.length > 0) {
-        const ctx = document.getElementById('maintenanceChart').getContext('2d');
-        maintenanceChartInstance = new Chart(ctx, {
-            type: 'line',
-            data: {
-                labels: maintData.map(d => `${d.date.slice(5)}`).reverse(),
-                datasets: [{
-                    label: '保養費用 (NT$)',
-                    data: [...maintData].map(d => d.totalCost).reverse(),
-                    borderColor: 'rgb(255, 99, 132)',
-                    backgroundColor: 'rgba(255, 99, 132, 0.1)',
-                    tension: 0.1
-                }]
-            },
-            options: { responsive: true, plugins: { legend: { display: true }}}
-        });
-    }
-
-    if (chargeChartInstance) chargeChartInstance.destroy();
-    if (chargeData.length > 1) {
-        const efficiencyMap = calculateEfficiencies(chargeData);
-        const efficiencies = Object.entries(efficiencyMap).map(([id, value]) => ({
-            id: parseInt(id),
-            value: parseFloat(value)
-        }));
-        
-        // Ensure chart data is also in chronological order
-        const chronologicalData = [...chargeData].sort((a,b) => new Date(a.startTime) - new Date(b.startTime));
-        const chartData = chronologicalData
-            .map(record => {
-                const efficiency = efficiencies.find(e => e.id === record.id);
-                return efficiency ? { label: record.date.slice(5), value: efficiency.value } : null;
-            })
-            .filter(item => item !== null);
-
-        const ctx = document.getElementById('chargeChart').getContext('2d');
-        chargeChartInstance = new Chart(ctx, {
-            type: 'bar',
-            data: {
-                labels: chartData.map(d => d.label),
-                datasets: [{
-                    label: '效率 (km/kWh)',
-                    data: chartData.map(d => d.value),
-                    backgroundColor: 'rgba(54, 162, 235, 0.5)',
-                    borderColor: 'rgba(54, 162, 235, 1)',
-                    borderWidth: 1
-                }]
-            },
-            options: { responsive: true, plugins: { legend: { display: true }}}
-        });
-    }
-
-    if (expenseChartInstance) expenseChartInstance.destroy();
-    if (expenseData.length > 0) {
-        const ctx = document.getElementById('expenseChart').getContext('2d');
-        expenseChartInstance = new Chart(ctx, {
-            type: 'bar',
-            data: {
-                labels: expenseData.map(d => `${d.date.slice(5)}`).reverse(),
-                datasets: [{
-                    label: '花費金額 (NT$)',
-                    data: [...expenseData].map(d => d.amount).reverse(),
-                    backgroundColor: 'rgba(75, 192, 192, 0.5)',
-                    borderColor: 'rgba(75, 192, 192, 1)',
-                    borderWidth: 1
-                }]
-            },
-            options: { responsive: true, plugins: { legend: { display: true }}}
-        });
-    }
-
-    renderMonthlyExpenseChart();
-    renderCategoryPieChart();
+    renderChargeChart();
+    renderMaintChart();
+    renderExpenseChart();
+    renderMonthlyChart();
+    renderCategoryChart();
 }
 
-function renderMonthlyExpenseChart() {
+function renderChargeChart() {
+    const data = JSON.parse(localStorage.getItem('chargeLog')) || [];
+    if (data.length < 2) return;
+    
+    const effMap = calculateEfficiencies(data);
+    const sorted = [...data].sort((a, b) => new Date(a.startTime) - new Date(b.startTime));
+    const chartData = sorted.map(r => ({ label: r.date.slice(5), value: effMap[r.id] })).filter(d => d.value);
+    
+    if (charts.charge) charts.charge.destroy();
+    const ctx = document.getElementById('chargeChart').getContext('2d');
+    charts.charge = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: chartData.map(d => d.label),
+            datasets: [{
+                label: '效率 (km/kWh)',
+                data: chartData.map(d => d.value),
+                backgroundColor: 'rgba(37, 99, 235, 0.5)',
+                borderColor: 'rgba(37, 99, 235, 1)',
+                borderWidth: 2
+            }]
+        },
+        options: { responsive: true, plugins: { legend: { display: true }}}
+    });
+}
+
+function renderMaintChart() {
+    const data = JSON.parse(localStorage.getItem('maintenanceLog')) || [];
+    if (data.length === 0) return;
+    
+    if (charts.maint) charts.maint.destroy();
+    const ctx = document.getElementById('maintChart').getContext('2d');
+    charts.maint = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: [...data].reverse().map(d => d.date.slice(5)),
+            datasets: [{
+                label: '保養費用 (NT$)',
+                data: [...data].reverse().map(d => d.totalCost),
+                borderColor: 'rgb(239, 68, 68)',
+                backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                tension: 0.4
+            }]
+        },
+        options: { responsive: true, plugins: { legend: { display: true }}}
+    });
+}
+
+function renderExpenseChart() {
+    const data = JSON.parse(localStorage.getItem('expenseLog')) || [];
+    if (data.length === 0) return;
+    
+    if (charts.expense) charts.expense.destroy();
+    const ctx = document.getElementById('expenseChart').getContext('2d');
+    charts.expense = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: [...data].reverse().map(d => d.date.slice(5)),
+            datasets: [{
+                label: '費用 (NT$)',
+                data: [...data].reverse().map(d => d.amount),
+                backgroundColor: 'rgba(16, 185, 129, 0.5)',
+                borderColor: 'rgba(16, 185, 129, 1)',
+                borderWidth: 2
+            }]
+        },
+        options: { responsive: true, plugins: { legend: { display: true }}}
+    });
+}
+
+function renderMonthlyChart() {
     const maintData = JSON.parse(localStorage.getItem('maintenanceLog')) || [];
     const chargeData = JSON.parse(localStorage.getItem('chargeLog')) || [];
     const expenseData = JSON.parse(localStorage.getItem('expenseLog')) || [];
     
     const monthlyData = {};
-    
     maintData.forEach(m => {
         const month = m.date.slice(0, 7);
         monthlyData[month] = (monthlyData[month] || 0) + (m.totalCost || 0);
     });
-    
     chargeData.forEach(c => {
         const month = c.date.slice(0, 7);
         monthlyData[month] = (monthlyData[month] || 0) + (c.cost || 0);
     });
-    
     expenseData.forEach(e => {
         const month = e.date.slice(0, 7);
         monthlyData[month] = (monthlyData[month] || 0) + (e.amount || 0);
     });
     
-    const sortedMonths = Object.keys(monthlyData).sort();
+    const months = Object.keys(monthlyData).sort();
+    if (months.length === 0) return;
     
-    if (monthlyExpenseChartInstance) monthlyExpenseChartInstance.destroy();
-    if (sortedMonths.length > 0) {
-        const ctx = document.getElementById('monthlyExpenseChart').getContext('2d');
-        monthlyExpenseChartInstance = new Chart(ctx, {
-            type: 'line',
-            data: {
-                labels: sortedMonths,
-                datasets: [{
-                    label: '月度總花費 (NT$)',
-                    data: sortedMonths.map(m => monthlyData[m]),
-                    borderColor: 'rgb(153, 102, 255)',
-                    backgroundColor: 'rgba(153, 102, 255, 0.1)',
-                    tension: 0.1,
-                    fill: true
-                }]
-            },
-            options: { responsive: true, plugins: { legend: { display: true }}}
-        });
-    }
+    if (charts.monthly) charts.monthly.destroy();
+    const ctx = document.getElementById('monthlyChart').getContext('2d');
+    charts.monthly = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: months,
+            datasets: [{
+                label: '月度總花費 (NT$)',
+                data: months.map(m => monthlyData[m]),
+                borderColor: 'rgb(139, 92, 246)',
+                backgroundColor: 'rgba(139, 92, 246, 0.1)',
+                tension: 0.4,
+                fill: true
+            }]
+        },
+        options: { responsive: true, plugins: { legend: { display: true }}}
+    });
 }
 
-function renderCategoryPieChart() {
+function renderCategoryChart() {
     const maintData = JSON.parse(localStorage.getItem('maintenanceLog')) || [];
     const chargeData = JSON.parse(localStorage.getItem('chargeLog')) || [];
-    const expenseData = JSON.parse(localStorage.getItem('expenseLog') || '[]');
+    const expenseData = JSON.parse(localStorage.getItem('expenseLog')) || [];
     
     const categoryData = { '保養': 0, '充電': 0 };
-    
     maintData.forEach(m => categoryData['保養'] += m.totalCost || 0);
     chargeData.forEach(c => categoryData['充電'] += c.cost || 0);
     expenseData.forEach(e => {
@@ -1379,32 +1598,180 @@ function renderCategoryPieChart() {
     });
     
     const categories = Object.keys(categoryData).filter(k => categoryData[k] > 0);
-    const values = categories.map(k => categoryData[k]);
+    if (categories.length === 0) return;
     
-    if (categoryPieChartInstance) categoryPieChartInstance.destroy();
-    if (categories.length > 0) {
-        const ctx = document.getElementById('categoryPieChart').getContext('2d');
-        categoryPieChartInstance = new Chart(ctx, {
-            type: 'doughnut',
-            data: {
-                labels: categories,
-                datasets: [{
-                    data: values,
-                    backgroundColor: [
-                        'rgba(255, 99, 132, 0.8)',
-                        'rgba(54, 162, 235, 0.8)',
-                        'rgba(255, 206, 86, 0.8)',
-                        'rgba(75, 192, 192, 0.8)',
-                        'rgba(153, 102, 255, 0.8)',
-                        'rgba(255, 159, 64, 0.8)',
-                        'rgba(199, 199, 199, 0.8)'
-                    ]
-                }]
-            },
-            options: { responsive: true, plugins: { legend: { position: 'bottom' }}}
-        });
-    }
+    if (charts.category) charts.category.destroy();
+    const ctx = document.getElementById('categoryChart').getContext('2d');
+    charts.category = new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+            labels: categories,
+            datasets: [{
+                data: categories.map(k => categoryData[k]),
+                backgroundColor: [
+                    'rgba(239, 68, 68, 0.8)',
+                    'rgba(37, 99, 235, 0.8)',
+                    'rgba(245, 158, 11, 0.8)',
+                    'rgba(16, 185, 129, 0.8)',
+                    'rgba(139, 92, 246, 0.8)',
+                    'rgba(236, 72, 153, 0.8)',
+                    'rgba(100, 116, 139, 0.8)'
+                ]
+            }]
+        },
+        options: { responsive: true, plugins: { legend: { position: 'bottom' }}}
+    });
 }
-</script>
+
+function populateMonthFilters() {
+    const allData = [
+        ...JSON.parse(localStorage.getItem('chargeLog') || '[]'),
+        ...JSON.parse(localStorage.getItem('maintenanceLog') || '[]'),
+        ...JSON.parse(localStorage.getItem('expenseLog') || '[]'),
+        ...JSON.parse(localStorage.getItem('statusLog') || '[]')
+    ];
+    
+    const months = new Set();
+    allData.forEach(r => { if (r.date) months.add(r.date.slice(0, 7)); });
+    const sorted = Array.from(months).sort().reverse();
+    
+    ['chargeMonthFilter', 'maintMonthFilter', 'expenseMonthFilter', 'statusMonthFilter'].forEach(id => {
+        const select = document.getElementById(id);
+        select.innerHTML = '<option value="">所有月份</option>';
+        sorted.forEach(month => {
+            select.innerHTML += `<option value="${month}">${month}</option>`;
+        });
+    });
+}
+
+function importData(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    
+    const reader = new FileReader();
+    reader.onload = (event) => {
+        try {
+            const imported = JSON.parse(event.target.result);
+            
+            // 排序函式
+            const sortFn = (a, b) => {
+                // 修正排序邏輯：優先使用 startTime (ISO 格式)，否則組合 date 和 time
+                const dateStrA = a.startTime ? a.startTime : (a.date + 'T' + (a.time || '00:00'));
+                const dateStrB = b.startTime ? b.startTime : (b.date + 'T' + (b.time || '00:00'));
+                
+                const dateA = new Date(dateStrA);
+                const dateB = new Date(dateStrB);
+                
+                return dateB - dateA; // 降冪排序 (最新在前)
+            };
+
+            if (imported.type === 'all') {
+                if (!confirm('確定要匯入完整資料嗎？這將會覆蓋現有的所有記錄。')) return;
+                
+                // 匯入前排序
+                if (imported.chargeLog) {
+                    imported.chargeLog.sort(sortFn);
+                    localStorage.setItem('chargeLog', JSON.stringify(imported.chargeLog));
+                }
+                if (imported.maintenanceLog) {
+                    imported.maintenanceLog.sort(sortFn);
+                    localStorage.setItem('maintenanceLog', JSON.stringify(imported.maintenanceLog));
+                }
+                if (imported.expenseLog) {
+                    imported.expenseLog.sort(sortFn);
+                    localStorage.setItem('expenseLog', JSON.stringify(imported.expenseLog));
+                }
+                if (imported.statusLog) {
+                    imported.statusLog.sort(sortFn);
+                    localStorage.setItem('statusLog', JSON.stringify(imported.statusLog));
+                }
+                showToast('✅ 完整資料匯入成功');
+            } else if (imported.type && Array.isArray(imported.data)) {
+                if (!confirm('確定要匯入資料嗎？這將會覆蓋現有的同類型記錄。')) return;
+                
+                // 匯入前排序
+                imported.data.sort(sortFn);
+                localStorage.setItem(imported.type, JSON.stringify(imported.data));
+                showToast('✅ 資料匯入成功');
+            } else {
+                showToast('❌ JSON 檔案格式不符', 'error');
+                return;
+            }
+            
+            loadAllData();
+            populateMonthFilters();
+        } catch (error) {
+            showToast('❌ 讀取檔案失敗', 'error');
+        }
+    };
+    reader.readAsText(file);
+    e.target.value = '';
+}
+
+function exportData(key) {
+    const data = JSON.parse(localStorage.getItem(key) || '[]');
+    if (data.length === 0) { showToast('❌ 沒有資料可以匯出', 'error'); return; }
+    
+    const exportObj = {
+        type: key,
+        version: '3.0',
+        exportDate: new Date().toISOString(),
+        data: data
+    };
+    
+    downloadJSON(exportObj, `${key}_${new Date().toISOString().slice(0, 10)}.json`);
+    showToast('✅ 資料已匯出');
+}
+
+function exportAllData() {
+    const allData = {
+        type: 'all',
+        version: '3.0',
+        exportDate: new Date().toISOString(),
+        chargeLog: JSON.parse(localStorage.getItem('chargeLog') || '[]'),
+        maintenanceLog: JSON.parse(localStorage.getItem('maintenanceLog') || '[]'),
+        expenseLog: JSON.parse(localStorage.getItem('expenseLog') || '[]'),
+        statusLog: JSON.parse(localStorage.getItem('statusLog') || '[]')
+    };
+    
+    downloadJSON(allData, `motorcycle_all_data_${new Date().toISOString().slice(0, 10)}.json`);
+    showToast('✅ 全部資料已匯出');
+}
+
+function clearAllData() {
+    if (!confirm('確定要清除所有資料嗎？此操作無法復原！')) return;
+    if (!confirm('請再次確認：這將永久刪除所有記錄！')) return;
+    localStorage.clear();
+    loadAllData();
+    showToast('🗑️ 所有資料已清除');
+}
+
+function downloadJSON(data, filename) {
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(url);
+}
+
+function formatDateTime(isoString) {
+    if (!isoString) return '';
+    return new Date(isoString).toLocaleString('zh-TW', { 
+        month: '2-digit', 
+        day: '2-digit', 
+        hour: '2-digit', 
+        minute: '2-digit' 
+    });
+}
+
+function toLocalISO(isoString) {
+    if (!isoString) return '';
+    const d = new Date(isoString);
+    d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
+    return d.toISOString().slice(0, 16);
+}
+    </script>
 </body>
 </html>
