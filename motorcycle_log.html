@@ -48,7 +48,11 @@
         
         .dashboard {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            /* 修改 (1): 
+              原為 minmax(250px, 1fr)，在手機上會導致變為1欄。
+              改為 minmax(150px, 1fr)，使其在手機上能容納2欄。
+            */
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
             gap: 20px;
             padding: 30px;
             background: white;
@@ -291,7 +295,11 @@
         
         .analytics-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            /* 修改 (1): 
+              原為 minmax(200px, 1fr)，在手機上會導致變為1欄。
+              改為 minmax(150px, 1fr)，使其在手機上能容納2欄。
+            */
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
             gap: 15px;
             margin: 20px 0;
         }
@@ -712,13 +720,10 @@
             <div class="data-management">
                 <h3>📦 資料管理</h3>
                 <input type="file" id="jsonImport" accept=".json" style="display:none;">
+                <!-- 修改 (2): 簡化按鈕 -->
                 <div class="data-btns">
                     <button class="btn btn-primary" id="importBtn">📥 匯入</button>
-                    <button class="btn btn-secondary" id="exportChargeBtn">⚡ 充電</button>
-                    <button class="btn btn-secondary" id="exportMaintBtn">🔧 保養</button>
-                    <button class="btn btn-secondary" id="exportExpenseBtn">💰 費用</button>
-                    <button class="btn btn-secondary" id="exportStatusBtn">📊 狀態</button>
-                    <button class="btn btn-success" id="exportAllBtn">📦 全部</button>
+                    <button class="btn btn-success" id="exportAllBtn">📦 匯出全部</button>
                     <button class="btn btn-danger" id="clearAllBtn">🗑️ 清除</button>
                 </div>
             </div>
@@ -827,10 +832,8 @@ function initEventListeners() {
 
     document.getElementById('importBtn').addEventListener('click', () => document.getElementById('jsonImport').click());
     document.getElementById('jsonImport').addEventListener('change', importData);
-    document.getElementById('exportChargeBtn').addEventListener('click', () => exportData('chargeLog'));
-    document.getElementById('exportMaintBtn').addEventListener('click', () => exportData('maintenanceLog'));
-    document.getElementById('exportExpenseBtn').addEventListener('click', () => exportData('expenseLog'));
-    document.getElementById('exportStatusBtn').addEventListener('click', () => exportData('statusLog'));
+    
+    <!-- 修改 (3): 移除單獨匯出的監聽 -->
     document.getElementById('exportAllBtn').addEventListener('click', exportAllData);
     document.getElementById('clearAllBtn').addEventListener('click', clearAllData);
     
@@ -1767,20 +1770,7 @@ function importData(e) {
     e.target.value = '';
 }
 
-function exportData(key) {
-    const data = JSON.parse(localStorage.getItem(key) || '[]');
-    if (data.length === 0) { showToast('❌ 沒有資料可以匯出', 'error'); return; }
-    
-    const exportObj = {
-        type: key,
-        version: '3.0',
-        exportDate: new Date().toISOString(),
-        data: data
-    };
-    
-    downloadJSON(exportObj, `${key}_${new Date().toISOString().slice(0, 10)}.json`);
-    showToast('✅ 資料已匯出');
-}
+<!-- 修改 (3): 移除不再需要的 exportData 函式 -->
 
 function exportAllData() {
     const allData = {
