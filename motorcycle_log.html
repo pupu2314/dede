@@ -545,7 +545,18 @@
                         <div class="form-group"><label>時間</label><input type="time" id="mTime" required></div>
                         <button type="button" class="btn btn-secondary" id="maintNowBtn" style="margin-bottom: 20px; padding: 8px 12px;">📅 填入現在時間</button>
                         <div class="form-group"><label>總里程 (ODO)</label><input type="number" step="0.1" id="mOdo" placeholder="公里" required></div>
-                        <div class="form-group"><label>地點</label><input type="text" id="mLocation" placeholder="保養地點"></div>
+                        
+                        <!-- === START MODIFICATION 1 === -->
+                        <div class="form-group">
+                            <label>地點</label>
+                            <select id="mLocationSelect">
+                                <option value="基隆成功專賣店">基隆成功專賣店</option>
+                                <option value="其他">其他</option>
+                            </select>
+                            <input type="text" id="mLocationInput" placeholder="自訂保養地點" style="display:none; margin-top:10px;">
+                        </div>
+                        <!-- === END MODIFICATION 1 === -->
+                        
                         <div class="form-group">
                             <label>保養類型</label>
                             <select id="mType">
@@ -801,6 +812,19 @@ function initEventListeners() {
     document.getElementById('maintNowBtn').addEventListener('click', () => populateDateTime('mDate', 'mTime'));
     document.getElementById('expenseNowBtn').addEventListener('click', () => populateDateTime('eDate', 'eTime'));
 
+    // === START MODIFICATION 1 ===
+    // 保養地點 "其他" 選項的監聽
+    document.getElementById('mLocationSelect').addEventListener('change', (e) => {
+        const input = document.getElementById('mLocationInput');
+        if (e.target.value === '其他') {
+            input.style.display = 'block';
+        } else {
+            input.style.display = 'none';
+            input.value = '';
+        }
+    });
+    // === END MODIFICATION 1 ===
+
     document.getElementById('importBtn').addEventListener('click', () => document.getElementById('jsonImport').click());
     document.getElementById('jsonImport').addEventListener('change', importData);
     document.getElementById('exportChargeBtn').addEventListener('click', () => exportData('chargeLog'));
@@ -968,13 +992,20 @@ function saveMaintenance(e) {
         });
     });
     
+    // === START MODIFICATION 1 ===
+    // 讀取保養地點
+    const locSelect = document.getElementById('mLocationSelect').value;
+    const locInput = document.getElementById('mLocationInput').value;
+    const location = locSelect === '其他' ? locInput : locSelect;
+    // === END MODIFICATION 1 ===
+    
     const editingId = document.getElementById('editingMaintId').value;
     const record = {
         id: editingId ? parseInt(editingId) : Date.now(),
         date: document.getElementById('mDate').value,
         time: document.getElementById('mTime').value,
         odo: parseFloat(document.getElementById('mOdo').value),
-        location: document.getElementById('mLocation').value,
+        location: location, // 使用組合後的地點
         type: document.getElementById('mType').value,
         notes: document.getElementById('mNotes').value,
         parts: parts,
@@ -993,6 +1024,14 @@ function cancelMaintEdit() {
     document.getElementById('partsList').innerHTML = '';
     document.getElementById('maintTitle').textContent = '記錄保養';
     document.getElementById('cancelMaintEdit').style.display = 'none';
+    
+    // === START MODIFICATION 1 ===
+    // 重置保養地點
+    document.getElementById('mLocationSelect').value = '基隆成功專賣店';
+    document.getElementById('mLocationInput').value = '';
+    document.getElementById('mLocationInput').style.display = 'none';
+    // === END MODIFICATION 1 ===
+
     updateTotalCost();
     populateDateTime('mDate', 'mTime'); // 重置時填入現在時間
 }
@@ -1141,7 +1180,11 @@ function updateDashboard() {
         }
     }
     
-    if (maintData.length === 0) {
+    // === START MODIFICATION 2 ===
+    // 尋找最後一次 "定期保養" 的紀錄
+    const regularMaintData = maintData.filter(m => m.type === '定期保養');
+    
+    if (regularMaintData.length === 0) { // 如果從未有過定期保養
         const kmLeft = FIRST_SERVICE_KM - totalMileage;
         if (kmLeft > 0) {
             document.getElementById('nextServiceKm').textContent = `${kmLeft.toFixed(0)} km`;
@@ -1151,7 +1194,7 @@ function updateDashboard() {
             document.getElementById('nextServiceDate').textContent = '請盡快保養';
         }
     } else {
-        const last = maintData[0];
+        const last = regularMaintData[0]; // 以最後一次 "定期保養" 為基準
         const kmSince = totalMileage - last.odo;
         const kmLeft = REGULAR_SERVICE_KM - kmSince;
         const daysAgo = daysBetween(last.date, new Date().toISOString().slice(0, 10));
@@ -1165,6 +1208,7 @@ function updateDashboard() {
             document.getElementById('nextServiceDate').textContent = '請盡快保養';
         }
     }
+    // === END MODIFICATION 2 ===
     
     document.getElementById('statTotalMileage').textContent = `${totalMileage.toFixed(1)} km`;
     document.getElementById('statTotalCost').textContent = `${totalExpense.toFixed(0)} NT$`;
@@ -1359,7 +1403,22 @@ window.editMaintenance = function(id) {
     document.getElementById('mDate').value = record.date;
     document.getElementById('mTime').value = record.time;
     document.getElementById('mOdo').value = record.odo;
-    document.getElementById('mLocation').value = record.location || '';
+    
+    // === START MODIFICATION 1 ===
+    // 填入保養地點
+    const locSelect = document.getElementById('mLocationSelect');
+    const locInput = document.getElementById('mLocationInput');
+    if (record.location === '基隆成功專賣店') {
+        locSelect.value = '基隆成功專賣店';
+        locInput.value = '';
+        locInput.style.display = 'none';
+    } else {
+        locSelect.value = '其他';
+        locInput.value = record.location || '';
+        locInput.style.display = 'block';
+    }
+    // === END MODIFICATION 1 ===
+    
     document.getElementById('mType').value = record.type;
     document.getElementById('mNotes').value = record.notes || '';
     document.getElementById('partsList').innerHTML = '';
