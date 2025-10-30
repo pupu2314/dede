@@ -424,6 +424,8 @@
                 <button class="tab-button" data-tab="expense">其他費用</button>
                 <button class="tab-button" data-tab="status">快速更新</button>
                 <button class="tab-button" data-tab="statistics">統計分析</button>
+                <!-- === MODIFICATION 2: Add Settings Tab Button === -->
+                <button class="tab-button" data-tab="settings">⚙️ 系統設定</button>
             </div>
             
             <!-- 充電紀錄 -->
@@ -461,11 +463,7 @@
                                 </div>
                             </div>
                             
-                            <div class="form-group">
-                                <label>本次里程 (TRIP)</label>
-                                <input type="number" step="0.1" id="cTrip" placeholder="公里">
-                                <small>上次充飽電後到現在的里程</small>
-                            </div>
+                            <!-- === MODIFICATION 1: Remove TRIP === -->
                             
                             <div class="form-group">
                                 <label>備註</label>
@@ -508,6 +506,8 @@
                             <div class="form-group" id="costGroup">
                                 <label>充電費用 (NT$)</label>
                                 <input type="number" id="cCost" placeholder="例如: 30">
+                                <!-- === MODIFICATION 2: Add auto-calc info === -->
+                                <small>於「公司」或「家裡」充電時，若已設定電費將自動計算。</small>
                             </div>
                             
                             <div class="form-group">
@@ -535,7 +535,8 @@
                 
                 <div style="overflow-x: auto;">
                     <table>
-                        <thead><tr><th>期間</th><th>地點</th><th>TRIP</th><th>費用</th><th>效率</th><th>電量</th><th>時長</th><th>操作</th></tr></thead>
+                        <!-- === MODIFICATION 1: Remove TRIP Header === -->
+                        <thead><tr><th>期間</th><th>地點</th><th>費用</th><th>效率</th><th>電量</th><th>時長</th><th>操作</th></tr></thead>
                         <tbody id="chargeTable"></tbody>
                     </table>
                 </div>
@@ -579,6 +580,15 @@
                         
                         <h3>保養項目/零件</h3>
                         <div id="partsList"></div>
+                        
+                        <!-- === MODIFICATION 4: Add Maintenance Templates === -->
+                        <div class="form-group" style="margin-top: 15px;">
+                            <label>快速模板</label>
+                            <div id="maintTemplates" style="display: flex; gap: 10px; flex-wrap: wrap; margin-top: 10px;">
+                                <!-- Templates will be dynamically added here by JS -->
+                            </div>
+                        </div>
+                        
                         <button type="button" class="btn btn-success" id="addPartBtn">➕ 新增項目</button>
                         
                         <div class="total-cost">總費用: NT$ <span id="totalCost">0</span></div>
@@ -716,6 +726,21 @@
                 <div class="chart-container"><h3>花費類別分布</h3><canvas id="categoryChart"></canvas></div>
             </div>
             
+            <!-- === MODIFICATION 2: Add Settings Tab Content === -->
+            <div id="settingsTab" class="tab-content">
+                <div class="form-card">
+                    <h3>⚙️ 系統設定</h3>
+                    <div id="settingsForm">
+                        <div class="form-group">
+                            <label>住家/公司 電費 (每度電 NT$)</label>
+                            <input type="number" step="0.1" id="electricRate" placeholder="例如: 3.5">
+                            <small>設定後，於「公司」或「家裡」充電時，輸入度數(kWh)將自動換算費用。</small>
+                        </div>
+                        <button type="button" class="btn btn-primary" id="saveSettingsBtn">💾 儲存設定</button>
+                    </div>
+                </div>
+            </div>
+            
             <!-- 資料管理 -->
             <div class="data-management">
                 <h3>📦 資料管理</h3>
@@ -726,6 +751,8 @@
                     <button class="btn btn-success" id="exportAllBtn">📦 匯出全部</button>
                     <button class="btn btn-danger" id="clearAllBtn">🗑️ 清除</button>
                 </div>
+                <!-- === MODIFICATION 3: Add Backup Warning === -->
+                <small id="backupWarning" style="color: var(--danger); display: none; margin-top: 10px; text-align: center;"></small>
             </div>
         </div>
     </div>
@@ -742,7 +769,7 @@
                 <div class="form-group"><label>開始時間</label><input type="datetime-local" id="edit_cStartTime" required></div>
                 <div class="form-group"><label>結束時間</label><input type="datetime-local" id="edit_cEndTime" required></div>
                 <div class="form-group"><label>總里程 (ODO)</label><input type="number" step="0.1" id="edit_cOdo" required></div>
-                <div class="form-group"><label>本次里程 (TRIP)</label><input type="number" step="0.1" id="edit_cTrip"></div>
+                <!-- === MODIFICATION 1: Remove Edit TRIP === -->
                 <div class="form-group"><label>充電站</label><input type="text" id="edit_cStation"></div>
                 <div class="form-group"><label>開始電量 (格)</label><input type="number" id="edit_cBatteryStart" min="0" max="5"></div>
                 <div class="form-group"><label>結束電量 (格)</label><input type="number" id="edit_cBatteryEnd" min="0" max="5"></div>
@@ -757,6 +784,18 @@
     <div class="toast" id="toast"></div>
     
     <script>
+// === MODIFICATION 2, 3, 4: Add constants ===
+const SETTINGS_KEY = 'motorcycleSettings';
+const BACKUP_KEY = 'lastBackupDate';
+const maintTemplates = [
+    { name: '齒輪油', cost: 150 },
+    { name: '前輪胎', cost: 1200 },
+    { name: '後輪胎', cost: 1300 },
+    { name: '空氣濾芯', cost: 350 },
+    { name: '煞車油', cost: 400 }
+];
+
+// 保養週期設定
 const FIRST_SERVICE_KM = 300;
 const FIRST_SERVICE_DAYS = 30;
 const REGULAR_SERVICE_KM = 3000;
@@ -770,8 +809,8 @@ document.addEventListener('DOMContentLoaded', () => {
     initEventListeners();
     loadAllData();
     populateMonthFilters();
-    populateDateTime('mDate', 'mTime'); // 網頁載入時填入保養時間
-    populateDateTime('eDate', 'eTime'); // 網頁載入時填入費用時間
+    // === MODIFICATION 4: Populate templates on load ===
+    populateMaintTemplates();
 });
 
 function initEventListeners() {
@@ -784,7 +823,10 @@ function initEventListeners() {
             document.querySelectorAll('.tab-content').forEach(tc => tc.classList.remove('active'));
             document.getElementById(tabId).classList.add('active');
             
-            // 移除 'status' 相關的自動填入
+            // === MODIFICATION 2: Load settings when tab is clicked ===
+            if (tabId === 'settingsTab') {
+                loadSettings();
+            }
         });
     });
     
@@ -806,6 +848,10 @@ function initEventListeners() {
     document.getElementById('expenseForm').addEventListener('submit', saveExpense);
     document.getElementById('statusForm').addEventListener('submit', saveStatus);
     document.getElementById('editChargeForm').addEventListener('submit', saveEditCharge);
+    
+    // === MODIFICATION 2: Add listeners for cost calculation and settings ===
+    document.getElementById('cKwh').addEventListener('input', autoCalculateCost);
+    document.getElementById('saveSettingsBtn').addEventListener('click', saveSettings);
     
     document.getElementById('addPartBtn').addEventListener('click', () => addPartItem());
     document.getElementById('cancelMaintEdit').addEventListener('click', cancelMaintEdit);
@@ -833,7 +879,7 @@ function initEventListeners() {
     document.getElementById('importBtn').addEventListener('click', () => document.getElementById('jsonImport').click());
     document.getElementById('jsonImport').addEventListener('change', importData);
     
-    <!-- 修改 (3): 移除單獨匯出的監聽 -->
+    // 修改 (3): 移除單獨匯出的監聽
     document.getElementById('exportAllBtn').addEventListener('click', exportAllData);
     document.getElementById('clearAllBtn').addEventListener('click', clearAllData);
     
@@ -868,12 +914,14 @@ function startCharging(e) {
         batteryStart: parseInt(document.querySelector('input[name="cBatteryStart"]:checked').value),
         station: station,
         stationType: selectedStation,
-        trip: parseFloat(document.getElementById('cTrip').value) || 0,
+        // === MODIFICATION 1: Remove TRIP ===
         notes: document.getElementById('cNotes').value
     };
     
     localStorage.setItem('currentChargingSession', JSON.stringify(session));
     document.getElementById('startChargeForm').reset();
+    // === MODIFICATION 2: Reset cost input readonly state ===
+    document.getElementById('cCost').readOnly = false;
     selectedStation = '';
     document.querySelectorAll('.station-btn').forEach(b => b.classList.remove('active'));
     updateChargeUI();
@@ -907,6 +955,9 @@ function endCharging(e) {
     saveData('chargeLog', record);
     localStorage.removeItem('currentChargingSession');
     document.getElementById('endChargeForm').reset();
+    // === MODIFICATION 2: Reset cost/kwh input readonly state ===
+    document.getElementById('cKwh').readOnly = false;
+    document.getElementById('cCost').readOnly = false;
     updateChargeUI();
     loadAllData();
     showToast('✅ 充電記錄已儲存');
@@ -937,11 +988,29 @@ function updateChargeUI() {
         
         kwhInput.value = ''; costInput.value = '';
         kwhInput.required = false; costInput.required = false;
+        // === MODIFICATION 2: Reset readonly states ===
+        kwhInput.readOnly = false;
+        costInput.readOnly = false;
+        kwhGroup.style.display = 'block';
+        costGroup.style.display = 'block';
         
+        // === MODIFICATION 2: Update UI logic for auto-calculation ===
         switch (session.stationType) {
-            case '公司': kwhGroup.style.display = 'block'; costGroup.style.display = 'none'; break;
-            case '充電站': kwhGroup.style.display = 'none'; costGroup.style.display = 'block'; costInput.required = true; break;
-            default: kwhGroup.style.display = 'block'; costGroup.style.display = 'block'; break;
+            case '公司':
+            case '家裡':
+                costInput.readOnly = true;
+                const settings = JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}');
+                if (!settings.electricRate) {
+                    showToast('請先至「系統設定」填寫電費', 'warning');
+                }
+                break;
+            case '充電站':
+                kwhGroup.style.display = 'none'; // 充電站通常只看總費用
+                costInput.required = true;
+                break;
+            default: // '其他'
+                // 兩者皆可填
+                break;
         }
         
         updateChargingTimer(session.startTime);
@@ -1141,6 +1210,9 @@ function saveData(key, record, isEdit = false) {
 
 function loadAllData() {
     updateChargeUI();
+    // === MODIFICATION 2 & 3: Load settings and check backup on load ===
+    loadSettings();
+    checkBackupStatus();
     loadChargeHistory();
     loadMaintenanceHistory();
     loadExpenseHistory();
@@ -1248,10 +1320,10 @@ function loadChargeHistory() {
         const eff = effMap[record.id] || '-';
         const period = `${formatDateTime(record.startTime)}<br>~ ${formatDateTime(record.endTime)}`;
         
+        // === MODIFICATION 1: Remove TRIP cell ===
         row.innerHTML = `
             <td>${period}</td>
             <td>${record.station}</td>
-            <td>${record.trip || '-'}</td>
             <td>${record.cost || '-'}</td>
             <td>${eff}</td>
             <td>${record.batteryStart}→${record.batteryEnd}格</td>
@@ -1350,7 +1422,7 @@ window.editCharge = function(id) {
     document.getElementById('edit_cStartTime').value = toLocalISO(record.startTime);
     document.getElementById('edit_cEndTime').value = toLocalISO(record.endTime);
     document.getElementById('edit_cOdo').value = record.odo;
-    document.getElementById('edit_cTrip').value = record.trip;
+    // === MODIFICATION 1: Remove TRIP ===
     document.getElementById('edit_cStation').value = record.station;
     document.getElementById('edit_cBatteryStart').value = record.batteryStart;
     document.getElementById('edit_cBatteryEnd').value = record.batteryEnd;
@@ -1359,6 +1431,7 @@ window.editCharge = function(id) {
     document.getElementById('edit_cNotes').value = record.notes || '';
     
     document.getElementById('editChargeModal').classList.add('active');
+    // Note: Edit modal doesn't trigger auto-calc for simplicity. User can manually edit cost.
 }
 
 function saveEditCharge(e) {
@@ -1377,7 +1450,7 @@ function saveEditCharge(e) {
         date: startTime.toISOString().slice(0, 10),
         duration: `${hours}小時 ${minutes}分`,
         odo: parseFloat(document.getElementById('edit_cOdo').value),
-        trip: parseFloat(document.getElementById('edit_cTrip').value),
+        // === MODIFICATION 1: Remove TRIP ===
         station: document.getElementById('edit_cStation').value,
         batteryStart: parseInt(document.getElementById('edit_cBatteryStart').value),
         batteryEnd: parseInt(document.getElementById('edit_cBatteryEnd').value),
@@ -1785,6 +1858,10 @@ function exportAllData() {
     
     downloadJSON(allData, `motorcycle_all_data_${new Date().toISOString().slice(0, 10)}.json`);
     showToast('✅ 全部資料已匯出');
+    
+    // === MODIFICATION 3: Set backup date and update status ===
+    localStorage.setItem(BACKUP_KEY, new Date().toISOString().slice(0, 10));
+    checkBackupStatus();
 }
 
 function clearAllData() {
@@ -1805,6 +1882,96 @@ function downloadJSON(data, filename) {
     URL.revokeObjectURL(url);
 }
 
+// === START: NEW FUNCTIONS (MODIFICATION 2, 3, 4) ===
+
+/**
+ * 載入設定
+ */
+function loadSettings() {
+    const settings = JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}');
+    if (document.getElementById('electricRate')) {
+        document.getElementById('electricRate').value = settings.electricRate || '';
+    }
+    return settings;
+}
+
+/**
+ * 儲存設定
+ */
+function saveSettings() {
+    const rate = parseFloat(document.getElementById('electricRate').value) || 0;
+    localStorage.setItem(SETTINGS_KEY, JSON.stringify({ electricRate: rate }));
+    showToast('✅ 設定已儲存');
+    loadSettings(); // 重新載入以確認
+}
+
+/**
+ * 自動計算充電費用
+ */
+function autoCalculateCost() {
+    const settings = loadSettings();
+    const rate = parseFloat(settings.electricRate);
+    const costInput = document.getElementById('cCost');
+    
+    // 只有在 costInput 是 readOnly (即 "公司" 或 "家裡") 時才自動計算
+    if (costInput.readOnly) {
+        if (rate && rate > 0) {
+            const kwh = parseFloat(document.getElementById('cKwh').value) || 0;
+            costInput.value = (kwh * rate).toFixed(0);
+        } else {
+            costInput.value = '0';
+        }
+    }
+}
+
+/**
+ * 檢查備份狀態並顯示警告
+ */
+function checkBackupStatus() {
+    const lastBackup = localStorage.getItem(BACKUP_KEY);
+    const warningEl = document.getElementById('backupWarning');
+    if (!warningEl) return;
+
+    if (!lastBackup) {
+        warningEl.textContent = '您尚未備份過資料，建議立即匯出。';
+        warningEl.style.display = 'block';
+        return;
+    }
+    
+    const daysAgo = daysBetween(lastBackup, new Date().toISOString().slice(0, 10));
+    
+    if (daysAgo > 30) {
+        warningEl.textContent = `您已 ${daysAgo} 天未備份，建議立即匯出。`;
+        warningEl.style.display = 'block';
+    } else {
+        warningEl.style.display = 'none';
+    }
+}
+
+/**
+ * 產生保養快速模板按鈕
+ */
+function populateMaintTemplates() {
+    const container = document.getElementById('maintTemplates');
+    if (!container) return;
+    container.innerHTML = '';
+    
+    maintTemplates.forEach(template => {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'btn btn-secondary';
+        btn.textContent = `+ ${template.name} (${template.cost})`;
+        btn.style.padding = '8px 12px';
+        btn.onclick = () => { 
+            addPartItem(template.name, template.cost); 
+        };
+        container.appendChild(btn);
+    });
+}
+
+// === END: NEW FUNCTIONS ===
+
+
 function formatDateTime(isoString) {
     if (!isoString) return '';
     return new Date(isoString).toLocaleString('zh-TW', { 
@@ -1824,3 +1991,4 @@ function toLocalISO(isoString) {
     </script>
 </body>
 </html>
+
