@@ -1,5 +1,10 @@
 import { renderChargeModule, setupChargeModuleEvents } from "./modules/chargeModule.js";
 import { renderMaintenanceModule, setupMaintenanceEvents } from "./modules/maintenanceModule.js";
+import { renderChargeModule, setupChargeModuleEvents } from "./modules/chargeModule.js";
+import { renderExpenseModule, setupExpenseModuleEvents } from "./modules/expenseModule.js";
+import { renderStatisticsModule, setupStatisticsModuleEvents } from "./modules/statisticsModule.js";
+import { renderSettingsModule, setupSettingsModuleEvents } from "./modules/settingsModule.js";
+
 
 document.addEventListener('DOMContentLoaded', () => {
   setupTabs();
@@ -34,13 +39,16 @@ function loadTab(tabName) {
         setupMaintenanceEvents();
         break;
       case 'expense':
-        main.innerHTML = `<div class='placeholder'>💰 費用紀錄模組</div>`;
+        main.innerHTML = renderExpenseModule();
+        setupExpenseModuleEvents();
         break;
       case 'statistics':
-        main.innerHTML = `<div class='placeholder'>📊 統計分析模組</div>`;
+        main.innerHTML = renderStatisticsModule();
+        setupStatisticsModuleEvents();
         break;
       case 'settings':
-        main.innerHTML = `<div class='placeholder'>⚙️ 系統設定模組</div>`;
+        main.innerHTML = renderSettingsModule();
+        setupSettingsModuleEvents();
         break;
     }
   }, 200);
