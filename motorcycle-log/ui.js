@@ -1,6 +1,5 @@
 import { renderChargeModule, setupChargeModuleEvents } from "./modules/chargeModule.js";
 import { renderMaintenanceModule, setupMaintenanceEvents } from "./modules/maintenanceModule.js";
-import { renderChargeModule, setupChargeModuleEvents } from "./modules/chargeModule.js";
 import { renderExpenseModule, setupExpenseModuleEvents } from "./modules/expenseModule.js";
 import { renderStatisticsModule, setupStatisticsModuleEvents } from "./modules/statisticsModule.js";
 import { renderSettingsModule, setupSettingsModuleEvents } from "./modules/settingsModule.js";
