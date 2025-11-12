@@ -30,7 +30,8 @@ function loadTab(tabName) {
         setupChargeModuleEvents();
         break;
       case 'maintenance':
-        main.innerHTML = `<div class='placeholder'>🧰 保養紀錄模組</div>`;
+        main.innerHTML = renderMaintenanceModule();
+        setupMaintenanceEvents();
         break;
       case 'expense':
         main.innerHTML = `<div class='placeholder'>💰 費用紀錄模組</div>`;
