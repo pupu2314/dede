@@ -1,4 +1,5 @@
 import { renderChargeModule, setupChargeModuleEvents } from "./modules/chargeModule.js";
+import { renderMaintenanceModule, setupMaintenanceEvents } from "./modules/maintenanceModule.js";
 
 document.addEventListener('DOMContentLoaded', () => {
   setupTabs();
