@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>🏍️ 電動摩托車紀錄系統</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+  <div class="app">
+    <header class="app-header">
+      <h1>🏍️ 電動摩托車紀錄系統</h1>
+      <p>智能管理您的充電、保養與費用</p>
+    </header>
+
+    <nav class="tabs">
+      <button class="tab-btn active" data-tab="dashboard">儀表板</button>
+      <button class="tab-btn" data-tab="charge">充電</button>
+      <button class="tab-btn" data-tab="maintenance">保養</button>
+      <button class="tab-btn" data-tab="expense">費用</button>
+      <button class="tab-btn" data-tab="statistics">統計</button>
+      <button class="tab-btn" data-tab="settings">設定</button>
+    </nav>
+
+    <main id="tab-content">
+      <section id="dashboardTab" class="tab-section active">
+        <div class="dashboard">
+          <div class="stat-card"><h3>總里程</h3><div class="value" id="totalMileage">0</div><div class="unit">km</div></div>
+          <div class="stat-card"><h3>總花費</h3><div class="value" id="totalExpense">0</div><div class="unit">NT$</div></div>
+          <div class="stat-card"><h3>上次充電</h3><div class="value" id="lastChargeDays">-</div><div class="unit" id="lastChargeDate">尚未記錄</div></div>
+          <div class="stat-card"><h3>下次保養</h3><div class="value" id="nextServiceKm">-</div><div class="unit" id="nextServiceDate">請先記錄保養</div></div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <div id="toast"></div>
+  <script src="ui.js"></script>
+</body>
+</html>
