@@ -62,21 +62,63 @@ body {
 }
 
 .dashboard {
-  display: flex;
-  overflow-x: auto;
-  scroll-snap-type: x mandatory;
-  gap: 20px;
-  padding: 20px;
+  display: grid;
+  gap: 16px;
+  padding: 16px;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  justify-items: stretch;
+  align-items: stretch;
 }
 
 .stat-card {
-  flex: 0 0 70%;
   background: var(--card-bg);
   border-radius: var(--radius);
   box-shadow: var(--shadow);
-  padding: 20px;
-  scroll-snap-align: start;
+  padding: 16px;
   transition: transform var(--transition);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: flex-start;
+  text-align: left;
+  min-height: 100px;
+}
+
+.stat-card:hover {
+  transform: translateY(-4px);
+}
+
+.stat-card h3 {
+  color: var(--muted);
+  font-size: 0.9rem;
+  margin-bottom: 6px;
+}
+
+.value {
+  font-size: 1.6rem;
+  font-weight: bold;
+  color: var(--primary);
+  line-height: 1.2;
+}
+
+.unit {
+  font-size: 0.8rem;
+  color: var(--secondary);
+}
+
+/* 手機優化：保證一屏顯示兩列 */
+@media (max-width: 768px) {
+  .dashboard {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+    padding: 12px;
+  }
+  .stat-card {
+    padding: 12px;
+  }
+  .value {
+    font-size: 1.4rem;
+  }
 }
 
 .stat-card:hover {
