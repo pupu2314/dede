@@ -49,19 +49,63 @@ export function setupSettingsModuleEvents() {
 
   importBtn.addEventListener("click", () => importFile.click());
 
-  importFile.addEventListener("change", e => {
-    const file = e.target.files[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = evt => {
-      try {
-        const data = JSON.parse(evt.target.result);
-        for (const key in data) localStorage.setItem(key, JSON.stringify(data[key]));
-        showToast("✅ 匯入成功，請重新整理");
-      } catch {
-        showToast("❌ 匯入失敗，檔案格式錯誤", "error");
+importFile.addEventListener("change", e => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = evt => {
+    try {
+      const data = JSON.parse(evt.target.result);
+
+      // --- 新增：舊版相容轉換 ---
+      if (data.chargeLog || data.expenseLog) {
+        const newData = {};
+
+        if (Array.isArray(data.chargeLog)) {
+          newData.chargeRecords = data.chargeLog.map(item => ({
+            date: item.date,
+            kwh: item.kwh || 0,
+            cost: item.cost ?? 0,
+            location: item.station || item.stationType || "",
+            note: item.notes || "",
+          }));
+        }
+
+        if (Array.isArray(data.expenseLog)) {
+          newData.expenseRecords = data.expenseLog.map(item => ({
+            date: item.date,
+            category: item.category || "其他",
+            amount: item.amount ?? 0,
+            note: item.description || "",
+          }));
+        }
+
+        // 其餘資料暫存
+        if (Array.isArray(data.maintenanceLog))
+          newData.maintenanceRecords = data.maintenanceLog;
+        if (Array.isArray(data.statusLog))
+          newData.statusRecords = data.statusLog;
+
+        // 匯入時間戳（非必要）
+        newData.importedFrom = data.version ? `v${data.version}` : "unknown";
+
+        // 儲存
+        for (const key in newData)
+          localStorage.setItem(key, JSON.stringify(newData[key]));
+
+        showToast("✅ 舊版資料已成功轉換並匯入");
       }
-    };
-    reader.readAsText(file);
-  });
+      // --- 若為新版備份 ---
+      else {
+        for (const key in data)
+          localStorage.setItem(key, JSON.stringify(data[key]));
+        showToast("✅ 匯入成功（新版格式）");
+      }
+    } catch (err) {
+      console.error(err);
+      showToast("❌ 匯入失敗，檔案格式錯誤", "error");
+    }
+  };
+  reader.readAsText(file);
+});
 }
