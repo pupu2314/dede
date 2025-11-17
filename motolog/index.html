@@ -4,15 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>電動摩托車紀錄系統</title>
-
-    <!-- Chart.js CDN -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-
-    <!-- 外部 CSS（已從原檔的 <style> 拆出） -->
     <link rel="stylesheet" href="motolog.css">
 </head>
 <body>
-    <!-- 原始內容（保持不變）-->
     <div class="container">
         <div class="header">
             <h1>🏍️ 電動摩托車紀錄系統</h1>
@@ -49,6 +44,7 @@
                 <button class="tab-button" data-tab="expense">其他費用</button>
                 <button class="tab-button" data-tab="status">快速更新</button>
                 <button class="tab-button" data-tab="statistics">統計分析</button>
+                <!-- === MODIFICATION 2: Add Settings Tab Button === -->
                 <button class="tab-button" data-tab="settings">⚙️ 系統設定</button>
             </div>
             
@@ -86,6 +82,8 @@
                                     <div class="battery-option"><input type="radio" id="bs5" name="cBatteryStart" value="5"><label for="bs5">5</label></div>
                                 </div>
                             </div>
+                            
+                            <!-- === MODIFICATION 1: Remove TRIP === -->
                             
                             <div class="form-group">
                                 <label>備註</label>
@@ -128,6 +126,7 @@
                             <div class="form-group" id="costGroup">
                                 <label>充電費用 (NT$)</label>
                                 <input type="number" id="cCost" placeholder="例如: 30">
+                                <!-- === MODIFICATION 2: Add auto-calc info === -->
                                 <small>於「公司」或「家裡」充電時，若已設定電費將自動計算。</small>
                             </div>
                             
@@ -156,6 +155,7 @@
                 
                 <div style="overflow-x: auto;">
                     <table>
+                        <!-- === MODIFICATION 1: Remove TRIP Header === -->
                         <thead><tr><th>期間</th><th>地點</th><th>費用</th><th>效率</th><th>電量</th><th>時長</th><th>操作</th></tr></thead>
                         <tbody id="chargeTable"></tbody>
                     </table>
@@ -163,15 +163,245 @@
                 
                 <div class="chart-container"><h3>充電效率趨勢</h3><canvas id="chargeChart"></canvas></div>
             </div>
-
-            <!-- 其餘 tab (保養 / 費用 / 快速更新 / 統計 / 設定 / 資料管理) ... -->
-            <!-- 為簡潔起見在此不再重複 HTML（實際檔案請保留原本全部內容） -->
+            
+            <!-- 保養維修 -->
+            <div id="maintenanceTab" class="tab-content">
+                <div class="form-card">
+                    <h3 id="maintTitle">記錄保養</h3>
+                    <form id="maintenanceForm">
+                        <input type="hidden" id="editingMaintId">
+                        <div class="form-group"><label>日期</label><input type="date" id="mDate" required></div>
+                        <div class="form-group"><label>時間</label><input type="time" id="mTime" required></div>
+                        <button type="button" class="btn btn-secondary" id="maintNowBtn" style="margin-bottom: 20px; padding: 8px 12px;">📅 填入現在時間</button>
+                        <div class="form-group"><label>總里程 (ODO)</label><input type="number" step="0.1" id="mOdo" placeholder="公里" required></div>
+                        
+                        <!-- === START MODIFICATION 1 === -->
+                        <div class="form-group">
+                            <label>地點</label>
+                            <select id="mLocationSelect">
+                                <option value="基隆成功專賣店">基隆成功專賣店</option>
+                                <option value="其他">其他</option>
+                            </select>
+                            <input type="text" id="mLocationInput" placeholder="自訂保養地點" style="display:none; margin-top:10px;">
+                        </div>
+                        <!-- === END MODIFICATION 1 === -->
+                        
+                        <div class="form-group">
+                            <label>保養類型</label>
+                            <select id="mType">
+                                <option value="定期保養">定期保養</option>
+                                <option value="大保養">大保養</option>
+                                <option value="小保養">小保養</option>
+                                <option value="維修">維修</option>
+                                <option value="檢查">檢查</option>
+                            </select>
+                        </div>
+                        <div class="form-group"><label>服務/備註</label><textarea id="mNotes" rows="3" placeholder="例如: 大保養、檢查電路"></textarea></div>
+                        
+                        <h3>保養項目/零件</h3>
+                        <div id="partsList"></div>
+                        
+                        <!-- === MODIFICATION 4: Add Maintenance Templates === -->
+                        <div class="form-group" style="margin-top: 15px;">
+                            <label>快速模板</label>
+                            <div id="maintTemplates" style="display: flex; gap: 10px; flex-wrap: wrap; margin-top: 10px;">
+                                <!-- Templates will be dynamically added here by JS -->
+                            </div>
+                        </div>
+                        
+                        <button type="button" class="btn btn-success" id="addPartBtn">➕ 新增項目</button>
+                        
+                        <div class="total-cost">總費用: NT$ <span id="totalCost">0</span></div>
+                        
+                        <button type="submit" class="btn btn-primary btn-full">💾 儲存記錄</button>
+                        <button type="button" class="btn btn-secondary btn-full" id="cancelMaintEdit" style="display:none; margin-top:10px;">❌ 取消編輯</button>
+                    </form>
+                </div>
+                
+                <div class="filter-bar">
+                    <input type="text" id="maintSearch" placeholder="🔍 搜尋內容...">
+                    <select id="maintMonthFilter"><option value="">所有月份</option></select>
+                    <select id="maintTypeFilter">
+                        <option value="">所有類型</option>
+                        <option value="定期保養">定期保養</option>
+                        <option value="大保養">大保養</option>
+                        <option value="小保養">小保養</option>
+                        <option value="維修">維修</option>
+                        <option value="檢查">檢查</option>
+                    </select>
+                </div>
+                
+                <div style="overflow-x: auto;">
+                    <table>
+                        <thead><tr><th>日期</th><th>ODO</th><th>類型</th><th>項目/備註</th><th>費用</th><th>操作</th></tr></thead>
+                        <tbody id="maintTable"></tbody>
+                    </table>
+                </div>
+                
+                <div class="chart-container"><h3>保養費用趨勢</h3><canvas id="maintChart"></canvas></div>
+            </div>
+            
+            <!-- 其他費用 -->
+            <div id="expenseTab" class="tab-content">
+                <div class="form-card">
+                    <h3 id="expenseTitle">記錄其他花費</h3>
+                    <form id="expenseForm">
+                        <input type="hidden" id="editingExpenseId">
+                        <div class="form-group"><label>日期</label><input type="date" id="eDate" required></div>
+                        <div class="form-group"><label>時間</label><input type="time" id="eTime" required></div>
+                        <button type="button" class="btn btn-secondary" id="expenseNowBtn" style="margin-bottom: 20px; padding: 8px 12px;">📅 填入現在時間</button>
+                        <div class="form-group"><label>總里程 (ODO)</label><input type="number" step="0.1" id="eOdo" placeholder="公里 (選填)"></div>
+                        <div class="form-group">
+                            <label>類別</label>
+                            <select id="eCategory">
+                                <option value="保險">保險</option>
+                                <option value="牌照稅">牌照稅</option>
+                                <option value="停車費">停車費</option>
+                                <option value="配件">配件</option>
+                                <option value="清潔">清潔</option>
+                                <option value="其他">其他</option>
+                            </select>
+                        </div>
+                        <div class="form-group"><label>金額 (NT$)</label><input type="number" id="eAmount" placeholder="費用" required></div>
+                        <div class="form-group"><label>說明</label><textarea id="eDescription" rows="3" placeholder="詳細說明"></textarea></div>
+                        
+                        <button type="submit" class="btn btn-primary btn-full">💾 儲存記錄</button>
+                        <button type="button" class="btn btn-secondary btn-full" id="cancelExpenseEdit" style="display:none; margin-top:10px;">❌ 取消編輯</button>
+                    </form>
+                </div>
+                
+                <div class="filter-bar">
+                    <select id="expenseCategoryFilter">
+                        <option value="">所有類別</option>
+                        <option value="保險">保險</option>
+                        <option value="牌照稅">牌照稅</option>
+                        <option value="停車費">停車費</option>
+                        <option value="配件">配件</option>
+                        <option value="清潔">清潔</option>
+                        <option value="其他">其他</option>
+                    </select>
+                    <select id="expenseMonthFilter"><option value="">所有月份</option></select>
+                </div>
+                
+                <div style="overflow-x: auto;">
+                    <table>
+                        <thead><tr><th>日期</th><th>類別</th><th>金額</th><th>說明</th><th>操作</th></tr></thead>
+                        <tbody id="expenseTable"></tbody>
+                    </table>
+                </div>
+                
+                <div class="chart-container"><h3>費用趨勢</h3><canvas id="expenseChart"></canvas></div>
+            </div>
+            
+            <!-- 快速更新 -->
+            <div id="statusTab" class="tab-content">
+                <div class="form-card">
+                    <h3 id="statusTitle">快速更新狀態</h3>
+                    <form id="statusForm">
+                        <!-- 移除隱藏的日期和時間欄位 -->
+                        
+                        <div class="form-group"><label>目前總里程 (ODO)</label><input type="number" step="0.1" id="sOdo" placeholder="公里" required></div>
+                        <div class="form-group">
+                            <label>目前電量 (格)</label>
+                            <div class="battery-selector">
+                                <div class="battery-option"><input type="radio" id="sb0" name="sBattery" value="0"><label for="sb0">0</label></div>
+                                <div class="battery-option"><input type="radio" id="sb1" name="sBattery" value="1" checked><label for="sb1">1</label></div>
+                                <div class="battery-option"><input type="radio" id="sb2" name="sBattery" value="2"><label for="sb2">2</label></div>
+                                <div class="battery-option"><input type="radio" id="sb3" name="sBattery" value="3"><label for="sb3">3</label></div>
+                                <div class="battery-option"><input type="radio" id="sb4" name="sBattery" value="4"><label for="sb4">4</label></div>
+                                <div class="battery-option"><input type="radio" id="sb5" name="sBattery" value="5"><label for="sb5">5</label></div>
+                            </div>
+                        </div>
+                        <div class="form-group"><label>備註</label><textarea id="sNotes" rows="3" placeholder="例如: 剛洗完車"></textarea></div>
+                        
+                        <button type="submit" class="btn btn-primary btn-full">💾 儲存狀態</button>
+                        <!-- 移除取消編輯按鈕 -->
+                    </form>
+                </div>
+                
+                <div class="filter-bar">
+                    <select id="statusMonthFilter"><option value="">所有月份</option></select>
+                </div>
+                
+                <div style="overflow-x: auto;">
+                    <table>
+                        <thead><tr><th>日期</th><th>時間</th><th>ODO</th><th>電量(格)</th><th>備註</th></tr></thead>
+                        <tbody id="statusTable"></tbody>
+                    </table>
+                </div>
+            </div>
+            
+            <!-- 統計分析 -->
+            <div id="statisticsTab" class="tab-content">
+                <div class="analytics-grid">
+                    <div class="analytics-card"><h4>總里程</h4><p id="statTotalMileage">0 km</p></div>
+                    <div class="analytics-card"><h4>平均日里程</h4><p id="statAvgDaily">0 km</p></div>
+                    <div class="analytics-card"><h4>總花費</h4><p id="statTotalCost">0 NT$</p></div>
+                    <div class="analytics-card"><h4>每公里成本</h4><p id="statCostPerKm">0 NT$</p></div>
+                    <div class="analytics-card"><h4>保養次數</h4><p id="statMaintCount">0</p></div>
+                    <div class="analytics-card"><h4>充電次數</h4><p id="statChargeCount">0</p></div>
+                </div>
+                
+                <div class="chart-container"><h3>月度花費分析</h3><canvas id="monthlyChart"></canvas></div>
+                <div class="chart-container"><h3>花費類別分布</h3><canvas id="categoryChart"></canvas></div>
+            </div>
+            
+            <!-- === MODIFICATION 2: Add Settings Tab Content === -->
+            <div id="settingsTab" class="tab-content">
+                <div class="form-card">
+                    <h3>⚙️ 系統設定</h3>
+                    <div id="settingsForm">
+                        <div class="form-group">
+                            <label>住家/公司 電費 (每度電 NT$)</label>
+                            <input type="number" step="0.1" id="electricRate" placeholder="例如: 3.5">
+                            <small>設定後，於「公司」或「家裡」充電時，輸入度數(kWh)將自動換算費用。</small>
+                        </div>
+                        <button type="button" class="btn btn-primary" id="saveSettingsBtn">💾 儲存設定</button>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 資料管理 -->
+            <div class="data-management">
+                <h3>📦 資料管理</h3>
+                <input type="file" id="jsonImport" accept=".json" style="display:none;">
+                <!-- 修改 (2): 簡化按鈕 -->
+                <div class="data-btns">
+                    <button class="btn btn-primary" id="importBtn">📥 匯入</button>
+                    <button class="btn btn-success" id="exportAllBtn">📦 匯出全部</button>
+                    <button class="btn btn-danger" id="clearAllBtn">🗑️ 清除</button>
+                </div>
+                <!-- === MODIFICATION 3: Add Backup Warning === -->
+                <small id="backupWarning" style="color: var(--danger); display: none; margin-top: 10px; text-align: center;"></small>
+            </div>
         </div>
     </div>
-
-    <!-- Edit Modal, toast 等也保留原本 HTML 結構（請參考原檔） -->
-
-    <!-- 外部 JS（已從原檔的 <script> 拆出） -->
+    
+    <!-- 編輯充電Modal -->
+    <div id="editChargeModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>編輯充電記錄</h3>
+                <button class="btn btn-secondary" id="closeEditModal" style="padding:8px 12px;">✖️</button>
+            </div>
+            <form id="editChargeForm">
+                <input type="hidden" id="editingChargeId">
+                <div class="form-group"><label>開始時間</label><input type="datetime-local" id="edit_cStartTime" required></div>
+                <div class="form-group"><label>結束時間</label><input type="datetime-local" id="edit_cEndTime" required></div>
+                <div class="form-group"><label>總里程 (ODO)</label><input type="number" step="0.1" id="edit_cOdo" required></div>
+                <!-- === MODIFICATION 1: Remove Edit TRIP === -->
+                <div class="form-group"><label>充電站</label><input type="text" id="edit_cStation"></div>
+                <div class="form-group"><label>開始電量 (格)</label><input type="number" id="edit_cBatteryStart" min="0" max="5"></div>
+                <div class="form-group"><label>結束電量 (格)</label><input type="number" id="edit_cBatteryEnd" min="0" max="5"></div>
+                <div class="form-group"><label>充電度數 (kWh)</label><input type="number" step="0.01" id="edit_cKwh"></div>
+                <div class="form-group"><label>充電費用 (NT$)</label><input type="number" id="edit_cCost"></div>
+                <div class="form-group"><label>備註</label><textarea id="edit_cNotes" rows="2"></textarea></div>
+                <button type="submit" class="btn btn-primary btn-full">💾 儲存變更</button>
+            </form>
+        </div>
+    </div>
+    
+    <div class="toast" id="toast"></div>
     <script src="motolog.js" defer></script>
 </body>
 </html>
