@@ -44,7 +44,6 @@ body {
 
 .dashboard {
     display: grid;
-    /* 修改 (1): 原為 minmax(250px, 1fr)，改為 minmax(150px, 1fr) */
     grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
     gap: 20px;
     padding: 30px;
@@ -102,15 +101,15 @@ body {
     white-space: nowrap;
 }
 
-.tab-button:hover { color: var(--primary); }
+tab-button:hover { color: var(--primary); }
 .tab-button.active {
     color: var(--primary);
     border-bottom-color: var(--primary);
     font-weight: 600;
 }
 
-.tab-content { display: none; }
-.tab-content.active { display: block; animation: fadeIn 0.3s; }
+tab-content { display: none; }
+tab-content.active { display: block; animation: fadeIn 0.3s; }
 
 @keyframes fadeIn {
     from { opacity: 0; transform: translateY(10px); }
@@ -362,7 +361,7 @@ tr:hover { background: var(--light); }
     z-index: 2000;
 }
 
-.toast.show { display: block; animation: slideIn 0.3s; }
+toast.show { display: block; animation: slideIn 0.3s; }
 
 @keyframes slideIn {
     from { transform: translateX(400px); }
@@ -373,4 +372,78 @@ tr:hover { background: var(--light); }
     .dashboard { grid-template-columns: 1fr; padding: 20px; }
     .battery-selector { grid-template-columns: repeat(3, 1fr); }
     .part-item { grid-template-columns: 1fr; }
+}
+
+/* =========================
+   Mobile / Small-screen optimizations
+   ========================= */
+
+@media (max-width: 480px) {
+    body { padding: 10px; }
+    .container { margin: 0 6px; border-radius: 12px; }
+    .header { padding: 18px; }
+    .header h1 { font-size: 1.4rem; }
+    .dashboard { padding: 12px; gap: 12px; }
+    .stat-card { padding: 14px; border-radius: 12px; }
+    .stat-card .value { font-size: 1.4rem; }
+    .tabs {
+        position: sticky;
+        top: 0;
+        background: white;
+        z-index: 40;
+        padding: 8px 12px;
+        margin-bottom: 12px;
+        -webkit-overflow-scrolling: touch;
+    }
+    .tab-button {
+        padding: 10px 14px;
+        font-size: 0.95rem;
+        border-radius: 10px;
+        min-width: 72px;
+    }
+    .form-card { padding: 16px; border-radius: 12px; }
+    .form-card h3 { margin-bottom: 12px; font-size: 1rem; }
+    .form-group { margin-bottom: 14px; }
+    input, select, textarea { padding: 10px; font-size: 0.95rem; }
+    .battery-selector { grid-template-columns: repeat(3, 1fr); gap: 8px; }
+    .battery-option label { padding: 12px; font-size: 0.95rem; }
+    .quick-stations { grid-template-columns: repeat(2, 1fr); gap: 8px; }
+    .station-btn { padding: 12px; font-size: 0.95rem; }
+    .btn { padding: 12px 16px; font-size: 1rem; border-radius: 10px; }
+    .btn-full { height: 48px; display: inline-flex; align-items: center; justify-content: center; }
+    .part-item { grid-template-columns: 1fr 120px auto; gap: 8px; align-items: center; }
+    th, td { padding: 10px 8px; font-size: 0.92rem; }
+    table { font-size: 0.92rem; border-radius: 8px; }
+    .chart-container { padding: 14px; margin: 12px 0; border-radius: 12px; }
+    .modal { align-items: flex-end; padding: 0 6px; }
+    .modal-content {
+        width: 100%;
+        max-width: 100%;
+        border-radius: 12px 12px 0 0;
+        padding: 18px;
+        max-height: 70vh;
+    }
+    .data-btns { grid-template-columns: 1fr; gap: 8px; }
+    .data-management { padding: 16px; }
+    .toast {
+        left: 12px;
+        right: 12px;
+        bottom: 14px;
+        margin: 0 auto;
+        border-radius: 10px;
+        text-align: center;
+    }
+    .action-btns { flex-wrap: wrap; gap: 6px; }
+    .action-btns button { flex: 1 1 auto; min-width: 86px; }
+    .container, .form-card, .chart-container, table { box-shadow: 0 6px 18px rgba(0,0,0,0.12); }
+    .filter-bar { flex-direction: column; gap: 10px; }
+    .filter-bar input, .filter-bar select { min-width: 0; width: 100%; }
+}
+
+/* Slightly larger touch-targets for small tablets */
+@media (min-width: 481px) and (max-width: 768px) {
+    .tab-button { padding: 12px 18px; }
+    .btn { padding: 12px 18px; }
+    .battery-selector { grid-template-columns: repeat(4, 1fr); }
+    .quick-stations { grid-template-columns: repeat(3, 1fr); }
 }
