@@ -39,12 +39,13 @@
         
         <div class="content">
             <div class="tabs">
-                <button class="tab-button" data-tab="charge">充電紀錄</button>
-                <button class="tab-button" data-tab="maintenance">保養維修</button>
-                <button class="tab-button" data-tab="expense">其他費用</button>
-                <button class="tab-button active" data-tab="status">快速更新</button>
-                <button class="tab-button" data-tab="statistics">統計分析</button>
-                <button class="tab-button" data-tab="settings">⚙️ 系統設定</button>
+                <!-- (3) / (4): 將「快速更新」移到最左並且重命名等 -->
+                <button class="tab-button active" data-tab="status">更新</button>
+                <button class="tab-button" data-tab="charge">充電</button>
+                <button class="tab-button" data-tab="maintenance">保養</button>
+                <button class="tab-button" data-tab="expense">其他</button>
+                <button class="tab-button" data-tab="statistics">分析</button>
+                <button class="tab-button" data-tab="settings">設定</button>
             </div>
             
             <div id="chargeTab" class="tab-content">
@@ -150,7 +151,7 @@
                 
                 <div style="overflow-x: auto;">
                     <table>
-                        <thead><tr><th>期間</th><th>地點</th><th>費用</th><th>效率</th><th>電量</th><th>時長</th><th>操作</th></tr></thead>
+                        <thead><tr><th>日期</th><th>地點</th><th>時長</th><th>操作</th></tr></thead>
                         <tbody id="chargeTable"></tbody>
                     </table>
                 </div>
