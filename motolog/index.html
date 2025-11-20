@@ -169,7 +169,6 @@
                     <select id="chargeMonthFilter"><option value="">所有月份</option></select>
                 </div>
                 
-                <!-- 取代原本的 Table -->
                 <div id="chargeList" class="history-list"></div>
             </div>
             
@@ -232,7 +231,8 @@
                         </div>
                         
                         <button type="submit" class="btn btn-primary btn-full btn-lg">💾 儲存記錄</button>
-                        <button type="button" class="btn btn-secondary btn-full" id="cancelMaintEdit" style="display:none; margin-top:10px;">取消編輯</button>
+                        <!-- 修正：加上 btn-lg 以確保高度正確 -->
+                        <button type="button" class="btn btn-secondary btn-full btn-lg" id="cancelMaintEdit" style="display:none; margin-top:10px;">取消編輯</button>
                     </form>
                 </div>
                 
@@ -246,7 +246,6 @@
                     </select>
                 </div>
                 
-                <!-- 取代原本的 Table -->
                 <div id="maintList" class="history-list"></div>
             </div>
             
@@ -281,7 +280,8 @@
                         <div class="form-group"><label>說明</label><textarea id="eDescription" rows="2"></textarea></div>
                         
                         <button type="submit" class="btn btn-primary btn-full btn-lg">💾 儲存記錄</button>
-                        <button type="button" class="btn btn-secondary btn-full" id="cancelExpenseEdit" style="display:none; margin-top:10px;">取消編輯</button>
+                        <!-- 修正：加上 btn-lg 以確保高度正確 -->
+                        <button type="button" class="btn btn-secondary btn-full btn-lg" id="cancelExpenseEdit" style="display:none; margin-top:10px;">取消編輯</button>
                     </form>
                 </div>
                 
@@ -290,7 +290,6 @@
                     <select id="expenseMonthFilter"><option value="">所有月份</option></select>
                 </div>
                 
-                <!-- 取代原本的 Table -->
                 <div id="expenseList" class="history-list"></div>
             </div>
             
@@ -330,12 +329,14 @@
         </div>
     </div>
 
+    <!-- 編輯視窗 -->
     <div id="editChargeModal" class="modal">
         <div class="modal-content">
             <div class="modal-header">
                 <h3>編輯充電</h3>
                 <button class="btn btn-text" id="closeEditModal">關閉</button>
             </div>
+            <!-- 關鍵修正：這裡的 form 結構與 CSS 配合，實現卷軸與底部按鈕固定 -->
             <form id="editChargeForm">
                 <input type="hidden" id="editingChargeId">
                 <div class="form-scroll-area">
@@ -344,8 +345,30 @@
                     <div class="form-group"><label>里程 (ODO)</label><input type="number" inputmode="decimal" step="0.1" id="edit_cOdo" required></div>
                     <div class="form-group"><label>充電站</label><input type="text" id="edit_cStation"></div>
                     <div class="row-group">
-                        <div class="form-group half"><label>開始電量</label><input type="number" inputmode="numeric" id="edit_cBatteryStart" min="0" max="5"></div>
-                        <div class="form-group half"><label>結束電量</label><input type="number" inputmode="numeric" id="edit_cBatteryEnd" min="0" max="5"></div>
+                        <!-- 改為下拉選單 -->
+                        <div class="form-group half">
+                            <label>開始電量</label>
+                            <select id="edit_cBatteryStart">
+                                <option value="0">0</option>
+                                <option value="1">1</option>
+                                <option value="2">2</option>
+                                <option value="3">3</option>
+                                <option value="4">4</option>
+                                <option value="5">5</option>
+                            </select>
+                        </div>
+                        <!-- 改為下拉選單 -->
+                        <div class="form-group half">
+                            <label>結束電量</label>
+                            <select id="edit_cBatteryEnd">
+                                <option value="0">0</option>
+                                <option value="1">1</option>
+                                <option value="2">2</option>
+                                <option value="3">3</option>
+                                <option value="4">4</option>
+                                <option value="5">5</option>
+                            </select>
+                        </div>
                     </div>
                     <div class="row-group">
                         <div class="form-group half"><label>度數 (kWh)</label><input type="number" inputmode="decimal" step="0.01" id="edit_cKwh"></div>
