@@ -1,15 +1,14 @@
 /* motolog.js
-   手機優化版 (v6)：
-   1. 補回 checkBackupStatus 備份提示功能。
-   2. 更新保養模板清單。
+   手機優化版 (v7)：
+   1. 更新 checkBackupStatus 邏輯：改為顯示頁面置頂懸浮提示 (topAlert)。
+   2. 點擊懸浮提示時，自動切換至「設定」分頁。
 */
 
-console.log('motolog.js (mobile optimized v6): loaded');
+console.log('motolog.js (mobile optimized v7): loaded');
 
 const SETTINGS_KEY = 'motorcycleSettings';
 const BACKUP_KEY = 'lastBackupDate';
 
-// 套用您的修改：新的保養模板
 const MAINT_TEMPLATES = [
     { name: '基本費', cost: 0 },
     { name: '齒輪油', cost: 0 },
@@ -48,6 +47,8 @@ document.addEventListener('DOMContentLoaded', function() {
         prefillChargeDefaults();
         prefillStatusForm();
         updateChargeUI();
+        // 確保載入時就檢查備份
+        checkBackupStatus();
     } catch (err) {
         console.error('Init error:', err);
     }
@@ -144,23 +145,43 @@ function checkMileageAnomaly(newOdo, recordDateStr) {
     return true;
 }
 
-// 補回：檢查備份狀態函式
+// 更新版：檢查備份狀態 (使用置頂懸浮 alert)
 function checkBackupStatus() {
     try {
         var last = localStorage.getItem(BACKUP_KEY);
-        var el = safe('backupWarning');
-        if (!el) return;
-        if (!last) {
-            el.textContent = '⚠️ 您尚未備份過資料，建議立即匯出。';
-            el.style.display = 'block';
-            return;
+        var alertBox = safe('topAlert');
+        
+        // 若 alertBox 尚未存在 (防呆)
+        if (!alertBox) {
+            alertBox = document.createElement('div');
+            alertBox.id = 'topAlert';
+            alertBox.className = 'top-alert';
+            document.body.prepend(alertBox);
         }
-        var days = daysBetween(last, new Date().toISOString().slice(0,10));
-        if (days > 30) {
-            el.textContent = '⚠️ 您已 ' + days + ' 天未備份，建議立即匯出。';
-            el.style.display = 'block';
+
+        // 綁定點擊跳轉事件 (每次都重新綁定以確保正確性)
+        alertBox.onclick = function() {
+            var settingTabBtn = document.querySelector('[data-tab="settings"]');
+            if(settingTabBtn) settingTabBtn.click();
+            // 點擊後可暫時隱藏
+            this.classList.remove('show');
+        };
+
+        var msg = '';
+        if (!last) {
+            msg = '⚠️ 您尚未備份過資料，建議立即匯出 (點擊前往)';
         } else {
-            el.style.display = 'none';
+            var days = daysBetween(last, new Date().toISOString().slice(0,10));
+            if (days > 30) {
+                msg = '⚠️ 您已 ' + days + ' 天未備份，建議立即匯出 (點擊前往)';
+            }
+        }
+
+        if (msg) {
+            alertBox.textContent = msg;
+            alertBox.classList.add('show');
+        } else {
+            alertBox.classList.remove('show');
         }
     } catch (err) { console.error('checkBackupStatus error', err); }
 }
@@ -300,7 +321,7 @@ function saveData(key, record, isEdit) {
 function loadAllData() {
     loadSettings();
     updateDashboard();
-    checkBackupStatus(); // 補回呼叫
+    checkBackupStatus();
     filterChargeTable();
     filterMaintTable();
     filterExpenseTable();
@@ -893,7 +914,7 @@ function importData(e) {
     e.target.value = '';
 }
 
-// 補回：匯出時更新備份時間
+// 匯出時更新備份時間
 function exportAllData() {
     var data = {
         chargeLog: JSON.parse(localStorage.getItem('chargeLog')||'[]'),
@@ -910,6 +931,7 @@ function exportAllData() {
     
     // 記錄備份時間
     localStorage.setItem(BACKUP_KEY, new Date().toISOString().slice(0,10));
+    // 重新檢查狀態，隱藏 alert
     checkBackupStatus();
 }
 
