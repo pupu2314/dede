@@ -8,12 +8,17 @@ console.log('motolog.js (mobile optimized v5): loaded');
 const SETTINGS_KEY = 'motorcycleSettings';
 const BACKUP_KEY = 'lastBackupDate';
 const MAINT_TEMPLATES = [
-    { name: '機油', cost: 300 },
-    { name: '齒輪油', cost: 100 },
-    { name: '空氣濾芯', cost: 250 },
-    { name: '輪胎(前)', cost: 1200 },
-    { name: '輪胎(後)', cost: 1300 },
-    { name: '煞車皮', cost: 450 }
+    { name: '基本費', cost: 0 },
+    { name: '齒輪油', cost: 0 },
+    { name: '煞車油', cost: 0 },
+    { name: '煞車來令片', cost: 0 },
+    { name: '輪胎(前)', cost: 0 },
+    { name: '輪胎(後)', cost: 0 },
+    { name: '傳動系統濾棉', cost: 0 },
+    { name: '傳動皮帶', cost: 0 },
+    { name: '燈泡', cost: 0 },
+    { name: '保險絲', cost: 0 },
+    { name: '鉛酸電池 (12V)', cost: 0 }
 ];
 
 const REGULAR_SERVICE_KM = 3000;
