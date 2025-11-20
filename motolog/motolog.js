@@ -1,10 +1,9 @@
 /* motolog.js
-   手機優化版 (v7)：
-   1. 更新 checkBackupStatus 邏輯：改為顯示頁面置頂懸浮提示 (topAlert)。
-   2. 點擊懸浮提示時，自動切換至「設定」分頁。
+   手機優化版 (v8)：
+   1. 若正在進行充電，預設開啟「充電」分頁。
 */
 
-console.log('motolog.js (mobile optimized v7): loaded');
+console.log('motolog.js (mobile optimized v8): loaded');
 
 const SETTINGS_KEY = 'motorcycleSettings';
 const BACKUP_KEY = 'lastBackupDate';
@@ -47,8 +46,15 @@ document.addEventListener('DOMContentLoaded', function() {
         prefillChargeDefaults();
         prefillStatusForm();
         updateChargeUI();
-        // 確保載入時就檢查備份
         checkBackupStatus();
+
+        // [新增] 檢查是否正在充電，若是則切換至充電分頁
+        if (localStorage.getItem('currentChargingSession')) {
+            var chargeTabBtn = document.querySelector('.tab-button[data-tab="charge"]');
+            if (chargeTabBtn) {
+                chargeTabBtn.click();
+            }
+        }
     } catch (err) {
         console.error('Init error:', err);
     }
