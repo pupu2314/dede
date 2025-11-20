@@ -1,12 +1,15 @@
 /* motolog.js
-   手機優化版 (v5)：
-   1. 編輯充電視窗功能更新 (下拉選單值讀取)。
+   手機優化版 (v6)：
+   1. 補回 checkBackupStatus 備份提示功能。
+   2. 更新保養模板清單。
 */
 
-console.log('motolog.js (mobile optimized v5): loaded');
+console.log('motolog.js (mobile optimized v6): loaded');
 
 const SETTINGS_KEY = 'motorcycleSettings';
 const BACKUP_KEY = 'lastBackupDate';
+
+// 套用您的修改：新的保養模板
 const MAINT_TEMPLATES = [
     { name: '基本費', cost: 0 },
     { name: '齒輪油', cost: 0 },
@@ -139,6 +142,27 @@ function checkMileageAnomaly(newOdo, recordDateStr) {
         return confirm(`⚠️ 系統偵測到您的里程增加異常：\n\n上次紀錄：${lastOdo} 公里 (${latest.date})\n本次輸入：${newOdo} 公里\n\n短短 ${Math.round(diffDays)} 天內增加了 ${diffKm.toFixed(1)} 公里。\n\n確定要儲存嗎？`);
     }
     return true;
+}
+
+// 補回：檢查備份狀態函式
+function checkBackupStatus() {
+    try {
+        var last = localStorage.getItem(BACKUP_KEY);
+        var el = safe('backupWarning');
+        if (!el) return;
+        if (!last) {
+            el.textContent = '⚠️ 您尚未備份過資料，建議立即匯出。';
+            el.style.display = 'block';
+            return;
+        }
+        var days = daysBetween(last, new Date().toISOString().slice(0,10));
+        if (days > 30) {
+            el.textContent = '⚠️ 您已 ' + days + ' 天未備份，建議立即匯出。';
+            el.style.display = 'block';
+        } else {
+            el.style.display = 'none';
+        }
+    } catch (err) { console.error('checkBackupStatus error', err); }
 }
 
 function getLatestRecord() {
@@ -276,6 +300,7 @@ function saveData(key, record, isEdit) {
 function loadAllData() {
     loadSettings();
     updateDashboard();
+    checkBackupStatus(); // 補回呼叫
     filterChargeTable();
     filterMaintTable();
     filterExpenseTable();
@@ -539,7 +564,6 @@ window.editCharge = function(id) {
     safe('edit_cOdo').value = r.odo;
     safe('edit_cStation').value = r.station;
     
-    // 更新：讀取電量到 select
     safe('edit_cBatteryStart').value = r.batteryStart;
     safe('edit_cBatteryEnd').value = r.batteryEnd;
     
@@ -562,7 +586,6 @@ function saveEditCharge(e) {
     r.odo = parseFloat(safe('edit_cOdo').value);
     r.station = safe('edit_cStation').value;
     
-    // 更新：從 select 讀取值
     r.batteryStart = parseInt(safe('edit_cBatteryStart').value);
     r.batteryEnd = parseInt(safe('edit_cBatteryEnd').value);
     
@@ -870,6 +893,7 @@ function importData(e) {
     e.target.value = '';
 }
 
+// 補回：匯出時更新備份時間
 function exportAllData() {
     var data = {
         chargeLog: JSON.parse(localStorage.getItem('chargeLog')||'[]'),
@@ -883,6 +907,10 @@ function exportAllData() {
     a.href = URL.createObjectURL(blob);
     a.download = 'motolog_backup_' + new Date().toISOString().slice(0,10) + '.json';
     a.click();
+    
+    // 記錄備份時間
+    localStorage.setItem(BACKUP_KEY, new Date().toISOString().slice(0,10));
+    checkBackupStatus();
 }
 
 function clearAllData() {
