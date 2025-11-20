@@ -1,10 +1,9 @@
 /* motolog.js
-   手機優化版 (v4)：
-   1. 歷史紀錄改為 Div 卡片式渲染 (移除 Table 相關邏輯)。
-   2. 維持所有 v3 功能：自動帶入、公里單位、保養顯示、防呆驗證。
+   手機優化版 (v5)：
+   1. 編輯充電視窗功能更新 (下拉選單值讀取)。
 */
 
-console.log('motolog.js (mobile optimized v4): loaded');
+console.log('motolog.js (mobile optimized v5): loaded');
 
 const SETTINGS_KEY = 'motorcycleSettings';
 const BACKUP_KEY = 'lastBackupDate';
@@ -347,7 +346,7 @@ function updateDashboard() {
     safe('statAvgDaily').textContent = (maxOdo / daysRange).toFixed(1) + " 公里";
 }
 
-// === 卡片式列表渲染 (取代表格) ===
+// === 卡片式列表渲染 ===
 function loadChargeHistory() {
     var data = JSON.parse(localStorage.getItem('chargeLog') || '[]');
     var list = safe('chargeList');
@@ -363,7 +362,6 @@ function loadChargeHistory() {
         return matchSearch && matchMonth;
     });
 
-    // Efficiency calc
     var effTotal = 0, effCount = 0, maxEff = 0;
     var reversed = [...data].reverse();
     var effMap = {};
@@ -535,8 +533,11 @@ window.editCharge = function(id) {
     safe('edit_cEndTime').value = toLocalISO(r.endTime);
     safe('edit_cOdo').value = r.odo;
     safe('edit_cStation').value = r.station;
+    
+    // 更新：讀取電量到 select
     safe('edit_cBatteryStart').value = r.batteryStart;
     safe('edit_cBatteryEnd').value = r.batteryEnd;
+    
     safe('edit_cKwh').value = r.kwh;
     safe('edit_cCost').value = r.cost;
     safe('edit_cNotes').value = r.notes;
@@ -555,8 +556,11 @@ function saveEditCharge(e) {
     r.date = r.startTime.slice(0,10);
     r.odo = parseFloat(safe('edit_cOdo').value);
     r.station = safe('edit_cStation').value;
+    
+    // 更新：從 select 讀取值
     r.batteryStart = parseInt(safe('edit_cBatteryStart').value);
     r.batteryEnd = parseInt(safe('edit_cBatteryEnd').value);
+    
     r.kwh = parseFloat(safe('edit_cKwh').value);
     r.cost = parseFloat(safe('edit_cCost').value);
     r.notes = safe('edit_cNotes').value;
