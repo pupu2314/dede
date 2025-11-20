@@ -175,7 +175,7 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--p
     cursor: pointer;
     font-weight: 600;
     transition: transform 0.1s, opacity 0.2s;
-    display: inline-flex; align-items: center; justify-content: center;
+    display: inline-flex; align-items: center; justify-content: center; padding: 8px 12px;
 }
 .btn:active { transform: scale(0.98); }
 .btn-lg { padding: 14px 20px; font-size: 1.05rem; }
