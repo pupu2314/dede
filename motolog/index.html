@@ -231,7 +231,6 @@
                         </div>
                         
                         <button type="submit" class="btn btn-primary btn-full btn-lg">💾 儲存記錄</button>
-                        <!-- 修正：加上 btn-lg 以確保高度正確 -->
                         <button type="button" class="btn btn-secondary btn-full btn-lg" id="cancelMaintEdit" style="display:none; margin-top:10px;">取消編輯</button>
                     </form>
                 </div>
@@ -280,7 +279,6 @@
                         <div class="form-group"><label>說明</label><textarea id="eDescription" rows="2"></textarea></div>
                         
                         <button type="submit" class="btn btn-primary btn-full btn-lg">💾 儲存記錄</button>
-                        <!-- 修正：加上 btn-lg 以確保高度正確 -->
                         <button type="button" class="btn btn-secondary btn-full btn-lg" id="cancelExpenseEdit" style="display:none; margin-top:10px;">取消編輯</button>
                     </form>
                 </div>
@@ -311,6 +309,7 @@
                             <input type="number" inputmode="decimal" step="0.1" id="electricRate" placeholder="例如: 3.5">
                             <small>用於自動計算公司或家裡的充電費用</small>
                         </div>
+                        <!-- 套用您的修改：按鈕類別 -->
                         <button type="button" class="btn btn-primary btn-block-setting btn-full" id="saveSettingsBtn">儲存設定</button>
                     </div>
                 </div>
@@ -323,6 +322,7 @@
                         <button class="btn btn-primary btn-block-setting" id="importBtn">📥 匯入備份檔</button>
                         <button class="btn btn-danger btn-block-setting" id="clearAllBtn">🗑️ 清除所有資料</button>
                     </div>
+                    <!-- 此處將顯示久未備份提示 -->
                     <small id="backupWarning" style="color: var(--danger); display: none; margin-top: 10px; text-align: center; font-weight:bold;"></small>
                 </div>
             </div>
@@ -336,7 +336,6 @@
                 <h3>編輯充電</h3>
                 <button class="btn btn-text" id="closeEditModal">關閉</button>
             </div>
-            <!-- 關鍵修正：這裡的 form 結構與 CSS 配合，實現卷軸與底部按鈕固定 -->
             <form id="editChargeForm">
                 <input type="hidden" id="editingChargeId">
                 <div class="form-scroll-area">
@@ -345,7 +344,6 @@
                     <div class="form-group"><label>里程 (ODO)</label><input type="number" inputmode="decimal" step="0.1" id="edit_cOdo" required></div>
                     <div class="form-group"><label>充電站</label><input type="text" id="edit_cStation"></div>
                     <div class="row-group">
-                        <!-- 改為下拉選單 -->
                         <div class="form-group half">
                             <label>開始電量</label>
                             <select id="edit_cBatteryStart">
@@ -357,7 +355,6 @@
                                 <option value="5">5</option>
                             </select>
                         </div>
-                        <!-- 改為下拉選單 -->
                         <div class="form-group half">
                             <label>結束電量</label>
                             <select id="edit_cBatteryEnd">
