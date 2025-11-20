@@ -228,7 +228,6 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--p
 
 .chart-container { display: none; }
 
-/* ======== Analytics Grid (補回遺失的樣式) ======== */
 .analytics-grid {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
@@ -256,9 +255,9 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--p
     color: var(--primary);
 }
 
-/* ======== Modal (補回基礎顯示樣式，解決持續顯示問題) ======== */
+/* ======== Modal 修復 (確保 footer 固定在底部) ======== */
 .modal {
-    display: none; /* 預設隱藏 */
+    display: none; 
     position: fixed;
     top: 0; left: 0; width: 100%; height: 100%;
     background: rgba(0,0,0,0.5);
@@ -266,7 +265,7 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--p
     align-items: center;
     justify-content: center;
 }
-.modal.active { display: flex; } /* 加上 active 才顯示 */
+.modal.active { display: flex; }
 
 .modal-content {
     background: white;
@@ -276,17 +275,45 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--p
     overflow: hidden;
     display: flex;
     flex-direction: column;
-    max-height: 90vh;
+    max-height: 90vh; /* 限制高度，避免超出畫面 */
     animation: slideUp 0.3s;
 }
 
 @keyframes slideUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
 
-.modal-header { padding: 15px 20px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; background: #f8fafc; }
+/* 修復點：Form 設為 Flex column，並撐滿 modal-content */
+#editChargeForm {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    overflow: hidden; /* 防止雙重卷軸 */
+}
+
+.modal-header { 
+    padding: 15px 20px; 
+    border-bottom: 1px solid var(--border); 
+    display: flex; 
+    justify-content: space-between; 
+    align-items: center; 
+    background: #f8fafc; 
+    flex-shrink: 0;
+}
 .modal-header h3 { margin: 0; font-size: 1.1rem; }
 
-.form-scroll-area { padding: 20px; overflow-y: auto; }
-.modal-footer { padding: 15px 20px; border-top: 1px solid var(--border); background: white; }
+/* 修復點：卷軸區塊設定 Flex-grow，確保它佔滿中間空間並可捲動 */
+.form-scroll-area { 
+    padding: 20px; 
+    overflow-y: auto; 
+    flex: 1;
+}
+
+/* 修復點：Footer 固定不縮放，確保永遠可見 */
+.modal-footer { 
+    padding: 15px 20px; 
+    border-top: 1px solid var(--border); 
+    background: white; 
+    flex-shrink: 0;
+}
 
 /* ======== History List Cards ======== */
 .history-list {
