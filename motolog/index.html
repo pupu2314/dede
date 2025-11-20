@@ -7,6 +7,9 @@
     <link rel="stylesheet" href="motolog.css">
 </head>
 <body>
+    <!-- 新增：置頂懸浮備份提示 -->
+    <div id="topAlert" class="top-alert"></div>
+
     <div class="container">
         <div class="header">
             <h1>🏍️ 電動摩托車紀錄</h1>
@@ -309,7 +312,6 @@
                             <input type="number" inputmode="decimal" step="0.1" id="electricRate" placeholder="例如: 3.5">
                             <small>用於自動計算公司或家裡的充電費用</small>
                         </div>
-                        <!-- 套用您的修改：按鈕類別 -->
                         <button type="button" class="btn btn-primary btn-block-setting btn-full" id="saveSettingsBtn">儲存設定</button>
                     </div>
                 </div>
@@ -322,8 +324,7 @@
                         <button class="btn btn-primary btn-block-setting" id="importBtn">📥 匯入備份檔</button>
                         <button class="btn btn-danger btn-block-setting" id="clearAllBtn">🗑️ 清除所有資料</button>
                     </div>
-                    <!-- 此處將顯示久未備份提示 -->
-                    <small id="backupWarning" style="color: var(--danger); display: none; margin-top: 10px; text-align: center; font-weight:bold;"></small>
+                    <!-- 移除了舊的 id="backupWarning"，功能改由 topAlert 取代 -->
                 </div>
             </div>
         </div>
