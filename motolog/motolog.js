@@ -282,9 +282,9 @@ function updateChargeUI() {
         endSec.style.display = 'block';
         safe('currentChargeInfo').innerHTML = `
             <div style="background:white; padding:10px; border-radius:8px; font-size:0.9rem; color:#555;">
-                <div>📍 地點: ${session.station}</div>
-                <div>🔋 初始: ${session.batteryStart} 格</div>
-                <div>⏱️ 開始: ${formatTime(session.startTime)}</div>
+                <div>📍 地點<br> ${session.station}</div>
+                <div>🔋 初始<br> ${session.batteryStart} 格</div>
+                <div>⏱️ 開始<br> ${formatTime(session.startTime)}</div>
             </div>
         `;
         var settings = loadSettings();
