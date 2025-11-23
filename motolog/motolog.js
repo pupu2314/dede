@@ -1,11 +1,10 @@
 /* motolog.js
-   手機優化版 (v17)：
-   1. 修改 statusLog 儲存邏輯：改為「累積歷史紀錄」而非覆蓋，確保時間軸正確。
-   2. 優化 getLatestState：分別尋找最新的 ODO 與最新的 Battery (解決保養紀錄無電量導致電量歸零的問題)。
-   3. 強化時間排序邏輯，確保雲端匯入資料與本地資料能正確比對。
+   手機優化版 (v18)：
+   1. [StatusLog 結構優化] saveStatus 現在會寫入 `startTime` (ISO格式)，並保持單筆覆蓋模式。
+   2. 這確保了 StatusLog 與 ChargeLog 的時間基準一致，讓 `getLatestState` 能精確判斷誰是最新的。
 */
 
-console.log('motolog.js (mobile optimized v17): loaded');
+console.log('motolog.js (mobile optimized v18): loaded');
 
 const SETTINGS_KEY = 'motorcycleSettings';
 const BACKUP_KEY = 'lastBackupDate';
@@ -49,7 +48,8 @@ document.addEventListener('DOMContentLoaded', function() {
         populateMonthFilters();
         loadAllData();
         
-        prefillForms(); // 預填
+        // 統一預填邏輯
+        prefillForms();
         
         updateChargeUI();
         checkBackupStatus();
@@ -73,11 +73,7 @@ function initEventListeners() {
             if (target) target.classList.add('active');
             window.scrollTo({top: 0, behavior: 'smooth'});
             
-            // 切換分頁時，強制重新抓取最新數據並預填
             if (e.target.dataset.tab === 'status' || e.target.dataset.tab === 'charge') {
-                // 清空舊值以便重新帶入 (使用者體驗考量：若想保留輸入值可註解掉這行)
-                // safe('sOdo').value = '';
-                // safe('cOdo').value = '';
                 prefillForms();
             }
             
@@ -162,31 +158,24 @@ function showToast(message, type = 'success') {
 }
 
 function checkMileageAnomaly(newOdo, recordDateStr) {
-    var latestState = getLatestState();
-    var latest = latestState.rawRecord; 
-    
+    var latest = getLatestState().rawRecord; 
     if (!latest) return true; 
     
     var lastDateVal = getRecordTimestamp(latest);
     var newDateVal = new Date(recordDateStr).getTime();
     
     var lastOdo = parseFloat(latest.odo) || 0;
-    
-    // 若使用者輸入比上次還小的里程，直接通過 (可能是修正數據)
-    if (newOdo < lastOdo) return true;
-
     var diffKm = newOdo - lastOdo;
     var diffDays = (newDateVal - lastDateVal) / (1000 * 60 * 60 * 24);
     
-    // 7天內且增加超過100km
     if (diffDays <= 7 && diffKm > 100) {
         var dateStr = new Date(lastDateVal).toLocaleDateString();
-        return confirm(`⚠️ 里程異常提示：\n\n上次紀錄：${lastOdo} 公里 (${dateStr})\n本次輸入：${newOdo} 公里\n\n${Math.round(Math.abs(diffDays))} 天內增加了 ${diffKm.toFixed(1)} 公里。\n\n確定要儲存嗎？`);
+        return confirm(`⚠️ 系統偵測到您的里程增加異常：\n\n上次紀錄：${lastOdo} 公里 (${dateStr})\n本次輸入：${newOdo} 公里\n\n短短 ${Math.round(Math.abs(diffDays))} 天內增加了 ${diffKm.toFixed(1)} 公里。\n\n確定要儲存嗎？`);
     }
     return true;
 }
 
-// === 核心：取得最新狀態 (分離式搜尋) ===
+// === 核心：取得最新狀態 (整合所有 Log) ===
 function getLatestState() {
     var charges = JSON.parse(localStorage.getItem('chargeLog') || '[]');
     var statuses = JSON.parse(localStorage.getItem('statusLog') || '[]');
@@ -195,86 +184,86 @@ function getLatestState() {
 
     var allRecords = [];
     
-    // 1. 整理所有紀錄到一個陣列
-    charges.forEach(r => allRecords.push({ ts: getRecordTimestamp(r), odo: parseFloat(r.odo), battery: r.batteryEnd, type: 'charge', raw: r }));
-    statuses.forEach(r => allRecords.push({ ts: getRecordTimestamp(r), odo: parseFloat(r.odo), battery: r.battery, type: 'status', raw: r }));
+    // 1. 充電紀錄
+    charges.forEach(r => {
+        allRecords.push({ 
+            ts: getRecordTimestamp(r), 
+            odo: parseFloat(r.odo), 
+            battery: r.batteryEnd, 
+            type: 'charge',
+            raw: r
+        });
+    });
+
+    // 2. 狀態紀錄
+    statuses.forEach(r => {
+        allRecords.push({ 
+            ts: getRecordTimestamp(r), 
+            odo: parseFloat(r.odo), 
+            battery: r.battery, 
+            type: 'status',
+            raw: r
+        });
+    });
+
+    // 3. 保養與花費
     maints.forEach(r => allRecords.push({ ts: getRecordTimestamp(r), odo: parseFloat(r.odo), battery: null, type: 'maint', raw: r }));
     expenses.forEach(r => allRecords.push({ ts: getRecordTimestamp(r), odo: parseFloat(r.odo), battery: null, type: 'expense', raw: r }));
 
-    // 2. 依時間倒序 (最新的在最前)
+    // 排序：時間大到小
     allRecords.sort((a, b) => b.ts - a.ts);
 
-    if (allRecords.length === 0) return { odo: 0, battery: null, rawRecord: null, lastTs: 0 };
+    if (allRecords.length === 0) return { odo: 0, battery: null, rawRecord: null };
 
-    // 3. 獨立尋找最新的 ODO
-    // 遍歷紀錄，找到第一筆有 ODO 的資料
     var latestOdo = 0;
-    for (var i = 0; i < allRecords.length; i++) {
-        if (allRecords[i].odo > 0) {
-            latestOdo = allRecords[i].odo;
-            break;
-        }
-    }
+    var latestOdoRec = allRecords.find(r => r.odo > 0);
+    if (latestOdoRec) latestOdo = latestOdoRec.odo;
 
-    // 4. 獨立尋找最新的 Battery
-    // 遍歷紀錄，找到第一筆有 Battery 的資料 (只看 charge 和 status)
     var latestBat = null;
-    for (var i = 0; i < allRecords.length; i++) {
-        if (allRecords[i].battery !== null && allRecords[i].battery !== undefined && allRecords[i].battery !== "") {
-            latestBat = parseInt(allRecords[i].battery);
-            break;
-        }
-    }
+    var latestBatRec = allRecords.find(r => (r.type === 'charge' || r.type === 'status') && r.battery !== null && r.battery !== undefined);
+    if (latestBatRec) latestBat = parseInt(latestBatRec.battery);
 
     return {
         odo: latestOdo,
         battery: latestBat,
-        rawRecord: allRecords[0].raw, // 絕對時間最新的一筆 (用於計算更新時間)
+        rawRecord: allRecords[0].raw,
         lastTs: allRecords[0].ts
     };
 }
 
-// 輔助：統一取得時間戳記
 function getRecordTimestamp(r) {
     if (!r) return 0;
-    if (r.endTime) return new Date(r.endTime).getTime(); // 充電優先用結束時間
-    if (r.startTime) return new Date(r.startTime).getTime(); 
     
-    // 強制截取前 10 碼 (YYYY-MM-DD)，避免 ISO 字串混亂
-    var dateStr = (r.date || "").slice(0, 10); 
+    // 優先使用 ISO 時間格式 (ChargeLog 和 新版 StatusLog)
+    if (r.endTime) return new Date(r.endTime).getTime();
+    if (r.startTime) return new Date(r.startTime).getTime();
+    
+    // 處理舊版資料或日期格式
+    var dateStr = (r.date || "").slice(0, 10); // 只取 YYYY-MM-DD
     
     if (dateStr && r.time) {
-        return new Date(dateStr + 'T' + r.time).getTime(); 
+        return new Date(dateStr + 'T' + r.time).getTime();
     }
     
     if (dateStr) {
-        // 如果只有日期，預設為當天最後一秒，避免被同天有時間的紀錄蓋過? 
-        // 或是當天 00:00? 這裡設為 00:00 比較保險
-        return new Date(dateStr + 'T00:00:00').getTime(); 
+        return new Date(dateStr + 'T00:00:00').getTime();
     }
+    
     return 0;
 }
 
-// === 統一預填表單函式 ===
 function prefillForms() {
     var state = getLatestState();
     
-    // 更新顯示文字
     updateLastUpdateTimeDisplay(state.lastTs);
 
-    // 1. 預填快速更新
-    var sOdo = safe('sOdo');
-    if (sOdo && !sOdo.value) sOdo.value = state.odo || '';
-    
+    if (safe('sOdo')) safe('sOdo').value = state.odo || '';
     if (state.battery !== null) {
         var sb = document.querySelector(`input[name="sBattery"][value="${state.battery}"]`);
         if(sb) sb.checked = true;
     }
 
-    // 2. 預填充電
-    var cOdo = safe('cOdo');
-    if (cOdo && !cOdo.value) cOdo.value = state.odo || '';
-    
+    if (safe('cOdo')) safe('cOdo').value = state.odo || '';
     if (state.battery !== null) {
         var cb = document.querySelector(`input[name="cBatteryStart"][value="${state.battery}"]`);
         if(cb) cb.checked = true;
@@ -318,6 +307,7 @@ function checkBackupStatus() {
 
         if (!last || (daysBetween(last, new Date().toISOString().slice(0,10)) > 30)) {
             showMsg = true;
+            
             if (settings.gasUrl) {
                 msgText = '☁️ 系統偵測到您很久未備份，點此<b>立即同步到雲端</b>';
                 clickAction = function() {
@@ -435,10 +425,10 @@ function updateChargeUI() {
         startSec.style.display = 'block';
         endSec.style.display = 'none';
         if (chargeTimer) { clearInterval(chargeTimer); chargeTimer = null; }
+        prefillChargeDefaults();
     }
 }
 
-// 修正：改用 push 而非取代
 function saveData(key, record, isEdit) {
     var data = JSON.parse(localStorage.getItem(key) || '[]');
     if (isEdit) {
@@ -861,73 +851,21 @@ function updateTotalCost() {
     safe('totalCost').textContent = total;
 }
 
-function saveMaintenance(e) {
-    e.preventDefault();
-    if (!checkMileageAnomaly(parseFloat(safe('mOdo').value), safe('mDate').value)) return;
-    var parts = [];
-    document.querySelectorAll('.part-item').forEach(item => {
-        parts.push({
-            name: item.querySelector('.part-name').value,
-            cost: parseFloat(item.querySelector('.part-cost').value) || 0
-        });
-    });
-    var loc = safe('mLocationSelect').value;
-    if(loc === '其他') loc = safe('mLocationInput').value;
-    var record = {
-        id: safe('editingMaintId').value ? parseInt(safe('editingMaintId').value) : Date.now(),
-        date: safe('mDate').value,
-        time: safe('mTime').value,
-        odo: parseFloat(safe('mOdo').value) || 0,
-        location: loc,
-        type: safe('mType').value,
-        notes: safe('mNotes').value,
-        parts: parts,
-        totalCost: parseFloat(safe('totalCost').textContent)
-    };
-    saveData('maintenanceLog', record, !!safe('editingMaintId').value);
-    cancelMaintEdit();
-    loadAllData();
-    showToast('✅ 保養儲存成功');
-}
-
-function saveExpense(e) {
-    e.preventDefault();
-    if (safe('eOdo').value) {
-         if (!checkMileageAnomaly(parseFloat(safe('eOdo').value), safe('eDate').value)) return;
-    }
-    var record = {
-        id: safe('editingExpenseId').value ? parseInt(safe('editingExpenseId').value) : Date.now(),
-        date: safe('eDate').value,
-        time: safe('eTime').value,
-        category: safe('eCategory').value,
-        amount: parseFloat(safe('eAmount').value) || 0,
-        odo: parseFloat(safe('eOdo').value) || 0,
-        description: safe('eDescription').value
-    };
-    saveData('expenseLog', record, !!safe('editingExpenseId').value);
-    cancelExpenseEdit();
-    loadAllData();
-    showToast('✅ 花費儲存成功');
-}
-
-// 修正：saveStatus 改為 push 模式
+// 修改：Status 儲存改為 ISO String
 function saveStatus(e) {
     e.preventDefault();
     if (!checkMileageAnomaly(parseFloat(safe('sOdo').value), new Date().toISOString().slice(0,10))) return;
-    
     var now = new Date();
     var record = {
         id: Date.now(),
-        date: now.toISOString().slice(0,10),
-        time: now.toTimeString().slice(0,5),
+        startTime: now.toISOString(), // 此為與 ChargeLog 一致的 ISO 格式
+        date: now.toISOString().slice(0,10), // 保留日期供篩選/統計使用
+        // time: ... 移除舊版 HH:MM 格式
         odo: parseFloat(safe('sOdo').value) || 0,
         battery: parseInt(document.querySelector('input[name="sBattery"]:checked').value),
         notes: '' 
     };
-    
-    // 這裡呼叫 saveData 而非 setItem，確保是 push
-    saveData('statusLog', record);
-    
+    localStorage.setItem('statusLog', JSON.stringify([record])); // 覆蓋模式：陣列中只存這一筆
     safe('statusForm').reset();
     loadAllData();
     prefillForms();
