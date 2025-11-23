@@ -340,6 +340,7 @@
                     
                     <div class="data-btns-stack" style="margin-bottom: 20px;">
                         <button class="btn btn-warning btn-block-setting" id="syncToCloudBtn">☁️ 同步到 Google Sheets</button>
+                        <button class="btn btn-secondary btn-block-setting" id="restoreFromCloudBtn">📥 從雲端還原</button>
                     </div>
 
                     <input type="file" id="jsonImport" accept=".json" style="display:none;">
@@ -429,6 +430,7 @@
   try {
     var data = JSON.parse(e.postData.contents);
     var ss = SpreadsheetApp.getActiveSpreadsheet();
+    
     if (data.action === 'sync') {
       saveToSheet(ss, 'ChargeLog', data.chargeLog);
       saveToSheet(ss, 'MaintenanceLog', data.maintenanceLog);
@@ -436,11 +438,21 @@
       saveToSheet(ss, 'StatusLog', data.statusLog);
       return ContentService.createTextOutput(JSON.stringify({status: 'success'}))
         .setMimeType(ContentService.MimeType.JSON);
+    } else if (data.action === 'restore') {
+      var result = {
+        ChargeLog: readSheet(ss, 'ChargeLog'),
+        MaintenanceLog: readSheet(ss, 'MaintenanceLog'),
+        ExpenseLog: readSheet(ss, 'ExpenseLog'),
+        StatusLog: readSheet(ss, 'StatusLog')
+      };
+      return ContentService.createTextOutput(JSON.stringify({status: 'success', data: result}))
+        .setMimeType(ContentService.MimeType.JSON);
     }
   } catch (f) {
     return ContentService.createTextOutput(JSON.stringify({status: 'error', message: f.toString()})).setMimeType(ContentService.MimeType.JSON);
   }
 }
+
 function saveToSheet(ss, sheetName, dataArray) {
   var sheet = ss.getSheetByName(sheetName);
   if (!sheet || !dataArray || dataArray.length === 0) return;
@@ -453,6 +465,29 @@ function saveToSheet(ss, sheetName, dataArray) {
     return val;
   }));
   sheet.getRange(2, 1, rows.length, headers.length).setValues(rows);
+}
+
+function readSheet(ss, sheetName) {
+  var sheet = ss.getSheetByName(sheetName);
+  if (!sheet) return [];
+  var rows = sheet.getDataRange().getValues();
+  if (rows.length < 2) return [];
+  var headers = rows[0];
+  var data = [];
+  for (var i = 1; i < rows.length; i++) {
+    var obj = {};
+    for (var j = 0; j < headers.length; j++) {
+      var val = rows[i][j];
+      try {
+         if (typeof val === 'string' && (val.startsWith('[') || val.startsWith('{'))) {
+             val = JSON.parse(val);
+         }
+      } catch(e) {}
+      obj[headers[j]] = val;
+    }
+    data.push(obj);
+  }
+  return data;
 }</code></pre>
 
                 <h4>步驟 3：部署</h4>
