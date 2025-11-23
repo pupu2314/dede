@@ -1,10 +1,11 @@
 /* motolog.js
-   手機優化版 (v14)：
-   1. 移除 showToast 中的 inline style，完全依賴 CSS 類別，解決深色模式對比問題。
-   2. 更新 checkBackupStatus：若已設定 GAS URL，提示條直接提供「立即同步」按鈕。
+   手機優化版 (v15)：
+   1. 統一「最新狀態」取得邏輯：跨所有紀錄類型 (充電/狀態/保養/其他) 尋找最新的 ODO。
+   2. 跨「充電」與「狀態」紀錄尋找最新的電量。
+   3. 充電與快速更新頁面皆會自動帶入上述最新資訊。
 */
 
-console.log('motolog.js (mobile optimized v14): loaded');
+console.log('motolog.js (mobile optimized v15): loaded');
 
 const SETTINGS_KEY = 'motorcycleSettings';
 const BACKUP_KEY = 'lastBackupDate';
@@ -47,10 +48,11 @@ document.addEventListener('DOMContentLoaded', function() {
         populateMaintTemplates();
         populateMonthFilters();
         loadAllData();
-        prefillChargeDefaults();
-        prefillStatusForm();
-        updateChargeUI();
         
+        // 統一預填邏輯
+        prefillForms();
+        
+        updateChargeUI();
         checkBackupStatus();
 
         if (localStorage.getItem('currentChargingSession')) {
@@ -72,13 +74,12 @@ function initEventListeners() {
             if (target) target.classList.add('active');
             window.scrollTo({top: 0, behavior: 'smooth'});
             
-            if (e.target.dataset.tab === 'status') prefillStatusForm();
-            if (e.target.dataset.tab === 'settings') {
-                var s = JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}');
-                if(safe('electricRate')) safe('electricRate').value = s.electricRate || '';
-                if(safe('gasUrl')) safe('gasUrl').value = s.gasUrl || '';
-                if(safe('themeSelect')) safe('themeSelect').value = s.theme || 'light';
+            // 切換分頁時，重新抓取最新數據預填
+            if (e.target.dataset.tab === 'status' || e.target.dataset.tab === 'charge') {
+                prefillForms();
             }
+            
+            if (e.target.dataset.tab === 'settings') loadSettings();
         });
     });
 
@@ -152,41 +153,123 @@ function showToast(message, type = 'success') {
     var toast = safe('toast');
     if (!toast) return;
     toast.textContent = message;
-    
-    // 清除所有可能的顏色 class，再加入新的
-    toast.className = 'toast show'; // 先重置
-    
-    // 根據類型加入對應 class
-    if (type === 'success') {
-        toast.classList.add('toast-success');
-    } else {
-        toast.classList.add('toast-error');
-    }
-    
-    // 移除 inline style 以確保 CSS class 生效 (重要修正)
+    toast.className = 'toast show ' + (type === 'success' ? 'toast-success' : 'toast-error');
     toast.style.background = '';
     toast.style.color = '';
-    
-    setTimeout(() => {
-        toast.classList.remove('show');
-    }, 3000);
+    setTimeout(() => { toast.classList.remove('show'); }, 3000);
 }
 
 function checkMileageAnomaly(newOdo, recordDateStr) {
-    var latest = getLatestRecord();
+    var latest = getLatestState().rawRecord; // 取得最新一筆紀錄
     if (!latest) return true; 
-    var lastOdo = latest.odo;
-    var lastDate = new Date(latest.date);
-    var newDate = new Date(recordDateStr);
+    
+    // 判斷 latest 的日期格式
+    var lastDateVal = getRecordTimestamp(latest);
+    var newDateVal = new Date(recordDateStr).getTime();
+    
+    var lastOdo = parseFloat(latest.odo) || 0;
     var diffKm = newOdo - lastOdo;
-    var diffDays = (newDate - lastDate) / (1000 * 60 * 60 * 24);
+    var diffDays = (newDateVal - lastDateVal) / (1000 * 60 * 60 * 24);
+    
+    // 條件：7天內且增加超過100km
     if (diffDays <= 7 && diffKm > 100) {
-        return confirm(`⚠️ 系統偵測到您的里程增加異常：\n\n上次紀錄：${lastOdo} 公里 (${latest.date})\n本次輸入：${newOdo} 公里\n\n短短 ${Math.round(diffDays)} 天內增加了 ${diffKm.toFixed(1)} 公里。\n\n確定要儲存嗎？`);
+        var dateStr = new Date(lastDateVal).toLocaleDateString();
+        return confirm(`⚠️ 系統偵測到您的里程增加異常：\n\n上次紀錄：${lastOdo} 公里 (${dateStr})\n本次輸入：${newOdo} 公里\n\n短短 ${Math.round(Math.abs(diffDays))} 天內增加了 ${diffKm.toFixed(1)} 公里。\n\n確定要儲存嗎？`);
     }
     return true;
 }
 
-// 修正後的備份檢查邏輯
+// === 核心：取得最新狀態 (整合所有 Log) ===
+function getLatestState() {
+    // 1. 讀取所有紀錄
+    var charges = JSON.parse(localStorage.getItem('chargeLog') || '[]');
+    var statuses = JSON.parse(localStorage.getItem('statusLog') || '[]');
+    var maints = JSON.parse(localStorage.getItem('maintenanceLog') || '[]');
+    var expenses = JSON.parse(localStorage.getItem('expenseLog') || '[]');
+
+    // 2. 合併並標準化 (為了排序)
+    var allRecords = [];
+    
+    // Charge: 時間點以 endTime 為準 (充飽電的時間)，若無則 startTime
+    charges.forEach(r => {
+        allRecords.push({ 
+            ts: getRecordTimestamp(r), 
+            odo: parseFloat(r.odo), 
+            battery: r.batteryEnd, // 充電紀錄的最新電量是「結束電量」
+            type: 'charge',
+            raw: r
+        });
+    });
+
+    // Status
+    statuses.forEach(r => {
+        allRecords.push({ 
+            ts: getRecordTimestamp(r), 
+            odo: parseFloat(r.odo), 
+            battery: r.battery, 
+            type: 'status',
+            raw: r
+        });
+    });
+
+    // Maint & Expense (通常只提供 ODO，沒有電量)
+    maints.forEach(r => allRecords.push({ ts: getRecordTimestamp(r), odo: parseFloat(r.odo), battery: null, type: 'maint', raw: r }));
+    expenses.forEach(r => allRecords.push({ ts: getRecordTimestamp(r), odo: parseFloat(r.odo), battery: null, type: 'expense', raw: r }));
+
+    // 3. 排序 (新 -> 舊)
+    allRecords.sort((a, b) => b.ts - a.ts);
+
+    if (allRecords.length === 0) return { odo: 0, battery: null, rawRecord: null };
+
+    // 4. 找出最新 ODO (取第一筆有效 ODO)
+    // 有時使用者可能忘記填 ODO (0)，所以往下找最近一筆有值的
+    var latestOdo = 0;
+    var latestOdoRec = allRecords.find(r => r.odo > 0);
+    if (latestOdoRec) latestOdo = latestOdoRec.odo;
+
+    // 5. 找出最新 Battery (只看 charge 和 status)
+    var latestBat = null;
+    var latestBatRec = allRecords.find(r => (r.type === 'charge' || r.type === 'status') && r.battery !== null && r.battery !== undefined);
+    if (latestBatRec) latestBat = parseInt(latestBatRec.battery);
+
+    return {
+        odo: latestOdo,
+        battery: latestBat,
+        rawRecord: allRecords[0].raw // 回傳絕對時間最新的那筆，用於 anomaly check
+    };
+}
+
+// 輔助：統一取得時間戳記
+function getRecordTimestamp(r) {
+    if (r.endTime) return new Date(r.endTime).getTime(); // 充電結束
+    if (r.startTime) return new Date(r.startTime).getTime(); // 充電開始
+    if (r.date && r.time) return new Date(r.date + 'T' + r.time).getTime(); // 狀態/保養/花費
+    if (r.date) return new Date(r.date + 'T00:00:00').getTime(); // 只有日期
+    return 0;
+}
+
+// === 統一預填表單函式 ===
+function prefillForms() {
+    var state = getLatestState();
+    
+    // 1. 預填快速更新 (Status)
+    if (safe('sOdo')) safe('sOdo').value = state.odo || '';
+    if (state.battery !== null) {
+        var sb = document.querySelector(`input[name="sBattery"][value="${state.battery}"]`);
+        if(sb) sb.checked = true;
+    }
+
+    // 2. 預填充電 (Charge)
+    if (safe('cOdo')) safe('cOdo').value = state.odo || '';
+    if (state.battery !== null) {
+        // 充電「開始」電量 = 目前最新電量
+        var cb = document.querySelector(`input[name="cBatteryStart"][value="${state.battery}"]`);
+        if(cb) cb.checked = true;
+    }
+}
+
+// === 原有功能維持 ===
+
 function checkBackupStatus() {
     try {
         var last = localStorage.getItem(BACKUP_KEY);
@@ -204,19 +287,16 @@ function checkBackupStatus() {
         var msgText = '';
         var clickAction = null;
 
-        // 判斷邏輯：超過 30 天或從未備份
         if (!last || (daysBetween(last, new Date().toISOString().slice(0,10)) > 30)) {
             showMsg = true;
             
             if (settings.gasUrl) {
-                // 情境 2: 已設定雲端，提供直接同步
                 msgText = '☁️ 系統偵測到您很久未備份，點此<b>立即同步到雲端</b>';
                 clickAction = function() {
                     syncToGoogleSheets();
                     this.classList.remove('show');
                 };
             } else {
-                // 情境 1: 未設定雲端，引導去設定頁
                 msgText = '⚠️ 您尚未備份過資料，點此<b>前往設定頁面匯出</b>';
                 clickAction = function() {
                     var settingTabBtn = document.querySelector('.tab-button[data-tab="settings"]');
@@ -227,39 +307,13 @@ function checkBackupStatus() {
         }
 
         if (showMsg) {
-            alertBox.innerHTML = msgText; // 使用 innerHTML 支援 bold tag
+            alertBox.innerHTML = msgText; 
             alertBox.onclick = clickAction;
             alertBox.classList.add('show');
         } else {
             alertBox.classList.remove('show');
         }
     } catch (err) { console.error('checkBackupStatus error', err); }
-}
-
-function getLatestRecord() {
-    var all = [
-        ...JSON.parse(localStorage.getItem('chargeLog') || '[]'),
-        ...JSON.parse(localStorage.getItem('maintenanceLog') || '[]'),
-        ...JSON.parse(localStorage.getItem('expenseLog') || '[]'),
-        ...JSON.parse(localStorage.getItem('statusLog') || '[]')
-    ];
-    if (all.length === 0) return null;
-    all.sort((a, b) => new Date(b.date + 'T' + (b.time||'00:00')) - new Date(a.date + 'T' + (a.time||'00:00')));
-    return all[0];
-}
-
-function prefillStatusForm() {
-    var latest = getLatestRecord();
-    if (latest) {
-        if(safe('sOdo')) safe('sOdo').value = latest.odo;
-        var battery = null;
-        if (latest.battery !== undefined) battery = latest.battery;
-        else if (latest.batteryEnd !== undefined) battery = latest.batteryEnd;
-        if (battery !== null) {
-            var radio = document.querySelector(`input[name="sBattery"][value="${battery}"]`);
-            if(radio) radio.checked = true;
-        }
-    }
 }
 
 function startCharging(e) {
@@ -314,6 +368,8 @@ function endCharging(e) {
     if (chargeTimer) { clearInterval(chargeTimer); chargeTimer = null; }
     updateChargeUI();
     loadAllData();
+    // 儲存後重新預填，以便使用者連續操作
+    prefillForms();
     showToast('✅ 充電記錄已完成');
 }
 
@@ -352,7 +408,6 @@ function updateChargeUI() {
         startSec.style.display = 'block';
         endSec.style.display = 'none';
         if (chargeTimer) { clearInterval(chargeTimer); chargeTimer = null; }
-        prefillChargeDefaults();
     }
 }
 
@@ -384,18 +439,15 @@ function updateDashboard() {
     
     var maxOdo = 0;
     [charge, maint, expense, status].flat().forEach(d => {
-        // 修正：強制轉型為 Float，避免字串比較錯誤
         var o = parseFloat(d.odo) || 0;
         if(d && o > maxOdo) maxOdo = o;
     });
     safe('totalMileage').textContent = maxOdo.toFixed(1);
     
     var totalCost = 0;
-    // 修正：強制轉型為 Float，避免 "100"+"50" = "10050" 的錯誤
     maint.forEach(i => totalCost += (parseFloat(i.totalCost) || 0));
     charge.forEach(i => totalCost += (parseFloat(i.cost) || 0));
     expense.forEach(i => totalCost += (parseFloat(i.amount) || 0));
-    
     safe('totalExpense').textContent = Math.round(totalCost).toLocaleString();
     safe('statTotalCost').textContent = Math.round(totalCost).toLocaleString() + ' NT$';
 
@@ -490,7 +542,6 @@ function loadChargeHistory() {
 
     filtered.forEach(r => {
         var eff = effMap[r.id] ? effMap[r.id].toFixed(1) : '-';
-        // 修正：強制截取前 10 位，解決 ISO 時間格式問題
         var dateStr = (r.date || '').slice(0, 10).replace(/-/g,'/');
         var timeStr = formatTime(r.startTime);
         
@@ -548,7 +599,6 @@ function loadMaintenanceHistory() {
     }
 
     filtered.forEach(r => {
-        // 修正：日期處理
         var dateStr = (r.date || '').slice(0, 10).replace(/-/g,'/');
         var items = r.parts ? r.parts.map(p => p.name).join(', ') : r.notes;
 
@@ -602,7 +652,6 @@ function loadExpenseHistory() {
     }
 
     filtered.forEach(r => {
-        // 修正：日期處理
         var dateStr = (r.date || '').slice(0, 10).replace(/-/g,'/');
         var card = document.createElement('div');
         card.className = 'history-card';
@@ -847,7 +896,7 @@ function saveStatus(e) {
     localStorage.setItem('statusLog', JSON.stringify([record])); 
     safe('statusForm').reset();
     loadAllData();
-    prefillStatusForm();
+    prefillForms(); // 儲存後更新表單預填
     showToast('✅ 狀態已更新');
 }
 
@@ -894,14 +943,7 @@ function autoCalculateCost() {
 }
 
 function prefillChargeDefaults() {
-    var charge = JSON.parse(localStorage.getItem('chargeLog') || '[]');
-    if(charge.length > 0) {
-        var last = charge[0];
-        safe('cOdo').value = last.odo; 
-        var lastEnd = last.batteryEnd || 5;
-        var radio = document.querySelector(`input[name="cBatteryStart"][value="${lastEnd}"]`);
-        if(radio) radio.checked = true;
-    }
+    // 留空，功能已被 prefillForms 取代，但保留函式避免報錯
 }
 
 function populateDateTime(dId, tId) {
@@ -1018,7 +1060,6 @@ function clearAllData() {
     }
 }
 
-// 雲端同步邏輯
 function syncToGoogleSheets() {
     var settings = loadSettings();
     if (!settings.gasUrl) {
@@ -1058,7 +1099,6 @@ function syncToGoogleSheets() {
     });
 }
 
-// 從雲端還原邏輯
 function restoreFromGoogleSheets() {
     var settings = loadSettings();
     if (!settings.gasUrl) {
