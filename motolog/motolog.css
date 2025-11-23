@@ -568,6 +568,13 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--p
 .toast.show { display: block; animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
 @keyframes popIn { from { transform: translateX(-50%) scale(0.8); opacity: 0; } to { transform: translateX(-50%) scale(1); opacity: 1; } }
 
+.toast-success { background: var(--success); color: white; }
+.toast-error { background: var(--danger); color: white; }
+
+/* 深色模式下，如果背景過亮，使用深色文字 */
+[data-theme="dark"] .toast-success { background: #22c55e; color: white; }
+[data-theme="dark"] .toast-error { background: #ef4444; color: white; }
+
 /* Data management btns */
 .data-management { margin-top: 30px; padding-top: 20px; border-top: 2px dashed var(--border); }
 .data-btns-stack { display: flex; flex-direction: column; gap: 10px; margin-top: 15px; }
