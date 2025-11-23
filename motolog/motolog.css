@@ -353,7 +353,7 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--p
     to { box-shadow: 0 0 15px #4ade80; }
 }
 
-/* Top Alert (更新顏色邏輯) */
+/* Top Alert */
 .top-alert {
     position: fixed;
     top: 0;
@@ -371,7 +371,6 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--p
     cursor: pointer;
     transition: transform 0.3s ease;
 }
-/* 深色模式下的 Alert 使用較深的黃色背景，並確保文字對比 */
 [data-theme="dark"] .top-alert {
     background: #ca8a04; /* Darker Yellow/Gold */
     color: #fff; /* White text */
@@ -580,6 +579,15 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--p
 /* Data management btns */
 .data-management { margin-top: 30px; padding-top: 20px; border-top: 2px dashed var(--border); }
 .data-btns-stack { display: flex; flex-direction: column; gap: 10px; margin-top: 15px; }
+
+/* Last Update Info - new style */
+.last-update-info {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    margin-bottom: 10px;
+    text-align: right;
+    font-style: italic;
+}
 
 /* RWD tweak */
 @media (max-width: 768px) {
