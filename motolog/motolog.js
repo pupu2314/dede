@@ -1,11 +1,10 @@
 /* motolog.js
-   手機優化版 (v13)：
-   1. 修正雲端匯入日期顯示異常 (強制截取 YYYY-MM-DD)。
-   2. 修正統計數據顯示為 NaN/非數值 的問題 (強制 parseFloat)。
-   3. 修正 Toast 顏色邏輯 (CSS 配合)。
+   手機優化版 (v14)：
+   1. 移除 showToast 中的 inline style，完全依賴 CSS 類別，解決深色模式對比問題。
+   2. 更新 checkBackupStatus：若已設定 GAS URL，提示條直接提供「立即同步」按鈕。
 */
 
-console.log('motolog.js (mobile optimized v13): loaded');
+console.log('motolog.js (mobile optimized v14): loaded');
 
 const SETTINGS_KEY = 'motorcycleSettings';
 const BACKUP_KEY = 'lastBackupDate';
@@ -153,15 +152,23 @@ function showToast(message, type = 'success') {
     var toast = safe('toast');
     if (!toast) return;
     toast.textContent = message;
-    // 修正：改為 JS 控制 class，顏色由 CSS 決定，避免 inline style 衝突
-    toast.className = 'toast show ' + (type === 'success' ? 'toast-success' : 'toast-error');
-    // 保留 inline style 以兼容舊版 CSS (如果有的話)，但主要依賴 CSS
-    toast.style.background = (type === 'success') ? 'var(--text-main)' : 'var(--danger)';
+    
+    // 清除所有可能的顏色 class，再加入新的
+    toast.className = 'toast show'; // 先重置
+    
+    // 根據類型加入對應 class
+    if (type === 'success') {
+        toast.classList.add('toast-success');
+    } else {
+        toast.classList.add('toast-error');
+    }
+    
+    // 移除 inline style 以確保 CSS class 生效 (重要修正)
+    toast.style.background = '';
+    toast.style.color = '';
     
     setTimeout(() => {
         toast.classList.remove('show');
-        // 延遲移除顏色 class 以免下次顯示出錯
-        setTimeout(() => { toast.className = 'toast'; }, 300); 
     }, 3000);
 }
 
@@ -179,10 +186,12 @@ function checkMileageAnomaly(newOdo, recordDateStr) {
     return true;
 }
 
+// 修正後的備份檢查邏輯
 function checkBackupStatus() {
     try {
         var last = localStorage.getItem(BACKUP_KEY);
         var alertBox = safe('topAlert');
+        var settings = JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}');
         
         if (!alertBox) {
             alertBox = document.createElement('div');
@@ -191,24 +200,35 @@ function checkBackupStatus() {
             document.body.prepend(alertBox);
         }
 
-        alertBox.onclick = function() {
-            var settingTabBtn = document.querySelector('[data-tab="settings"]');
-            if(settingTabBtn) settingTabBtn.click();
-            this.classList.remove('show');
-        };
+        var showMsg = false;
+        var msgText = '';
+        var clickAction = null;
 
-        var msg = '';
-        if (!last) {
-            msg = '⚠️ 您尚未備份過資料，建議立即匯出 (點擊前往)';
-        } else {
-            var days = daysBetween(last, new Date().toISOString().slice(0,10));
-            if (days > 30) {
-                msg = '⚠️ 您已 ' + days + ' 天未備份，建議立即匯出 (點擊前往)';
+        // 判斷邏輯：超過 30 天或從未備份
+        if (!last || (daysBetween(last, new Date().toISOString().slice(0,10)) > 30)) {
+            showMsg = true;
+            
+            if (settings.gasUrl) {
+                // 情境 2: 已設定雲端，提供直接同步
+                msgText = '☁️ 系統偵測到您很久未備份，點此<b>立即同步到雲端</b>';
+                clickAction = function() {
+                    syncToGoogleSheets();
+                    this.classList.remove('show');
+                };
+            } else {
+                // 情境 1: 未設定雲端，引導去設定頁
+                msgText = '⚠️ 您尚未備份過資料，點此<b>前往設定頁面匯出</b>';
+                clickAction = function() {
+                    var settingTabBtn = document.querySelector('.tab-button[data-tab="settings"]');
+                    if(settingTabBtn) settingTabBtn.click();
+                    this.classList.remove('show');
+                };
             }
         }
 
-        if (msg) {
-            alertBox.textContent = msg;
+        if (showMsg) {
+            alertBox.innerHTML = msgText; // 使用 innerHTML 支援 bold tag
+            alertBox.onclick = clickAction;
             alertBox.classList.add('show');
         } else {
             alertBox.classList.remove('show');
