@@ -432,6 +432,7 @@ function updateChargeUI() {
         startSec.style.display = 'block';
         endSec.style.display = 'none';
         if (chargeTimer) { clearInterval(chargeTimer); chargeTimer = null; }
+        prefillChargeDefaults();
     }
 }
 
@@ -566,6 +567,7 @@ function loadChargeHistory() {
 
     filtered.forEach(r => {
         var eff = effMap[r.id] ? effMap[r.id].toFixed(1) : '-';
+        // 修正：強制截取前 10 位，解決 ISO 時間格式問題
         var dateStr = (r.date || '').slice(0, 10).replace(/-/g,'/');
         var timeStr = formatTime(r.startTime);
         
@@ -920,7 +922,7 @@ function saveStatus(e) {
     localStorage.setItem('statusLog', JSON.stringify([record])); 
     safe('statusForm').reset();
     loadAllData();
-    prefillForms();
+    prefillStatusForm();
     showToast('✅ 狀態已更新');
 }
 
