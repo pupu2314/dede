@@ -1,11 +1,11 @@
 /* motolog.js
-   手機優化版 (v15)：
-   1. 統一「最新狀態」取得邏輯：跨所有紀錄類型 (充電/狀態/保養/其他) 尋找最新的 ODO。
-   2. 跨「充電」與「狀態」紀錄尋找最新的電量。
-   3. 充電與快速更新頁面皆會自動帶入上述最新資訊。
+   手機優化版 (v16)：
+   1. 修正 getLatestState 邏輯：解決雲端匯入日期格式導致的最新紀錄判斷錯誤。
+   2. 加入離線偵測：無網路時禁止同步。
+   3. 新增最後更新時間顯示功能。
 */
 
-console.log('motolog.js (mobile optimized v15): loaded');
+console.log('motolog.js (mobile optimized v16): loaded');
 
 const SETTINGS_KEY = 'motorcycleSettings';
 const BACKUP_KEY = 'lastBackupDate';
@@ -160,10 +160,9 @@ function showToast(message, type = 'success') {
 }
 
 function checkMileageAnomaly(newOdo, recordDateStr) {
-    var latest = getLatestState().rawRecord; // 取得最新一筆紀錄
+    var latest = getLatestState().rawRecord; 
     if (!latest) return true; 
     
-    // 判斷 latest 的日期格式
     var lastDateVal = getRecordTimestamp(latest);
     var newDateVal = new Date(recordDateStr).getTime();
     
@@ -171,7 +170,6 @@ function checkMileageAnomaly(newOdo, recordDateStr) {
     var diffKm = newOdo - lastOdo;
     var diffDays = (newDateVal - lastDateVal) / (1000 * 60 * 60 * 24);
     
-    // 條件：7天內且增加超過100km
     if (diffDays <= 7 && diffKm > 100) {
         var dateStr = new Date(lastDateVal).toLocaleDateString();
         return confirm(`⚠️ 系統偵測到您的里程增加異常：\n\n上次紀錄：${lastOdo} 公里 (${dateStr})\n本次輸入：${newOdo} 公里\n\n短短 ${Math.round(Math.abs(diffDays))} 天內增加了 ${diffKm.toFixed(1)} 公里。\n\n確定要儲存嗎？`);
@@ -181,27 +179,23 @@ function checkMileageAnomaly(newOdo, recordDateStr) {
 
 // === 核心：取得最新狀態 (整合所有 Log) ===
 function getLatestState() {
-    // 1. 讀取所有紀錄
     var charges = JSON.parse(localStorage.getItem('chargeLog') || '[]');
     var statuses = JSON.parse(localStorage.getItem('statusLog') || '[]');
     var maints = JSON.parse(localStorage.getItem('maintenanceLog') || '[]');
     var expenses = JSON.parse(localStorage.getItem('expenseLog') || '[]');
 
-    // 2. 合併並標準化 (為了排序)
     var allRecords = [];
     
-    // Charge: 時間點以 endTime 為準 (充飽電的時間)，若無則 startTime
     charges.forEach(r => {
         allRecords.push({ 
             ts: getRecordTimestamp(r), 
             odo: parseFloat(r.odo), 
-            battery: r.batteryEnd, // 充電紀錄的最新電量是「結束電量」
+            battery: r.batteryEnd, 
             type: 'charge',
             raw: r
         });
     });
 
-    // Status
     statuses.forEach(r => {
         allRecords.push({ 
             ts: getRecordTimestamp(r), 
@@ -212,22 +206,18 @@ function getLatestState() {
         });
     });
 
-    // Maint & Expense (通常只提供 ODO，沒有電量)
     maints.forEach(r => allRecords.push({ ts: getRecordTimestamp(r), odo: parseFloat(r.odo), battery: null, type: 'maint', raw: r }));
     expenses.forEach(r => allRecords.push({ ts: getRecordTimestamp(r), odo: parseFloat(r.odo), battery: null, type: 'expense', raw: r }));
 
-    // 3. 排序 (新 -> 舊)
+    // 修正後的排序
     allRecords.sort((a, b) => b.ts - a.ts);
 
     if (allRecords.length === 0) return { odo: 0, battery: null, rawRecord: null };
 
-    // 4. 找出最新 ODO (取第一筆有效 ODO)
-    // 有時使用者可能忘記填 ODO (0)，所以往下找最近一筆有值的
     var latestOdo = 0;
     var latestOdoRec = allRecords.find(r => r.odo > 0);
     if (latestOdoRec) latestOdo = latestOdoRec.odo;
 
-    // 5. 找出最新 Battery (只看 charge 和 status)
     var latestBat = null;
     var latestBatRec = allRecords.find(r => (r.type === 'charge' || r.type === 'status') && r.battery !== null && r.battery !== undefined);
     if (latestBatRec) latestBat = parseInt(latestBatRec.battery);
@@ -235,16 +225,32 @@ function getLatestState() {
     return {
         odo: latestOdo,
         battery: latestBat,
-        rawRecord: allRecords[0].raw // 回傳絕對時間最新的那筆，用於 anomaly check
+        rawRecord: allRecords[0].raw,
+        lastTs: allRecords[0].ts // 回傳最後一筆的時間戳
     };
 }
 
-// 輔助：統一取得時間戳記
+// 輔助：統一取得時間戳記 (修正雲端格式問題)
 function getRecordTimestamp(r) {
-    if (r.endTime) return new Date(r.endTime).getTime(); // 充電結束
-    if (r.startTime) return new Date(r.startTime).getTime(); // 充電開始
-    if (r.date && r.time) return new Date(r.date + 'T' + r.time).getTime(); // 狀態/保養/花費
-    if (r.date) return new Date(r.date + 'T00:00:00').getTime(); // 只有日期
+    if (!r) return 0;
+    
+    // 優先處理完整時間戳
+    if (r.endTime) return new Date(r.endTime).getTime(); 
+    if (r.startTime) return new Date(r.startTime).getTime(); 
+    
+    // 處理日期字串
+    // 關鍵修正：雲端資料可能是 "2023-11-21T00:00:00.000Z"，需要截取前10碼
+    var dateStr = (r.date || "").slice(0, 10); 
+    
+    if (dateStr && r.time) {
+        // 若有時間，組合成完整 ISO 格式嘗試解析
+        return new Date(dateStr + 'T' + r.time).getTime(); 
+    }
+    
+    if (dateStr) {
+        return new Date(dateStr + 'T00:00:00').getTime(); 
+    }
+    
     return 0;
 }
 
@@ -252,6 +258,9 @@ function getRecordTimestamp(r) {
 function prefillForms() {
     var state = getLatestState();
     
+    // 更新最後時間顯示
+    updateLastUpdateTimeDisplay(state.lastTs);
+
     // 1. 預填快速更新 (Status)
     if (safe('sOdo')) safe('sOdo').value = state.odo || '';
     if (state.battery !== null) {
@@ -262,13 +271,29 @@ function prefillForms() {
     // 2. 預填充電 (Charge)
     if (safe('cOdo')) safe('cOdo').value = state.odo || '';
     if (state.battery !== null) {
-        // 充電「開始」電量 = 目前最新電量
         var cb = document.querySelector(`input[name="cBatteryStart"][value="${state.battery}"]`);
         if(cb) cb.checked = true;
     }
 }
 
-// === 原有功能維持 ===
+// 新增：顯示最後更新時間
+function updateLastUpdateTimeDisplay(timestamp) {
+    var display = safe('lastUpdateInfo');
+    if (!display || !timestamp) return;
+
+    var now = Date.now();
+    var diffMs = now - timestamp;
+    var diffMin = Math.floor(diffMs / 60000);
+    var diffHour = Math.floor(diffMin / 60);
+    var diffDay = Math.floor(diffHour / 24);
+
+    var text = "最後更新：剛剛";
+    if (diffDay > 0) text = `最後更新：${diffDay} 天前`;
+    else if (diffHour > 0) text = `最後更新：${diffHour} 小時前`;
+    else if (diffMin > 0) text = `最後更新：${diffMin} 分鐘前`;
+
+    display.textContent = text;
+}
 
 function checkBackupStatus() {
     try {
@@ -368,7 +393,6 @@ function endCharging(e) {
     if (chargeTimer) { clearInterval(chargeTimer); chargeTimer = null; }
     updateChargeUI();
     loadAllData();
-    // 儲存後重新預填，以便使用者連續操作
     prefillForms();
     showToast('✅ 充電記錄已完成');
 }
@@ -896,7 +920,7 @@ function saveStatus(e) {
     localStorage.setItem('statusLog', JSON.stringify([record])); 
     safe('statusForm').reset();
     loadAllData();
-    prefillForms(); // 儲存後更新表單預填
+    prefillForms();
     showToast('✅ 狀態已更新');
 }
 
@@ -1060,7 +1084,13 @@ function clearAllData() {
     }
 }
 
+// 雲端同步邏輯
 function syncToGoogleSheets() {
+    if (!navigator.onLine) {
+        showToast('❌ 離線狀態無法同步', 'error');
+        return;
+    }
+
     var settings = loadSettings();
     if (!settings.gasUrl) {
         showToast('請先在設定頁面輸入 GAS API 網址', 'error');
@@ -1099,7 +1129,13 @@ function syncToGoogleSheets() {
     });
 }
 
+// 從雲端還原邏輯
 function restoreFromGoogleSheets() {
+    if (!navigator.onLine) {
+        showToast('❌ 離線狀態無法還原', 'error');
+        return;
+    }
+
     var settings = loadSettings();
     if (!settings.gasUrl) {
         showToast('請先在設定頁面輸入 GAS API 網址', 'error');
