@@ -1,11 +1,11 @@
 /* motolog.js
-   手機優化版 (v16)：
-   1. 修正 getLatestState 邏輯：解決雲端匯入日期格式導致的最新紀錄判斷錯誤。
-   2. 加入離線偵測：無網路時禁止同步。
-   3. 新增最後更新時間顯示功能。
+   手機優化版 (v17)：
+   1. 修改 statusLog 儲存邏輯：改為「累積歷史紀錄」而非覆蓋，確保時間軸正確。
+   2. 優化 getLatestState：分別尋找最新的 ODO 與最新的 Battery (解決保養紀錄無電量導致電量歸零的問題)。
+   3. 強化時間排序邏輯，確保雲端匯入資料與本地資料能正確比對。
 */
 
-console.log('motolog.js (mobile optimized v16): loaded');
+console.log('motolog.js (mobile optimized v17): loaded');
 
 const SETTINGS_KEY = 'motorcycleSettings';
 const BACKUP_KEY = 'lastBackupDate';
@@ -49,8 +49,7 @@ document.addEventListener('DOMContentLoaded', function() {
         populateMonthFilters();
         loadAllData();
         
-        // 統一預填邏輯
-        prefillForms();
+        prefillForms(); // 預填
         
         updateChargeUI();
         checkBackupStatus();
@@ -74,8 +73,11 @@ function initEventListeners() {
             if (target) target.classList.add('active');
             window.scrollTo({top: 0, behavior: 'smooth'});
             
-            // 切換分頁時，重新抓取最新數據預填
+            // 切換分頁時，強制重新抓取最新數據並預填
             if (e.target.dataset.tab === 'status' || e.target.dataset.tab === 'charge') {
+                // 清空舊值以便重新帶入 (使用者體驗考量：若想保留輸入值可註解掉這行)
+                // safe('sOdo').value = '';
+                // safe('cOdo').value = '';
                 prefillForms();
             }
             
@@ -160,24 +162,31 @@ function showToast(message, type = 'success') {
 }
 
 function checkMileageAnomaly(newOdo, recordDateStr) {
-    var latest = getLatestState().rawRecord; 
+    var latestState = getLatestState();
+    var latest = latestState.rawRecord; 
+    
     if (!latest) return true; 
     
     var lastDateVal = getRecordTimestamp(latest);
     var newDateVal = new Date(recordDateStr).getTime();
     
     var lastOdo = parseFloat(latest.odo) || 0;
+    
+    // 若使用者輸入比上次還小的里程，直接通過 (可能是修正數據)
+    if (newOdo < lastOdo) return true;
+
     var diffKm = newOdo - lastOdo;
     var diffDays = (newDateVal - lastDateVal) / (1000 * 60 * 60 * 24);
     
+    // 7天內且增加超過100km
     if (diffDays <= 7 && diffKm > 100) {
         var dateStr = new Date(lastDateVal).toLocaleDateString();
-        return confirm(`⚠️ 系統偵測到您的里程增加異常：\n\n上次紀錄：${lastOdo} 公里 (${dateStr})\n本次輸入：${newOdo} 公里\n\n短短 ${Math.round(Math.abs(diffDays))} 天內增加了 ${diffKm.toFixed(1)} 公里。\n\n確定要儲存嗎？`);
+        return confirm(`⚠️ 里程異常提示：\n\n上次紀錄：${lastOdo} 公里 (${dateStr})\n本次輸入：${newOdo} 公里\n\n${Math.round(Math.abs(diffDays))} 天內增加了 ${diffKm.toFixed(1)} 公里。\n\n確定要儲存嗎？`);
     }
     return true;
 }
 
-// === 核心：取得最新狀態 (整合所有 Log) ===
+// === 核心：取得最新狀態 (分離式搜尋) ===
 function getLatestState() {
     var charges = JSON.parse(localStorage.getItem('chargeLog') || '[]');
     var statuses = JSON.parse(localStorage.getItem('statusLog') || '[]');
@@ -186,71 +195,63 @@ function getLatestState() {
 
     var allRecords = [];
     
-    charges.forEach(r => {
-        allRecords.push({ 
-            ts: getRecordTimestamp(r), 
-            odo: parseFloat(r.odo), 
-            battery: r.batteryEnd, 
-            type: 'charge',
-            raw: r
-        });
-    });
-
-    statuses.forEach(r => {
-        allRecords.push({ 
-            ts: getRecordTimestamp(r), 
-            odo: parseFloat(r.odo), 
-            battery: r.battery, 
-            type: 'status',
-            raw: r
-        });
-    });
-
+    // 1. 整理所有紀錄到一個陣列
+    charges.forEach(r => allRecords.push({ ts: getRecordTimestamp(r), odo: parseFloat(r.odo), battery: r.batteryEnd, type: 'charge', raw: r }));
+    statuses.forEach(r => allRecords.push({ ts: getRecordTimestamp(r), odo: parseFloat(r.odo), battery: r.battery, type: 'status', raw: r }));
     maints.forEach(r => allRecords.push({ ts: getRecordTimestamp(r), odo: parseFloat(r.odo), battery: null, type: 'maint', raw: r }));
     expenses.forEach(r => allRecords.push({ ts: getRecordTimestamp(r), odo: parseFloat(r.odo), battery: null, type: 'expense', raw: r }));
 
-    // 修正後的排序
+    // 2. 依時間倒序 (最新的在最前)
     allRecords.sort((a, b) => b.ts - a.ts);
 
-    if (allRecords.length === 0) return { odo: 0, battery: null, rawRecord: null };
+    if (allRecords.length === 0) return { odo: 0, battery: null, rawRecord: null, lastTs: 0 };
 
+    // 3. 獨立尋找最新的 ODO
+    // 遍歷紀錄，找到第一筆有 ODO 的資料
     var latestOdo = 0;
-    var latestOdoRec = allRecords.find(r => r.odo > 0);
-    if (latestOdoRec) latestOdo = latestOdoRec.odo;
+    for (var i = 0; i < allRecords.length; i++) {
+        if (allRecords[i].odo > 0) {
+            latestOdo = allRecords[i].odo;
+            break;
+        }
+    }
 
+    // 4. 獨立尋找最新的 Battery
+    // 遍歷紀錄，找到第一筆有 Battery 的資料 (只看 charge 和 status)
     var latestBat = null;
-    var latestBatRec = allRecords.find(r => (r.type === 'charge' || r.type === 'status') && r.battery !== null && r.battery !== undefined);
-    if (latestBatRec) latestBat = parseInt(latestBatRec.battery);
+    for (var i = 0; i < allRecords.length; i++) {
+        if (allRecords[i].battery !== null && allRecords[i].battery !== undefined && allRecords[i].battery !== "") {
+            latestBat = parseInt(allRecords[i].battery);
+            break;
+        }
+    }
 
     return {
         odo: latestOdo,
         battery: latestBat,
-        rawRecord: allRecords[0].raw,
-        lastTs: allRecords[0].ts // 回傳最後一筆的時間戳
+        rawRecord: allRecords[0].raw, // 絕對時間最新的一筆 (用於計算更新時間)
+        lastTs: allRecords[0].ts
     };
 }
 
-// 輔助：統一取得時間戳記 (修正雲端格式問題)
+// 輔助：統一取得時間戳記
 function getRecordTimestamp(r) {
     if (!r) return 0;
-    
-    // 優先處理完整時間戳
-    if (r.endTime) return new Date(r.endTime).getTime(); 
+    if (r.endTime) return new Date(r.endTime).getTime(); // 充電優先用結束時間
     if (r.startTime) return new Date(r.startTime).getTime(); 
     
-    // 處理日期字串
-    // 關鍵修正：雲端資料可能是 "2023-11-21T00:00:00.000Z"，需要截取前10碼
+    // 強制截取前 10 碼 (YYYY-MM-DD)，避免 ISO 字串混亂
     var dateStr = (r.date || "").slice(0, 10); 
     
     if (dateStr && r.time) {
-        // 若有時間，組合成完整 ISO 格式嘗試解析
         return new Date(dateStr + 'T' + r.time).getTime(); 
     }
     
     if (dateStr) {
+        // 如果只有日期，預設為當天最後一秒，避免被同天有時間的紀錄蓋過? 
+        // 或是當天 00:00? 這裡設為 00:00 比較保險
         return new Date(dateStr + 'T00:00:00').getTime(); 
     }
-    
     return 0;
 }
 
@@ -258,25 +259,28 @@ function getRecordTimestamp(r) {
 function prefillForms() {
     var state = getLatestState();
     
-    // 更新最後時間顯示
+    // 更新顯示文字
     updateLastUpdateTimeDisplay(state.lastTs);
 
-    // 1. 預填快速更新 (Status)
-    if (safe('sOdo')) safe('sOdo').value = state.odo || '';
+    // 1. 預填快速更新
+    var sOdo = safe('sOdo');
+    if (sOdo && !sOdo.value) sOdo.value = state.odo || '';
+    
     if (state.battery !== null) {
         var sb = document.querySelector(`input[name="sBattery"][value="${state.battery}"]`);
         if(sb) sb.checked = true;
     }
 
-    // 2. 預填充電 (Charge)
-    if (safe('cOdo')) safe('cOdo').value = state.odo || '';
+    // 2. 預填充電
+    var cOdo = safe('cOdo');
+    if (cOdo && !cOdo.value) cOdo.value = state.odo || '';
+    
     if (state.battery !== null) {
         var cb = document.querySelector(`input[name="cBatteryStart"][value="${state.battery}"]`);
         if(cb) cb.checked = true;
     }
 }
 
-// 新增：顯示最後更新時間
 function updateLastUpdateTimeDisplay(timestamp) {
     var display = safe('lastUpdateInfo');
     if (!display || !timestamp) return;
@@ -314,7 +318,6 @@ function checkBackupStatus() {
 
         if (!last || (daysBetween(last, new Date().toISOString().slice(0,10)) > 30)) {
             showMsg = true;
-            
             if (settings.gasUrl) {
                 msgText = '☁️ 系統偵測到您很久未備份，點此<b>立即同步到雲端</b>';
                 clickAction = function() {
@@ -432,10 +435,10 @@ function updateChargeUI() {
         startSec.style.display = 'block';
         endSec.style.display = 'none';
         if (chargeTimer) { clearInterval(chargeTimer); chargeTimer = null; }
-        prefillChargeDefaults();
     }
 }
 
+// 修正：改用 push 而非取代
 function saveData(key, record, isEdit) {
     var data = JSON.parse(localStorage.getItem(key) || '[]');
     if (isEdit) {
@@ -567,7 +570,6 @@ function loadChargeHistory() {
 
     filtered.forEach(r => {
         var eff = effMap[r.id] ? effMap[r.id].toFixed(1) : '-';
-        // 修正：強制截取前 10 位，解決 ISO 時間格式問題
         var dateStr = (r.date || '').slice(0, 10).replace(/-/g,'/');
         var timeStr = formatTime(r.startTime);
         
@@ -908,21 +910,27 @@ function saveExpense(e) {
     showToast('✅ 花費儲存成功');
 }
 
+// 修正：saveStatus 改為 push 模式
 function saveStatus(e) {
     e.preventDefault();
     if (!checkMileageAnomaly(parseFloat(safe('sOdo').value), new Date().toISOString().slice(0,10))) return;
+    
+    var now = new Date();
     var record = {
         id: Date.now(),
-        date: new Date().toISOString().slice(0,10),
-        time: new Date().toTimeString().slice(0,5),
+        date: now.toISOString().slice(0,10),
+        time: now.toTimeString().slice(0,5),
         odo: parseFloat(safe('sOdo').value) || 0,
         battery: parseInt(document.querySelector('input[name="sBattery"]:checked').value),
         notes: '' 
     };
-    localStorage.setItem('statusLog', JSON.stringify([record])); 
+    
+    // 這裡呼叫 saveData 而非 setItem，確保是 push
+    saveData('statusLog', record);
+    
     safe('statusForm').reset();
     loadAllData();
-    prefillStatusForm();
+    prefillForms();
     showToast('✅ 狀態已更新');
 }
 
@@ -969,7 +977,7 @@ function autoCalculateCost() {
 }
 
 function prefillChargeDefaults() {
-    // 留空，功能已被 prefillForms 取代，但保留函式避免報錯
+    // 留空
 }
 
 function populateDateTime(dId, tId) {
@@ -1086,7 +1094,6 @@ function clearAllData() {
     }
 }
 
-// 雲端同步邏輯
 function syncToGoogleSheets() {
     if (!navigator.onLine) {
         showToast('❌ 離線狀態無法同步', 'error');
@@ -1131,7 +1138,6 @@ function syncToGoogleSheets() {
     });
 }
 
-// 從雲端還原邏輯
 function restoreFromGoogleSheets() {
     if (!navigator.onLine) {
         showToast('❌ 離線狀態無法還原', 'error');
