@@ -1,0 +1,21 @@
+{
+  "name": "電動摩托車紀錄",
+  "short_name": "MotoLog",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#f1f5f9",
+  "theme_color": "#2563eb",
+  "description": "紀錄電動車充電、保養與花費的個人化工具",
+  "icons": [
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
