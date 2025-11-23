@@ -1,9 +1,10 @@
 /* motolog.js
-   手機優化版 (v8)：
-   1. 若正在進行充電，預設開啟「充電」分頁。
+   手機優化版 (v11)：
+   1. 支援深色模式與雲端同步。
+   2. 增加「設定教學」視窗的開關邏輯。
 */
 
-console.log('motolog.js (mobile optimized v8): loaded');
+console.log('motolog.js (mobile optimized v11): loaded');
 
 const SETTINGS_KEY = 'motorcycleSettings';
 const BACKUP_KEY = 'lastBackupDate';
@@ -46,15 +47,15 @@ document.addEventListener('DOMContentLoaded', function() {
         prefillChargeDefaults();
         prefillStatusForm();
         updateChargeUI();
+        
         checkBackupStatus();
 
-        // [新增] 檢查是否正在充電，若是則切換至充電分頁
         if (localStorage.getItem('currentChargingSession')) {
             var chargeTabBtn = document.querySelector('.tab-button[data-tab="charge"]');
-            if (chargeTabBtn) {
-                chargeTabBtn.click();
-            }
+            if (chargeTabBtn) chargeTabBtn.click();
         }
+
+        applyTheme();
     } catch (err) {
         console.error('Init error:', err);
     }
@@ -109,6 +110,11 @@ function initEventListeners() {
     if(safe('closeEditModal')) safe('closeEditModal').addEventListener('click', closeEditModal);
     if(safe('editChargeModal')) safe('editChargeModal').addEventListener('click', (e) => { if(e.target === safe('editChargeModal')) closeEditModal(); });
 
+    // 教學視窗事件
+    if(safe('showTutorialBtn')) safe('showTutorialBtn').addEventListener('click', () => safe('tutorialModal').classList.add('active'));
+    if(safe('closeTutorialModal')) safe('closeTutorialModal').addEventListener('click', () => safe('tutorialModal').classList.remove('active'));
+    if(safe('tutorialModal')) safe('tutorialModal').addEventListener('click', (e) => { if(e.target === safe('tutorialModal')) safe('tutorialModal').classList.remove('active'); });
+
     if(safe('maintNowBtn')) safe('maintNowBtn').addEventListener('click', () => populateDateTime('mDate','mTime'));
     if(safe('expenseNowBtn')) safe('expenseNowBtn').addEventListener('click', () => populateDateTime('eDate','eTime'));
 
@@ -122,10 +128,18 @@ function initEventListeners() {
     if(safe('jsonImport')) safe('jsonImport').addEventListener('change', importData);
     if(safe('exportAllBtn')) safe('exportAllBtn').addEventListener('click', exportAllData);
     if(safe('clearAllBtn')) safe('clearAllBtn').addEventListener('click', clearAllData);
+    if(safe('syncToCloudBtn')) safe('syncToCloudBtn').addEventListener('click', syncToGoogleSheets);
 
     ['chargeMonthFilter', 'chargeSearch'].forEach(id => { if(safe(id)) safe(id).addEventListener('input', filterChargeTable); });
     ['maintMonthFilter', 'maintTypeFilter'].forEach(id => { if(safe(id)) safe(id).addEventListener('change', filterMaintTable); });
     ['expenseMonthFilter', 'expenseCategoryFilter'].forEach(id => { if(safe(id)) safe(id).addEventListener('change', filterExpenseTable); });
+    
+    if(safe('themeSelect')) safe('themeSelect').addEventListener('change', function(e) {
+        var settings = loadSettings();
+        settings.theme = e.target.value;
+        localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
+        applyTheme();
+    });
 }
 
 function showToast(message, type = 'success') {
@@ -151,13 +165,11 @@ function checkMileageAnomaly(newOdo, recordDateStr) {
     return true;
 }
 
-// 更新版：檢查備份狀態 (使用置頂懸浮 alert)
 function checkBackupStatus() {
     try {
         var last = localStorage.getItem(BACKUP_KEY);
         var alertBox = safe('topAlert');
         
-        // 若 alertBox 尚未存在 (防呆)
         if (!alertBox) {
             alertBox = document.createElement('div');
             alertBox.id = 'topAlert';
@@ -165,11 +177,9 @@ function checkBackupStatus() {
             document.body.prepend(alertBox);
         }
 
-        // 綁定點擊跳轉事件 (每次都重新綁定以確保正確性)
         alertBox.onclick = function() {
             var settingTabBtn = document.querySelector('[data-tab="settings"]');
             if(settingTabBtn) settingTabBtn.click();
-            // 點擊後可暫時隱藏
             this.classList.remove('show');
         };
 
@@ -282,9 +292,9 @@ function updateChargeUI() {
         endSec.style.display = 'block';
         safe('currentChargeInfo').innerHTML = `
             <div style="background:white; padding:10px; border-radius:8px; font-size:0.9rem; color:#555;">
-                <div>📍 地點<br> ${session.station}</div>
-                <div>🔋 初始<br> ${session.batteryStart} 格</div>
-                <div>⏱️ 開始<br> ${formatTime(session.startTime)}</div>
+                <div>📍 地點: ${session.station}</div>
+                <div>🔋 初始: ${session.batteryStart} 格</div>
+                <div>⏱️ 開始: ${formatTime(session.startTime)}</div>
             </div>
         `;
         var settings = loadSettings();
@@ -403,7 +413,6 @@ function updateDashboard() {
     safe('statAvgDaily').textContent = (maxOdo / daysRange).toFixed(1) + " 公里";
 }
 
-// === 卡片式列表渲染 ===
 function loadChargeHistory() {
     var data = JSON.parse(localStorage.getItem('chargeLog') || '[]');
     var list = safe('chargeList');
@@ -804,13 +813,33 @@ function saveStatus(e) {
 function loadSettings() {
     var s = JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}');
     if(safe('electricRate')) safe('electricRate').value = s.electricRate || '';
+    if(safe('gasUrl')) safe('gasUrl').value = s.gasUrl || '';
+    if(safe('themeSelect')) safe('themeSelect').value = s.theme || 'light';
     return s;
 }
 
 function saveSettings() {
     var rate = parseFloat(safe('electricRate').value);
-    localStorage.setItem(SETTINGS_KEY, JSON.stringify({ electricRate: rate }));
+    var gasUrl = safe('gasUrl').value.trim();
+    var theme = safe('themeSelect').value;
+    
+    localStorage.setItem(SETTINGS_KEY, JSON.stringify({ 
+        electricRate: rate,
+        gasUrl: gasUrl,
+        theme: theme
+    }));
+    
+    applyTheme();
     showToast('設定已儲存');
+}
+
+function applyTheme() {
+    var s = JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}');
+    if (s.theme === 'dark') {
+        document.documentElement.setAttribute('data-theme', 'dark');
+    } else {
+        document.documentElement.removeAttribute('data-theme');
+    }
 }
 
 function autoCalculateCost() {
@@ -920,7 +949,6 @@ function importData(e) {
     e.target.value = '';
 }
 
-// 匯出時更新備份時間
 function exportAllData() {
     var data = {
         chargeLog: JSON.parse(localStorage.getItem('chargeLog')||'[]'),
@@ -935,9 +963,7 @@ function exportAllData() {
     a.download = 'motolog_backup_' + new Date().toISOString().slice(0,10) + '.json';
     a.click();
     
-    // 記錄備份時間
     localStorage.setItem(BACKUP_KEY, new Date().toISOString().slice(0,10));
-    // 重新檢查狀態，隱藏 alert
     checkBackupStatus();
 }
 
@@ -946,4 +972,44 @@ function clearAllData() {
         localStorage.clear();
         location.reload();
     }
+}
+
+// 雲端同步邏輯
+function syncToGoogleSheets() {
+    var settings = loadSettings();
+    if (!settings.gasUrl) {
+        showToast('請先在設定頁面輸入 GAS API 網址', 'error');
+        return;
+    }
+    
+    if (!confirm('確定要將本機資料同步到 Google Sheets 嗎？')) return;
+
+    var payload = {
+        action: 'sync',
+        chargeLog: JSON.parse(localStorage.getItem('chargeLog')||'[]'),
+        maintenanceLog: JSON.parse(localStorage.getItem('maintenanceLog')||'[]'),
+        expenseLog: JSON.parse(localStorage.getItem('expenseLog')||'[]'),
+        statusLog: JSON.parse(localStorage.getItem('statusLog')||'[]')
+    };
+
+    showToast('☁️ 同步中...', 'success');
+    
+    fetch(settings.gasUrl, {
+        method: 'POST',
+        body: JSON.stringify(payload)
+    })
+    .then(res => res.json())
+    .then(data => {
+        if(data.status === 'success') {
+            showToast('✅ 雲端同步成功');
+            localStorage.setItem(BACKUP_KEY, new Date().toISOString().slice(0,10));
+            checkBackupStatus();
+        } else {
+            showToast('❌ 同步失敗: ' + data.message, 'error');
+        }
+    })
+    .catch(err => {
+        console.error(err);
+        showToast('❌ 網路錯誤', 'error');
+    });
 }
