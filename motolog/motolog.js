@@ -1,10 +1,10 @@
 /* motolog.js
-   手機優化版 (v11)：
-   1. 支援深色模式與雲端同步。
-   2. 增加「設定教學」視窗的開關邏輯。
+   手機優化版 (v12)：
+   1. 修復主題切換後跳回預設值的 bug。
+   2. 新增「從雲端還原」功能 (需配合新的 GAS 腳本)。
 */
 
-console.log('motolog.js (mobile optimized v11): loaded');
+console.log('motolog.js (mobile optimized v12): loaded');
 
 const SETTINGS_KEY = 'motorcycleSettings';
 const BACKUP_KEY = 'lastBackupDate';
@@ -40,6 +40,10 @@ window.onerror = function(message) {
 
 document.addEventListener('DOMContentLoaded', function() {
     try {
+        // 1. 先應用主題 (避免畫面閃爍)
+        var s = JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}');
+        if (s.theme) applyTheme(s.theme); // 傳入儲存的主題
+
         initEventListeners();
         populateMaintTemplates();
         populateMonthFilters();
@@ -54,8 +58,6 @@ document.addEventListener('DOMContentLoaded', function() {
             var chargeTabBtn = document.querySelector('.tab-button[data-tab="charge"]');
             if (chargeTabBtn) chargeTabBtn.click();
         }
-
-        applyTheme();
     } catch (err) {
         console.error('Init error:', err);
     }
@@ -72,7 +74,13 @@ function initEventListeners() {
             window.scrollTo({top: 0, behavior: 'smooth'});
             
             if (e.target.dataset.tab === 'status') prefillStatusForm();
-            if (e.target.dataset.tab === 'settings') loadSettings();
+            // 切換到設定頁時，重新讀取設定值到 UI，但不重置 localStorage
+            if (e.target.dataset.tab === 'settings') {
+                var s = JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}');
+                if(safe('electricRate')) safe('electricRate').value = s.electricRate || '';
+                if(safe('gasUrl')) safe('gasUrl').value = s.gasUrl || '';
+                if(safe('themeSelect')) safe('themeSelect').value = s.theme || 'light';
+            }
         });
     });
 
@@ -110,7 +118,6 @@ function initEventListeners() {
     if(safe('closeEditModal')) safe('closeEditModal').addEventListener('click', closeEditModal);
     if(safe('editChargeModal')) safe('editChargeModal').addEventListener('click', (e) => { if(e.target === safe('editChargeModal')) closeEditModal(); });
 
-    // 教學視窗事件
     if(safe('showTutorialBtn')) safe('showTutorialBtn').addEventListener('click', () => safe('tutorialModal').classList.add('active'));
     if(safe('closeTutorialModal')) safe('closeTutorialModal').addEventListener('click', () => safe('tutorialModal').classList.remove('active'));
     if(safe('tutorialModal')) safe('tutorialModal').addEventListener('click', (e) => { if(e.target === safe('tutorialModal')) safe('tutorialModal').classList.remove('active'); });
@@ -129,16 +136,18 @@ function initEventListeners() {
     if(safe('exportAllBtn')) safe('exportAllBtn').addEventListener('click', exportAllData);
     if(safe('clearAllBtn')) safe('clearAllBtn').addEventListener('click', clearAllData);
     if(safe('syncToCloudBtn')) safe('syncToCloudBtn').addEventListener('click', syncToGoogleSheets);
+    if(safe('restoreFromCloudBtn')) safe('restoreFromCloudBtn').addEventListener('click', restoreFromGoogleSheets); // 新增還原
 
     ['chargeMonthFilter', 'chargeSearch'].forEach(id => { if(safe(id)) safe(id).addEventListener('input', filterChargeTable); });
     ['maintMonthFilter', 'maintTypeFilter'].forEach(id => { if(safe(id)) safe(id).addEventListener('change', filterMaintTable); });
     ['expenseMonthFilter', 'expenseCategoryFilter'].forEach(id => { if(safe(id)) safe(id).addEventListener('change', filterExpenseTable); });
     
+    // 主題切換：立即儲存並應用，不等待「儲存設定」按鈕
     if(safe('themeSelect')) safe('themeSelect').addEventListener('change', function(e) {
-        var settings = loadSettings();
-        settings.theme = e.target.value;
-        localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
-        applyTheme();
+        var s = JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}');
+        s.theme = e.target.value;
+        localStorage.setItem(SETTINGS_KEY, JSON.stringify(s));
+        applyTheme(s.theme);
     });
 }
 
@@ -297,7 +306,7 @@ function updateChargeUI() {
                 <div>⏱️ 開始: ${formatTime(session.startTime)}</div>
             </div>
         `;
-        var settings = loadSettings();
+        var settings = JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}');
         var costInput = safe('cCost');
         if (settings.electricRate && (session.stationType === '公司' || session.stationType === '家裡')) {
            costInput.placeholder = "輸入度數自動計算";
@@ -335,7 +344,7 @@ function saveData(key, record, isEdit) {
 }
 
 function loadAllData() {
-    loadSettings();
+    // 移除 loadSettings() 避免覆蓋輸入框
     updateDashboard();
     checkBackupStatus();
     filterChargeTable();
@@ -829,13 +838,16 @@ function saveSettings() {
         theme: theme
     }));
     
-    applyTheme();
+    applyTheme(theme); // 更新主題
     showToast('設定已儲存');
 }
 
-function applyTheme() {
-    var s = JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}');
-    if (s.theme === 'dark') {
+function applyTheme(theme) {
+    if (!theme) {
+        var s = JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}');
+        theme = s.theme || 'light';
+    }
+    if (theme === 'dark') {
         document.documentElement.setAttribute('data-theme', 'dark');
     } else {
         document.documentElement.removeAttribute('data-theme');
@@ -982,7 +994,7 @@ function syncToGoogleSheets() {
         return;
     }
     
-    if (!confirm('確定要將本機資料同步到 Google Sheets 嗎？')) return;
+    if (!confirm('確定要將本機資料同步到 Google Sheets 嗎？(注意：這將覆蓋雲端上的舊備份)')) return;
 
     var payload = {
         action: 'sync',
@@ -1011,5 +1023,47 @@ function syncToGoogleSheets() {
     .catch(err => {
         console.error(err);
         showToast('❌ 網路錯誤', 'error');
+    });
+}
+
+// 從雲端還原邏輯
+function restoreFromGoogleSheets() {
+    var settings = loadSettings();
+    if (!settings.gasUrl) {
+        showToast('請先在設定頁面輸入 GAS API 網址', 'error');
+        return;
+    }
+    
+    if (!confirm('⚠️ 警告：這將使用雲端資料「覆蓋」您目前手機上的所有資料！確定要執行嗎？')) return;
+
+    showToast('☁️ 下載還原中...', 'success');
+    
+    // GAS 需要實作 doGet 或修改 doPost 來支援讀取
+    // 為了簡化，我們假設使用相同的 API URL，但 payload action 為 'restore'
+    // 注意：Google Apps Script 的 doPost 預設不支援回傳大量數據給前端跨域讀取，通常建議用 doGet
+    // 這裡示範使用 fetch POST 请求 'restore' action，需要在 GAS 端對應處理 return ContentService...
+    
+    fetch(settings.gasUrl, {
+        method: 'POST',
+        body: JSON.stringify({ action: 'restore' })
+    })
+    .then(res => res.json())
+    .then(data => {
+        if(data.status === 'success' && data.data) {
+            var d = data.data;
+            if(d.ChargeLog) localStorage.setItem('chargeLog', JSON.stringify(d.ChargeLog));
+            if(d.MaintenanceLog) localStorage.setItem('maintenanceLog', JSON.stringify(d.MaintenanceLog));
+            if(d.ExpenseLog) localStorage.setItem('expenseLog', JSON.stringify(d.ExpenseLog));
+            if(d.StatusLog) localStorage.setItem('statusLog', JSON.stringify(d.StatusLog));
+            
+            showToast('✅ 還原成功！頁面將重新整理...');
+            setTimeout(() => location.reload(), 1500);
+        } else {
+            showToast('❌ 還原失敗: ' + (data.message || '無資料'), 'error');
+        }
+    })
+    .catch(err => {
+        console.error(err);
+        showToast('❌ 網路錯誤或 API 未支援還原', 'error');
     });
 }
