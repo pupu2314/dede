@@ -7,7 +7,7 @@
     <link rel="stylesheet" href="motolog.css">
 </head>
 <body>
-    <!-- 置頂懸浮備份提示 -->
+    <!-- 置頂懸浮備份提示容器 -->
     <div id="topAlert" class="top-alert"></div>
 
     <div class="container">
@@ -312,12 +312,36 @@
                             <input type="number" inputmode="decimal" step="0.1" id="electricRate" placeholder="例如: 3.5">
                             <small>用於自動計算公司或家裡的充電費用</small>
                         </div>
+                        
+                        <div class="form-group">
+                            <label>外觀主題</label>
+                            <select id="themeSelect">
+                                <option value="light">🌞 亮色模式</option>
+                                <option value="dark">🌙 深色模式</option>
+                            </select>
+                        </div>
+
+                        <!-- 新增：API 欄位旁加入教學按鈕 -->
+                        <div class="form-group">
+                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                                <label style="margin-bottom:0;">Google Sheets API</label>
+                                <button type="button" id="showTutorialBtn" class="btn btn-text btn-sm" style="padding:4px 8px; font-size:0.9rem; color:var(--primary);">📖 設定教學</button>
+                            </div>
+                            <input type="text" id="gasUrl" placeholder="https://script.google.com/macros/s/..." style="font-size:0.8rem;">
+                            <small>請輸入 GAS 發布後的 Web App URL 以啟用雲端同步</small>
+                        </div>
+
                         <button type="button" class="btn btn-primary btn-block-setting btn-full" id="saveSettingsBtn">儲存設定</button>
                     </div>
                 </div>
                 
                 <div class="data-management">
                     <h3>📦 資料備份與還原</h3>
+                    
+                    <div class="data-btns-stack" style="margin-bottom: 20px;">
+                        <button class="btn btn-warning btn-block-setting" id="syncToCloudBtn">☁️ 同步到 Google Sheets</button>
+                    </div>
+
                     <input type="file" id="jsonImport" accept=".json" style="display:none;">
                     <div class="data-btns-stack">
                         <button class="btn btn-success btn-block-setting" id="exportAllBtn">📤 匯出備份檔 (JSON)</button>
@@ -329,7 +353,7 @@
         </div>
     </div>
 
-    <!-- 編輯視窗 -->
+    <!-- 編輯充電視窗 -->
     <div id="editChargeModal" class="modal">
         <div class="modal-content">
             <div class="modal-header">
@@ -377,6 +401,77 @@
                     <button type="submit" class="btn btn-primary btn-full btn-lg">儲存變更</button>
                 </div>
             </form>
+        </div>
+    </div>
+
+    <!-- 新增：教學視窗 (Tutorial Modal) -->
+    <div id="tutorialModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>☁️ 雲端同步教學</h3>
+                <button class="btn btn-text" id="closeTutorialModal">關閉</button>
+            </div>
+            <div class="form-scroll-area tutorial-content">
+                <h4>步驟 1：建立 Google 試算表</h4>
+                <p>1. 建立一個空白的 Google 試算表。</p>
+                <p>2. 在下方分頁籤，建立 4 個分頁，名稱請<b>完全一致</b>：</p>
+                <ul style="margin-left:20px; margin-bottom:10px;">
+                    <li><code>ChargeLog</code></li>
+                    <li><code>MaintenanceLog</code></li>
+                    <li><code>ExpenseLog</code></li>
+                    <li><code>StatusLog</code></li>
+                </ul>
+
+                <h4>步驟 2：Apps Script</h4>
+                <p>1. 點擊上方選單「擴充功能」>「Apps Script」。</p>
+                <p>2. 刪除原有內容，貼上以下程式碼：</p>
+                <pre><code>function doPost(e) {
+  try {
+    var data = JSON.parse(e.postData.contents);
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    if (data.action === 'sync') {
+      saveToSheet(ss, 'ChargeLog', data.chargeLog);
+      saveToSheet(ss, 'MaintenanceLog', data.maintenanceLog);
+      saveToSheet(ss, 'ExpenseLog', data.expenseLog);
+      saveToSheet(ss, 'StatusLog', data.statusLog);
+      return ContentService.createTextOutput(JSON.stringify({status: 'success'}))
+        .setMimeType(ContentService.MimeType.JSON);
+    }
+  } catch (f) {
+    return ContentService.createTextOutput(JSON.stringify({status: 'error', message: f.toString()})).setMimeType(ContentService.MimeType.JSON);
+  }
+}
+function saveToSheet(ss, sheetName, dataArray) {
+  var sheet = ss.getSheetByName(sheetName);
+  if (!sheet || !dataArray || dataArray.length === 0) return;
+  sheet.clear();
+  var headers = Object.keys(dataArray[0]);
+  sheet.appendRow(headers);
+  var rows = dataArray.map(obj => headers.map(key => {
+    var val = obj[key];
+    if (typeof val === 'object') return JSON.stringify(val);
+    return val;
+  }));
+  sheet.getRange(2, 1, rows.length, headers.length).setValues(rows);
+}</code></pre>
+
+                <h4>步驟 3：部署</h4>
+                <p>1. 點擊右上角「部署」>「新增部署作業」。</p>
+                <p>2. 類型選擇「網頁應用程式」。</p>
+                <p>3. 設定：</p>
+                <ul style="margin-left:20px;">
+                    <li>執行身分：<b>我 (您的信箱)</b></li>
+                    <li>誰可以存取：<b>所有人 (這很重要！)</b></li>
+                </ul>
+                <p>4. 點擊部署，授權時選擇「進階」>「前往... (不安全)」>「允許」。</p>
+                <p>5. 複製產生的網址 (以 <code>/exec</code> 結尾)。</p>
+                
+                <h4>步驟 4：完成設定</h4>
+                <p>回到本系統，將網址貼入「API 欄位」並儲存，即可開始同步！</p>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-primary btn-full btn-lg" onclick="document.getElementById('closeTutorialModal').click()">我瞭解了</button>
+            </div>
         </div>
     </div>
     
