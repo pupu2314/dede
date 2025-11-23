@@ -1,10 +1,11 @@
 /* motolog.js
-   手機優化版 (v12)：
-   1. 修復主題切換後跳回預設值的 bug。
-   2. 新增「從雲端還原」功能 (需配合新的 GAS 腳本)。
+   手機優化版 (v13)：
+   1. 修正雲端匯入日期顯示異常 (強制截取 YYYY-MM-DD)。
+   2. 修正統計數據顯示為 NaN/非數值 的問題 (強制 parseFloat)。
+   3. 修正 Toast 顏色邏輯 (CSS 配合)。
 */
 
-console.log('motolog.js (mobile optimized v12): loaded');
+console.log('motolog.js (mobile optimized v13): loaded');
 
 const SETTINGS_KEY = 'motorcycleSettings';
 const BACKUP_KEY = 'lastBackupDate';
@@ -40,9 +41,8 @@ window.onerror = function(message) {
 
 document.addEventListener('DOMContentLoaded', function() {
     try {
-        // 1. 先應用主題 (避免畫面閃爍)
         var s = JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}');
-        if (s.theme) applyTheme(s.theme); // 傳入儲存的主題
+        if (s.theme) applyTheme(s.theme);
 
         initEventListeners();
         populateMaintTemplates();
@@ -74,7 +74,6 @@ function initEventListeners() {
             window.scrollTo({top: 0, behavior: 'smooth'});
             
             if (e.target.dataset.tab === 'status') prefillStatusForm();
-            // 切換到設定頁時，重新讀取設定值到 UI，但不重置 localStorage
             if (e.target.dataset.tab === 'settings') {
                 var s = JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}');
                 if(safe('electricRate')) safe('electricRate').value = s.electricRate || '';
@@ -136,13 +135,12 @@ function initEventListeners() {
     if(safe('exportAllBtn')) safe('exportAllBtn').addEventListener('click', exportAllData);
     if(safe('clearAllBtn')) safe('clearAllBtn').addEventListener('click', clearAllData);
     if(safe('syncToCloudBtn')) safe('syncToCloudBtn').addEventListener('click', syncToGoogleSheets);
-    if(safe('restoreFromCloudBtn')) safe('restoreFromCloudBtn').addEventListener('click', restoreFromGoogleSheets); // 新增還原
+    if(safe('restoreFromCloudBtn')) safe('restoreFromCloudBtn').addEventListener('click', restoreFromGoogleSheets); 
 
     ['chargeMonthFilter', 'chargeSearch'].forEach(id => { if(safe(id)) safe(id).addEventListener('input', filterChargeTable); });
     ['maintMonthFilter', 'maintTypeFilter'].forEach(id => { if(safe(id)) safe(id).addEventListener('change', filterMaintTable); });
     ['expenseMonthFilter', 'expenseCategoryFilter'].forEach(id => { if(safe(id)) safe(id).addEventListener('change', filterExpenseTable); });
     
-    // 主題切換：立即儲存並應用，不等待「儲存設定」按鈕
     if(safe('themeSelect')) safe('themeSelect').addEventListener('change', function(e) {
         var s = JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}');
         s.theme = e.target.value;
@@ -155,9 +153,16 @@ function showToast(message, type = 'success') {
     var toast = safe('toast');
     if (!toast) return;
     toast.textContent = message;
+    // 修正：改為 JS 控制 class，顏色由 CSS 決定，避免 inline style 衝突
+    toast.className = 'toast show ' + (type === 'success' ? 'toast-success' : 'toast-error');
+    // 保留 inline style 以兼容舊版 CSS (如果有的話)，但主要依賴 CSS
     toast.style.background = (type === 'success') ? 'var(--text-main)' : 'var(--danger)';
-    toast.classList.add('show');
-    setTimeout(() => toast.classList.remove('show'), 3000);
+    
+    setTimeout(() => {
+        toast.classList.remove('show');
+        // 延遲移除顏色 class 以免下次顯示出錯
+        setTimeout(() => { toast.className = 'toast'; }, 300); 
+    }, 3000);
 }
 
 function checkMileageAnomaly(newOdo, recordDateStr) {
@@ -344,7 +349,6 @@ function saveData(key, record, isEdit) {
 }
 
 function loadAllData() {
-    // 移除 loadSettings() 避免覆蓋輸入框
     updateDashboard();
     checkBackupStatus();
     filterChargeTable();
@@ -360,14 +364,18 @@ function updateDashboard() {
     
     var maxOdo = 0;
     [charge, maint, expense, status].flat().forEach(d => {
-        if(d && d.odo > maxOdo) maxOdo = d.odo;
+        // 修正：強制轉型為 Float，避免字串比較錯誤
+        var o = parseFloat(d.odo) || 0;
+        if(d && o > maxOdo) maxOdo = o;
     });
     safe('totalMileage').textContent = maxOdo.toFixed(1);
     
     var totalCost = 0;
-    maint.forEach(i => totalCost += (i.totalCost || 0));
-    charge.forEach(i => totalCost += (i.cost || 0));
-    expense.forEach(i => totalCost += (i.amount || 0));
+    // 修正：強制轉型為 Float，避免 "100"+"50" = "10050" 的錯誤
+    maint.forEach(i => totalCost += (parseFloat(i.totalCost) || 0));
+    charge.forEach(i => totalCost += (parseFloat(i.cost) || 0));
+    expense.forEach(i => totalCost += (parseFloat(i.amount) || 0));
+    
     safe('totalExpense').textContent = Math.round(totalCost).toLocaleString();
     safe('statTotalCost').textContent = Math.round(totalCost).toLocaleString() + ' NT$';
 
@@ -375,7 +383,7 @@ function updateDashboard() {
         var last = charge[0]; 
         var days = daysBetween(last.date, new Date().toISOString().slice(0,10));
         safe('lastChargeDays').textContent = (days === 0 ? '今天' : days + '天前');
-        var riddenSince = maxOdo - last.odo;
+        var riddenSince = maxOdo - (parseFloat(last.odo)||0);
         safe('lastChargeDate').textContent = '充電後已騎乘 ' + riddenSince.toFixed(1) + ' 公里'; 
     } else {
         safe('lastChargeDays').textContent = '-';
@@ -385,7 +393,7 @@ function updateDashboard() {
     var regularMaint = maint.filter(m => m.type === '定期保養');
     if (regularMaint.length > 0) {
         var lastMaint = regularMaint[0];
-        var kmSince = maxOdo - lastMaint.odo;
+        var kmSince = maxOdo - (parseFloat(lastMaint.odo)||0);
         var kmLeft = REGULAR_SERVICE_KM - kmSince;
         var daysSince = daysBetween(lastMaint.date, new Date().toISOString().slice(0,10));
         var daysLeft = REGULAR_SERVICE_DAYS - daysSince;
@@ -433,7 +441,7 @@ function loadChargeHistory() {
     
     var filtered = data.filter(r => {
         var matchSearch = (r.station || '').toLowerCase().includes(search);
-        var matchMonth = !month || r.date.startsWith(month);
+        var matchMonth = !month || (r.date && r.date.startsWith(month));
         return matchSearch && matchMonth;
     });
 
@@ -442,9 +450,10 @@ function loadChargeHistory() {
     var effMap = {};
     for(let i=1; i<reversed.length; i++) {
         let curr = reversed[i], prev = reversed[i-1];
-        let dist = curr.odo - prev.odo;
-        if (dist > 0 && curr.kwh > 0) {
-            let eff = dist / curr.kwh;
+        let dist = (parseFloat(curr.odo)||0) - (parseFloat(prev.odo)||0);
+        let kwh = parseFloat(curr.kwh)||0;
+        if (dist > 0 && kwh > 0) {
+            let eff = dist / kwh;
             effMap[curr.id] = eff;
             effTotal += eff; effCount++;
             if(eff > maxEff) maxEff = eff;
@@ -461,7 +470,8 @@ function loadChargeHistory() {
 
     filtered.forEach(r => {
         var eff = effMap[r.id] ? effMap[r.id].toFixed(1) : '-';
-        var dateStr = r.date.replace(/-/g,'/');
+        // 修正：強制截取前 10 位，解決 ISO 時間格式問題
+        var dateStr = (r.date || '').slice(0, 10).replace(/-/g,'/');
         var timeStr = formatTime(r.startTime);
         
         var card = document.createElement('div');
@@ -510,7 +520,7 @@ function loadMaintenanceHistory() {
     
     var month = safe('maintMonthFilter').value;
     var type = safe('maintTypeFilter').value;
-    var filtered = data.filter(r => (!month || r.date.startsWith(month)) && (!type || r.type === type));
+    var filtered = data.filter(r => (!month || (r.date && r.date.startsWith(month))) && (!type || r.type === type));
     
     if (filtered.length === 0) {
         list.innerHTML = '<div class="empty-state">本月尚無紀錄</div>';
@@ -518,7 +528,8 @@ function loadMaintenanceHistory() {
     }
 
     filtered.forEach(r => {
-        var dateStr = r.date.replace(/-/g,'/');
+        // 修正：日期處理
+        var dateStr = (r.date || '').slice(0, 10).replace(/-/g,'/');
         var items = r.parts ? r.parts.map(p => p.name).join(', ') : r.notes;
 
         var card = document.createElement('div');
@@ -563,7 +574,7 @@ function loadExpenseHistory() {
     
     var month = safe('expenseMonthFilter').value;
     var cat = safe('expenseCategoryFilter').value;
-    var filtered = data.filter(r => (!month || r.date.startsWith(month)) && (!cat || r.category === cat));
+    var filtered = data.filter(r => (!month || (r.date && r.date.startsWith(month))) && (!cat || r.category === cat));
     
     if (filtered.length === 0) {
         list.innerHTML = '<div class="empty-state">本月尚無紀錄</div>';
@@ -571,7 +582,8 @@ function loadExpenseHistory() {
     }
 
     filtered.forEach(r => {
-        var dateStr = r.date.replace(/-/g,'/');
+        // 修正：日期處理
+        var dateStr = (r.date || '').slice(0, 10).replace(/-/g,'/');
         var card = document.createElement('div');
         card.className = 'history-card';
         card.innerHTML = `
@@ -838,7 +850,7 @@ function saveSettings() {
         theme: theme
     }));
     
-    applyTheme(theme); // 更新主題
+    applyTheme(theme);
     showToast('設定已儲存');
 }
 
@@ -902,7 +914,7 @@ function toLocalISO(iso) {
 function populateMonthFilters() {
     var dates = new Set();
     ['chargeLog','maintenanceLog','expenseLog'].forEach(key => {
-        JSON.parse(localStorage.getItem(key)||'[]').forEach(i => dates.add(i.date.slice(0,7)));
+        JSON.parse(localStorage.getItem(key)||'[]').forEach(i => dates.add((i.date||'').slice(0,7)));
     });
     var sorted = Array.from(dates).sort().reverse();
     
@@ -1037,11 +1049,6 @@ function restoreFromGoogleSheets() {
     if (!confirm('⚠️ 警告：這將使用雲端資料「覆蓋」您目前手機上的所有資料！確定要執行嗎？')) return;
 
     showToast('☁️ 下載還原中...', 'success');
-    
-    // GAS 需要實作 doGet 或修改 doPost 來支援讀取
-    // 為了簡化，我們假設使用相同的 API URL，但 payload action 為 'restore'
-    // 注意：Google Apps Script 的 doPost 預設不支援回傳大量數據給前端跨域讀取，通常建議用 doGet
-    // 這裡示範使用 fetch POST 请求 'restore' action，需要在 GAS 端對應處理 return ContentService...
     
     fetch(settings.gasUrl, {
         method: 'POST',
