@@ -1,12 +1,12 @@
 /* motolog.js
-   手機優化版 (v21 - 修復版)：
-   1. 補回遺失的 applyTheme 函式，解決 ReferenceError。
-   2. 包含 v20 的所有功能：日期修正、重新計算電費、雲端同步、離線偵測。
+   手機優化版 (v22 - 語法修復版)：
+   1. 修正 checkMileageAnomaly 中的 SyntaxError (改用傳統字串串接)。
+   2. 包含 v21 的所有功能：StatusLog 覆蓋模式、ISO 時間格式、applyTheme 修復。
 */
 
-console.log('motolog.js (mobile optimized v21): loaded');
+console.log('motolog.js (mobile optimized v22): loaded');
 
-const APP_VERSION = 'v21.0.0';
+const APP_VERSION = 'v22.0.0';
 const SETTINGS_KEY = 'motorcycleSettings';
 const BACKUP_KEY = 'lastBackupDate';
 
@@ -214,8 +214,11 @@ function recalculateChargeCosts() {
     }
 }
 
+// 修正：使用傳統字串串接避免 SyntaxError
 function checkMileageAnomaly(newOdo, recordDateStr) {
-    var latest = getLatestState().rawRecord; 
+    var latestData = getLatestState();
+    var latest = latestData.rawRecord; 
+    
     if (!latest) return true; 
     
     var lastDateVal = getRecordTimestamp(latest);
@@ -225,9 +228,16 @@ function checkMileageAnomaly(newOdo, recordDateStr) {
     var diffKm = newOdo - lastOdo;
     var diffDays = (newDateVal - lastDateVal) / (1000 * 60 * 60 * 24);
     
+    // 條件：7天內且增加超過100km
     if (diffDays <= 7 && diffKm > 100) {
         var dateStr = new Date(lastDateVal).toLocaleDateString();
-        return confirm(`⚠️ 系統偵測到您的里程增加異常：\n\n上次紀錄：${lastOdo} 公里 (${dateStr})\n本次輸入：${newOdo} 公里\n\n短短 ${Math.round(Math.abs(diffDays))} 天內增加了 ${diffKm.toFixed(1)} 公里。\n\n確定要儲存嗎？`);
+        // 使用字串串接 (+) 替代樣板字面量，避免語法錯誤
+        var msg = '⚠️ 系統偵測到您的里程增加異常：\n\n' + 
+                  '上次紀錄：' + lastOdo + ' 公里 (' + dateStr + ')\n' +
+                  '本次輸入：' + newOdo + ' 公里\n\n' +
+                  '短短 ' + Math.round(Math.abs(diffDays)) + ' 天內增加了 ' + diffKm.toFixed(1) + ' 公里。\n\n' +
+                  '確定要儲存嗎？';
+        return confirm(msg);
     }
     return true;
 }
