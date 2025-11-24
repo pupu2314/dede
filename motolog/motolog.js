@@ -1,12 +1,12 @@
 /* motolog.js
-   手機優化版 (v20)：
-   1. 修正編輯保養/其他時，日期時間無法正確代入的 Bug (處理日期格式)。
-   2. 新增「重新計算電費」功能，依據當前電價設定重算篩選範圍內的紀錄。
+   手機優化版 (v21 - 修復版)：
+   1. 補回遺失的 applyTheme 函式，解決 ReferenceError。
+   2. 包含 v20 的所有功能：日期修正、重新計算電費、雲端同步、離線偵測。
 */
 
-console.log('motolog.js (mobile optimized v20): loaded');
+console.log('motolog.js (mobile optimized v21): loaded');
 
-const APP_VERSION = 'v20.0.0';
+const APP_VERSION = 'v21.0.0';
 const SETTINGS_KEY = 'motorcycleSettings';
 const BACKUP_KEY = 'lastBackupDate';
 
@@ -42,6 +42,7 @@ window.onerror = function(message) {
 document.addEventListener('DOMContentLoaded', function() {
     try {
         var s = JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}');
+        // 呼叫 applyTheme 前確保它已定義
         if (s.theme) applyTheme(s.theme);
 
         initEventListeners();
@@ -137,7 +138,6 @@ function initEventListeners() {
     if(safe('syncToCloudBtn')) safe('syncToCloudBtn').addEventListener('click', syncToGoogleSheets);
     if(safe('restoreFromCloudBtn')) safe('restoreFromCloudBtn').addEventListener('click', restoreFromGoogleSheets); 
     
-    // 新增：重新計算電費按鈕監聽
     if(safe('recalcCostBtn')) safe('recalcCostBtn').addEventListener('click', recalculateChargeCosts);
 
     ['chargeMonthFilter', 'chargeSearch'].forEach(id => { if(safe(id)) safe(id).addEventListener('input', filterChargeTable); });
@@ -152,6 +152,19 @@ function initEventListeners() {
     });
 }
 
+// 補回 applyTheme 函式
+function applyTheme(theme) {
+    if (!theme) {
+        var s = JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}');
+        theme = s.theme || 'light';
+    }
+    if (theme === 'dark') {
+        document.documentElement.setAttribute('data-theme', 'dark');
+    } else {
+        document.documentElement.removeAttribute('data-theme');
+    }
+}
+
 function showToast(message, type = 'success') {
     var toast = safe('toast');
     if (!toast) return;
@@ -162,7 +175,6 @@ function showToast(message, type = 'success') {
     setTimeout(() => { toast.classList.remove('show'); }, 3000);
 }
 
-// === 2. 新增：重新計算電費功能 ===
 function recalculateChargeCosts() {
     var settings = JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}');
     var rate = parseFloat(settings.electricRate);
@@ -172,7 +184,7 @@ function recalculateChargeCosts() {
         return;
     }
 
-    var month = safe('chargeMonthFilter').value; // 取得目前篩選的月份
+    var month = safe('chargeMonthFilter').value; 
     var confirmMsg = month 
         ? `確定要以單價 ${rate} 元，重新計算「${month}」的所有充電費用嗎？` 
         : `確定要以單價 ${rate} 元，重新計算「所有歷史紀錄」的充電費用嗎？`;
@@ -183,11 +195,9 @@ function recalculateChargeCosts() {
     var updateCount = 0;
 
     data.forEach(r => {
-        // 判斷是否符合篩選月份
-        var rMonth = (r.date || "").slice(0, 7); // YYYY-MM
+        var rMonth = (r.date || "").slice(0, 7); 
         if (month && rMonth !== month) return;
 
-        // 只有當有度數 (kWh) 時才重算
         if (r.kwh && parseFloat(r.kwh) > 0) {
             r.cost = Math.round(parseFloat(r.kwh) * rate);
             updateCount++;
@@ -196,15 +206,14 @@ function recalculateChargeCosts() {
 
     if (updateCount > 0) {
         localStorage.setItem('chargeLog', JSON.stringify(data));
-        loadChargeHistory(); // 重新渲染列表
-        updateDashboard();   // 更新統計面板
+        loadChargeHistory(); 
+        updateDashboard();   
         showToast(`✅ 已更新 ${updateCount} 筆充電紀錄的費用`);
     } else {
         showToast('⚠️ 沒有可更新的紀錄 (可能無 kWh 資料)');
     }
 }
 
-// ... (checkMileageAnomaly, checkBackupStatus, getLatestState, getRecordTimestamp, prefillForms, updateLastUpdateTimeDisplay 保持不變) ...
 function checkMileageAnomaly(newOdo, recordDateStr) {
     var latest = getLatestState().rawRecord; 
     if (!latest) return true; 
@@ -278,8 +287,8 @@ function getLatestState() {
     var allRecords = [];
     charges.forEach(r => { allRecords.push({ ts: getRecordTimestamp(r), odo: parseFloat(r.odo), battery: r.batteryEnd, type: 'charge', raw: r }); });
     statuses.forEach(r => { allRecords.push({ ts: getRecordTimestamp(r), odo: parseFloat(r.odo), battery: r.battery, type: 'status', raw: r }); });
-    maints.forEach(r => allRecords.push({ ts: getRecordTimestamp(r), odo: parseFloat(r.odo), battery: null, type: 'maint', raw: r }));
-    expenses.forEach(r => allRecords.push({ ts: getRecordTimestamp(r), odo: parseFloat(r.odo), battery: null, type: 'expense', raw: r }));
+    maints.forEach(r => allRecords.push({ ts: getRecordTimestamp(r), odo: parseFloat(r.odo), battery: null, type: 'maint', raw: r }); });
+    expenses.forEach(r => allRecords.push({ ts: getRecordTimestamp(r), odo: parseFloat(r.odo), battery: null, type: 'expense', raw: r }); });
 
     allRecords.sort((a, b) => b.ts - a.ts);
 
@@ -336,7 +345,6 @@ function updateLastUpdateTimeDisplay(timestamp) {
     display.textContent = text;
 }
 
-// ... (startCharging, endCharging, updateChargeUI 保持不變) ...
 function startCharging(e) {
     e.preventDefault();
     if (!checkMileageAnomaly(parseFloat(safe('cOdo').value), new Date().toISOString().slice(0,10))) return;
@@ -428,10 +436,10 @@ function updateChargeUI() {
         startSec.style.display = 'block';
         endSec.style.display = 'none';
         if (chargeTimer) { clearInterval(chargeTimer); chargeTimer = null; }
+        prefillChargeDefaults();
     }
 }
 
-// ... (saveStatus, saveMaintenance, saveExpense, saveData 保持不變) ...
 function saveStatus(e) {
     e.preventDefault();
     if (!checkMileageAnomaly(parseFloat(safe('sOdo').value), new Date().toISOString().slice(0,10))) return;
@@ -511,7 +519,7 @@ function saveData(key, record, isEdit) {
     data.sort((a, b) => new Date(b.startTime || b.date + 'T' + (b.time||'00:00')) - new Date(a.startTime || a.date + 'T' + (a.time||'00:00')));
     localStorage.setItem(key, JSON.stringify(data));
 }
-// ... (loadAllData, updateDashboard, loadChargeHistory 保持不變) ...
+
 function loadAllData() {
     updateDashboard();
     checkBackupStatus();
@@ -672,7 +680,6 @@ function loadChargeHistory() {
     });
 }
 
-// ... (loadMaintenanceHistory, loadExpenseHistory 保持不變，但需使用 slice(0,10) 修正日期顯示) ...
 function loadMaintenanceHistory() {
     var data = JSON.parse(localStorage.getItem('maintenanceLog') || '[]');
     var list = safe('maintList');
@@ -770,57 +777,6 @@ function loadExpenseHistory() {
     });
 }
 
-// === 1. 修正：編輯功能正確代入日期時間 ===
-window.editMaintenance = function(id) {
-    var data = JSON.parse(localStorage.getItem('maintenanceLog'));
-    var r = data.find(x => x.id === id);
-    if(!r) return;
-    safe('editingMaintId').value = r.id;
-    
-    // 關鍵修正：確保日期格式為 YYYY-MM-DD，以便 input type="date" 讀取
-    safe('mDate').value = (r.date || '').slice(0, 10).replace(/\//g, '-'); 
-    safe('mTime').value = r.time;
-    
-    safe('mOdo').value = r.odo;
-    safe('mType').value = r.type;
-    safe('mNotes').value = r.notes;
-    var sel = safe('mLocationSelect');
-    if(r.location === '基隆成功專賣店') {
-        sel.value = r.location;
-        safe('mLocationInput').style.display = 'none';
-    } else {
-        sel.value = '其他';
-        safe('mLocationInput').style.display = 'block';
-        safe('mLocationInput').value = r.location;
-    }
-    safe('partsList').innerHTML = '';
-    if(r.parts) r.parts.forEach(p => addPartItem(p.name, p.cost));
-    updateTotalCost();
-    safe('maintTitle').textContent = '編輯保養';
-    safe('cancelMaintEdit').style.display = 'block';
-    document.querySelector('[data-tab="maintenance"]').click();
-}
-
-window.editExpense = function(id) {
-    var data = JSON.parse(localStorage.getItem('expenseLog'));
-    var r = data.find(x => x.id === id);
-    if(!r) return;
-    safe('editingExpenseId').value = r.id;
-    
-    // 關鍵修正：確保日期格式為 YYYY-MM-DD
-    safe('eDate').value = (r.date || '').slice(0, 10).replace(/\//g, '-');
-    safe('eTime').value = r.time;
-    
-    safe('eCategory').value = r.category;
-    safe('eAmount').value = r.amount;
-    safe('eDescription').value = r.description;
-    safe('eOdo').value = r.odo;
-    safe('expenseTitle').textContent = '編輯花費';
-    safe('cancelExpenseEdit').style.display = 'block';
-    document.querySelector('[data-tab="expense"]').click();
-}
-
-// ... (其餘功能如 editCharge 保持不變) ...
 window.editCharge = function(id) {
     var data = JSON.parse(localStorage.getItem('chargeLog') || '[]');
     var r = data.find(x => x.id === id);
@@ -871,7 +827,76 @@ function closeEditModal() {
     safe('editChargeModal').classList.remove('active');
 }
 
-// ... (populateMaintTemplates, addPartItem, updateTotalCost, daysBetween, formatDuration, formatTime, toLocalISO, populateMonthFilters, importData, exportAllData, clearAllData, syncToGoogleSheets, restoreFromGoogleSheets 保持不變) ...
+window.editMaintenance = function(id) {
+    var data = JSON.parse(localStorage.getItem('maintenanceLog'));
+    var r = data.find(x => x.id === id);
+    if(!r) return;
+    safe('editingMaintId').value = r.id;
+    safe('mDate').value = (r.date || '').slice(0, 10).replace(/\//g, '-');
+    safe('mTime').value = r.time;
+    safe('mOdo').value = r.odo;
+    safe('mType').value = r.type;
+    safe('mNotes').value = r.notes;
+    var sel = safe('mLocationSelect');
+    if(r.location === '基隆成功專賣店') {
+        sel.value = r.location;
+        safe('mLocationInput').style.display = 'none';
+    } else {
+        sel.value = '其他';
+        safe('mLocationInput').style.display = 'block';
+        safe('mLocationInput').value = r.location;
+    }
+    safe('partsList').innerHTML = '';
+    if(r.parts) r.parts.forEach(p => addPartItem(p.name, p.cost));
+    updateTotalCost();
+    safe('maintTitle').textContent = '編輯保養';
+    safe('cancelMaintEdit').style.display = 'block';
+    document.querySelector('[data-tab="maintenance"]').click();
+}
+
+function cancelMaintEdit() {
+    safe('maintenanceForm').reset();
+    safe('editingMaintId').value = '';
+    safe('partsList').innerHTML = '';
+    safe('maintTitle').textContent = '🛠️ 記錄保養';
+    safe('cancelMaintEdit').style.display = 'none';
+    updateTotalCost();
+    populateDateTime('mDate','mTime');
+}
+
+window.editExpense = function(id) {
+    var data = JSON.parse(localStorage.getItem('expenseLog'));
+    var r = data.find(x => x.id === id);
+    if(!r) return;
+    safe('editingExpenseId').value = r.id;
+    safe('eDate').value = (r.date || '').slice(0, 10).replace(/\//g, '-');
+    safe('eTime').value = r.time;
+    safe('eCategory').value = r.category;
+    safe('eAmount').value = r.amount;
+    safe('eDescription').value = r.description;
+    safe('eOdo').value = r.odo;
+    safe('expenseTitle').textContent = '編輯花費';
+    safe('cancelExpenseEdit').style.display = 'block';
+    document.querySelector('[data-tab="expense"]').click();
+}
+
+function cancelExpenseEdit() {
+    safe('expenseForm').reset();
+    safe('editingExpenseId').value = '';
+    safe('expenseTitle').textContent = '💰 記錄花費';
+    safe('cancelExpenseEdit').style.display = 'none';
+    populateDateTime('eDate','eTime');
+}
+
+window.deleteRecord = function(key, id) {
+    if(!confirm('確定刪除?')) return;
+    var data = JSON.parse(localStorage.getItem(key) || '[]');
+    var newData = data.filter(x => x.id !== id);
+    localStorage.setItem(key, JSON.stringify(newData));
+    loadAllData();
+    showToast('🗑️ 已刪除');
+}
+
 function populateMaintTemplates() {
     var div = safe('maintTemplates');
     if(!div) return;
@@ -884,6 +909,65 @@ function populateMaintTemplates() {
         btn.onclick = () => addPartItem(t.name, t.cost);
         div.appendChild(btn);
     });
+}
+
+function addPartItem(name = '', cost = 0) {
+    var div = document.createElement('div');
+    div.className = 'part-item';
+    div.innerHTML = `
+        <input type="text" class="part-name" value="${name}" placeholder="項目名稱">
+        <input type="number" class="part-cost" value="${cost}" placeholder="$">
+        <button type="button" class="btn btn-danger btn-sm" onclick="this.parentElement.remove(); updateTotalCost();">X</button>
+    `;
+    safe('partsList').appendChild(div);
+    div.querySelector('.part-cost').addEventListener('input', updateTotalCost);
+    updateTotalCost();
+}
+
+function updateTotalCost() {
+    var total = 0;
+    document.querySelectorAll('.part-cost').forEach(el => total += (parseFloat(el.value) || 0));
+    safe('totalCost').textContent = total;
+}
+
+function loadSettings() {
+    var s = JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}');
+    if(safe('electricRate')) safe('electricRate').value = s.electricRate || '';
+    if(safe('gasUrl')) safe('gasUrl').value = s.gasUrl || '';
+    if(safe('themeSelect')) safe('themeSelect').value = s.theme || 'light';
+    return s;
+}
+
+function saveSettings() {
+    var rate = parseFloat(safe('electricRate').value);
+    var gasUrl = safe('gasUrl').value.trim();
+    var theme = safe('themeSelect').value;
+    
+    localStorage.setItem(SETTINGS_KEY, JSON.stringify({ 
+        electricRate: rate,
+        gasUrl: gasUrl,
+        theme: theme
+    }));
+    
+    applyTheme(theme);
+    showToast('設定已儲存');
+}
+
+function autoCalculateCost() {
+    if(safe('cKwh').dataset.autoCalc !== "true") return;
+    var rate = parseFloat(safe('electricRate').value) || 0;
+    var kwh = parseFloat(safe('cKwh').value) || 0;
+    safe('cCost').value = Math.round(rate * kwh);
+}
+
+function prefillChargeDefaults() {
+    // 留空
+}
+
+function populateDateTime(dId, tId) {
+    var now = new Date();
+    safe(dId).value = now.toISOString().slice(0,10);
+    safe(tId).value = now.toTimeString().slice(0,5);
 }
 
 function daysBetween(d1, d2) {
@@ -944,6 +1028,10 @@ function populateMonthFilters() {
         }
     });
 }
+
+function filterChargeTable() { loadChargeHistory(); }
+function filterMaintTable() { loadMaintenanceHistory(); }
+function filterExpenseTable() { loadExpenseHistory(); }
 
 function importData(e) {
     var file = e.target.files[0];
