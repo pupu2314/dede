@@ -40,480 +40,459 @@
             <div class="stat-card">
                 <h3>總花費</h3>
                 <div class="value" id="totalExpense">0</div>
-                <div class="subtitle">元</div>
+                <div class="subtitle">NT$</div>
             </div>
         </div>
         
-        <!-- 底部導覽列 -->
-        <nav class="tabs">
-            <button class="tab active" data-tab="tab-charge"><i class="icon-bolt"></i> 充電</button>
-            <button class="tab" data-tab="tab-service"><i class="icon-wrench"></i> 保養</button>
-            <button class="tab" data-tab="tab-expense"><i class="icon-credit-card"></i> 花費</button>
-            <button class="tab" data-tab="tab-log"><i class="icon-list"></i> 紀錄</button>
-            <button class="tab" data-tab="tab-settings"><i class="icon-settings"></i> 設定</button>
-        </nav>
-        
-        <!-- 頁面內容 -->
         <div class="content">
+            <div class="tabs-wrapper">
+                <div class="tabs">
+                    <button class="tab-button active" data-tab="status">快速更新</button>
+                    <button class="tab-button" data-tab="charge">充電</button>
+                    <button class="tab-button" data-tab="maintenance">保養</button>
+                    <button class="tab-button" data-tab="expense">其他</button>
+                    <button class="tab-button" data-tab="statistics">統計</button>
+                    <button class="tab-button" data-tab="settings">設定</button>
+                </div>
+            </div>
             
-            <!-- 1. 充電頁面 -->
-            <div class="tab-content active" id="tab-charge">
-                <div class="card">
-                    <h2>記錄充電</h2>
-                    <form id="chargeForm">
+            <!-- 快速更新頁面 -->
+            <div id="statusTab" class="tab-content active">
+                <div class="form-card">
+                    <h3 id="statusTitle">📝 快速更新狀態</h3>
+                    <!-- 新增：顯示最後更新時間 -->
+                    <div id="lastUpdateInfo" class="last-update-info"></div>
+                    
+                    <form id="statusForm">
                         <div class="form-group">
-                            <label for="chargeMileage">目前里程 (公里)</label>
-                            <input type="number" id="chargeMileage" required>
+                            <label>目前里程 (ODO)</label>
+                            <input type="number" inputmode="decimal" step="0.1" id="sOdo" placeholder="自動帶入最新紀錄..." required style="font-size: 1.2rem;">
                         </div>
                         <div class="form-group">
-                            <label for="chargeKWh">充電度數 (kWh)</label>
-                            <input type="number" id="chargeKWh" step="0.01" required>
+                            <label>目前電量</label>
+                            <div class="battery-selector">
+                                <div class="battery-option"><input type="radio" id="sb0" name="sBattery" value="0"><label for="sb0">0</label></div>
+                                <div class="battery-option"><input type="radio" id="sb1" name="sBattery" value="1" checked><label for="sb1">1</label></div>
+                                <div class="battery-option"><input type="radio" id="sb2" name="sBattery" value="2"><label for="sb2">2</label></div>
+                                <div class="battery-option"><input type="radio" id="sb3" name="sBattery" value="3"><label for="sb3">3</label></div>
+                                <div class="battery-option"><input type="radio" id="sb4" name="sBattery" value="4"><label for="sb4">4</label></div>
+                                <div class="battery-option"><input type="radio" id="sb5" name="sBattery" value="5"><label for="sb5">5</label></div>
+                            </div>
                         </div>
-                        <div class="form-group">
-                            <label for="chargeCost">花費金額 (元)</label>
-                            <input type="number" id="chargeCost" required>
+                        <button type="submit" class="btn btn-primary btn-full btn-lg" style="margin-top: 20px;">💾 更新狀態</button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- 充電頁面 -->
+            <div id="chargeTab" class="tab-content">
+                <div id="startChargeSection">
+                    <div class="form-card">
+                        <h3>⚡ 開始充電</h3>
+                        <form id="startChargeForm">
+                            <div class="form-group">
+                                <label>快速地點</label>
+                                <div class="quick-stations">
+                                    <button type="button" class="station-btn" data-station="公司">🏢 公司</button>
+                                    <button type="button" class="station-btn" data-station="充電站">⚡ 充電站</button>
+                                    <button type="button" class="station-btn" data-station="家裡">🏠 家裡</button>
+                                    <button type="button" class="station-btn" data-station="其他">📍 其他</button>
+                                </div>
+                                <input type="text" id="cStation" placeholder="輸入自訂地點" style="display:none; margin-top:10px;">
+                            </div>
+                            
+                            <div class="form-group">
+                                <label>目前里程 (ODO)</label>
+                                <input type="number" inputmode="decimal" step="0.1" id="cOdo" placeholder="例如: 1234.5" required>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label>充電前電量</label>
+                                <div class="battery-selector">
+                                    <div class="battery-option"><input type="radio" id="bs0" name="cBatteryStart" value="0"><label for="bs0">0</label></div>
+                                    <div class="battery-option"><input type="radio" id="bs1" name="cBatteryStart" value="1" checked><label for="bs1">1</label></div>
+                                    <div class="battery-option"><input type="radio" id="bs2" name="cBatteryStart" value="2"><label for="bs2">2</label></div>
+                                    <div class="battery-option"><input type="radio" id="bs3" name="cBatteryStart" value="3"><label for="bs3">3</label></div>
+                                    <div class="battery-option"><input type="radio" id="bs4" name="cBatteryStart" value="4"><label for="bs4">4</label></div>
+                                    <div class="battery-option"><input type="radio" id="bs5" name="cBatteryStart" value="5"><label for="bs5">5</label></div>
+                                </div>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label>備註</label>
+                                <textarea id="cNotes" rows="2" placeholder="選填..."></textarea>
+                            </div>
+                             
+                            <button type="submit" class="btn btn-success btn-full btn-lg">⚡ 開始充電</button>
+                        </form>
+                    </div>
+                </div>
+                
+                <div id="endChargeSection" style="display:none;">
+                    <div class="charging-status">
+                        <h3>⚡ 充電進行中</h3>
+                        <div id="currentChargeInfo"></div>
+                        <div class="charging-timer" id="chargingTimer">00:00:00</div>
+                    </div>
+                    
+                    <div class="form-card">
+                        <h3>結束充電</h3>
+                        <form id="endChargeForm">
+                            <div class="form-group">
+                                <label>充電後電量</label>
+                                <div class="battery-selector">
+                                    <div class="battery-option"><input type="radio" id="be0" name="cBatteryEnd" value="0"><label for="be0">0</label></div>
+                                    <div class="battery-option"><input type="radio" id="be1" name="cBatteryEnd" value="1"><label for="be1">1</label></div>
+                                    <div class="battery-option"><input type="radio" id="be2" name="cBatteryEnd" value="2"><label for="be2">2</label></div>
+                                    <div class="battery-option"><input type="radio" id="be3" name="cBatteryEnd" value="3"><label for="be3">3</label></div>
+                                    <div class="battery-option"><input type="radio" id="be4" name="cBatteryEnd" value="4"><label for="be4">4</label></div>
+                                    <div class="battery-option"><input type="radio" id="be5" name="cBatteryEnd" value="5" checked><label for="be5">5</label></div>
+                                </div>
+                            </div>
+                            
+                            <div class="form-group" id="kwhGroup">
+                                <label>充電度數 (kWh)</label>
+                                <input type="number" inputmode="decimal" step="0.01" id="cKwh" placeholder="例如: 1.5">
+                            </div>
+                            
+                            <div class="form-group" id="costGroup">
+                                <label>充電費用 (NT$)</label>
+                                <input type="number" inputmode="numeric" id="cCost" placeholder="例如: 30">
+                            </div>
+                            
+                            <div class="form-group">
+                                <label>預估里程 (Range)</label>
+                                <input type="number" inputmode="decimal" step="0.1" id="cRange" placeholder="儀表顯示值">
+                            </div>
+                            
+                            <button type="submit" class="btn btn-primary btn-full btn-lg">✅ 完成並儲存</button>
+                        </form>
+                    </div>
+                </div>
+                
+                <div class="analytics-grid">
+                    <div class="analytics-card"><h4>平均效率</h4><p id="avgEfficiency">-</p></div>
+                    <div class="analytics-card"><h4>最佳效率</h4><p id="bestEfficiency">-</p></div>
+                    <div class="analytics-card"><h4>總次數</h4><p id="totalCharges">0</p></div>
+                </div>
+                
+                <div class="filter-bar">
+                    <input type="text" id="chargeSearch" placeholder="🔍 搜尋地點...">
+                    <select id="chargeMonthFilter"><option value="">所有月份</option></select>
+                    <button type="button" id="recalcCostBtn" class="btn btn-secondary btn-sm">🔄 重新計算電費</button>
+                </div>
+                
+                <div id="chargeList" class="history-list"></div>
+            </div>
+            
+            <!-- 保養頁面 -->
+            <div id="maintenanceTab" class="tab-content">
+                <div class="form-card">
+                    <h3 id="maintTitle">🛠️ 記錄保養</h3>
+                    <form id="maintenanceForm">
+                        <input type="hidden" id="editingMaintId">
+                        <div class="row-group">
+                            <div class="form-group half"><label>日期</label><input type="date" id="mDate" required></div>
+                            <div class="form-group half"><label>時間</label><input type="time" id="mTime" required></div>
                         </div>
+                        <button type="button" class="btn btn-secondary btn-sm" id="maintNowBtn">🕒 填入現在時間</button>
+                        
+                        <div class="form-group" style="margin-top:15px;">
+                            <label>里程 (ODO)</label>
+                            <input type="number" inputmode="decimal" step="0.1" id="mOdo" placeholder="公里" required>
+                        </div>
+                        
                         <div class="form-group">
-                            <label for="chargeStation">充電地點</label>
-                            <select id="chargeStation">
-                                <option value="家裡">家裡</option>
-                                <option value="公司">公司</option>
-                                <option value="充電站">充電站</option>
+                            <label>地點</label>
+                            <div style="display:flex; gap:8px;">
+                                <select id="mLocationSelect" style="flex:1;">
+                                    <option value="基隆成功專賣店">基隆成功專賣店</option>
+                                    <option value="其他">其他...</option>
+                                </select>
+                            </div>
+                            <input type="text" id="mLocationInput" placeholder="輸入地點名稱" style="display:none; margin-top:10px;">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label>類型</label>
+                            <select id="mType">
+                                <option value="定期保養">定期保養</option>
+                                <option value="大保養">大保養</option>
+                                <option value="小保養">小保養</option>
+                                <option value="維修">維修</option>
+                                <option value="檢查">檢查</option>
+                            </select>
+                        </div>
+                        
+                        <div class="form-group"><label>備註</label><textarea id="mNotes" rows="2"></textarea></div>
+                        
+                        <h3>項目清單</h3>
+                        <div id="partsList"></div>
+                        
+                        <div class="form-group">
+                            <label>快速加入</label>
+                            <div id="maintTemplates" class="scroll-chips">
+                                <!-- Templates via JS -->
+                            </div>
+                        </div>
+                        
+                        <button type="button" class="btn btn-success" id="addPartBtn" style="margin-bottom: 15px;">➕ 自訂項目</button>
+                        
+                        <div class="total-cost-bar">
+                            <span>總費用</span>
+                            <span class="cost">NT$ <span id="totalCost">0</span></span>
+                        </div>
+                        
+                        <button type="submit" class="btn btn-primary btn-full btn-lg">💾 儲存記錄</button>
+                        <button type="button" class="btn btn-secondary btn-full btn-lg" id="cancelMaintEdit" style="display:none; margin-top:10px;">取消編輯</button>
+                    </form>
+                </div>
+                
+                <div class="filter-bar">
+                    <select id="maintMonthFilter"><option value="">所有月份</option></select>
+                    <select id="maintTypeFilter">
+                        <option value="">所有類型</option>
+                        <option value="定期保養">定期保養</option>
+                        <option value="大保養">大保養</option>
+                        <option value="維修">維修</option>
+                    </select>
+                </div>
+                
+                <div id="maintList" class="history-list"></div>
+            </div>
+            
+            <!-- 其他頁面 -->
+            <div id="expenseTab" class="tab-content">
+                <div class="form-card">
+                    <h3 id="expenseTitle">💰 記錄花費</h3>
+                    <form id="expenseForm">
+                        <input type="hidden" id="editingExpenseId">
+                        <div class="row-group">
+                            <div class="form-group half"><label>日期</label><input type="date" id="eDate" required></div>
+                            <div class="form-group half"><label>時間</label><input type="time" id="eTime" required></div>
+                        </div>
+                        <button type="button" class="btn btn-secondary btn-sm" id="expenseNowBtn">🕒 填入現在時間</button>
+                        
+                        <div class="form-group" style="margin-top:15px;">
+                            <label>類別</label>
+                            <select id="eCategory">
+                                <option value="保險">保險</option>
+                                <option value="牌照稅">牌照稅</option>
+                                <option value="停車費">停車費</option>
+                                <option value="配件">配件</option>
+                                <option value="清潔">清潔</option>
                                 <option value="其他">其他</option>
                             </select>
                         </div>
                         <div class="form-group">
-                            <label for="chargeNotes">備註 (選填)</label>
-                            <input type="text" id="chargeNotes">
+                            <label>金額 (NT$)</label>
+                            <input type="number" inputmode="numeric" id="eAmount" placeholder="0" required style="font-size: 1.2rem;">
                         </div>
-                        <button type="submit" class="btn btn-primary btn-full">記錄充電</button>
+                        <div class="form-group"><label>里程 (選填)</label><input type="number" inputmode="decimal" step="0.1" id="eOdo" placeholder="公里"></div>
+                        <div class="form-group"><label>說明</label><textarea id="eDescription" rows="2"></textarea></div>
+                        
+                        <button type="submit" class="btn btn-primary btn-full btn-lg">💾 儲存記錄</button>
+                        <button type="button" class="btn btn-secondary btn-full btn-lg" id="cancelExpenseEdit" style="display:none; margin-top:10px;">取消編輯</button>
                     </form>
+                </div>
+                
+                <div class="filter-bar">
+                    <select id="expenseCategoryFilter"><option value="">所有類別</option></select>
+                    <select id="expenseMonthFilter"><option value="">所有月份</option></select>
+                </div>
+                
+                <div id="expenseList" class="history-list"></div>
+            </div>
+            
+            <div id="statisticsTab" class="tab-content">
+                <div class="analytics-grid">
+                    <div class="analytics-card"><h4>總里程</h4><p id="statTotalMileage">0 公里</p></div>
+                    <div class="analytics-card"><h4>平均日里程</h4><p id="statAvgDaily">0 公里</p></div>
+                    <div class="analytics-card"><h4>每公里成本</h4><p id="statCostPerKm">0 NT$</p></div>
+                    <div class="analytics-card"><h4>總花費</h4><p id="statTotalCost">0 NT$</p></div>
                 </div>
             </div>
             
-            <!-- 2. 保養頁面 -->
-            <div class="tab-content" id="tab-service">
-                <div class="card">
-                    <h2>記錄保養</h2>
-                    <form id="serviceForm">
+            <div id="settingsTab" class="tab-content">
+                <div class="form-card">
+                    <h3>⚙️ 設定</h3>
+                    <div id="settingsForm">
                         <div class="form-group">
-                            <label for="serviceMileage">目前里程 (公里)</label>
-                            <input type="number" id="serviceMileage" required>
+                            <label>電費單價 (NT$/度)</label>
+                            <input type="number" inputmode="decimal" step="0.1" id="electricRate" placeholder="例如: 3.5">
+                            <small>用於自動計算公司或家裡的充電費用</small>
                         </div>
+                        
                         <div class="form-group">
-                            <label for="serviceName">項目</label>
-                            <select id="serviceName" required onchange="updateServiceCost()">
-                                <option value="">請選擇項目</option>
+                            <label>外觀主題</label>
+                            <select id="themeSelect">
+                                <option value="light">🌞 亮色模式</option>
+                                <option value="dark">🌙 深色模式</option>
                             </select>
                         </div>
-                         <div class="form-group">
-                            <label for="serviceCost">花費金額 (元)</label>
-                            <input type="number" id="serviceCost" required>
-                        </div>
-                        <div class="form-group">
-                            <label for="serviceNotes">備註 (選填)</label>
-                            <input type="text" id="serviceNotes">
-                        </div>
-                        <button type="submit" class="btn btn-primary btn-full">記錄保養</button>
-                    </form>
-                    
-                    <div class="section-title">歷史保養紀錄</div>
-                    <div id="serviceHistoryList" class="log-list">
-                        <!-- 歷史保養紀錄將會動態插入這裡 -->
-                    </div>
-                </div>
-            </div>
 
-            <!-- 3. 花費頁面 -->
-            <div class="tab-content" id="tab-expense">
-                <div class="card">
-                    <h2>記錄其他花費</h2>
-                    <form id="expenseForm">
+                        <!-- 新增：API 欄位旁加入教學按鈕 -->
                         <div class="form-group">
-                            <label for="expenseName">項目</label>
-                            <input type="text" id="expenseName" required>
+                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                                <label style="margin-bottom:0;">Google Sheets API</label>
+                                <button type="button" id="showTutorialBtn" class="btn btn-text btn-sm" style="padding:4px 8px; font-size:0.9rem; color:var(--primary);">📖 設定教學</button>
+                            </div>
+                            <input type="text" id="gasUrl" placeholder="https://script.google.com/macros/s/..." style="font-size:0.8rem;">
+                            <small>請輸入 GAS 發布後的 Web App URL 以啟用雲端同步</small>
                         </div>
-                        <div class="form-group">
-                            <label for="expenseCost">花費金額 (元)</label>
-                            <input type="number" id="expenseCost" required>
-                        </div>
-                        <div class="form-group">
-                            <label for="expenseDate">日期</label>
-                            <input type="date" id="expenseDate" required>
-                        </div>
-                         <div class="form-group">
-                            <label for="expenseTime">時間</label>
-                            <input type="time" id="expenseTime" required>
-                        </div>
-                        <div class="form-group">
-                            <label for="expenseNotes">備註 (選填)</label>
-                            <input type="text" id="expenseNotes">
-                        </div>
-                        <button type="submit" class="btn btn-primary btn-full">記錄花費</button>
-                    </form>
 
-                    <div class="section-title">歷史花費紀錄</div>
-                    <div id="expenseHistoryList" class="log-list">
-                        <!-- 歷史花費紀錄將會動態插入這裡 -->
-                    </div>
-                </div>
-            </div>
-
-            <!-- 4. 紀錄與分析頁面 -->
-            <div class="tab-content" id="tab-log">
-                <div class="card">
-                    <h2>紀錄篩選</h2>
-                    <div class="form-group">
-                        <label for="logMonthFilter">篩選月份</label>
-                        <input type="month" id="logMonthFilter" onchange="renderLogs()">
-                    </div>
-                    
-                    <!-- 新增的重新計算電費按鈕容器 -->
-                    <div class="log-actions-container">
-                         <button id="recalculateChargeBtn" class="btn btn-secondary btn-small" onclick="recalculateChargeCost()">
-                            <i class="icon-refresh"></i> 重新計算電費
-                        </button>
-                    </div>
-
-                    <div class="section-title">充電紀錄</div>
-                    <div id="chargeLogList" class="log-list">
-                        <!-- 充電紀錄將會動態插入這裡 -->
-                    </div>
-                    
-                    <div class="section-title">保養紀錄</div>
-                    <div id="maintenanceLogList" class="log-list">
-                        <!-- 保養紀錄將會動態插入這裡 -->
-                    </div>
-                    
-                    <div class="section-title">花費紀錄</div>
-                    <div id="expenseLogList" class="log-list">
-                        <!-- 花費紀錄將會動態插入這裡 -->
-                    </div>
-                </div>
-            </div>
-
-            <!-- 5. 設定頁面 -->
-            <div class="tab-content" id="tab-settings">
-                <div class="card">
-                    <h2>基礎設定</h2>
-                    <form id="settingsForm">
-                        <div class="form-group">
-                            <label for="initialMileage">起始里程 (公里)</label>
-                            <input type="number" id="initialMileage" required>
-                        </div>
-                        <div class="form-group">
-                            <label for="serviceIntervalKm">定期保養里程 (公里)</label>
-                            <input type="number" id="serviceIntervalKm" required>
-                        </div>
-                        <div class="form-group">
-                            <label for="serviceIntervalDays">定期保養天數 (天)</label>
-                            <input type="number" id="serviceIntervalDays" required>
-                        </div>
-                        <div class="form-group">
-                            <label for="serviceTemplates">預設保養項目 (JSON 格式)</label>
-                            <textarea id="serviceTemplates" rows="6" required></textarea>
-                            <small class="text-muted">格式範例: `[{"name":"項目名","cost":100}]`</small>
-                        </div>
-                        <div class="form-group">
-                            <label for="pricePerKWh">電費單價 (元/度)</label>
-                            <input type="number" id="pricePerKWh" step="0.01" required>
-                            <small class="text-muted">用於重新計算家裡/公司充電費用</small>
-                        </div>
-                        <button type="submit" class="btn btn-primary btn-full">儲存設定</button>
-                    </form>
-                </div>
-                
-                <div class="card mt-4">
-                    <h2>雲端同步 (Google Sheets)</h2>
-                    <div class="form-group">
-                        <label for="gasUrl">Google Apps Script API 網址</label>
-                        <input type="url" id="gasUrl" placeholder="以 /exec 結尾的網址">
-                        <small class="text-muted"><a href="#" onclick="showTutorialModal(event)">如何設定？</a></small>
-                    </div>
-                    <div class="button-group">
-                        <button class="btn btn-success" onclick="syncToGoogleSheets()"><i class="icon-cloud-upload"></i> 手動同步至雲端</button>
-                        <button class="btn btn-warning" onclick="restoreFromGoogleSheets()"><i class="icon-cloud-download"></i> 從雲端還原 (覆蓋)</button>
-                    </div>
-                    <div class="sync-status" id="syncStatus">
-                        同步狀態：未同步
+                        <button type="button" class="btn btn-primary btn-block-setting btn-full" id="saveSettingsBtn">儲存設定</button>
                     </div>
                 </div>
                 
-                <div class="card mt-4">
-                    <h2>資料管理</h2>
-                    <button class="btn btn-danger btn-full" onclick="showExportDataModal()">匯出/匯入資料</button>
-                    <button class="btn btn-danger btn-full mt-2" onclick="showResetModal()">⚠️ 清除所有資料</button>
+                <div class="data-management">
+                    <h3>📦 資料備份與還原</h3>
+                    
+                    <div class="data-btns-stack" style="margin-bottom: 20px;">
+                        <button class="btn btn-warning btn-block-setting" id="syncToCloudBtn">☁️ 同步到 Google Sheets</button>
+                        <button class="btn btn-secondary btn-block-setting" id="restoreFromCloudBtn">📥 從雲端還原</button>
+                    </div>
+
+                    <input type="file" id="jsonImport" accept=".json" style="display:none;">
+                    <div class="data-btns-stack">
+                        <button class="btn btn-success btn-block-setting" id="exportAllBtn">📤 匯出備份檔 (JSON)</button>
+                        <button class="btn btn-primary btn-block-setting" id="importBtn">📥 匯入備份檔</button>
+                        <button class="btn btn-danger btn-block-setting" id="clearAllBtn">🗑️ 清除所有資料</button>
+                    </div>
                 </div>
-                
-                <div class="app-info">
-                    版本：<span id="appVersion"></span> | 最後更新：<span id="lastUpdated"></span> | <span id="onlineStatus"></span>
+                <!-- 加入版本顯示區塊 -->
+                <div style="text-align: center; margin-top: 20px; color: var(--secondary);">
+                   <small id="appVersion"></small>
                 </div>
             </div>
-            
-        </div> <!-- end .content -->
-    </div> <!-- end .container -->
-
-    <!-- Modal: 編輯花費紀錄 -->
-    <div id="editExpenseModal" class="modal">
-        <div class="modal-content">
-            <span class="close-button" id="closeExpenseModal">&times;</span>
-            <h2>編輯花費紀錄</h2>
-            <form id="editExpenseForm">
-                <input type="hidden" id="editExpenseId">
-                <div class="form-group">
-                    <label for="editExpenseName">項目</label>
-                    <input type="text" id="editExpenseName" required>
-                </div>
-                <div class="form-group">
-                    <label for="editExpenseCost">花費金額 (元)</label>
-                    <input type="number" id="editExpenseCost" required>
-                </div>
-                <div class="form-group">
-                    <label for="editExpenseDate">日期</label>
-                    <input type="date" id="editExpenseDate" required>
-                </div>
-                <div class="form-group">
-                    <label for="editExpenseTime">時間</label>
-                    <input type="time" id="editExpenseTime" required>
-                </div>
-                <div class="form-group">
-                    <label for="editExpenseNotes">備註 (選填)</label>
-                    <input type="text" id="editExpenseNotes">
-                </div>
-                <button type="submit" class="btn btn-primary btn-full">儲存修改</button>
-            </form>
-        </div>
-    </div>
-    
-    <!-- Modal: 編輯保養紀錄 -->
-    <div id="editServiceModal" class="modal">
-        <div class="modal-content">
-            <span class="close-button" id="closeServiceModal">&times;</span>
-            <h2>編輯保養紀錄</h2>
-            <form id="editServiceForm">
-                <input type="hidden" id="editServiceId">
-                 <div class="form-group">
-                    <label for="editServiceMileage">里程 (公里)</label>
-                    <input type="number" id="editServiceMileage" required>
-                </div>
-                <div class="form-group">
-                    <label for="editServiceName">項目</label>
-                    <select id="editServiceName" required>
-                         <option value="">請選擇項目</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label for="editServiceCost">花費金額 (元)</label>
-                    <input type="number" id="editServiceCost" required>
-                </div>
-                <div class="form-group">
-                    <label for="editServiceDate">日期</label>
-                    <input type="date" id="editServiceDate" required>
-                </div>
-                <div class="form-group">
-                    <label for="editServiceTime">時間</label>
-                    <input type="time" id="editServiceTime" required>
-                </div>
-                <div class="form-group">
-                    <label for="editServiceNotes">備註 (選填)</label>
-                    <input type="text" id="editServiceNotes">
-                </div>
-                <button type="submit" class="btn btn-primary btn-full">儲存修改</button>
-            </form>
         </div>
     </div>
 
-    <!-- Modal: 編輯充電紀錄 -->
+    <!-- 編輯充電視窗 -->
     <div id="editChargeModal" class="modal">
         <div class="modal-content">
-            <span class="close-button" id="closeChargeModal">&times;</span>
-            <h2>編輯充電紀錄</h2>
+            <div class="modal-header">
+                <h3>編輯充電</h3>
+                <button class="btn btn-text" id="closeEditModal">關閉</button>
+            </div>
             <form id="editChargeForm">
-                <input type="hidden" id="editChargeId">
-                <div class="form-group">
-                    <label for="editChargeMileage">里程 (公里)</label>
-                    <input type="number" id="editChargeMileage" required>
+                <input type="hidden" id="editingChargeId">
+                <div class="form-scroll-area">
+                    <div class="form-group"><label>開始時間</label><input type="datetime-local" id="edit_cStartTime" required></div>
+                    <div class="form-group"><label>結束時間</label><input type="datetime-local" id="edit_cEndTime" required></div>
+                    <div class="form-group"><label>里程 (ODO)</label><input type="number" inputmode="decimal" step="0.1" id="edit_cOdo" required></div>
+                    <div class="form-group"><label>充電站</label><input type="text" id="edit_cStation"></div>
+                    <div class="row-group">
+                        <div class="form-group half">
+                            <label>開始電量</label>
+                            <select id="edit_cBatteryStart">
+                                <option value="0">0</option>
+                                <option value="1">1</option>
+                                <option value="2">2</option>
+                                <option value="3">3</option>
+                                <option value="4">4</option>
+                                <option value="5">5</option>
+                            </select>
+                        </div>
+                        <div class="form-group half">
+                            <label>結束電量</label>
+                            <select id="edit_cBatteryEnd">
+                                <option value="0">0</option>
+                                <option value="1">1</option>
+                                <option value="2">2</option>
+                                <option value="3">3</option>
+                                <option value="4">4</option>
+                                <option value="5">5</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="row-group">
+                        <div class="form-group half"><label>度數 (kWh)</label><input type="number" inputmode="decimal" step="0.01" id="edit_cKwh"></div>
+                        <div class="form-group half"><label>費用 (NT$)</label><input type="number" inputmode="numeric" id="edit_cCost"></div>
+                    </div>
+                    <div class="form-group"><label>備註</label><textarea id="edit_cNotes" rows="2"></textarea></div>
                 </div>
-                <div class="form-group">
-                    <label for="editChargeKWh">充電度數 (kWh)</label>
-                    <input type="number" id="editChargeKWh" step="0.01" required>
+                <div class="modal-footer">
+                    <button type="submit" class="btn btn-primary btn-full btn-lg">儲存變更</button>
                 </div>
-                <div class="form-group">
-                    <label for="editChargeCost">花費金額 (元)</label>
-                    <input type="number" id="editChargeCost" required>
-                </div>
-                <div class="form-group">
-                    <label for="editChargeStation">充電地點</label>
-                    <select id="editChargeStation">
-                        <option value="家裡">家裡</option>
-                        <option value="公司">公司</option>
-                        <option value="充電站">充電站</option>
-                        <option value="其他">其他</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label for="editChargeDate">日期</label>
-                    <input type="date" id="editChargeDate" required>
-                </div>
-                <div class="form-group">
-                    <label for="editChargeTime">時間</label>
-                    <input type="time" id="editChargeTime" required>
-                </div>
-                <div class="form-group">
-                    <label for="editChargeNotes">備註 (選填)</label>
-                    <input type="text" id="editChargeNotes">
-                </div>
-                <button type="submit" class="btn btn-primary btn-full">儲存修改</button>
             </form>
         </div>
     </div>
-    
-    <!-- Modal: 匯出/匯入資料 -->
-    <div id="exportImportModal" class="modal">
-        <div class="modal-content">
-            <span class="close-button" id="closeExportImportModal">&times;</span>
-            <h2>匯出/匯入資料</h2>
-            <div class="form-group">
-                <label for="exportData">匯出資料 (JSON)</label>
-                <textarea id="exportData" rows="10" readonly></textarea>
-                <button class="btn btn-secondary btn-full mt-2" onclick="copyExportData()"><i class="icon-copy"></i> 複製資料</button>
-            </div>
-            <div class="section-title">匯入資料 (覆蓋現有資料)</div>
-             <div class="form-group">
-                <label for="importData">貼上匯入 JSON 資料</label>
-                <textarea id="importData" rows="5"></textarea>
-                <button class="btn btn-danger btn-full mt-2" onclick="importData()"><i class="icon-upload"></i> 執行匯入 (覆蓋)</button>
-            </div>
-        </div>
-    </div>
-    
-    <!-- Modal: 清除資料確認 -->
-    <div id="resetModal" class="modal">
-        <div class="modal-content">
-            <span class="close-button" id="closeResetModal">&times;</span>
-            <h2>⚠️ 確認清除所有資料</h2>
-            <p>您確定要清除所有充電、保養、花費紀錄和設定嗎？**此操作無法復原！**</p>
-            <div class="button-group mt-4">
-                <button class="btn btn-secondary" onclick="document.getElementById('closeResetModal').click()">取消</button>
-                <button class="btn btn-danger" onclick="resetAllData()">確定清除</button>
-            </div>
-        </div>
-    </div>
 
-    <!-- Modal: GAS 教學 -->
+    <!-- 新增：教學視窗 (Tutorial Modal) -->
     <div id="tutorialModal" class="modal">
         <div class="modal-content">
-            <span class="close-button" id="closeTutorialModal">&times;</span>
-            <h2>Google Sheets 雲端同步教學</h2>
-            
-            <div class="tutorial-body">
-                <h4>步驟 1：建立 Google Sheets</h4>
-                <p>1. 建立一個新的 Google 試算表 (例如：`電動摩托車紀錄資料`)。</p>
-                <p>2. 在試算表中建立三個工作表，名稱必須完全匹配：</p>
-                <ul style="margin-left:20px;">
-                    <li>`ChargeLog` (充電紀錄)</li>
-                    <li>`MaintenanceLog` (保養紀錄)</li>
-                    <li>`ExpenseLog` (花費紀錄)</li>
-                    <li>`StatusLog` (狀態紀錄 - 可選)</li>
+            <div class="modal-header">
+                <h3>☁️ 雲端同步教學</h3>
+                <button class="btn btn-text" id="closeTutorialModal">關閉</button>
+            </div>
+            <div class="form-scroll-area tutorial-content">
+                <h4>步驟 1：建立 Google 試算表</h4>
+                <p>1. 建立一個空白的 Google 試算表。</p>
+                <p>2. 在下方分頁籤，建立 4 個分頁，名稱請<b>完全一致</b>：</p>
+                <ul style="margin-left:20px; margin-bottom:10px;">
+                    <li><code>ChargeLog</code></li>
+                    <li><code>MaintenanceLog</code></li>
+                    <li><code>ExpenseLog</code></li>
+                    <li><code>StatusLog</code></li>
                 </ul>
-                
-                <h4>步驟 2：部署 Google Apps Script</h4>
-                <p>1. 在試算表菜單中，點擊「擴充功能」>「Apps Script」。</p>
-                <p>2. 將以下程式碼貼入 `程式碼.gs` 檔案中，覆蓋所有內容：</p>
+
+                <h4>步驟 2：Apps Script</h4>
+                <p>1. 點擊上方選單「擴充功能」>「Apps Script」。</p>
+                <p>2. 刪除原有內容，貼上以下程式碼：</p>
                 <pre><code>function doPost(e) {
-  var ss = SpreadsheetApp.getActiveSpreadsheet();
-  var params = JSON.parse(e.postData.contents);
-  var action = params.action;
-  
-  if (action === 'sync') {
-    // 處理同步上傳
-    try {
-      if (params.ChargeLog) syncData(ss, 'ChargeLog', params.ChargeLog);
-      if (params.MaintenanceLog) syncData(ss, 'MaintenanceLog', params.MaintenanceLog);
-      if (params.ExpenseLog) syncData(ss, 'ExpenseLog', params.ExpenseLog);
-      if (params.StatusLog) syncData(ss, 'StatusLog', params.StatusLog);
-      return ContentService.createTextOutput(JSON.stringify({ status: 'success', message: '資料同步成功' })).setMimeType(ContentService.MimeType.JSON);
-    } catch (error) {
-       return ContentService.createTextOutput(JSON.stringify({ status: 'error', message: '同步失敗: ' + error.message })).setMimeType(ContentService.MimeType.JSON);
+  try {
+    var data = JSON.parse(e.postData.contents);
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    
+    if (data.action === 'sync') {
+      saveToSheet(ss, 'ChargeLog', data.chargeLog);
+      saveToSheet(ss, 'MaintenanceLog', data.maintenanceLog);
+      saveToSheet(ss, 'ExpenseLog', data.expenseLog);
+      saveToSheet(ss, 'StatusLog', data.statusLog);
+      return ContentService.createTextOutput(JSON.stringify({status: 'success'}))
+        .setMimeType(ContentService.MimeType.JSON);
+    } else if (data.action === 'restore') {
+      var result = {
+        ChargeLog: readSheet(ss, 'ChargeLog'),
+        MaintenanceLog: readSheet(ss, 'MaintenanceLog'),
+        ExpenseLog: readSheet(ss, 'ExpenseLog'),
+        StatusLog: readSheet(ss, 'StatusLog')
+      };
+      return ContentService.createTextOutput(JSON.stringify({status: 'success', data: result}))
+        .setMimeType(ContentService.MimeType.JSON);
     }
-  } else if (action === 'restore') {
-    // 處理還原下載
-    var data = {};
-    try {
-      data.ChargeLog = readData(ss, 'ChargeLog');
-      data.MaintenanceLog = readData(ss, 'MaintenanceLog');
-      data.ExpenseLog = readData(ss, 'ExpenseLog');
-      data.StatusLog = readData(ss, 'StatusLog');
-      
-      // 移除所有為空陣列的屬性
-      for (var key in data) {
-          if (Array.isArray(data[key]) && data[key].length === 0) {
-              delete data[key];
-          }
-      }
-      
-      return ContentService.createTextOutput(JSON.stringify({ status: 'success', data: data })).setMimeType(ContentService.MimeType.JSON);
-    } catch (error) {
-      return ContentService.createTextOutput(JSON.stringify({ status: 'error', message: '還原失敗: ' + error.message })).setMimeType(ContentService.MimeType.JSON);
-    }
-  }
-  
-  return ContentService.createTextOutput(JSON.stringify({ status: 'error', message: '無效的動作' })).setMimeType(ContentService.MimeType.JSON);
-}
-
-// 輔助函數：將 JSON 陣列寫入工作表
-function syncData(ss, sheetName, data) {
-  var sheet = ss.getSheetByName(sheetName);
-  if (!sheet) throw new Error('找不到工作表: ' + sheetName);
-  
-  // 1. 取得標頭 (使用陣列的第一個物件的所有 key)
-  var headers = data.length > 0 ? Object.keys(data[0]) : [];
-  if (headers.length === 0) return; // 沒有資料或沒有標頭，直接返回
-
-  // 2. 清除舊資料 (保留第一行標頭)
-  sheet.clearContents();
-  
-  // 3. 寫入標頭
-  sheet.getRange(1, 1, 1, headers.length).setValues([headers]);
-  
-  // 4. 準備寫入資料
-  var values = data.map(function(obj) {
-    return headers.map(function(header) {
-      var val = obj[header];
-      // 檢查是否為物件或陣列，如果是，轉換為 JSON 字串
-      if (typeof val === 'object' && val !== null) {
-        return JSON.stringify(val);
-      }
-      return val;
-    });
-  });
-  
-  // 5. 寫入所有資料
-  if (values.length > 0) {
-    sheet.getRange(2, 1, values.length, headers.length).setValues(values);
+  } catch (f) {
+    return ContentService.createTextOutput(JSON.stringify({status: 'error', message: f.toString()})).setMimeType(ContentService.MimeType.JSON);
   }
 }
 
-// 輔助函數：從工作表讀取資料並轉換為 JSON 陣列
-function readData(ss, sheetName) {
+function saveToSheet(ss, sheetName, dataArray) {
   var sheet = ss.getSheetByName(sheetName);
-  if (!sheet) throw new Error('找不到工作表: ' + sheetName);
-  
-  var range = sheet.getDataRange();
-  var values = range.getValues();
-  
-  if (values.length < 2) return []; // 只有標頭或空白
-  
-  var headers = values[0]; // 第一行是標頭
+  if (!sheet || !dataArray || dataArray.length === 0) return;
+  sheet.clear();
+  var headers = Object.keys(dataArray[0]);
+  sheet.appendRow(headers);
+  var rows = dataArray.map(obj => headers.map(key => {
+    var val = obj[key];
+    if (typeof val === 'object') return JSON.stringify(val);
+    return val;
+  }));
+  sheet.getRange(2, 1, rows.length, headers.length).setValues(rows);
+}
+
+function readSheet(ss, sheetName) {
+  var sheet = ss.getSheetByName(sheetName);
+  if (!sheet) return [];
+  var rows = sheet.getDataRange().getValues();
+  if (rows.length < 2) return [];
+  var headers = rows[0];
   var data = [];
-  
-  for (var i = 1; i < values.length; i++) {
-    var row = values[i];
+  for (var i = 1; i < rows.length; i++) {
     var obj = {};
     for (var j = 0; j < headers.length; j++) {
-      var val = row[j];
+      var val = rows[i][j];
       try {
-         // 嘗試解析 JSON 字串 (如備註欄位可能為 JSON)
          if (typeof val === 'string' && (val.startsWith('[') || val.startsWith('{'))) {
              val = JSON.parse(val);
          }
@@ -546,18 +525,15 @@ function readData(ss, sheetName) {
     </div>
     
     <div class="toast" id="toast"></div>
-    <script src="motolog.js"></script>
+    <script src="motolog.js" defer></script>
     <script>
-        // 註冊 Service Worker
-        if ('serviceWorker' in navigator) {
-            window.addEventListener('load', function() {
-                navigator.serviceWorker.register('sw.js').then(function(registration) {
-                    console.log('Service Worker 註冊成功: ', registration.scope);
-                }, function(err) {
-                    console.log('Service Worker 註冊失敗: ', err);
-                });
-            });
-        }
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('./sw.js')
+            .then((reg) => console.log('Service Worker registered.', reg))
+            .catch((err) => console.log('Service Worker registration failed.', err));
+        });
+      }
     </script>
 </body>
 </html>
