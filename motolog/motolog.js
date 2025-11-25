@@ -1,13 +1,12 @@
 /* motolog.js
-   Based on v15 (Unified Prefill) + Modifications:
-   1. 顯示程式版本 (v15.2.0)。
-   2. 離線偵測 (禁止同步)。
-   3. 顯示最後更新時間 (例如：2小時前)。
+   v15.3.0 Changes:
+   1. 新增：重新計算電費功能 (recalcElectricityCost)
+   2. 修正：編輯保養/花費時日期與時間無法正確代入的問題
 */
 
-console.log('motolog.js (v15.2.0): loaded');
+console.log('motolog.js (v15.3.0): loaded');
 
-const APP_VERSION = 'v15.2.0';
+const APP_VERSION = 'v15.3.0';
 const SETTINGS_KEY = 'motorcycleSettings';
 const BACKUP_KEY = 'lastBackupDate';
 
@@ -50,13 +49,11 @@ document.addEventListener('DOMContentLoaded', function() {
         populateMonthFilters();
         loadAllData();
         
-        // 1. 統一預填邏輯
         prefillForms();
         
         updateChargeUI();
         checkBackupStatus();
         
-        // 2. 顯示版本號
         var verEl = safe('appVersion');
         if(verEl) verEl.textContent = 'Ver: ' + APP_VERSION;
 
@@ -79,7 +76,6 @@ function initEventListeners() {
             if (target) target.classList.add('active');
             window.scrollTo({top: 0, behavior: 'smooth'});
             
-            // 切換分頁時，重新抓取最新數據預填
             if (e.target.dataset.tab === 'status' || e.target.dataset.tab === 'charge') {
                 prefillForms();
             }
@@ -122,7 +118,6 @@ function initEventListeners() {
     if(safe('closeEditModal')) safe('closeEditModal').addEventListener('click', closeEditModal);
     if(safe('editChargeModal')) safe('editChargeModal').addEventListener('click', (e) => { if(e.target === safe('editChargeModal')) closeEditModal(); });
 
-    // 教學視窗事件
     if(safe('showTutorialBtn')) safe('showTutorialBtn').addEventListener('click', () => safe('tutorialModal').classList.add('active'));
     if(safe('closeTutorialModal')) safe('closeTutorialModal').addEventListener('click', () => safe('tutorialModal').classList.remove('active'));
     if(safe('tutorialModal')) safe('tutorialModal').addEventListener('click', (e) => { if(e.target === safe('tutorialModal')) safe('tutorialModal').classList.remove('active'); });
@@ -142,6 +137,9 @@ function initEventListeners() {
     if(safe('clearAllBtn')) safe('clearAllBtn').addEventListener('click', clearAllData);
     if(safe('syncToCloudBtn')) safe('syncToCloudBtn').addEventListener('click', syncToGoogleSheets);
     if(safe('restoreFromCloudBtn')) safe('restoreFromCloudBtn').addEventListener('click', restoreFromGoogleSheets); 
+    
+    // 新增：重新計算電費按鈕事件
+    if(safe('recalcCostBtn')) safe('recalcCostBtn').addEventListener('click', recalcElectricityCost);
 
     ['chargeMonthFilter', 'chargeSearch'].forEach(id => { if(safe(id)) safe(id).addEventListener('input', filterChargeTable); });
     ['maintMonthFilter', 'maintTypeFilter'].forEach(id => { if(safe(id)) safe(id).addEventListener('change', filterMaintTable); });
@@ -160,7 +158,6 @@ function showToast(message, type = 'success') {
     if (!toast) return;
     toast.textContent = message;
     toast.className = 'toast show ' + (type === 'success' ? 'toast-success' : 'toast-error');
-    // 清除 inline style 確保 CSS class 生效
     toast.style.background = '';
     toast.style.color = '';
     setTimeout(() => { toast.classList.remove('show'); }, 3000);
@@ -186,7 +183,6 @@ function checkMileageAnomaly(newOdo, recordDateStr) {
     return true;
 }
 
-// === 核心：取得最新狀態 (整合所有 Log) ===
 function getLatestState() {
     var charges = JSON.parse(localStorage.getItem('chargeLog') || '[]');
     var statuses = JSON.parse(localStorage.getItem('statusLog') || '[]');
@@ -218,17 +214,14 @@ function getLatestState() {
     maints.forEach(r => allRecords.push({ ts: getRecordTimestamp(r), odo: parseFloat(r.odo), battery: null, type: 'maint', raw: r }));
     expenses.forEach(r => allRecords.push({ ts: getRecordTimestamp(r), odo: parseFloat(r.odo), battery: null, type: 'expense', raw: r }));
 
-    // 排序：新 -> 舊
     allRecords.sort((a, b) => b.ts - a.ts);
 
     if (allRecords.length === 0) return { odo: 0, battery: null, rawRecord: null, lastTs: 0 };
 
-    // 找出最新 ODO
     var latestOdo = 0;
     var latestOdoRec = allRecords.find(r => r.odo > 0);
     if (latestOdoRec) latestOdo = latestOdoRec.odo;
 
-    // 找出最新 Battery (只看 charge 和 status)
     var latestBat = null;
     var latestBatRec = allRecords.find(r => (r.type === 'charge' || r.type === 'status') && r.battery !== null && r.battery !== undefined);
     if (latestBatRec) latestBat = parseInt(latestBatRec.battery);
@@ -237,37 +230,27 @@ function getLatestState() {
         odo: latestOdo,
         battery: latestBat,
         rawRecord: allRecords[0].raw,
-        lastTs: allRecords[0].ts // 回傳最新一筆的時間戳記
+        lastTs: allRecords[0].ts 
     };
 }
 
-// 統一取得時間戳記 (相容舊版與雲端格式)
 function getRecordTimestamp(r) {
     if (!r) return 0;
-    
-    // 優先使用 startTime / endTime
     if (r.endTime) return new Date(r.endTime).getTime();
     if (r.startTime) return new Date(r.startTime).getTime();
     
-    // 處理日期字串 (截取前10碼解決雲端 ISO 格式問題)
     var dateStr = (r.date || "").slice(0, 10); 
-    
     if (dateStr && r.time) {
         return new Date(dateStr + 'T' + r.time).getTime();
     }
-    
     if (dateStr) {
         return new Date(dateStr + 'T00:00:00').getTime();
     }
-    
     return 0;
 }
 
-// === 統一預填 & 顯示時間 ===
 function prefillForms() {
     var state = getLatestState();
-    
-    // 3. 顯示最後更新時間
     updateLastUpdateTimeDisplay(state.lastTs);
 
     if (safe('sOdo')) safe('sOdo').value = state.odo || '';
@@ -283,7 +266,6 @@ function prefillForms() {
     }
 }
 
-// 3. 計算並顯示時間差
 function updateLastUpdateTimeDisplay(timestamp) {
     var display = safe('lastUpdateInfo');
     if (!display || !timestamp) {
@@ -305,7 +287,6 @@ function updateLastUpdateTimeDisplay(timestamp) {
     display.textContent = text;
 }
 
-// === 備份與離線偵測 ===
 function checkBackupStatus() {
     try {
         var last = localStorage.getItem(BACKUP_KEY);
@@ -352,91 +333,53 @@ function checkBackupStatus() {
     } catch (err) { console.error('checkBackupStatus error', err); }
 }
 
-// 2. 雲端同步 (加入離線偵測)
-function syncToGoogleSheets() {
-    if (!navigator.onLine) {
-        showToast('❌ 離線狀態無法同步', 'error');
+// 重新計算電費邏輯
+function recalcElectricityCost() {
+    var settings = JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}');
+    var rate = parseFloat(settings.electricRate);
+    if (!rate) {
+        alert('請先在設定頁面設定「電費單價」');
         return;
     }
 
-    var settings = loadSettings();
-    if (!settings.gasUrl) {
-        showToast('請先在設定頁面輸入 GAS API 網址', 'error');
+    if (!confirm(`確定要依據單價 ${rate} 元重新計算目前顯示月份的「公司」或「家裡」充電費用嗎？`)) {
         return;
     }
-    
-    if (!confirm('確定要將本機資料同步到 Google Sheets 嗎？(注意：這將覆蓋雲端上的舊備份)')) return;
 
-    var payload = {
-        action: 'sync',
-        chargeLog: JSON.parse(localStorage.getItem('chargeLog')||'[]'),
-        maintenanceLog: JSON.parse(localStorage.getItem('maintenanceLog')||'[]'),
-        expenseLog: JSON.parse(localStorage.getItem('expenseLog')||'[]'),
-        statusLog: JSON.parse(localStorage.getItem('statusLog')||'[]')
-    };
+    var month = safe('chargeMonthFilter').value; // YYYY-MM
+    var data = JSON.parse(localStorage.getItem('chargeLog') || '[]');
+    var count = 0;
 
-    showToast('☁️ 同步中...', 'success');
-    
-    fetch(settings.gasUrl, {
-        method: 'POST',
-        body: JSON.stringify(payload)
-    })
-    .then(res => res.json())
-    .then(data => {
-        if(data.status === 'success') {
-            showToast('✅ 雲端同步成功');
-            localStorage.setItem(BACKUP_KEY, new Date().toISOString().slice(0,10));
-            checkBackupStatus();
-        } else {
-            showToast('❌ 同步失敗: ' + data.message, 'error');
+    data.forEach(r => {
+        // 檢查月份
+        var dateStr = (r.date || '').slice(0, 7);
+        if (month && dateStr !== month) return;
+
+        // 檢查地點類型 (相容舊資料的 stationType 與 station)
+        var st = (r.stationType || '').trim();
+        var sn = (r.station || '').trim();
+        var isTarget = (st === '公司' || st === '家裡') || (sn === '公司' || sn === '家裡');
+
+        if (isTarget) {
+            var kwh = parseFloat(r.kwh) || 0;
+            if (kwh > 0) {
+                var newCost = Math.round(kwh * rate);
+                if (r.cost !== newCost) {
+                    r.cost = newCost;
+                    count++;
+                }
+            }
         }
-    })
-    .catch(err => {
-        console.error(err);
-        showToast('❌ 網路錯誤', 'error');
     });
-}
 
-// 2. 雲端還原 (加入離線偵測)
-function restoreFromGoogleSheets() {
-    if (!navigator.onLine) {
-        showToast('❌ 離線狀態無法還原', 'error');
-        return;
+    if (count > 0) {
+        localStorage.setItem('chargeLog', JSON.stringify(data));
+        loadChargeHistory(); // 重新載入列表
+        updateDashboard(); // 更新總計
+        showToast(`✅ 已重新計算 ${count} 筆紀錄`);
+    } else {
+        showToast('沒有符合條件需更新的紀錄');
     }
-
-    var settings = loadSettings();
-    if (!settings.gasUrl) {
-        showToast('請先在設定頁面輸入 GAS API 網址', 'error');
-        return;
-    }
-    
-    if (!confirm('⚠️ 警告：這將使用雲端資料「覆蓋」您目前手機上的所有資料！確定要執行嗎？')) return;
-
-    showToast('☁️ 下載還原中...', 'success');
-    
-    fetch(settings.gasUrl, {
-        method: 'POST',
-        body: JSON.stringify({ action: 'restore' })
-    })
-    .then(res => res.json())
-    .then(data => {
-        if(data.status === 'success' && data.data) {
-            var d = data.data;
-            if(d.ChargeLog) localStorage.setItem('chargeLog', JSON.stringify(d.ChargeLog));
-            if(d.MaintenanceLog) localStorage.setItem('maintenanceLog', JSON.stringify(d.MaintenanceLog));
-            if(d.ExpenseLog) localStorage.setItem('expenseLog', JSON.stringify(d.ExpenseLog));
-            if(d.StatusLog) localStorage.setItem('statusLog', JSON.stringify(d.StatusLog));
-            
-            showToast('✅ 還原成功！頁面將重新整理...');
-            setTimeout(() => location.reload(), 1500);
-        } else {
-            showToast('❌ 還原失敗: ' + (data.message || '無資料'), 'error');
-        }
-    })
-    .catch(err => {
-        console.error(err);
-        showToast('❌ 網路錯誤或 API 未支援還原', 'error');
-    });
 }
 
 function startCharging(e) {
@@ -533,7 +476,6 @@ function updateChargeUI() {
     }
 }
 
-// 補回 CRUD 函式 (這些是您報錯缺少的函式)
 function saveStatus(e) {
     e.preventDefault();
     if (!checkMileageAnomaly(parseFloat(safe('sOdo').value), new Date().toISOString().slice(0,10))) return;
@@ -926,8 +868,9 @@ window.editMaintenance = function(id) {
     var r = data.find(x => x.id === id);
     if(!r) return;
     safe('editingMaintId').value = r.id;
-    safe('mDate').value = r.date;
-    safe('mTime').value = r.time;
+    // 修正：強制切分日期與時間字串，確保格式正確
+    safe('mDate').value = (r.date || '').slice(0, 10);
+    safe('mTime').value = (r.time || '').slice(0, 5);
     safe('mOdo').value = r.odo;
     safe('mType').value = r.type;
     safe('mNotes').value = r.notes;
@@ -963,8 +906,9 @@ window.editExpense = function(id) {
     var r = data.find(x => x.id === id);
     if(!r) return;
     safe('editingExpenseId').value = r.id;
-    safe('eDate').value = r.date;
-    safe('eTime').value = r.time;
+    // 修正：強制切分日期與時間字串
+    safe('eDate').value = (r.date || '').slice(0, 10);
+    safe('eTime').value = (r.time || '').slice(0, 5);
     safe('eCategory').value = r.category;
     safe('eAmount').value = r.amount;
     safe('eDescription').value = r.description;
@@ -1067,7 +1011,6 @@ function autoCalculateCost() {
 }
 
 function prefillChargeDefaults() {
-    // 留空
 }
 
 function populateDateTime(dId, tId) {
@@ -1184,7 +1127,6 @@ function clearAllData() {
     }
 }
 
-// 雲端同步邏輯
 function syncToGoogleSheets() {
     if (!navigator.onLine) {
         showToast('❌ 離線狀態無法同步', 'error');
@@ -1229,7 +1171,6 @@ function syncToGoogleSheets() {
     });
 }
 
-// 從雲端還原邏輯
 function restoreFromGoogleSheets() {
     if (!navigator.onLine) {
         showToast('❌ 離線狀態無法還原', 'error');
