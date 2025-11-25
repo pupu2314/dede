@@ -1,4 +1,4 @@
-const CACHE_NAME = 'motolog-v15.2.1';
+const CACHE_NAME = 'motolog-v15.2.2';
 const ASSETS_TO_CACHE = [
   './',
   './index.html',
