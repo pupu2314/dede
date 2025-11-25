@@ -1,12 +1,12 @@
 /* motolog.js
-   v15.3.1 Changes:
-   1. 修正：解決從 Google Sheets 還原後，日期與時間變成 ISO 格式導致編輯頁面無法正確顯示的問題。
-   2. 新增 helper 函式：safeDateVal (處理時區日期) 與 safeTimeVal (處理時間截取)。
+   v15.4.0 Changes:
+   1. 修改：電費計算改為「無條件進位至小數後2位」 (Math.ceil(x*100)/100)。
+   2. 新增：統計畫面顯示「充電成本/km」。
 */
 
-console.log('motolog.js (v15.3.1): loaded');
+console.log('motolog.js (v15.4.0): loaded');
 
-const APP_VERSION = 'v15.3.1';
+const APP_VERSION = 'v15.4.0';
 const SETTINGS_KEY = 'motorcycleSettings';
 const BACKUP_KEY = 'lastBackupDate';
 
@@ -150,41 +150,6 @@ function initEventListeners() {
         localStorage.setItem(SETTINGS_KEY, JSON.stringify(s));
         applyTheme(s.theme);
     });
-}
-
-// === 日期與時間處理工具 (解決雲端同步格式問題) ===
-
-// 將各種日期格式轉回本地 YYYY-MM-DD
-function safeDateVal(val) {
-    if (!val) return '';
-    // 如果已經是 YYYY-MM-DD
-    if (val.length === 10 && val.indexOf('-') === 4) return val;
-    
-    // 如果是 ISO 字串 (如 2025-10-26T16:00:00.000Z)
-    // 直接切字串會得到 UTC 日期 (可能比台灣少一天)，所以要轉回本地時間
-    try {
-        var d = new Date(val);
-        // 修正時區偏移，轉成 Local ISO
-        var local = new Date(d.getTime() - (d.getTimezoneOffset() * 60000));
-        return local.toISOString().slice(0, 10);
-    } catch(e) {
-        return val.slice(0, 10); // fallback
-    }
-}
-
-// 將各種時間格式轉回 HH:MM
-function safeTimeVal(val) {
-    if (!val) return '';
-    // 如果已經是 HH:MM
-    if (val.length === 5 && val.indexOf(':') === 2) return val;
-    
-    // 如果是 ISO 字串 (如 1899-12-30T07:30:00.000Z)
-    // 通常 Google Sheets 回傳的 Time Object 是以 UTC 儲存原本的 "面值"
-    // 所以直接切取 ISO 字串中的 HH:MM 比較保險，避免時區轉換把 07:30 變成 15:30
-    if (val.includes('T')) {
-        return val.split('T')[1].slice(0, 5);
-    }
-    return val.slice(0, 5);
 }
 
 function showToast(message, type = 'success') {
@@ -367,6 +332,7 @@ function checkBackupStatus() {
     } catch (err) { console.error('checkBackupStatus error', err); }
 }
 
+// 修改：無條件進位至小數點後2位
 function recalcElectricityCost() {
     var settings = JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}');
     var rate = parseFloat(settings.electricRate);
@@ -375,7 +341,7 @@ function recalcElectricityCost() {
         return;
     }
 
-    if (!confirm(`確定要依據單價 ${rate} 元重新計算目前顯示月份的「公司」或「家裡」充電費用嗎？`)) {
+    if (!confirm(`確定要依據單價 ${rate} 元重新計算目前顯示月份的「公司」或「家裡」充電費用嗎？\n(計算將無條件進位至小數後2位)`)) {
         return;
     }
 
@@ -394,7 +360,9 @@ function recalcElectricityCost() {
         if (isTarget) {
             var kwh = parseFloat(r.kwh) || 0;
             if (kwh > 0) {
-                var newCost = Math.round(kwh * rate);
+                // 無條件進位至小數後2位
+                var rawCost = kwh * rate;
+                var newCost = Math.ceil(rawCost * 100) / 100;
                 if (r.cost !== newCost) {
                     r.cost = newCost;
                     count++;
@@ -615,6 +583,10 @@ function updateDashboard() {
     safe('totalExpense').textContent = Math.round(totalCost).toLocaleString();
     safe('statTotalCost').textContent = Math.round(totalCost).toLocaleString() + ' NT$';
 
+    // 計算純充電成本
+    var totalChargeCost = 0;
+    charge.forEach(i => totalChargeCost += (parseFloat(i.cost) || 0));
+
     if (charge.length > 0) {
         var last = charge[0]; 
         var days = daysBetween(last.date, new Date().toISOString().slice(0,10));
@@ -655,7 +627,14 @@ function updateDashboard() {
         }
     }
     
-    if(maxOdo > 0) safe('statCostPerKm').textContent = (totalCost / maxOdo).toFixed(2) + " NT$";
+    // 統計計算
+    if(maxOdo > 0) {
+        safe('statCostPerKm').textContent = (totalCost / maxOdo).toFixed(2) + " NT$";
+        // 新增：充電成本/km
+        if(safe('statChargeCostPerKm')) {
+            safe('statChargeCostPerKm').textContent = (totalChargeCost / maxOdo).toFixed(2) + " NT$";
+        }
+    }
     safe('statTotalMileage').textContent = maxOdo.toFixed(1) + " 公里";
     var daysRange = 1;
     var allRec = [charge, maint, expense, status].flat();
@@ -899,9 +878,8 @@ window.editMaintenance = function(id) {
     var r = data.find(x => x.id === id);
     if(!r) return;
     safe('editingMaintId').value = r.id;
-    // 使用新的 helper 處理日期時間
-    safe('mDate').value = safeDateVal(r.date);
-    safe('mTime').value = safeTimeVal(r.time);
+    safe('mDate').value = (r.date || '').slice(0, 10);
+    safe('mTime').value = (r.time || '').slice(0, 5);
     safe('mOdo').value = r.odo;
     safe('mType').value = r.type;
     safe('mNotes').value = r.notes;
@@ -937,9 +915,8 @@ window.editExpense = function(id) {
     var r = data.find(x => x.id === id);
     if(!r) return;
     safe('editingExpenseId').value = r.id;
-    // 使用新的 helper 處理日期時間
-    safe('eDate').value = safeDateVal(r.date);
-    safe('eTime').value = safeTimeVal(r.time);
+    safe('eDate').value = (r.date || '').slice(0, 10);
+    safe('eTime').value = (r.time || '').slice(0, 5);
     safe('eCategory').value = r.category;
     safe('eAmount').value = r.amount;
     safe('eDescription').value = r.description;
@@ -1034,11 +1011,17 @@ function applyTheme(theme) {
     }
 }
 
+// 修改：無條件進位至小數後2位
 function autoCalculateCost() {
     if(safe('cKwh').dataset.autoCalc !== "true") return;
     var rate = parseFloat(safe('electricRate').value) || 0;
     var kwh = parseFloat(safe('cKwh').value) || 0;
-    safe('cCost').value = Math.round(rate * kwh);
+    
+    var rawCost = rate * kwh;
+    // Math.ceil(x * 100) / 100
+    var finalCost = Math.ceil(rawCost * 100) / 100;
+    
+    safe('cCost').value = finalCost.toFixed(2);
 }
 
 function prefillChargeDefaults() {
