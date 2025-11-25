@@ -157,7 +157,7 @@
                             
                             <div class="form-group" id="costGroup">
                                 <label>充電費用 (NT$)</label>
-                                <input type="number" inputmode="numeric" id="cCost" placeholder="例如: 30">
+                                <input type="number" inputmode="decimal" step="0.01" id="cCost" placeholder="例如: 30.50">
                             </div>
                             
                             <div class="form-group">
@@ -308,7 +308,9 @@
                 <div class="analytics-grid">
                     <div class="analytics-card"><h4>總里程</h4><p id="statTotalMileage">0 公里</p></div>
                     <div class="analytics-card"><h4>平均日里程</h4><p id="statAvgDaily">0 公里</p></div>
-                    <div class="analytics-card"><h4>每公里成本</h4><p id="statCostPerKm">0 NT$</p></div>
+                    <div class="analytics-card"><h4>每公里總成本</h4><p id="statCostPerKm">0 NT$</p></div>
+                    <!-- 新增：充電成本/km -->
+                    <div class="analytics-card"><h4>充電成本/km</h4><p id="statChargeCostPerKm">0 NT$</p></div>
                     <div class="analytics-card"><h4>總花費</h4><p id="statTotalCost">0 NT$</p></div>
                 </div>
             </div>
@@ -408,7 +410,7 @@
                     </div>
                     <div class="row-group">
                         <div class="form-group half"><label>度數 (kWh)</label><input type="number" inputmode="decimal" step="0.01" id="edit_cKwh"></div>
-                        <div class="form-group half"><label>費用 (NT$)</label><input type="number" inputmode="numeric" id="edit_cCost"></div>
+                        <div class="form-group half"><label>費用 (NT$)</label><input type="number" inputmode="decimal" step="0.01" id="edit_cCost"></div>
                     </div>
                     <div class="form-group"><label>備註</label><textarea id="edit_cNotes" rows="2"></textarea></div>
                 </div>
