@@ -1,12 +1,12 @@
 /* motolog.js
-   v15.3.0 Changes:
-   1. 新增：重新計算電費功能 (recalcElectricityCost)
-   2. 修正：編輯保養/花費時日期與時間無法正確代入的問題
+   v15.3.1 Changes:
+   1. 修正：解決從 Google Sheets 還原後，日期與時間變成 ISO 格式導致編輯頁面無法正確顯示的問題。
+   2. 新增 helper 函式：safeDateVal (處理時區日期) 與 safeTimeVal (處理時間截取)。
 */
 
-console.log('motolog.js (v15.3.0): loaded');
+console.log('motolog.js (v15.3.1): loaded');
 
-const APP_VERSION = 'v15.3.0';
+const APP_VERSION = 'v15.3.1';
 const SETTINGS_KEY = 'motorcycleSettings';
 const BACKUP_KEY = 'lastBackupDate';
 
@@ -138,7 +138,6 @@ function initEventListeners() {
     if(safe('syncToCloudBtn')) safe('syncToCloudBtn').addEventListener('click', syncToGoogleSheets);
     if(safe('restoreFromCloudBtn')) safe('restoreFromCloudBtn').addEventListener('click', restoreFromGoogleSheets); 
     
-    // 新增：重新計算電費按鈕事件
     if(safe('recalcCostBtn')) safe('recalcCostBtn').addEventListener('click', recalcElectricityCost);
 
     ['chargeMonthFilter', 'chargeSearch'].forEach(id => { if(safe(id)) safe(id).addEventListener('input', filterChargeTable); });
@@ -151,6 +150,41 @@ function initEventListeners() {
         localStorage.setItem(SETTINGS_KEY, JSON.stringify(s));
         applyTheme(s.theme);
     });
+}
+
+// === 日期與時間處理工具 (解決雲端同步格式問題) ===
+
+// 將各種日期格式轉回本地 YYYY-MM-DD
+function safeDateVal(val) {
+    if (!val) return '';
+    // 如果已經是 YYYY-MM-DD
+    if (val.length === 10 && val.indexOf('-') === 4) return val;
+    
+    // 如果是 ISO 字串 (如 2025-10-26T16:00:00.000Z)
+    // 直接切字串會得到 UTC 日期 (可能比台灣少一天)，所以要轉回本地時間
+    try {
+        var d = new Date(val);
+        // 修正時區偏移，轉成 Local ISO
+        var local = new Date(d.getTime() - (d.getTimezoneOffset() * 60000));
+        return local.toISOString().slice(0, 10);
+    } catch(e) {
+        return val.slice(0, 10); // fallback
+    }
+}
+
+// 將各種時間格式轉回 HH:MM
+function safeTimeVal(val) {
+    if (!val) return '';
+    // 如果已經是 HH:MM
+    if (val.length === 5 && val.indexOf(':') === 2) return val;
+    
+    // 如果是 ISO 字串 (如 1899-12-30T07:30:00.000Z)
+    // 通常 Google Sheets 回傳的 Time Object 是以 UTC 儲存原本的 "面值"
+    // 所以直接切取 ISO 字串中的 HH:MM 比較保險，避免時區轉換把 07:30 變成 15:30
+    if (val.includes('T')) {
+        return val.split('T')[1].slice(0, 5);
+    }
+    return val.slice(0, 5);
 }
 
 function showToast(message, type = 'success') {
@@ -333,7 +367,6 @@ function checkBackupStatus() {
     } catch (err) { console.error('checkBackupStatus error', err); }
 }
 
-// 重新計算電費邏輯
 function recalcElectricityCost() {
     var settings = JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}');
     var rate = parseFloat(settings.electricRate);
@@ -346,16 +379,14 @@ function recalcElectricityCost() {
         return;
     }
 
-    var month = safe('chargeMonthFilter').value; // YYYY-MM
+    var month = safe('chargeMonthFilter').value; 
     var data = JSON.parse(localStorage.getItem('chargeLog') || '[]');
     var count = 0;
 
     data.forEach(r => {
-        // 檢查月份
         var dateStr = (r.date || '').slice(0, 7);
         if (month && dateStr !== month) return;
 
-        // 檢查地點類型 (相容舊資料的 stationType 與 station)
         var st = (r.stationType || '').trim();
         var sn = (r.station || '').trim();
         var isTarget = (st === '公司' || st === '家裡') || (sn === '公司' || sn === '家裡');
@@ -374,8 +405,8 @@ function recalcElectricityCost() {
 
     if (count > 0) {
         localStorage.setItem('chargeLog', JSON.stringify(data));
-        loadChargeHistory(); // 重新載入列表
-        updateDashboard(); // 更新總計
+        loadChargeHistory(); 
+        updateDashboard(); 
         showToast(`✅ 已重新計算 ${count} 筆紀錄`);
     } else {
         showToast('沒有符合條件需更新的紀錄');
@@ -868,9 +899,9 @@ window.editMaintenance = function(id) {
     var r = data.find(x => x.id === id);
     if(!r) return;
     safe('editingMaintId').value = r.id;
-    // 修正：強制切分日期與時間字串，確保格式正確
-    safe('mDate').value = (r.date || '').slice(0, 10);
-    safe('mTime').value = (r.time || '').slice(0, 5);
+    // 使用新的 helper 處理日期時間
+    safe('mDate').value = safeDateVal(r.date);
+    safe('mTime').value = safeTimeVal(r.time);
     safe('mOdo').value = r.odo;
     safe('mType').value = r.type;
     safe('mNotes').value = r.notes;
@@ -906,9 +937,9 @@ window.editExpense = function(id) {
     var r = data.find(x => x.id === id);
     if(!r) return;
     safe('editingExpenseId').value = r.id;
-    // 修正：強制切分日期與時間字串
-    safe('eDate').value = (r.date || '').slice(0, 10);
-    safe('eTime').value = (r.time || '').slice(0, 5);
+    // 使用新的 helper 處理日期時間
+    safe('eDate').value = safeDateVal(r.date);
+    safe('eTime').value = safeTimeVal(r.time);
     safe('eCategory').value = r.category;
     safe('eAmount').value = r.amount;
     safe('eDescription').value = r.description;
