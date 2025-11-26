@@ -1,9 +1,8 @@
 /**
- * Service Worker for 加班費計算機 v2.2
- * 提供離線功能和快取管理
+ * Service Worker for 加班費計算機 v2.3
  */
 
-const CACHE_NAME = 'overtime-calculator-v2.2';
+const CACHE_NAME = 'overtime-calculator-v2.3';
 const urlsToCache = [
   './',
   './index.html',
@@ -148,4 +147,5 @@ self.addEventListener('notificationclick', event => {
     );
   }
 });
+
 
