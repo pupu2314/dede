@@ -425,11 +425,6 @@
             localStorage.setItem(STORAGE_KEYS.TEMP_RECORD, JSON.stringify(tempRecord));
             updatePunchUI(false);
             restoreState();
-            
-            // 提示前往查看
-            if(confirm('打卡完成！紀錄已儲存。是否前往「紀錄」分頁查看？')) {
-                switchTab('records');
-            }
         }
     }
     function updatePunchUI(isPunchedIn) {
