@@ -14,15 +14,21 @@
     <!-- 截圖功能 -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     
-    <!-- 移除原本的 Google API 腳本，改用標準 Fetch API -->
-
     <link rel="stylesheet" href="work.css">
 </head>
 <body>
-    <div class="container">
-        <h1>加班費計算機 <small style="font-size: 0.5em; color: #666;">v2.2 (GAS版)</small></h1>
+    <div class="container main-layout">
+        <h1 class="app-title">加班費計算機 <small>v2.3</small></h1>
         
-        <div id="welcome-message" class="info-message" style="display: none;">
+        <!-- 分頁導航列 -->
+        <nav class="tabs-nav">
+            <button class="tab-btn" data-tab="settings">設定</button>
+            <button class="tab-btn active" data-tab="punch">加班</button>
+            <button class="tab-btn" data-tab="records">紀錄</button>
+            <button class="tab-btn" data-tab="backup">備份</button>
+        </nav>
+
+        <div id="welcome-message" class="info-message" style="display: none; margin-bottom: 1rem;">
             <h3>👋 歡迎使用加班費計算機！</h3>
             <p><strong>使用前請注意：</strong></p>
             <ul style="text-align: left; margin: 0.5rem 0;">
@@ -30,49 +36,60 @@
                 <li>☁️ <strong>免費雲端同步：</strong>支援 Google Apps Script (GAS) 同步！</li>
                 <li>⚠️ 建議每日進行雲端同步或本地備份。</li>
             </ul>
-            <p style="margin-top: 1rem;">請先完成下方「基本設定」，然後開始記錄加班！</p>
+            <p style="margin-top: 1rem;">請先至「設定」分頁完成基本資料，然後開始記錄！</p>
             <button id="close-welcome" class="btn-secondary btn-small" style="margin-top: 0.5rem;">我知道了</button>
         </div>
         
-        <div class="grid-container single-column-grid">
+        <!-- 分頁 1: 設定 -->
+        <div id="tab-settings" class="tab-content">
             <div class="card">
-                <details id="settings-details">
-                    <summary>1. 基本設定</summary>
-                    <div>
-                        <div class="form-group">
-                            <label for="user-name">姓名 (選填)</label>
-                            <input type="text" id="user-name" placeholder="例如:王小明" aria-label="使用者姓名">
-                            <small style="color: var(--secondary-color); display: block; margin-top: 0.25rem;">
-                                💡 設定姓名方便提交給人資時區分
-                            </small>
-                        </div>
-                        <div class="form-group"><label>薪資類型</label><div class="radio-group"><label><input type="radio" name="salaryType" value="monthly" checked> 月薪</label><label><input type="radio" name="salaryType" value="hourly"> 時薪</label></div></div>
-                        <div class="form-group"><label for="salary">薪資金額 (NTD)</label><input type="number" id="salary" min="0" step="1" placeholder="例如:40000" aria-label="薪資金額"></div>
-                        <div class="form-group"><label for="hourly-rate">換算時薪 (自動)</label><input type="number" id="hourly-rate" readonly aria-label="換算後的時薪"></div>
-                        <div class="form-group">
-                            <label for="payday">發薪日期 (每月幾號)</label>
-                            <input type="number" id="payday" min="1" max="31" value="1" placeholder="例如:15" aria-label="發薪日期">
-                            <small style="color: var(--secondary-color); display: block; margin-top: 0.25rem;">
-                                💡 設定發薪日用於計算加班費區間。例如:15日發薪代表前月15日至該月14日為一個計薪週期
-                            </small>
-                        </div>
-                        <hr>
-                        <div class="form-group">
-                            <label>正常工作/午休時間 (僅於「平日」加班時自動排除)</label>
-                            <div class="time-input-group">
-                                <label>上班</label><input type="time" id="work-start" value="09:00" aria-label="上班時間">
-                                <label>下班</label><input type="time" id="work-end" value="18:00" aria-label="下班時間">
-                                <label>午休</label><input type="time" id="break-start" value="12:00" aria-label="午休開始時間">
-                                <label>結束</label><input type="time" id="break-end" value="13:00" aria-label="午休結束時間">
-                            </div>
-                        </div>
-                        <button id="save-settings">儲存設定</button>
+                <h2>基本設定</h2>
+                <div>
+                    <div class="form-group">
+                        <label for="user-name">姓名 (選填)</label>
+                        <input type="text" id="user-name" placeholder="例如:王小明" aria-label="使用者姓名">
+                        <small style="color: var(--secondary-color); display: block; margin-top: 0.25rem;">
+                            💡 設定姓名方便提交給人資時區分
+                        </small>
                     </div>
-                </details>
+                    <div class="form-group"><label>薪資類型</label><div class="radio-group"><label><input type="radio" name="salaryType" value="monthly" checked> 月薪</label><label><input type="radio" name="salaryType" value="hourly"> 時薪</label></div></div>
+                    <div class="form-group"><label for="salary">薪資金額 (NTD)</label><input type="number" id="salary" min="0" step="1" placeholder="例如:40000" aria-label="薪資金額"></div>
+                    <div class="form-group"><label for="hourly-rate">換算時薪 (自動)</label><input type="number" id="hourly-rate" readonly aria-label="換算後的時薪"></div>
+                    <div class="form-group">
+                        <label for="payday">發薪日期 (每月幾號)</label>
+                        <input type="number" id="payday" min="1" max="31" value="1" placeholder="例如:15" aria-label="發薪日期">
+                        <small style="color: var(--secondary-color); display: block; margin-top: 0.25rem;">
+                            💡 設定發薪日用於計算加班費區間。例如:15日發薪代表前月15日至該月14日為一個計薪週期
+                        </small>
+                    </div>
+                    <hr>
+                    <div class="form-group">
+                        <label>正常工作/午休時間 (僅於「平日」加班時自動排除)</label>
+                        <div class="time-input-group">
+                            <label>上班</label><input type="time" id="work-start" value="09:00" aria-label="上班時間">
+                            <label>下班</label><input type="time" id="work-end" value="18:00" aria-label="下班時間">
+                            <label>午休</label><input type="time" id="break-start" value="12:00" aria-label="午休開始時間">
+                            <label>結束</label><input type="time" id="break-end" value="13:00" aria-label="午休結束時間">
+                        </div>
+                    </div>
+                    <button id="save-settings">儲存設定</button>
+                </div>
             </div>
+            <div class="disclaimer" style="font-size: 0.8rem; color: var(--secondary-color); margin-top: 1.5rem; border-top: 1px solid var(--border-color); padding-top: 1rem;">
+                <h4>免責聲明與計算依據</h4>
+                <p>本工具計算結果僅供參考,實際加班費請以公司人資或會計部門計算為準。</p>
+                <p><strong>計算依據:</strong> 依據勞動基準法第24條,加班費率如下:<br>
+                • 平日延長工時: 前2小時 × 1.34倍,第3小時起 × 1.67倍<br>
+                • 休息日: 前2小時 × 1.34倍,第3-8小時 × 1.67倍,第9小時起 × 2.67倍<br>
+                • 國定假日: × 1倍(另給工資)<br>
+                • 月薪換算時薪: 月薪 ÷ 240小時</p>
+            </div>
+        </div>
 
+        <!-- 分頁 2: 加班 (打卡/補登) -->
+        <div id="tab-punch" class="tab-content active">
             <div class="card">
-                <h2>2. 新增加班紀錄</h2>
+                <h2>新增加班紀錄</h2>
                 <div class="mode-switcher">
                     <button id="mode-punch" class="active" aria-pressed="true">即時打卡</button>
                     <button id="mode-manual" aria-pressed="false">補登紀錄</button>
@@ -106,106 +123,103 @@
             </div>
         </div>
 
-        <div id="capture-area" class="card" style="margin-top: 2rem;">
-            <h2>3. 加班紀錄與總覽</h2>
-            <div class="controls-container" style="display: flex; flex-wrap: wrap; gap: 1rem; align-items: flex-end;">
-                <div class="form-group" style="flex: 1 1 200px;">
-                    <label for="month-filter">篩選發薪月份</label>
-                    <input type="month" id="month-filter" aria-label="選擇要篩選的月份">
-                    <small id="pay-period-hint" style="color: var(--secondary-color); display: block; margin-top: 0.25rem;"></small>
+        <!-- 分頁 3: 紀錄 -->
+        <div id="tab-records" class="tab-content">
+            <div id="capture-area" class="card">
+                <h2>加班紀錄與總覽</h2>
+                <div class="controls-container" style="display: flex; flex-wrap: wrap; gap: 1rem; align-items: flex-end;">
+                    <div class="form-group" style="flex: 1 1 200px;">
+                        <label for="month-filter">篩選發薪月份</label>
+                        <input type="month" id="month-filter" aria-label="選擇要篩選的月份">
+                        <small id="pay-period-hint" style="color: var(--secondary-color); display: block; margin-top: 0.25rem;"></small>
+                    </div>
+                    <button id="export-image" class="btn-secondary" style="flex: 1 1 150px;">匯出本月圖片</button>
+                    <button id="export-csv" class="btn-secondary" style="flex: 1 1 150px;">匯出 CSV</button>
                 </div>
-                <button id="export-image" class="btn-secondary" style="flex: 1 1 150px;">匯出本月圖片</button>
-                <button id="export-csv" class="btn-secondary" style="flex: 1 1 150px;">匯出 CSV</button>
-            </div>
-            <table role="table" aria-label="加班記錄列表"><thead><tr><th>日期</th><th>類型</th><th>總時長(H)</th><th>加班費($)</th><th>操作</th></tr></thead><tbody id="records-body"></tbody></table>
-            <div class="summary">
-                <h3 id="summary-title">篩選月份總計</h3>
-                <p>期間:<span id="summary-period"></span></p>
-                <span id="total-overtime-pay" class="summary-value">0</span> 元
+                <table role="table" aria-label="加班記錄列表"><thead><tr><th>日期</th><th>類型</th><th>總時長(H)</th><th>加班費($)</th><th>操作</th></tr></thead><tbody id="records-body"></tbody></table>
+                <div class="summary">
+                    <h3 id="summary-title">篩選月份總計</h3>
+                    <p>期間:<span id="summary-period"></span></p>
+                    <span id="total-overtime-pay" class="summary-value">0</span> 元
+                </div>
             </div>
         </div>
         
-        <div class="card" style="margin-top: 2rem;">
-            <h2>4. 資料管理</h2>
-            
-            <div id="backup-reminder" class="warning-message" style="display: none; margin-bottom: 1rem;">
-                <strong>⚠️ 備份提醒</strong><br>
-                <span id="backup-reminder-text"></span>
-                <div style="margin-top: 0.5rem;">
-                    <button id="backup-reminder-action" class="btn-secondary btn-small">立即同步/備份</button>
-                    <button id="backup-remind-later" class="btn-secondary btn-small">稍後提醒</button>
-                </div>
-            </div>
-
-            <!-- 雲端同步區塊 (GAS Version) -->
-            <div id="cloud-sync-section" style="margin-bottom: 2rem; background: #f0f7ff; padding: 1rem; border-radius: 8px; border: 1px solid #cce5ff;">
-                <h3 style="margin-top:0; color: #0056b3;">☁️ Google Sheets 雲端同步 (GAS版)</h3>
+        <!-- 分頁 4: 備份 (資料管理) -->
+        <div id="tab-backup" class="tab-content">
+            <div class="card">
+                <h2>資料管理</h2>
                 
-                <div id="gas-config-container">
-                    <p style="margin-bottom: 0.5rem; font-size: 0.95rem;">
-                        請在 Google 試算表中建立 Apps Script，並將發布後的 <strong>Web App URL</strong> 貼在下方。
-                        <br><small style="color:#666;">(無須登入，僅需網址即可同步)</small>
-                    </p>
-                    <div style="display: flex; gap: 0.5rem; margin-bottom: 1rem;">
-                        <input type="text" id="gas-url-input" placeholder="https://script.google.com/macros/s/..../exec" style="flex:1;">
-                        <button id="save-gas-url" class="btn-small">儲存網址</button>
+                <div id="backup-reminder" class="warning-message" style="display: none; margin-bottom: 1rem;">
+                    <strong>⚠️ 備份提醒</strong><br>
+                    <span id="backup-reminder-text"></span>
+                    <div style="margin-top: 0.5rem;">
+                        <button id="backup-reminder-action" class="btn-secondary btn-small">立即同步/備份</button>
+                        <button id="backup-remind-later" class="btn-secondary btn-small">稍後提醒</button>
                     </div>
                 </div>
 
-                <div id="gas-sync-actions" style="display: none;">
-                    <div class="user-info" style="margin-bottom: 1rem; font-size: 0.9rem; display: flex; justify-content: space-between; align-items: center;">
-                        <span style="color: var(--success-color); font-weight: bold;">✅ 已連結 Google Sheets</span>
-                        <button id="reset-gas-url" class="btn-small btn-secondary">重設網址</button>
+                <!-- 雲端同步區塊 (GAS Version) -->
+                <div id="cloud-sync-section" style="margin-bottom: 2rem; background: #f0f7ff; padding: 1rem; border-radius: 8px; border: 1px solid #cce5ff;">
+                    <h3 style="margin-top:0; color: #0056b3;">☁️ Google Sheets 雲端同步 (GAS版)</h3>
+                    
+                    <div id="gas-config-container">
+                        <p style="margin-bottom: 0.5rem; font-size: 0.95rem;">
+                            請在 Google 試算表中建立 Apps Script，並將發布後的 <strong>Web App URL</strong> 貼在下方。
+                            <br><small style="color:#666;">(無須登入，僅需網址即可同步)</small>
+                        </p>
+                        <div style="display: flex; gap: 0.5rem; margin-bottom: 1rem;">
+                            <input type="text" id="gas-url-input" placeholder="https://script.google.com/macros/s/..../exec" style="flex:1;">
+                            <button id="save-gas-url" class="btn-small">儲存網址</button>
+                        </div>
                     </div>
-                    <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
-                        <button id="sync-upload-btn" class="btn-sync upload">
-                            ⬆️ 上傳覆蓋 (備份)
-                        </button>
-                        <button id="sync-download-btn" class="btn-sync download">
-                            ⬇️ 下載合併 (還原)
-                        </button>
-                    </div>
-                    <small style="display: block; margin-top: 0.5rem; color: #666;">
-                        * 上傳：會完全覆蓋試算表內容<br>
-                        * 下載：將試算表資料合併至本機 (ID 相同更新，不同新增)
-                    </small>
-                    <div id="sync-status" class="sync-status-msg" style="display: none;"></div>
-                </div>
-            </div>
 
-            <div class="grid-container">
-                <div>
-                    <h3>本地匯出</h3>
-                    <button id="export-text">匯出為文字(JSON)</button>
-                    <div id="export-output" style="display:none; margin-top: 1rem;">
-                        <label>請複製以下所有文字:</label>
-                        <textarea id="export-textarea" readonly rows="5" aria-label="匯出的資料"></textarea>
-                        <div style="margin-top: 0.5rem; display: flex; gap: 0.5rem;">
-                            <button id="copy-json" class="btn-secondary btn-small">📋 一鍵複製</button>
-                            <button id="download-json" class="btn-secondary btn-small">💾 下載檔案</button>
+                    <div id="gas-sync-actions" style="display: none;">
+                        <div class="user-info" style="margin-bottom: 1rem; font-size: 0.9rem; display: flex; justify-content: space-between; align-items: center;">
+                            <span style="color: var(--success-color); font-weight: bold;">✅ 已連結 Google Sheets</span>
+                            <button id="reset-gas-url" class="btn-small btn-secondary">重設網址</button>
                         </div>
-                        <div id="copy-success" class="info-message" style="display: none; margin-top: 0.5rem; padding: 0.5rem;">
-                            ✅ 已複製到剪貼簿！
+                        <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                            <button id="sync-upload-btn" class="btn-sync upload">
+                                ⬆️ 上傳覆蓋 (備份)
+                            </button>
+                            <button id="sync-download-btn" class="btn-sync download">
+                                ⬇️ 下載合併 (還原)
+                            </button>
                         </div>
+                        <small style="display: block; margin-top: 0.5rem; color: #666;">
+                            * 上傳：會完全覆蓋試算表內容<br>
+                            * 下載：將試算表資料合併至本機 (ID 相同更新，不同新增)
+                        </small>
+                        <div id="sync-status" class="sync-status-msg" style="display: none;"></div>
                     </div>
                 </div>
-                <div>
-                    <h3>本地匯入</h3>
-                    <textarea id="import-textarea" placeholder="在此貼上您備份的 JSON 文字" rows="5" aria-label="要匯入的資料"></textarea>
-                    <button id="import-text" style="margin-top: 0.5rem;">確認匯入</button>
-                    <button id="import-file-btn" class="btn btn-secondary">從檔案匯入</button>
-                    <input type="file" id="import-file-input" accept=".json" style="display: none;">
+
+                <div class="grid-container">
+                    <div>
+                        <h3>本地匯出</h3>
+                        <button id="export-text">匯出為文字(JSON)</button>
+                        <div id="export-output" style="display:none; margin-top: 1rem;">
+                            <label>請複製以下所有文字:</label>
+                            <textarea id="export-textarea" readonly rows="5" aria-label="匯出的資料"></textarea>
+                            <div style="margin-top: 0.5rem; display: flex; gap: 0.5rem;">
+                                <button id="copy-json" class="btn-secondary btn-small">📋 一鍵複製</button>
+                                <button id="download-json" class="btn-secondary btn-small">💾 下載檔案</button>
+                            </div>
+                            <div id="copy-success" class="info-message" style="display: none; margin-top: 0.5rem; padding: 0.5rem;">
+                                ✅ 已複製到剪貼簿！
+                            </div>
+                        </div>
+                    </div>
+                    <div>
+                        <h3>本地匯入</h3>
+                        <textarea id="import-textarea" placeholder="在此貼上您備份的 JSON 文字" rows="5" aria-label="要匯入的資料"></textarea>
+                        <button id="import-text" style="margin-top: 0.5rem;">確認匯入</button>
+                        <button id="import-file-btn" class="btn btn-secondary">從檔案匯入</button>
+                        <input type="file" id="import-file-input" accept=".json" style="display: none;">
+                    </div>
                 </div>
             </div>
-        </div>
-        <div class="disclaimer" style="font-size: 0.8rem; color: var(--secondary-color); margin-top: 1.5rem; border-top: 1px solid var(--border-color); padding-top: 1rem;">
-            <h4>免責聲明與計算依據</h4>
-            <p>本工具計算結果僅供參考,實際加班費請以公司人資或會計部門計算為準。</p>
-            <p><strong>計算依據:</strong> 依據勞動基準法第24條,加班費率如下:<br>
-            • 平日延長工時: 前2小時 × 1.34倍,第3小時起 × 1.67倍<br>
-            • 休息日: 前2小時 × 1.34倍,第3-8小時 × 1.67倍,第9小時起 × 2.67倍<br>
-            • 國定假日: × 1倍(另給工資)<br>
-            • 月薪換算時薪: 月薪 ÷ 240小時</p>
         </div>
     </div>
 
