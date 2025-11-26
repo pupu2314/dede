@@ -1,6 +1,7 @@
 /**
- * 加班費計算機 v2.2 - JavaScript
- * 改用 Google Apps Script Web App 進行免費同步
+ * 加班費計算機 v2.3 - JavaScript
+ * - 支援分頁切換
+ * - 優化預設月份篩選邏輯
  */
 
 (function() {
@@ -56,6 +57,10 @@
     const syncUploadBtn = document.getElementById('sync-upload-btn');
     const syncDownloadBtn = document.getElementById('sync-download-btn');
     const syncStatusEl = document.getElementById('sync-status');
+    
+    // Tabs DOM
+    const tabButtons = document.querySelectorAll('.tab-btn');
+    const tabContents = document.querySelectorAll('.tab-content');
 
     // --- 應用程式狀態 ---
     let settings = {};
@@ -137,9 +142,8 @@
                 settings.salary = 0;
             }
 
-            const settingsDetails = document.getElementById('settings-details');
-            settingsDetails.open = !(savedSettings && settings.salary > 0);
-            
+            // (舊版) 設定區塊展開邏輯已移除，改由 Tab 控制
+
             document.getElementById('user-name').value = settings.userName || '';
             salaryInput.value = settings.salary || '';
             document.querySelector(`input[name="salaryType"][value="${settings.salaryType}"]`).checked = true;
@@ -185,9 +189,12 @@
             localStorage.setItem(STORAGE_KEYS.SETTINGS, JSON.stringify(settings));
             calculateHourlyRate();
             updatePayPeriodHint();
+            
+            // 儲存後自動跳轉到加班分頁
+            alert('設定已儲存! 您現在可以開始記錄加班了。');
+            switchTab('punch');
             render();
-            alert('設定已儲存!');
-            document.getElementById('settings-details').open = false;
+            
         } catch (error) {
             console.error('儲存設定時發生錯誤:', error);
             showError('儲存設定時發生錯誤,請重試。');
@@ -286,6 +293,11 @@
         loadRecords();
         render();
         clearForm();
+        
+        // 提示成功並詢問是否去查看
+        if (confirm('紀錄已儲存！是否前往「紀錄」分頁查看？')) {
+            switchTab('records');
+        }
     }
 
     function deleteRecord(id) {
@@ -299,7 +311,10 @@
     function editRecord(id) {
         const record = records.find(rec => rec.id === id);
         if (record) {
+            // 切換到加班分頁並進入補登模式
+            switchTab('punch');
             switchMode('manual', false);
+            
             document.getElementById('start-time').value = record.start;
             document.getElementById('end-time').value = record.end;
             document.getElementById('overtime-reason').value = record.reason || '';
@@ -352,7 +367,7 @@
         return false;
     }
     
-    // ... 打卡模式 (省略未變更部分) ...
+    // --- 打卡模式 (保持不變) ---
     function startTimer(startTime) {
         if (punchTimerInterval) clearInterval(punchTimerInterval);
         const startTimeDisplay = document.getElementById('punch-start-time-display');
@@ -410,6 +425,11 @@
             localStorage.setItem(STORAGE_KEYS.TEMP_RECORD, JSON.stringify(tempRecord));
             updatePunchUI(false);
             restoreState();
+            
+            // 提示前往查看
+            if(confirm('打卡完成！紀錄已儲存。是否前往「紀錄」分頁查看？')) {
+                switchTab('records');
+            }
         }
     }
     function updatePunchUI(isPunchedIn) {
@@ -421,7 +441,7 @@
         document.getElementById('mode-punch').disabled = isPunchedIn;
     }
 
-    // 計算相關函式
+    // 計算相關函式 (保持不變)
     function calculateNetOvertimeHours(record) {
         let recordStart = new Date(record.start).getTime();
         let recordEnd = new Date(record.end).getTime();
@@ -493,7 +513,33 @@
         return { start: periodStart, end: periodEnd, displayText: `${formatDate(periodStart)} ~ ${formatDate(periodEnd)}` };
     };
 
-    // 渲染相關函式 (保持不變)
+    // --- 新增功能: 計算預設篩選月份 ---
+    function getDefaultMonthValue() {
+        const today = new Date();
+        const currentYear = today.getFullYear();
+        const currentMonth = today.getMonth(); // 0-11
+        const currentDay = today.getDate();
+        const payday = settings.payday || 1;
+
+        // 如果發薪日是 1 號，通常視為當月 (例如 11月發薪是算11/1-11/30)
+        if (payday === 1) {
+            return today.toISOString().substring(0, 7);
+        }
+
+        // 如果發薪日不是 1 號 (例如 15 號)
+        // 且今天日期 >= 發薪日 (例如 26 >= 15)
+        // 代表已經過了這個月的發薪截止日 (14號)，進入了下個計薪週期
+        if (currentDay >= payday) {
+            // 下個月
+            const nextMonthDate = new Date(currentYear, currentMonth + 1, 1);
+            return nextMonthDate.toISOString().substring(0, 7);
+        } else {
+            // 還沒過截止日，屬於當前月份的計薪週期
+            return today.toISOString().substring(0, 7);
+        }
+    }
+
+    // 渲染相關函式
     function render() {
         const filteredRecords = filterRecords(monthFilter.value);
         const dailyGroups = groupRecordsByDay(filteredRecords);
@@ -501,6 +547,8 @@
         renderSummary(dailyGroups, monthFilter.value);
         updatePayPeriodHint();
     }
+    // ... filterRecords, groupRecordsByDay, renderTable, renderSummary, updatePayPeriodHint, toggleDetails, generateExportHTML, exportResultsAsImage, exportCSV (保持不變) ...
+    
     function filterRecords(filterValue) {
         if (!filterValue) return records;
         const period = getPayPeriod(filterValue);
@@ -661,8 +709,7 @@
         link.click();
     }
 
-    // --- Google Apps Script 同步邏輯 (免 API Key) ---
-    
+    // --- Google Apps Script 同步邏輯 ---
     function loadGasUrl() {
         gasAppUrl = localStorage.getItem(STORAGE_KEYS.GAS_APP_URL) || '';
         gasUrlInput.value = gasAppUrl;
@@ -679,7 +726,6 @@
             alert('這看起來不像是正確的 Google Apps Script 網址');
             return;
         }
-        
         gasAppUrl = url;
         localStorage.setItem(STORAGE_KEYS.GAS_APP_URL, gasAppUrl);
         updateGasUiState();
@@ -717,32 +763,16 @@
     // 上傳資料 (Overwrite)
     async function syncToCloud() {
         if (!gasAppUrl) return;
-        
         try {
             updateSyncStatus('正在上傳資料至 Google Sheets...', 'info');
-            
-            // 準備資料 payload
-            const payload = {
-                action: 'save',
-                data: {
-                    settings: settings,
-                    records: records
-                }
-            };
-            
-            // 使用 text/plain 避免 CORS 預檢請求 (Preflight)
-            // GAS 必須在 doPost 中解析字串
+            const payload = { action: 'save', data: { settings: settings, records: records } };
             const response = await fetch(gasAppUrl, {
                 method: 'POST',
                 body: JSON.stringify(payload),
-                headers: {
-                    'Content-Type': 'text/plain;charset=utf-8',
-                },
+                headers: { 'Content-Type': 'text/plain;charset=utf-8' },
             });
-            
             if (!response.ok) throw new Error('Network response was not ok');
             const result = await response.json();
-            
             if (result.status === 'success') {
                 localStorage.setItem(STORAGE_KEYS.LAST_SYNC, Date.now().toString());
                 document.getElementById('backup-reminder').style.display = 'none';
@@ -760,31 +790,18 @@
     async function syncFromCloud() {
         if (!gasAppUrl) return;
         if (!confirm('確定要從雲端下載資料嗎？\n這將會與您現有的本地資料合併。')) return;
-
         try {
             updateSyncStatus('正在讀取雲端資料...', 'info');
-            
-            // GET 請求
             const response = await fetch(`${gasAppUrl}?action=load`);
             if (!response.ok) throw new Error('Network response was not ok');
             const result = await response.json();
-            
-            if (result.status !== 'success') {
-                throw new Error(result.message || 'Server error');
-            }
-            
+            if (result.status !== 'success') throw new Error(result.message || 'Server error');
             const cloudData = result.data;
-            if (!cloudData || !cloudData.records) {
-                throw new Error('雲端沒有有效資料');
-            }
-
-            // 合併 Settings (優先使用雲端設定，除了 user name 如果為空)
-            const newSettings = { ...settings, ...cloudData.settings };
+            if (!cloudData || !cloudData.records) throw new Error('雲端沒有有效資料');
             
-            // 合併 Records (ID 存在則更新，不存在則新增)
+            const newSettings = { ...settings, ...cloudData.settings };
             let addedCount = 0;
             let updatedCount = 0;
-            
             cloudData.records.forEach(remoteRec => {
                 if (!remoteRec.id) return;
                 const localIdx = records.findIndex(localRec => localRec.id === remoteRec.id);
@@ -797,13 +814,11 @@
                 }
             });
 
-            // 更新 State
             settings = newSettings;
             localStorage.setItem(STORAGE_KEYS.SETTINGS, JSON.stringify(settings));
             saveRecords();
             localStorage.setItem(STORAGE_KEYS.LAST_SYNC, Date.now().toString());
 
-            // 重新載入介面
             loadSettings();
             loadRecords();
             render();
@@ -815,12 +830,38 @@
         }
     }
 
+    // --- Tab 切換功能 ---
+    function switchTab(tabId) {
+        // 更新按鈕狀態
+        tabButtons.forEach(btn => {
+            if (btn.dataset.tab === tabId) {
+                btn.classList.add('active');
+            } else {
+                btn.classList.remove('active');
+            }
+        });
+
+        // 更新內容狀態
+        tabContents.forEach(content => {
+            if (content.id === `tab-${tabId}`) {
+                content.classList.add('active');
+                content.style.display = 'block';
+            } else {
+                content.classList.remove('active');
+                content.style.display = 'none';
+            }
+        });
+        
+        // 如果切換到紀錄分頁，可能需要重新渲染或滾動
+        if (tabId === 'records') {
+            render();
+        }
+    }
 
     // --- UI/UX 相關函式 (續) ---
     function showWelcomeMessage() {
         const welcomeShown = localStorage.getItem(STORAGE_KEYS.WELCOME_SHOWN);
         const hasSettings = localStorage.getItem(STORAGE_KEYS.SETTINGS);
-        
         if (!welcomeShown && !hasSettings) {
             const welcomeEl = document.getElementById('welcome-message');
             welcomeEl.style.display = 'block';
@@ -838,22 +879,15 @@
     function checkBackupReminder() {
         const lastBackup = localStorage.getItem(STORAGE_KEYS.LAST_BACKUP);
         const lastSync = localStorage.getItem(STORAGE_KEYS.LAST_SYNC);
-        
-        // 取兩者中較新的時間
-        const lastActionTime = Math.max(
-            lastBackup ? parseInt(lastBackup) : 0,
-            lastSync ? parseInt(lastSync) : 0
-        );
-        
+        const lastActionTime = Math.max(lastBackup ? parseInt(lastBackup) : 0, lastSync ? parseInt(lastSync) : 0);
         const now = Date.now();
         
         if (lastActionTime === 0) {
-            localStorage.setItem(STORAGE_KEYS.LAST_BACKUP, now.toString()); // 初次使用當作已備份
+            localStorage.setItem(STORAGE_KEYS.LAST_BACKUP, now.toString());
             return;
         }
         
         const daysSince = Math.floor((now - lastActionTime) / (1000 * 60 * 60 * 24));
-        
         if (daysSince >= BACKUP_REMINDER_DAYS && records.length > 0) {
             showBackupReminder(daysSince);
         }
@@ -862,11 +896,8 @@
     function showBackupReminder(days) {
         const reminderEl = document.getElementById('backup-reminder');
         const reminderText = document.getElementById('backup-reminder-text');
-        
         reminderText.textContent = `您已經有 ${days} 天沒有備份或同步資料了！為避免資料遺失，建議立即操作。`;
         reminderEl.style.display = 'block';
-        
-        // 超過 3 天才顯示強制彈窗
         if (days >= 3) {
             const modal = document.getElementById('backup-modal');
             document.getElementById('backup-days-count').textContent = days;
@@ -874,20 +905,15 @@
         }
     }
 
-    // 導引到同步區塊
     function performSyncOrBackup() {
         document.getElementById('backup-reminder').style.display = 'none';
         document.getElementById('backup-modal').classList.remove('show');
-        
-        // 滾動到雲端同步區塊
-        document.getElementById('cloud-sync-section').scrollIntoView({ behavior: 'smooth' });
+        switchTab('backup'); // 跳轉到備份分頁
     }
 
     function remindLater() {
-        // 延後 12 小時
         const delayTime = Date.now() - ((BACKUP_REMINDER_DAYS - 0.5) * 24 * 60 * 60 * 1000);
         localStorage.setItem(STORAGE_KEYS.LAST_BACKUP, delayTime.toString());
-        
         document.getElementById('backup-reminder').style.display = 'none';
         document.getElementById('backup-modal').classList.remove('show');
     }
@@ -909,6 +935,8 @@
         };
 
         if (tempRecord.start && !tempRecord.end) {
+            // 切換到加班分頁
+            switchTab('punch');
             switchMode('punch', false);
             updatePunchUI(true);
             restoreFormFields();
@@ -916,6 +944,7 @@
             restoreMsgEl.textContent = '已為您還原上次的打卡上班狀態。';
             restoreMsgEl.style.display = 'block';
         } else if (tempRecord.start && tempRecord.end) {
+            switchTab('punch');
             switchMode('manual', false);
             updatePunchUI(false);
             document.getElementById('start-time').value = formatDateTimeLocal(new Date(tempRecord.start));
@@ -928,12 +957,12 @@
 
     function handleUrlHash() {
         const hash = window.location.hash;
-        
         if (hash === '#punch') {
-            switchMode('punch', false);
-            document.getElementById('mode-punch').scrollIntoView({ behavior: 'smooth', block: 'center' });
+            switchTab('punch');
         } else if (hash === '#records') {
-            document.getElementById('capture-area').scrollIntoView({ behavior: 'smooth', block: 'start' });
+            switchTab('records');
+        } else if (hash === '#settings') {
+            switchTab('settings');
         }
         
         if (hash) {
@@ -943,6 +972,7 @@
         }
     }
 
+    // importData (保持不變)
     function importData(jsonString) {
         if (!jsonString) {
             showError('請先提供要匯入的資料。');
@@ -997,6 +1027,14 @@
         
         document.getElementById('close-welcome').addEventListener('click', closeWelcomeMessage);
         
+        // Tab 按鈕監聽
+        tabButtons.forEach(btn => {
+            btn.addEventListener('click', () => {
+                switchTab(btn.dataset.tab);
+            });
+        });
+
+        // 匯出/匯入/備份相關事件 (保持不變)
         document.getElementById('export-text').addEventListener('click', () => {
             const outputArea = document.getElementById('export-output');
             const textarea = document.getElementById('export-textarea');
@@ -1004,45 +1042,36 @@
             outputArea.style.display = 'block';
             localStorage.setItem(STORAGE_KEYS.LAST_BACKUP, Date.now().toString());
         });
-        
         document.getElementById('copy-json').addEventListener('click', async () => {
             const textarea = document.getElementById('export-textarea');
             try {
                 await navigator.clipboard.writeText(textarea.value);
                 const successMsg = document.getElementById('copy-success');
                 successMsg.style.display = 'block';
-                setTimeout(() => {
-                    successMsg.style.display = 'none';
-                }, 2000);
+                setTimeout(() => { successMsg.style.display = 'none'; }, 2000);
             } catch (err) {
                 textarea.select();
                 document.execCommand('copy');
                 alert('已複製到剪貼簿！');
             }
         });
-        
         document.getElementById('download-json').addEventListener('click', () => {
             const textarea = document.getElementById('export-textarea');
             const blob = new Blob([textarea.value], { type: 'application/json' });
             const link = document.createElement('a');
             link.href = URL.createObjectURL(blob);
             const timestamp = new Date().toISOString().slice(0, 10);
-            const fileName = settings.userName 
-                ? `加班記錄備份-${settings.userName}-${timestamp}.json`
-                : `加班記錄備份-${timestamp}.json`;
+            const fileName = settings.userName ? `加班記錄備份-${settings.userName}-${timestamp}.json` : `加班記錄備份-${timestamp}.json`;
             link.download = fileName;
             link.click();
         });
-        
         document.getElementById('import-text').addEventListener('click', () => {
             const importText = document.getElementById('import-textarea').value;
             importData(importText);
         });
-
         document.getElementById('import-file-btn').addEventListener('click', () => {
             document.getElementById('import-file-input').click();
         });
-
         document.getElementById('import-file-input').addEventListener('change', (event) => {
             const file = event.target.files[0];
             if (!file) return;
@@ -1052,26 +1081,18 @@
                 return;
             }
             const reader = new FileReader();
-            reader.onload = (e) => {
-                importData(e.target.result);
-            };
-            reader.onerror = () => {
-                showError('讀取檔案時發生錯誤。');
-            };
+            reader.onload = (e) => { importData(e.target.result); };
+            reader.onerror = () => { showError('讀取檔案時發生錯誤。'); };
             reader.readAsText(file);
             event.target.value = '';
         });
         
-        // 備份提醒相關
         document.getElementById('backup-reminder-action').addEventListener('click', performSyncOrBackup);
         document.getElementById('backup-remind-later').addEventListener('click', remindLater);
         document.getElementById('modal-backup-now').addEventListener('click', performSyncOrBackup);
         document.getElementById('modal-remind-later').addEventListener('click', remindLater);
-        
         document.getElementById('backup-modal').addEventListener('click', (e) => {
-            if (e.target.id === 'backup-modal') {
-                remindLater();
-            }
+            if (e.target.id === 'backup-modal') remindLater();
         });
 
         // GAS Sync Event Listeners
@@ -1085,14 +1106,24 @@
     function init() {
         loadSettings();
         loadRecords();
-        loadGasUrl(); // 載入 GAS URL
+        loadGasUrl();
         
-        monthFilter.value = new Date().toISOString().substring(0, 7);
+        // 1. 設定預設月份 (使用新的邏輯)
+        monthFilter.value = getDefaultMonthValue();
         
         render();
         setupEventListeners();
         restoreState();
         showWelcomeMessage();
+        
+        // 2. 決定初始 Tab
+        if (settings && settings.salary > 0 && settings.hourlyRate > 0) {
+            // 已有設定 -> 預設顯示加班頁
+            switchTab('punch');
+        } else {
+            // 無設定 -> 預設顯示設定頁
+            switchTab('settings');
+        }
         
         setTimeout(() => checkBackupReminder(), 2000);
         handleUrlHash();
