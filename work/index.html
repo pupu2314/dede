@@ -18,8 +18,14 @@
 </head>
 <body>
     <div class="container main-layout">
-        <h1 class="app-title">加班費計算機 <small>v2.3</small></h1>
+        <h1 class="app-title">加班費計算機 <small>v2.4</small></h1>
         
+        <!-- 未同步提醒條 (預設隱藏) -->
+        <div id="unsynced-alert" class="sync-alert-bar" style="display: none;">
+            <span>⚠️ 您有尚未同步的資料</span>
+            <button id="quick-sync-btn" class="btn-small btn-warning">立即同步</button>
+        </div>
+
         <!-- 分頁導航列 -->
         <nav class="tabs-nav">
             <button class="tab-btn" data-tab="settings">設定</button>
