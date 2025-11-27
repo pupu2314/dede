@@ -1,7 +1,8 @@
 /**
- * 加班費計算機 v2.3 - JavaScript
- * - 支援分頁切換
- * - 優化預設月份篩選邏輯
+ * 加班費計算機 v2.4 - JavaScript
+ * - 自動寫入打卡資料
+ * - 優化跨年份月份篩選
+ * - 新增未同步資料提醒
  */
 
 (function() {
@@ -26,8 +27,9 @@
         TEMP_RECORD: 'tempOvertimeRecordV10.2',
         LAST_BACKUP: 'lastBackupDateV10',
         LAST_SYNC: 'lastSyncDateV10',
+        LAST_MODIFIED: 'lastDataModifiedV1', // 新增: 記錄最後修改時間
         WELCOME_SHOWN: 'welcomeShownV10',
-        GAS_APP_URL: 'gasAppUrlV1' // 儲存 GAS Web App URL
+        GAS_APP_URL: 'gasAppUrlV1'
     };
 
     // 每日提醒 (設定為 1 天)
@@ -57,6 +59,8 @@
     const syncUploadBtn = document.getElementById('sync-upload-btn');
     const syncDownloadBtn = document.getElementById('sync-download-btn');
     const syncStatusEl = document.getElementById('sync-status');
+    const unsyncedAlert = document.getElementById('unsynced-alert');
+    const quickSyncBtn = document.getElementById('quick-sync-btn');
     
     // Tabs DOM
     const tabButtons = document.querySelectorAll('.tab-btn');
@@ -122,6 +126,13 @@
         };
     };
 
+    // --- 狀態更新函式 (新增) ---
+    function updateLastModified() {
+        const now = Date.now().toString();
+        localStorage.setItem(STORAGE_KEYS.LAST_MODIFIED, now);
+        checkSyncStatus(); // 檢查同步狀態
+    }
+
     // --- 核心邏輯函式 ---
     function loadSettings() {
         try {
@@ -141,8 +152,6 @@
             if (!isValidNumber(settings.salary)) {
                 settings.salary = 0;
             }
-
-            // (舊版) 設定區塊展開邏輯已移除，改由 Tab 控制
 
             document.getElementById('user-name').value = settings.userName || '';
             salaryInput.value = settings.salary || '';
@@ -187,10 +196,10 @@
             };
             
             localStorage.setItem(STORAGE_KEYS.SETTINGS, JSON.stringify(settings));
+            updateLastModified(); // 標記資料已修改
             calculateHourlyRate();
             updatePayPeriodHint();
             
-            // 儲存後自動跳轉到加班分頁
             alert('設定已儲存! 您現在可以開始記錄加班了。');
             switchTab('punch');
             render();
@@ -231,6 +240,7 @@
     const saveRecords = throttle(() => {
         try {
             localStorage.setItem(STORAGE_KEYS.RECORDS, JSON.stringify(records));
+            updateLastModified(); // 標記資料已修改
         } catch (error) {
             console.error('儲存記錄時發生錯誤:', error);
             showError('儲存記錄時發生錯誤,可能是儲存空間不足。');
@@ -294,7 +304,6 @@
         render();
         clearForm();
         
-        // 提示成功並詢問是否去查看
         if (confirm('紀錄已儲存！是否前往「紀錄」分頁查看？')) {
             switchTab('records');
         }
@@ -311,10 +320,8 @@
     function editRecord(id) {
         const record = records.find(rec => rec.id === id);
         if (record) {
-            // 切換到加班分頁並進入補登模式
             switchTab('punch');
             switchMode('manual', false);
-            
             document.getElementById('start-time').value = record.start;
             document.getElementById('end-time').value = record.end;
             document.getElementById('overtime-reason').value = record.reason || '';
@@ -367,7 +374,7 @@
         return false;
     }
     
-    // --- 打卡模式 (保持不變) ---
+    // --- 打卡模式 ---
     function startTimer(startTime) {
         if (punchTimerInterval) clearInterval(punchTimerInterval);
         const startTimeDisplay = document.getElementById('punch-start-time-display');
@@ -412,19 +419,54 @@
         updatePunchUI(true);
         startTimer(new Date(tempRecord.start));
     }
+    
+    // [重要] 修正: 結束打卡時自動儲存
     function endPunch() {
         const tempRecordJSON = localStorage.getItem(STORAGE_KEYS.TEMP_RECORD);
         if (!tempRecordJSON) return;
         const tempRecord = JSON.parse(tempRecordJSON);
         if (tempRecord.start && !tempRecord.end) {
             stopTimer();
-            tempRecord.end = new Date().toISOString();
-            tempRecord.reason = document.getElementById('overtime-reason').value;
-            tempRecord.type = document.querySelector('input[name="overtimeType"]:checked').value;
-            tempRecord.forceFullCalculation = forceFullCalcToggle.checked;
-            localStorage.setItem(STORAGE_KEYS.TEMP_RECORD, JSON.stringify(tempRecord));
+            
+            // 1. 準備完整紀錄資料
+            const endTime = new Date();
+            const newRecord = {
+                id: `rec_${Date.now()}`,
+                start: tempRecord.start, // 保持原始開始時間字串
+                end: endTime.toISOString(),
+                reason: document.getElementById('overtime-reason').value || tempRecord.reason,
+                type: document.querySelector('input[name="overtimeType"]:checked').value || tempRecord.type,
+                forceFullCalculation: forceFullCalcToggle.checked
+            };
+            
+            // 2. 檢查重疊
+            if (isOverlapping(newRecord)) {
+                // 若重疊，不自動儲存，而是填入表單讓用戶手動處理
+                tempRecord.end = endTime.toISOString();
+                localStorage.setItem(STORAGE_KEYS.TEMP_RECORD, JSON.stringify(tempRecord));
+                updatePunchUI(false);
+                restoreState();
+                alert('打卡結束，但偵測到時間重疊。請在下方表單檢查並手動儲存。');
+                return;
+            }
+
+            // 3. 自動寫入資料庫
+            records.push(newRecord);
+            
+            // 4. 儲存並清除暫存
+            saveRecords(); // 這會觸發 updateLastModified
+            localStorage.removeItem(STORAGE_KEYS.TEMP_RECORD);
+            
+            // 5. 更新 UI
             updatePunchUI(false);
-            restoreState();
+            loadRecords(); // 重新載入以確保排序
+            render();
+            clearForm(); // 清空表單文字
+
+            // 6. 詢問跳轉
+            if(confirm('打卡完成！紀錄已自動儲存。是否前往「紀錄」分頁查看？')) {
+                switchTab('records');
+            }
         }
     }
     function updatePunchUI(isPunchedIn) {
@@ -508,7 +550,7 @@
         return { start: periodStart, end: periodEnd, displayText: `${formatDate(periodStart)} ~ ${formatDate(periodEnd)}` };
     };
 
-    // --- 新增功能: 計算預設篩選月份 ---
+    // --- [重要] 修正: 跨年份月份篩選邏輯 ---
     function getDefaultMonthValue() {
         const today = new Date();
         const currentYear = today.getFullYear();
@@ -516,21 +558,30 @@
         const currentDay = today.getDate();
         const payday = settings.payday || 1;
 
-        // 如果發薪日是 1 號，通常視為當月 (例如 11月發薪是算11/1-11/30)
         if (payday === 1) {
             return today.toISOString().substring(0, 7);
         }
 
-        // 如果發薪日不是 1 號 (例如 15 號)
-        // 且今天日期 >= 發薪日 (例如 26 >= 15)
-        // 代表已經過了這個月的發薪截止日 (14號)，進入了下個計薪週期
+        // 檢查是否超過發薪日，若超過則視為下一個計薪週期
         if (currentDay >= payday) {
-            // 下個月
+            // 自動處理跨年 (12月+1 = 明年1月)
             const nextMonthDate = new Date(currentYear, currentMonth + 1, 1);
             return nextMonthDate.toISOString().substring(0, 7);
         } else {
-            // 還沒過截止日，屬於當前月份的計薪週期
             return today.toISOString().substring(0, 7);
+        }
+    }
+
+    // --- 新增: 檢查同步狀態 ---
+    function checkSyncStatus() {
+        const lastSync = localStorage.getItem(STORAGE_KEYS.LAST_SYNC) || 0;
+        const lastMod = localStorage.getItem(STORAGE_KEYS.LAST_MODIFIED) || 0;
+        
+        // 如果 資料修改時間 > 最後同步時間，且有設定 GAS URL，顯示提醒
+        if (parseInt(lastMod) > parseInt(lastSync) && gasAppUrl) {
+            unsyncedAlert.style.display = 'flex';
+        } else {
+            unsyncedAlert.style.display = 'none';
         }
     }
 
@@ -541,6 +592,7 @@
         renderTable(recordsBody, dailyGroups);
         renderSummary(dailyGroups, monthFilter.value);
         updatePayPeriodHint();
+        checkSyncStatus(); // 每次渲染都檢查同步狀態
     }
     // ... filterRecords, groupRecordsByDay, renderTable, renderSummary, updatePayPeriodHint, toggleDetails, generateExportHTML, exportResultsAsImage, exportCSV (保持不變) ...
     
@@ -709,6 +761,7 @@
         gasAppUrl = localStorage.getItem(STORAGE_KEYS.GAS_APP_URL) || '';
         gasUrlInput.value = gasAppUrl;
         updateGasUiState();
+        checkSyncStatus();
     }
 
     function saveGasUrl() {
@@ -724,6 +777,7 @@
         gasAppUrl = url;
         localStorage.setItem(STORAGE_KEYS.GAS_APP_URL, gasAppUrl);
         updateGasUiState();
+        checkSyncStatus();
         alert('網址已儲存！您可以開始同步資料了。');
     }
 
@@ -733,6 +787,7 @@
             localStorage.removeItem(STORAGE_KEYS.GAS_APP_URL);
             gasUrlInput.value = '';
             updateGasUiState();
+            checkSyncStatus();
         }
     }
 
@@ -757,7 +812,10 @@
 
     // 上傳資料 (Overwrite)
     async function syncToCloud() {
-        if (!gasAppUrl) return;
+        if (!gasAppUrl) {
+            switchTab('backup');
+            return;
+        }
         try {
             updateSyncStatus('正在上傳資料至 Google Sheets...', 'info');
             const payload = { action: 'save', data: { settings: settings, records: records } };
@@ -769,9 +827,13 @@
             if (!response.ok) throw new Error('Network response was not ok');
             const result = await response.json();
             if (result.status === 'success') {
-                localStorage.setItem(STORAGE_KEYS.LAST_SYNC, Date.now().toString());
+                const now = Date.now().toString();
+                localStorage.setItem(STORAGE_KEYS.LAST_SYNC, now);
+                // 同步成功後，LAST_MODIFIED 應該設為 <= LAST_SYNC (或單純不變，下次修改才會大於)
+                // 這裡簡單把 LAST_SYNC 更新即可
                 document.getElementById('backup-reminder').style.display = 'none';
                 updateSyncStatus(`✅ 上傳成功！(時間: ${new Date().toLocaleTimeString()})`, 'success');
+                checkSyncStatus();
             } else {
                 throw new Error(result.message || 'Unknown error from server');
             }
@@ -812,11 +874,14 @@
             settings = newSettings;
             localStorage.setItem(STORAGE_KEYS.SETTINGS, JSON.stringify(settings));
             saveRecords();
+            
+            // 下載視為同步成功
             localStorage.setItem(STORAGE_KEYS.LAST_SYNC, Date.now().toString());
 
             loadSettings();
             loadRecords();
             render();
+            checkSyncStatus();
             
             updateSyncStatus(`✅ 下載完成！(新增: ${addedCount}, 更新: ${updatedCount})`, 'success');
         } catch (e) {
@@ -827,7 +892,6 @@
 
     // --- Tab 切換功能 ---
     function switchTab(tabId) {
-        // 更新按鈕狀態
         tabButtons.forEach(btn => {
             if (btn.dataset.tab === tabId) {
                 btn.classList.add('active');
@@ -835,8 +899,6 @@
                 btn.classList.remove('active');
             }
         });
-
-        // 更新內容狀態
         tabContents.forEach(content => {
             if (content.id === `tab-${tabId}`) {
                 content.classList.add('active');
@@ -846,8 +908,6 @@
                 content.style.display = 'none';
             }
         });
-        
-        // 如果切換到紀錄分頁，可能需要重新渲染或滾動
         if (tabId === 'records') {
             render();
         }
@@ -903,7 +963,7 @@
     function performSyncOrBackup() {
         document.getElementById('backup-reminder').style.display = 'none';
         document.getElementById('backup-modal').classList.remove('show');
-        switchTab('backup'); // 跳轉到備份分頁
+        switchTab('backup');
     }
 
     function remindLater() {
@@ -930,7 +990,6 @@
         };
 
         if (tempRecord.start && !tempRecord.end) {
-            // 切換到加班分頁
             switchTab('punch');
             switchMode('punch', false);
             updatePunchUI(true);
@@ -952,18 +1011,12 @@
 
     function handleUrlHash() {
         const hash = window.location.hash;
-        if (hash === '#punch') {
-            switchTab('punch');
-        } else if (hash === '#records') {
-            switchTab('records');
-        } else if (hash === '#settings') {
-            switchTab('settings');
-        }
+        if (hash === '#punch') switchTab('punch');
+        else if (hash === '#records') switchTab('records');
+        else if (hash === '#settings') switchTab('settings');
         
         if (hash) {
-            setTimeout(() => {
-                history.replaceState(null, null, ' ');
-            }, 1000);
+            setTimeout(() => { history.replaceState(null, null, ' '); }, 1000);
         }
     }
 
@@ -991,6 +1044,7 @@
             localStorage.setItem(STORAGE_KEYS.SETTINGS, JSON.stringify(data.settings));
             localStorage.setItem(STORAGE_KEYS.RECORDS, JSON.stringify(validRecords));
             localStorage.setItem(STORAGE_KEYS.LAST_BACKUP, Date.now().toString());
+            updateLastModified();
             
             loadSettings();
             loadRecords();
@@ -1022,11 +1076,17 @@
         
         document.getElementById('close-welcome').addEventListener('click', closeWelcomeMessage);
         
-        // Tab 按鈕監聽
         tabButtons.forEach(btn => {
-            btn.addEventListener('click', () => {
-                switchTab(btn.dataset.tab);
-            });
+            btn.addEventListener('click', () => { switchTab(btn.dataset.tab); });
+        });
+
+        // 快捷同步按鈕
+        quickSyncBtn.addEventListener('click', () => {
+            if (!gasAppUrl) {
+                switchTab('backup');
+            } else {
+                syncToCloud();
+            }
         });
 
         // 匯出/匯入/備份相關事件 (保持不變)
@@ -1113,14 +1173,13 @@
         
         // 2. 決定初始 Tab
         if (settings && settings.salary > 0 && settings.hourlyRate > 0) {
-            // 已有設定 -> 預設顯示加班頁
             switchTab('punch');
         } else {
-            // 無設定 -> 預設顯示設定頁
             switchTab('settings');
         }
         
         setTimeout(() => checkBackupReminder(), 2000);
+        checkSyncStatus(); // 初始檢查同步狀態
         handleUrlHash();
     }
 
