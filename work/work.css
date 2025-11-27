@@ -44,6 +44,24 @@ h2 {
 	margin-top: 0;
 }
 
+/* Sync Alert Bar */
+.sync-alert-bar {
+    background-color: #fff3cd;
+    color: #856404;
+    border: 1px solid #ffeaa7;
+    padding: 0.75rem 1rem;
+    border-radius: 6px;
+    margin-bottom: 1rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    animation: slideDown 0.3s ease-out;
+}
+@keyframes slideDown {
+    from { opacity: 0; transform: translateY(-10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
 /* Tabs Navigation Styles */
 .tabs-nav {
     display: flex;
@@ -111,7 +129,6 @@ details>div {
 }
 .card {
 	background: #fff;
-	/* padding: 1.5rem; Removed padding to let it flow better in tabs if needed, but keeping for now */
     padding: 0; /* Reset for tab content flow */
 	border: none; /* Remove border inside tab */
 }
@@ -181,6 +198,13 @@ button:disabled {
 }
 .btn-danger:hover {
 	background-color: #c82333;
+}
+.btn-warning {
+    background-color: var(--warning-color);
+    color: #212529;
+}
+.btn-warning:hover {
+    background-color: #e0a800;
 }
 .btn-small {
 	padding: 0.4rem 0.8rem;
