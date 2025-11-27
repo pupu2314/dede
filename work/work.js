@@ -1,8 +1,8 @@
 /**
- * 加班費計算機 v2.4 - JavaScript
- * - 自動寫入打卡資料
- * - 優化跨年份月份篩選
- * - 新增未同步資料提醒
+ * 加班費計算機 v2.5 - JavaScript
+ * - 修改打卡結束邏輯為手動確認
+ * - 優化預設月份篩選
+ * - 強化同步提醒機制
  */
 
 (function() {
@@ -27,12 +27,11 @@
         TEMP_RECORD: 'tempOvertimeRecordV10.2',
         LAST_BACKUP: 'lastBackupDateV10',
         LAST_SYNC: 'lastSyncDateV10',
-        LAST_MODIFIED: 'lastDataModifiedV1', // 新增: 記錄最後修改時間
+        LAST_MODIFIED: 'lastDataModifiedV1',
         WELCOME_SHOWN: 'welcomeShownV10',
         GAS_APP_URL: 'gasAppUrlV1'
     };
 
-    // 每日提醒 (設定為 1 天)
     const BACKUP_REMINDER_DAYS = 1;
 
     // --- DOM 元素快取 ---
@@ -126,11 +125,10 @@
         };
     };
 
-    // --- 狀態更新函式 (新增) ---
     function updateLastModified() {
         const now = Date.now().toString();
         localStorage.setItem(STORAGE_KEYS.LAST_MODIFIED, now);
-        checkSyncStatus(); // 檢查同步狀態
+        checkSyncStatus();
     }
 
     // --- 核心邏輯函式 ---
@@ -172,16 +170,12 @@
     function saveSettings() {
         try {
             const salary = parseFloat(salaryInput.value) || 0;
-            
             if (salary < 0) {
                 showError('錯誤:薪資不能為負數。');
                 return;
             }
-            
             if (salary > 0 && salary < 1000) {
-                if (!confirm('您輸入的薪資似乎偏低,確定要儲存嗎?')) {
-                    return;
-                }
+                if (!confirm('您輸入的薪資似乎偏低,確定要儲存嗎?')) return;
             }
 
             settings = {
@@ -196,7 +190,7 @@
             };
             
             localStorage.setItem(STORAGE_KEYS.SETTINGS, JSON.stringify(settings));
-            updateLastModified(); // 標記資料已修改
+            updateLastModified();
             calculateHourlyRate();
             updatePayPeriodHint();
             
@@ -240,7 +234,7 @@
     const saveRecords = throttle(() => {
         try {
             localStorage.setItem(STORAGE_KEYS.RECORDS, JSON.stringify(records));
-            updateLastModified(); // 標記資料已修改
+            updateLastModified();
         } catch (error) {
             console.error('儲存記錄時發生錯誤:', error);
             showError('儲存記錄時發生錯誤,可能是儲存空間不足。');
@@ -299,7 +293,12 @@
             records.push(newRecord);
         }
         
+        // 儲存紀錄
         saveRecords();
+        
+        // **關鍵修改**: 新增成功後，清除暫存 (如果是來自打卡的補登)
+        localStorage.removeItem(STORAGE_KEYS.TEMP_RECORD);
+        
         loadRecords();
         render();
         clearForm();
@@ -341,14 +340,16 @@
         forceFullCalcToggle.checked = false;
         addRecordBtn.textContent = '新增紀錄';
         hideError();
-        localStorage.removeItem(STORAGE_KEYS.TEMP_RECORD);
+        
+        // 清除表單時也清除暫存（除非正在計時）
+        if (!punchTimerInterval) {
+             localStorage.removeItem(STORAGE_KEYS.TEMP_RECORD);
+             updatePunchUI(false);
+        }
         
         const restoreMsgEl = document.getElementById('restore-message');
         restoreMsgEl.style.display = 'none';
         restoreMsgEl.textContent = '';
-        
-        stopTimer();
-        updatePunchUI(false);
     }
 
     function isOverlapping(newRecord) {
@@ -420,55 +421,38 @@
         startTimer(new Date(tempRecord.start));
     }
     
-    // [重要] 修正: 結束打卡時自動儲存
+    // **[修改] 結束打卡：不自動儲存，而是填入表單讓用戶確認**
     function endPunch() {
         const tempRecordJSON = localStorage.getItem(STORAGE_KEYS.TEMP_RECORD);
         if (!tempRecordJSON) return;
+        
         const tempRecord = JSON.parse(tempRecordJSON);
         if (tempRecord.start && !tempRecord.end) {
             stopTimer();
             
-            // 1. 準備完整紀錄資料
+            // 1. 記錄結束時間到暫存
             const endTime = new Date();
-            const newRecord = {
-                id: `rec_${Date.now()}`,
-                start: tempRecord.start, // 保持原始開始時間字串
-                end: endTime.toISOString(),
-                reason: document.getElementById('overtime-reason').value || tempRecord.reason,
-                type: document.querySelector('input[name="overtimeType"]:checked').value || tempRecord.type,
-                forceFullCalculation: forceFullCalcToggle.checked
-            };
+            tempRecord.end = endTime.toISOString();
+            tempRecord.reason = document.getElementById('overtime-reason').value || tempRecord.reason;
+            tempRecord.type = document.querySelector('input[name="overtimeType"]:checked').value || tempRecord.type;
             
-            // 2. 檢查重疊
-            if (isOverlapping(newRecord)) {
-                // 若重疊，不自動儲存，而是填入表單讓用戶手動處理
-                tempRecord.end = endTime.toISOString();
-                localStorage.setItem(STORAGE_KEYS.TEMP_RECORD, JSON.stringify(tempRecord));
-                updatePunchUI(false);
-                restoreState();
-                alert('打卡結束，但偵測到時間重疊。請在下方表單檢查並手動儲存。');
-                return;
-            }
-
-            // 3. 自動寫入資料庫
-            records.push(newRecord);
+            // 2. 更新暫存 (避免重新整理後遺失)
+            localStorage.setItem(STORAGE_KEYS.TEMP_RECORD, JSON.stringify(tempRecord));
             
-            // 4. 儲存並清除暫存
-            saveRecords(); // 這會觸發 updateLastModified
-            localStorage.removeItem(STORAGE_KEYS.TEMP_RECORD);
-            
-            // 5. 更新 UI
+            // 3. 更新 UI 狀態：還原按鈕狀態，並觸發 restoreState 來填寫表單
             updatePunchUI(false);
-            loadRecords(); // 重新載入以確保排序
-            render();
-            clearForm(); // 清空表單文字
-
-            // 6. 詢問跳轉
-            if(confirm('打卡完成！紀錄已自動儲存。是否前往「紀錄」分頁查看？')) {
-                switchTab('records');
-            }
+            restoreState(); 
+            
+            // 4. 顯示提示
+            const restoreMsgEl = document.getElementById('restore-message');
+            restoreMsgEl.textContent = '打卡已結束，時間已填入下方表單。請確認無誤後按下「新增紀錄」儲存。';
+            restoreMsgEl.style.display = 'block';
+            restoreMsgEl.style.backgroundColor = '#d4edda'; // 綠色背景提示成功填入
+            restoreMsgEl.style.borderColor = '#c3e6cb';
+            restoreMsgEl.style.color = '#155724';
         }
     }
+
     function updatePunchUI(isPunchedIn) {
         punchStartBtn.disabled = isPunchedIn;
         punchEndBtn.disabled = !isPunchedIn;
@@ -550,7 +534,7 @@
         return { start: periodStart, end: periodEnd, displayText: `${formatDate(periodStart)} ~ ${formatDate(periodEnd)}` };
     };
 
-    // --- [重要] 修正: 跨年份月份篩選邏輯 ---
+    // --- [優化] 預設月份邏輯 ---
     function getDefaultMonthValue() {
         const today = new Date();
         const currentYear = today.getFullYear();
@@ -562,7 +546,7 @@
             return today.toISOString().substring(0, 7);
         }
 
-        // 檢查是否超過發薪日，若超過則視為下一個計薪週期
+        // 如果今天 >= 發薪日，代表這個月的薪水計算截止了，進入下個月的週期
         if (currentDay >= payday) {
             // 自動處理跨年 (12月+1 = 明年1月)
             const nextMonthDate = new Date(currentYear, currentMonth + 1, 1);
@@ -572,12 +556,12 @@
         }
     }
 
-    // --- 新增: 檢查同步狀態 ---
+    // --- 檢查同步狀態 ---
     function checkSyncStatus() {
         const lastSync = localStorage.getItem(STORAGE_KEYS.LAST_SYNC) || 0;
         const lastMod = localStorage.getItem(STORAGE_KEYS.LAST_MODIFIED) || 0;
         
-        // 如果 資料修改時間 > 最後同步時間，且有設定 GAS URL，顯示提醒
+        // 只有在已設定 GAS URL 且資料有更新時才顯示提醒
         if (parseInt(lastMod) > parseInt(lastSync) && gasAppUrl) {
             unsyncedAlert.style.display = 'flex';
         } else {
@@ -592,7 +576,7 @@
         renderTable(recordsBody, dailyGroups);
         renderSummary(dailyGroups, monthFilter.value);
         updatePayPeriodHint();
-        checkSyncStatus(); // 每次渲染都檢查同步狀態
+        checkSyncStatus();
     }
     // ... filterRecords, groupRecordsByDay, renderTable, renderSummary, updatePayPeriodHint, toggleDetails, generateExportHTML, exportResultsAsImage, exportCSV (保持不變) ...
     
@@ -829,8 +813,6 @@
             if (result.status === 'success') {
                 const now = Date.now().toString();
                 localStorage.setItem(STORAGE_KEYS.LAST_SYNC, now);
-                // 同步成功後，LAST_MODIFIED 應該設為 <= LAST_SYNC (或單純不變，下次修改才會大於)
-                // 這裡簡單把 LAST_SYNC 更新即可
                 document.getElementById('backup-reminder').style.display = 'none';
                 updateSyncStatus(`✅ 上傳成功！(時間: ${new Date().toLocaleTimeString()})`, 'success');
                 checkSyncStatus();
@@ -875,7 +857,6 @@
             localStorage.setItem(STORAGE_KEYS.SETTINGS, JSON.stringify(settings));
             saveRecords();
             
-            // 下載視為同步成功
             localStorage.setItem(STORAGE_KEYS.LAST_SYNC, Date.now().toString());
 
             loadSettings();
@@ -973,6 +954,7 @@
         document.getElementById('backup-modal').classList.remove('show');
     }
 
+    // 修改 restoreState 以支援打卡後切換模式
     function restoreState() {
         const tempRecordJSON = localStorage.getItem(STORAGE_KEYS.TEMP_RECORD);
         if (!tempRecordJSON) {
@@ -1004,7 +986,9 @@
             document.getElementById('start-time').value = formatDateTimeLocal(new Date(tempRecord.start));
             document.getElementById('end-time').value = formatDateTimeLocal(new Date(tempRecord.end));
             restoreFormFields();
-            restoreMsgEl.textContent = '您有未儲存的打卡紀錄，已為您還原。';
+            
+            // 提示改為較柔和的顏色
+            restoreMsgEl.textContent = '您有已打卡但未儲存的紀錄，已自動填入表單。請確認後按下新增。';
             restoreMsgEl.style.display = 'block';
         }
     }
