@@ -1,4 +1,4 @@
-const CACHE_NAME = 'motolog-v15.4.1'; // 更新版本號以觸發更新
+const CACHE_NAME = 'motolog-v15.5.0'; // 版本號更新
 const ASSETS_TO_CACHE = [
   './',
   './index.html',
