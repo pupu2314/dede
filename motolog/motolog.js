@@ -1,14 +1,16 @@
 /* motolog.js
-   v15.4.0 Changes:
-   1. 修改：電費計算改為「無條件進位至小數後2位」 (Math.ceil(x*100)/100)。
-   2. 新增：統計畫面顯示「充電成本/km」。
+   v15.5.0 Changes:
+   1. 新增：未同步變更偵測 (Dirty Flag)。
+   2. 修改：所有資料寫入操作後自動標記為 Dirty。
+   3. 修改：上方提示條 (TopAlert) 優先顯示「未同步」橘色警示。
 */
 
-console.log('motolog.js (v15.4.0): loaded');
+console.log('motolog.js (v15.5.0): loaded');
 
-const APP_VERSION = 'v15.4.0';
+const APP_VERSION = 'v15.5.0';
 const SETTINGS_KEY = 'motorcycleSettings';
 const BACKUP_KEY = 'lastBackupDate';
+const DIRTY_KEY = 'hasUnsyncedChanges'; // 新增：未同步標記 Key
 
 const MAINT_TEMPLATES = [
     { name: '基本費', cost: 0 },
@@ -286,12 +288,21 @@ function updateLastUpdateTimeDisplay(timestamp) {
     display.textContent = text;
 }
 
+// ----------------------------------------------------
+// 新增：未同步標記 (Dirty Flag) 邏輯
+// ----------------------------------------------------
+function markDataDirty() {
+    localStorage.setItem(DIRTY_KEY, 'true');
+    checkBackupStatus(); // 立即更新 UI
+}
+
 function checkBackupStatus() {
     try {
-        var last = localStorage.getItem(BACKUP_KEY);
         var alertBox = safe('topAlert');
         var settings = JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}');
-        
+        var lastBackup = localStorage.getItem(BACKUP_KEY);
+        var isDirty = localStorage.getItem(DIRTY_KEY) === 'true';
+
         if (!alertBox) {
             alertBox = document.createElement('div');
             alertBox.id = 'topAlert';
@@ -302,10 +313,21 @@ function checkBackupStatus() {
         var showMsg = false;
         var msgText = '';
         var clickAction = null;
+        var isUnsyncedAlert = false;
 
-        if (!last || (daysBetween(last, new Date().toISOString().slice(0,10)) > 30)) {
+        // 優先檢查：是否有未同步的變更 (橘色警示)
+        if (isDirty && settings.gasUrl) {
             showMsg = true;
-            
+            isUnsyncedAlert = true;
+            msgText = '⚠️ 您有新變更尚未同步到雲端 [立即同步]';
+            clickAction = function() {
+                syncToGoogleSheets();
+                this.classList.remove('show');
+            };
+        } 
+        // 次要檢查：是否很久沒備份 (黃色警示)
+        else if (!lastBackup || (daysBetween(lastBackup, new Date().toISOString().slice(0,10)) > 30)) {
+            showMsg = true;
             if (settings.gasUrl) {
                 msgText = '☁️ 系統偵測到您很久未備份，點此<b>立即同步到雲端</b>';
                 clickAction = function() {
@@ -322,17 +344,27 @@ function checkBackupStatus() {
             }
         }
 
+        // 更新樣式與內容
         if (showMsg) {
-            alertBox.innerHTML = msgText; 
+            alertBox.innerHTML = msgText;
             alertBox.onclick = clickAction;
+            
+            // 切換橘色(unsynced)或預設黃色樣式
+            if (isUnsyncedAlert) {
+                alertBox.classList.add('unsynced');
+            } else {
+                alertBox.classList.remove('unsynced');
+            }
+            
             alertBox.classList.add('show');
         } else {
             alertBox.classList.remove('show');
+            alertBox.classList.remove('unsynced');
         }
+
     } catch (err) { console.error('checkBackupStatus error', err); }
 }
 
-// 修改：無條件進位至小數點後2位
 function recalcElectricityCost() {
     var settings = JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}');
     var rate = parseFloat(settings.electricRate);
@@ -373,6 +405,7 @@ function recalcElectricityCost() {
 
     if (count > 0) {
         localStorage.setItem('chargeLog', JSON.stringify(data));
+        markDataDirty(); // 標記未同步
         loadChargeHistory(); 
         updateDashboard(); 
         showToast(`✅ 已重新計算 ${count} 筆紀錄`);
@@ -428,6 +461,7 @@ function endCharging(e) {
         notes: session.notes
     };
     saveData('chargeLog', record);
+    markDataDirty(); // 標記未同步
     localStorage.removeItem('currentChargingSession');
     safe('endChargeForm').reset();
     if (chargeTimer) { clearInterval(chargeTimer); chargeTimer = null; }
@@ -488,6 +522,7 @@ function saveStatus(e) {
         notes: '' 
     };
     localStorage.setItem('statusLog', JSON.stringify([record])); 
+    markDataDirty(); // 標記未同步
     safe('statusForm').reset();
     loadAllData();
     prefillForms();
@@ -518,6 +553,7 @@ function saveMaintenance(e) {
         totalCost: parseFloat(safe('totalCost').textContent)
     };
     saveData('maintenanceLog', record, !!safe('editingMaintId').value);
+    markDataDirty(); // 標記未同步
     cancelMaintEdit();
     loadAllData();
     showToast('✅ 保養儲存成功');
@@ -538,6 +574,7 @@ function saveExpense(e) {
         description: safe('eDescription').value
     };
     saveData('expenseLog', record, !!safe('editingExpenseId').value);
+    markDataDirty(); // 標記未同步
     cancelExpenseEdit();
     loadAllData();
     showToast('✅ 花費儲存成功');
@@ -583,7 +620,6 @@ function updateDashboard() {
     safe('totalExpense').textContent = Math.round(totalCost).toLocaleString();
     safe('statTotalCost').textContent = Math.round(totalCost).toLocaleString() + ' NT$';
 
-    // 計算純充電成本
     var totalChargeCost = 0;
     charge.forEach(i => totalChargeCost += (parseFloat(i.cost) || 0));
 
@@ -627,10 +663,8 @@ function updateDashboard() {
         }
     }
     
-    // 統計計算
     if(maxOdo > 0) {
         safe('statCostPerKm').textContent = (totalCost / maxOdo).toFixed(2) + " NT$";
-        // 新增：充電成本/km
         if(safe('statChargeCostPerKm')) {
             safe('statChargeCostPerKm').textContent = (totalChargeCost / maxOdo).toFixed(2) + " NT$";
         }
@@ -864,6 +898,7 @@ function saveEditCharge(e) {
     var ms = new Date(r.endTime) - new Date(r.startTime);
     r.duration = formatDuration(ms);
     localStorage.setItem('chargeLog', JSON.stringify(data));
+    markDataDirty(); // 標記未同步
     closeEditModal();
     loadAllData();
     showToast('✅ 記錄已更新');
@@ -939,6 +974,7 @@ window.deleteRecord = function(key, id) {
     var data = JSON.parse(localStorage.getItem(key) || '[]');
     var newData = data.filter(x => x.id !== id);
     localStorage.setItem(key, JSON.stringify(newData));
+    markDataDirty(); // 標記未同步
     loadAllData();
     showToast('🗑️ 已刪除');
 }
@@ -995,6 +1031,7 @@ function saveSettings() {
         theme: theme
     }));
     
+    markDataDirty(); // 標記未同步
     applyTheme(theme);
     showToast('設定已儲存');
 }
@@ -1011,7 +1048,6 @@ function applyTheme(theme) {
     }
 }
 
-// 修改：無條件進位至小數後2位
 function autoCalculateCost() {
     if(safe('cKwh').dataset.autoCalc !== "true") return;
     var rate = parseFloat(safe('electricRate').value) || 0;
@@ -1108,6 +1144,8 @@ function importData(e) {
             if(data.expenseLog) localStorage.setItem('expenseLog', JSON.stringify(data.expenseLog));
             if(data.statusLog) localStorage.setItem('statusLog', JSON.stringify(data.statusLog));
             if(data.settings) localStorage.setItem(SETTINGS_KEY, JSON.stringify(data.settings));
+            
+            markDataDirty(); // 匯入視為變更
             loadAllData();
             showToast('✅ 資料匯入成功');
         } catch(err) { showToast('匯入失敗', 'error'); }
@@ -1174,6 +1212,8 @@ function syncToGoogleSheets() {
         if(data.status === 'success') {
             showToast('✅ 雲端同步成功');
             localStorage.setItem(BACKUP_KEY, new Date().toISOString().slice(0,10));
+            // 清除未同步標記
+            localStorage.removeItem(DIRTY_KEY);
             checkBackupStatus();
         } else {
             showToast('❌ 同步失敗: ' + data.message, 'error');
@@ -1213,6 +1253,10 @@ function restoreFromGoogleSheets() {
             if(d.MaintenanceLog) localStorage.setItem('maintenanceLog', JSON.stringify(d.MaintenanceLog));
             if(d.ExpenseLog) localStorage.setItem('expenseLog', JSON.stringify(d.ExpenseLog));
             if(d.StatusLog) localStorage.setItem('statusLog', JSON.stringify(d.StatusLog));
+            
+            // 還原成功，視為同步完成
+            localStorage.removeItem(DIRTY_KEY);
+            localStorage.setItem(BACKUP_KEY, new Date().toISOString().slice(0,10));
             
             showToast('✅ 還原成功！頁面將重新整理...');
             setTimeout(() => location.reload(), 1500);
