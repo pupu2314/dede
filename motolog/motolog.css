@@ -353,7 +353,7 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--p
     to { box-shadow: 0 0 15px #4ade80; }
 }
 
-/* Top Alert (更新顏色邏輯) */
+/* Top Alert (一般備份提示 - 黃色) */
 .top-alert {
     position: fixed;
     top: 0;
@@ -371,12 +371,24 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--p
     cursor: pointer;
     transition: transform 0.3s ease;
 }
-/* 深色模式下的 Alert 使用較深的黃色背景，並確保文字對比 */
 [data-theme="dark"] .top-alert {
-    background: #ca8a04; /* Darker Yellow/Gold */
-    color: #fff; /* White text */
+    background: #ca8a04; 
+    color: #fff; 
     box-shadow: 0 2px 10px rgba(0,0,0,0.3);
 }
+
+/* 新增：Top Alert (未同步變更 - 橘色) */
+.top-alert.unsynced {
+    background: #fff7ed; /* Light Orange */
+    color: #c2410c; /* Dark Orange */
+    border-bottom: 2px solid #fdba74;
+}
+[data-theme="dark"] .top-alert.unsynced {
+    background: #431407; /* Dark Orange BG */
+    color: #fb923c; /* Light Orange Text */
+    border-bottom: 2px solid #c2410c;
+}
+
 .top-alert.show { display: block; animation: slideDown 0.3s; }
 @keyframes slideDown { from { transform: translateY(-100%); } to { transform: translateY(0); } }
 
