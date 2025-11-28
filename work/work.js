@@ -1,8 +1,7 @@
 /**
- * 加班費計算機 v2.5 - JavaScript
- * - 修改打卡結束邏輯為手動確認
- * - 優化預設月份篩選
- * - 強化同步提醒機制
+ * 加班費計算機 v2.6 - JavaScript
+ * - 新增 Toast 通知功能
+ * - 優化同步提醒與狀態顯示
  */
 
 (function() {
@@ -60,6 +59,7 @@
     const syncStatusEl = document.getElementById('sync-status');
     const unsyncedAlert = document.getElementById('unsynced-alert');
     const quickSyncBtn = document.getElementById('quick-sync-btn');
+    const toastEl = document.getElementById('toast');
     
     // Tabs DOM
     const tabButtons = document.querySelectorAll('.tab-btn');
@@ -129,6 +129,17 @@
         const now = Date.now().toString();
         localStorage.setItem(STORAGE_KEYS.LAST_MODIFIED, now);
         checkSyncStatus();
+    }
+
+    // --- 新增: Toast 提示功能 ---
+    function showToast(message, type = 'info') {
+        toastEl.textContent = message;
+        toastEl.className = 'toast show ' + type;
+        
+        // 3秒後自動消失
+        setTimeout(() => {
+            toastEl.className = toastEl.className.replace('show', '');
+        }, 3000);
     }
 
     // --- 核心邏輯函式 ---
@@ -293,12 +304,8 @@
             records.push(newRecord);
         }
         
-        // 儲存紀錄
         saveRecords();
-        
-        // **關鍵修改**: 新增成功後，清除暫存 (如果是來自打卡的補登)
-        localStorage.removeItem(STORAGE_KEYS.TEMP_RECORD);
-        
+        localStorage.removeItem(STORAGE_KEYS.TEMP_RECORD); // 成功新增後清除暫存
         loadRecords();
         render();
         clearForm();
@@ -341,7 +348,6 @@
         addRecordBtn.textContent = '新增紀錄';
         hideError();
         
-        // 清除表單時也清除暫存（除非正在計時）
         if (!punchTimerInterval) {
              localStorage.removeItem(STORAGE_KEYS.TEMP_RECORD);
              updatePunchUI(false);
@@ -421,7 +427,7 @@
         startTimer(new Date(tempRecord.start));
     }
     
-    // **[修改] 結束打卡：不自動儲存，而是填入表單讓用戶確認**
+    // 結束打卡
     function endPunch() {
         const tempRecordJSON = localStorage.getItem(STORAGE_KEYS.TEMP_RECORD);
         if (!tempRecordJSON) return;
@@ -430,24 +436,21 @@
         if (tempRecord.start && !tempRecord.end) {
             stopTimer();
             
-            // 1. 記錄結束時間到暫存
+            // 記錄結束時間
             const endTime = new Date();
             tempRecord.end = endTime.toISOString();
             tempRecord.reason = document.getElementById('overtime-reason').value || tempRecord.reason;
             tempRecord.type = document.querySelector('input[name="overtimeType"]:checked').value || tempRecord.type;
             
-            // 2. 更新暫存 (避免重新整理後遺失)
             localStorage.setItem(STORAGE_KEYS.TEMP_RECORD, JSON.stringify(tempRecord));
             
-            // 3. 更新 UI 狀態：還原按鈕狀態，並觸發 restoreState 來填寫表單
             updatePunchUI(false);
             restoreState(); 
             
-            // 4. 顯示提示
             const restoreMsgEl = document.getElementById('restore-message');
             restoreMsgEl.textContent = '打卡已結束，時間已填入下方表單。請確認無誤後按下「新增紀錄」儲存。';
             restoreMsgEl.style.display = 'block';
-            restoreMsgEl.style.backgroundColor = '#d4edda'; // 綠色背景提示成功填入
+            restoreMsgEl.style.backgroundColor = '#d4edda';
             restoreMsgEl.style.borderColor = '#c3e6cb';
             restoreMsgEl.style.color = '#155724';
         }
@@ -534,7 +537,7 @@
         return { start: periodStart, end: periodEnd, displayText: `${formatDate(periodStart)} ~ ${formatDate(periodEnd)}` };
     };
 
-    // --- [優化] 預設月份邏輯 ---
+    // --- 預設月份邏輯 ---
     function getDefaultMonthValue() {
         const today = new Date();
         const currentYear = today.getFullYear();
@@ -546,9 +549,9 @@
             return today.toISOString().substring(0, 7);
         }
 
-        // 如果今天 >= 發薪日，代表這個月的薪水計算截止了，進入下個月的週期
+        // 當天日期 >= 發薪日，顯示下個月
         if (currentDay >= payday) {
-            // 自動處理跨年 (12月+1 = 明年1月)
+            // setMonth 會自動處理年份進位 (如 11月+1 = 明年1月)
             const nextMonthDate = new Date(currentYear, currentMonth + 1, 1);
             return nextMonthDate.toISOString().substring(0, 7);
         } else {
@@ -561,7 +564,6 @@
         const lastSync = localStorage.getItem(STORAGE_KEYS.LAST_SYNC) || 0;
         const lastMod = localStorage.getItem(STORAGE_KEYS.LAST_MODIFIED) || 0;
         
-        // 只有在已設定 GAS URL 且資料有更新時才顯示提醒
         if (parseInt(lastMod) > parseInt(lastSync) && gasAppUrl) {
             unsyncedAlert.style.display = 'flex';
         } else {
@@ -785,6 +787,7 @@
         }
     }
 
+    // 移除舊的 static sync status
     function updateSyncStatus(msg, type = 'info') {
         syncStatusEl.style.display = 'block';
         syncStatusEl.textContent = msg;
@@ -792,6 +795,9 @@
         if(type === 'success') syncStatusEl.style.color = 'var(--success-color)';
         else if (type === 'error') syncStatusEl.style.color = 'var(--danger-color)';
         else syncStatusEl.style.color = 'var(--text-color)';
+        
+        // 同時顯示 Toast
+        showToast(msg, type);
     }
 
     // 上傳資料 (Overwrite)
