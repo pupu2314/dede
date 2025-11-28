@@ -12,13 +12,13 @@
     <meta name="apple-mobile-web-app-title" content="加班費計算機">
     
     <!-- 截圖功能 -->
-    <script src="[https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js](https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js)"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     
     <link rel="stylesheet" href="work.css">
 </head>
 <body>
     <div class="container main-layout">
-        <h1 class="app-title">加班費計算機 <small>v2.5</small></h1>
+        <h1 class="app-title">加班費計算機 <small>v2.6</small></h1>
         
         <!-- 未同步提醒條 (預設隱藏) -->
         <div id="unsynced-alert" class="sync-alert-bar" style="display: none;">
@@ -175,7 +175,7 @@
                             <br><small style="color:#666;">(無須登入，僅需網址即可同步)</small>
                         </p>
                         <div style="display: flex; gap: 0.5rem; margin-bottom: 1rem;">
-                            <input type="text" id="gas-url-input" placeholder="[https://script.google.com/macros/s/..../exec](https://script.google.com/macros/s/..../exec)" style="flex:1;">
+                            <input type="text" id="gas-url-input" placeholder="https://script.google.com/macros/s/..../exec" style="flex:1;">
                             <button id="save-gas-url" class="btn-small">儲存網址</button>
                         </div>
                     </div>
@@ -228,6 +228,9 @@
             </div>
         </div>
     </div>
+
+    <!-- Toast Container -->
+    <div id="toast" class="toast"></div>
 
     <div id="backup-modal" class="modal" role="dialog" aria-labelledby="backup-modal-title">
         <div class="modal-content">
