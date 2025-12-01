@@ -1,16 +1,16 @@
 /* motolog.js
-   v15.5.0 Changes:
-   1. 新增：未同步變更偵測 (Dirty Flag)。
-   2. 修改：所有資料寫入操作後自動標記為 Dirty。
-   3. 修改：上方提示條 (TopAlert) 優先顯示「未同步」橘色警示。
+   v15.6.0 Changes:
+   1. 排序優化：確保所有列表 (充電/保養/花費) 嚴格依照日期時間由新到舊排列。
+   2. 資料結構統一：保養與花費現在也會儲存 startTime (ISO格式)，與充電一致。
+   3. 雲端還原修復：自動修正從 Google Sheets 還原後，日期與時間格式跑掉 (如 1899年) 的問題。
 */
 
-console.log('motolog.js (v15.5.0): loaded');
+console.log('motolog.js (v15.6.0): loaded');
 
-const APP_VERSION = 'v15.5.0';
+const APP_VERSION = 'v15.6.0';
 const SETTINGS_KEY = 'motorcycleSettings';
 const BACKUP_KEY = 'lastBackupDate';
-const DIRTY_KEY = 'hasUnsyncedChanges'; // 新增：未同步標記 Key
+const DIRTY_KEY = 'hasUnsyncedChanges';
 
 const MAINT_TEMPLATES = [
     { name: '基本費', cost: 0 },
@@ -215,6 +215,7 @@ function getLatestState() {
     maints.forEach(r => allRecords.push({ ts: getRecordTimestamp(r), odo: parseFloat(r.odo), battery: null, type: 'maint', raw: r }));
     expenses.forEach(r => allRecords.push({ ts: getRecordTimestamp(r), odo: parseFloat(r.odo), battery: null, type: 'expense', raw: r }));
 
+    // 這裡的排序會影響 Dashboard 的最新狀態判定
     allRecords.sort((a, b) => b.ts - a.ts);
 
     if (allRecords.length === 0) return { odo: 0, battery: null, rawRecord: null, lastTs: 0 };
@@ -235,16 +236,30 @@ function getLatestState() {
     };
 }
 
+// 通用時間戳記轉換，確保排序依據一致
 function getRecordTimestamp(r) {
     if (!r) return 0;
-    if (r.endTime) return new Date(r.endTime).getTime();
+    // 如果有標準的 startTime (充電或新版保養/花費)，優先使用
     if (r.startTime) return new Date(r.startTime).getTime();
     
+    // 舊版或雲端還原資料：組合 date + time
     var dateStr = (r.date || "").slice(0, 10); 
-    if (dateStr && r.time) {
-        return new Date(dateStr + 'T' + r.time).getTime();
-    }
     if (dateStr) {
+        // 如果有 time 欄位
+        if (r.time) {
+            // 處理 time 可能是 "07:30" 或 "1899-12-30T07:30..." 的情況
+            var timeStr = r.time;
+            if (timeStr.includes('T')) {
+                // 如果是 ISO 格式，嘗試提取 HH:MM
+                try {
+                    var d = new Date(timeStr);
+                    var h = d.getHours().toString().padStart(2, '0');
+                    var m = d.getMinutes().toString().padStart(2, '0');
+                    timeStr = `${h}:${m}`;
+                } catch(e) { timeStr = "00:00"; }
+            }
+            return new Date(dateStr + 'T' + timeStr).getTime();
+        }
         return new Date(dateStr + 'T00:00:00').getTime();
     }
     return 0;
@@ -288,12 +303,9 @@ function updateLastUpdateTimeDisplay(timestamp) {
     display.textContent = text;
 }
 
-// ----------------------------------------------------
-// 新增：未同步標記 (Dirty Flag) 邏輯
-// ----------------------------------------------------
 function markDataDirty() {
     localStorage.setItem(DIRTY_KEY, 'true');
-    checkBackupStatus(); // 立即更新 UI
+    checkBackupStatus(); 
 }
 
 function checkBackupStatus() {
@@ -315,7 +327,6 @@ function checkBackupStatus() {
         var clickAction = null;
         var isUnsyncedAlert = false;
 
-        // 優先檢查：是否有未同步的變更 (橘色警示)
         if (isDirty && settings.gasUrl) {
             showMsg = true;
             isUnsyncedAlert = true;
@@ -325,7 +336,6 @@ function checkBackupStatus() {
                 this.classList.remove('show');
             };
         } 
-        // 次要檢查：是否很久沒備份 (黃色警示)
         else if (!lastBackup || (daysBetween(lastBackup, new Date().toISOString().slice(0,10)) > 30)) {
             showMsg = true;
             if (settings.gasUrl) {
@@ -344,12 +354,10 @@ function checkBackupStatus() {
             }
         }
 
-        // 更新樣式與內容
         if (showMsg) {
             alertBox.innerHTML = msgText;
             alertBox.onclick = clickAction;
             
-            // 切換橘色(unsynced)或預設黃色樣式
             if (isUnsyncedAlert) {
                 alertBox.classList.add('unsynced');
             } else {
@@ -392,7 +400,6 @@ function recalcElectricityCost() {
         if (isTarget) {
             var kwh = parseFloat(r.kwh) || 0;
             if (kwh > 0) {
-                // 無條件進位至小數後2位
                 var rawCost = kwh * rate;
                 var newCost = Math.ceil(rawCost * 100) / 100;
                 if (r.cost !== newCost) {
@@ -405,7 +412,7 @@ function recalcElectricityCost() {
 
     if (count > 0) {
         localStorage.setItem('chargeLog', JSON.stringify(data));
-        markDataDirty(); // 標記未同步
+        markDataDirty();
         loadChargeHistory(); 
         updateDashboard(); 
         showToast(`✅ 已重新計算 ${count} 筆紀錄`);
@@ -461,7 +468,7 @@ function endCharging(e) {
         notes: session.notes
     };
     saveData('chargeLog', record);
-    markDataDirty(); // 標記未同步
+    markDataDirty();
     localStorage.removeItem('currentChargingSession');
     safe('endChargeForm').reset();
     if (chargeTimer) { clearInterval(chargeTimer); chargeTimer = null; }
@@ -522,7 +529,7 @@ function saveStatus(e) {
         notes: '' 
     };
     localStorage.setItem('statusLog', JSON.stringify([record])); 
-    markDataDirty(); // 標記未同步
+    markDataDirty();
     safe('statusForm').reset();
     loadAllData();
     prefillForms();
@@ -531,7 +538,10 @@ function saveStatus(e) {
 
 function saveMaintenance(e) {
     e.preventDefault();
-    if (!checkMileageAnomaly(parseFloat(safe('mOdo').value), safe('mDate').value)) return;
+    var dateVal = safe('mDate').value;
+    var timeVal = safe('mTime').value;
+    if (!checkMileageAnomaly(parseFloat(safe('mOdo').value), dateVal)) return;
+    
     var parts = [];
     document.querySelectorAll('.part-item').forEach(item => {
         parts.push({
@@ -541,10 +551,15 @@ function saveMaintenance(e) {
     });
     var loc = safe('mLocationSelect').value;
     if(loc === '其他') loc = safe('mLocationInput').value;
+    
+    // 建立 startTime (ISO String) 以統一格式
+    var startTime = new Date(dateVal + 'T' + (timeVal || '00:00')).toISOString();
+
     var record = {
         id: safe('editingMaintId').value ? parseInt(safe('editingMaintId').value) : Date.now(),
-        date: safe('mDate').value,
-        time: safe('mTime').value,
+        startTime: startTime, // 新增：統一儲存 ISO 時間
+        date: dateVal,
+        time: timeVal,
         odo: parseFloat(safe('mOdo').value) || 0,
         location: loc,
         type: safe('mType').value,
@@ -553,7 +568,7 @@ function saveMaintenance(e) {
         totalCost: parseFloat(safe('totalCost').textContent)
     };
     saveData('maintenanceLog', record, !!safe('editingMaintId').value);
-    markDataDirty(); // 標記未同步
+    markDataDirty();
     cancelMaintEdit();
     loadAllData();
     showToast('✅ 保養儲存成功');
@@ -561,25 +576,34 @@ function saveMaintenance(e) {
 
 function saveExpense(e) {
     e.preventDefault();
+    var dateVal = safe('eDate').value;
+    var timeVal = safe('eTime').value;
+    
     if (safe('eOdo').value) {
-         if (!checkMileageAnomaly(parseFloat(safe('eOdo').value), safe('eDate').value)) return;
+         if (!checkMileageAnomaly(parseFloat(safe('eOdo').value), dateVal)) return;
     }
+    
+    // 建立 startTime (ISO String) 以統一格式
+    var startTime = new Date(dateVal + 'T' + (timeVal || '00:00')).toISOString();
+
     var record = {
         id: safe('editingExpenseId').value ? parseInt(safe('editingExpenseId').value) : Date.now(),
-        date: safe('eDate').value,
-        time: safe('eTime').value,
+        startTime: startTime, // 新增：統一儲存 ISO 時間
+        date: dateVal,
+        time: timeVal,
         category: safe('eCategory').value,
         amount: parseFloat(safe('eAmount').value) || 0,
         odo: parseFloat(safe('eOdo').value) || 0,
         description: safe('eDescription').value
     };
     saveData('expenseLog', record, !!safe('editingExpenseId').value);
-    markDataDirty(); // 標記未同步
+    markDataDirty();
     cancelExpenseEdit();
     loadAllData();
     showToast('✅ 花費儲存成功');
 }
 
+// 通用存檔函式：確保寫入時就排序
 function saveData(key, record, isEdit) {
     var data = JSON.parse(localStorage.getItem(key) || '[]');
     if (isEdit) {
@@ -588,7 +612,8 @@ function saveData(key, record, isEdit) {
     } else {
         data.push(record);
     }
-    data.sort((a, b) => new Date(b.startTime || b.date + 'T' + (b.time||'00:00')) - new Date(a.startTime || a.date + 'T' + (a.time||'00:00')));
+    // 排序：使用 getRecordTimestamp 統一標準 (新->舊)
+    data.sort((a, b) => getRecordTimestamp(b) - getRecordTimestamp(a));
     localStorage.setItem(key, JSON.stringify(data));
 }
 
@@ -681,6 +706,9 @@ function updateDashboard() {
 
 function loadChargeHistory() {
     var data = JSON.parse(localStorage.getItem('chargeLog') || '[]');
+    // 強制排序
+    data.sort((a, b) => getRecordTimestamp(b) - getRecordTimestamp(a));
+    
     var list = safe('chargeList');
     if(!list) return;
     list.innerHTML = '';
@@ -720,7 +748,7 @@ function loadChargeHistory() {
     filtered.forEach(r => {
         var eff = effMap[r.id] ? effMap[r.id].toFixed(1) : '-';
         var dateStr = (r.date || '').slice(0, 10).replace(/-/g,'/');
-        var timeStr = formatTime(r.startTime);
+        var timeStr = formatTime(r.startTime || r.date + 'T' + (r.time || '00:00'));
         
         var card = document.createElement('div');
         card.className = 'history-card';
@@ -762,6 +790,9 @@ function loadChargeHistory() {
 
 function loadMaintenanceHistory() {
     var data = JSON.parse(localStorage.getItem('maintenanceLog') || '[]');
+    // 強制排序
+    data.sort((a, b) => getRecordTimestamp(b) - getRecordTimestamp(a));
+
     var list = safe('maintList');
     if(!list) return;
     list.innerHTML = '';
@@ -815,6 +846,9 @@ function loadMaintenanceHistory() {
 
 function loadExpenseHistory() {
     var data = JSON.parse(localStorage.getItem('expenseLog') || '[]');
+    // 強制排序
+    data.sort((a, b) => getRecordTimestamp(b) - getRecordTimestamp(a));
+
     var list = safe('expenseList');
     if(!list) return;
     list.innerHTML = '';
@@ -898,7 +932,7 @@ function saveEditCharge(e) {
     var ms = new Date(r.endTime) - new Date(r.startTime);
     r.duration = formatDuration(ms);
     localStorage.setItem('chargeLog', JSON.stringify(data));
-    markDataDirty(); // 標記未同步
+    markDataDirty();
     closeEditModal();
     loadAllData();
     showToast('✅ 記錄已更新');
@@ -914,7 +948,18 @@ window.editMaintenance = function(id) {
     if(!r) return;
     safe('editingMaintId').value = r.id;
     safe('mDate').value = (r.date || '').slice(0, 10);
-    safe('mTime').value = (r.time || '').slice(0, 5);
+    // 修正：如果 time 是舊格式 (1899...) 或 startTime 存在，嘗試正確提取 HH:MM
+    var t = r.time || '';
+    if (t.includes('T')) {
+        try {
+            var d = new Date(t);
+            var h = d.getHours().toString().padStart(2, '0');
+            var m = d.getMinutes().toString().padStart(2, '0');
+            t = `${h}:${m}`;
+        } catch(e){}
+    }
+    safe('mTime').value = t.slice(0, 5);
+    
     safe('mOdo').value = r.odo;
     safe('mType').value = r.type;
     safe('mNotes').value = r.notes;
@@ -951,7 +996,18 @@ window.editExpense = function(id) {
     if(!r) return;
     safe('editingExpenseId').value = r.id;
     safe('eDate').value = (r.date || '').slice(0, 10);
-    safe('eTime').value = (r.time || '').slice(0, 5);
+    // 修正：時間提取邏輯
+    var t = r.time || '';
+    if (t.includes('T')) {
+        try {
+            var d = new Date(t);
+            var h = d.getHours().toString().padStart(2, '0');
+            var m = d.getMinutes().toString().padStart(2, '0');
+            t = `${h}:${m}`;
+        } catch(e){}
+    }
+    safe('eTime').value = t.slice(0, 5);
+    
     safe('eCategory').value = r.category;
     safe('eAmount').value = r.amount;
     safe('eDescription').value = r.description;
@@ -974,7 +1030,7 @@ window.deleteRecord = function(key, id) {
     var data = JSON.parse(localStorage.getItem(key) || '[]');
     var newData = data.filter(x => x.id !== id);
     localStorage.setItem(key, JSON.stringify(newData));
-    markDataDirty(); // 標記未同步
+    markDataDirty();
     loadAllData();
     showToast('🗑️ 已刪除');
 }
@@ -1031,7 +1087,7 @@ function saveSettings() {
         theme: theme
     }));
     
-    markDataDirty(); // 標記未同步
+    markDataDirty();
     applyTheme(theme);
     showToast('設定已儲存');
 }
@@ -1054,7 +1110,6 @@ function autoCalculateCost() {
     var kwh = parseFloat(safe('cKwh').value) || 0;
     
     var rawCost = rate * kwh;
-    // Math.ceil(x * 100) / 100
     var finalCost = Math.ceil(rawCost * 100) / 100;
     
     safe('cCost').value = finalCost.toFixed(2);
@@ -1145,7 +1200,7 @@ function importData(e) {
             if(data.statusLog) localStorage.setItem('statusLog', JSON.stringify(data.statusLog));
             if(data.settings) localStorage.setItem(SETTINGS_KEY, JSON.stringify(data.settings));
             
-            markDataDirty(); // 匯入視為變更
+            markDataDirty();
             loadAllData();
             showToast('✅ 資料匯入成功');
         } catch(err) { showToast('匯入失敗', 'error'); }
@@ -1212,7 +1267,6 @@ function syncToGoogleSheets() {
         if(data.status === 'success') {
             showToast('✅ 雲端同步成功');
             localStorage.setItem(BACKUP_KEY, new Date().toISOString().slice(0,10));
-            // 清除未同步標記
             localStorage.removeItem(DIRTY_KEY);
             checkBackupStatus();
         } else {
@@ -1225,6 +1279,7 @@ function syncToGoogleSheets() {
     });
 }
 
+// 雲端還原 (含資料清洗)
 function restoreFromGoogleSheets() {
     if (!navigator.onLine) {
         showToast('❌ 離線狀態無法還原', 'error');
@@ -1249,12 +1304,38 @@ function restoreFromGoogleSheets() {
     .then(data => {
         if(data.status === 'success' && data.data) {
             var d = data.data;
+
+            // 輔助函式：清洗資料格式
+            // 處理 Google Sheets 可能傳回的 ISO 格式 (1899...)
+            const sanitize = (list) => {
+                if(!Array.isArray(list)) return [];
+                return list.map(item => {
+                    // 1. 處理 Date: 如果是 ISO 格式，只取前 10 碼
+                    if (item.date && item.date.includes('T')) {
+                        item.date = item.date.slice(0, 10);
+                    }
+                    // 2. 處理 Time: 如果是 ISO 格式 (含 1899)，嘗試轉回 HH:MM
+                    if (item.time && item.time.includes('T')) {
+                        try {
+                            var t = new Date(item.time);
+                            var h = t.getHours().toString().padStart(2, '0');
+                            var m = t.getMinutes().toString().padStart(2, '0');
+                            item.time = `${h}:${m}`;
+                        } catch(e) {}
+                    }
+                    // 3. 補上 startTime (如果沒有)
+                    if (!item.startTime && item.date) {
+                         item.startTime = new Date(item.date + 'T' + (item.time || '00:00')).toISOString();
+                    }
+                    return item;
+                });
+            };
+
             if(d.ChargeLog) localStorage.setItem('chargeLog', JSON.stringify(d.ChargeLog));
-            if(d.MaintenanceLog) localStorage.setItem('maintenanceLog', JSON.stringify(d.MaintenanceLog));
-            if(d.ExpenseLog) localStorage.setItem('expenseLog', JSON.stringify(d.ExpenseLog));
+            if(d.MaintenanceLog) localStorage.setItem('maintenanceLog', JSON.stringify(sanitize(d.MaintenanceLog)));
+            if(d.ExpenseLog) localStorage.setItem('expenseLog', JSON.stringify(sanitize(d.ExpenseLog)));
             if(d.StatusLog) localStorage.setItem('statusLog', JSON.stringify(d.StatusLog));
             
-            // 還原成功，視為同步完成
             localStorage.removeItem(DIRTY_KEY);
             localStorage.setItem(BACKUP_KEY, new Date().toISOString().slice(0,10));
             
