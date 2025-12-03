@@ -1,13 +1,12 @@
 /* motolog.js
-   v15.7.0 Changes:
-   1. 資料瘦身 (Optimization): 移除冗餘的 date, time 欄位，統一使用 startTime。
-   2. 稀疏儲存: 自動過濾空字串、Null 與空陣列，減少 LocalStorage 佔用。
-   3. 邏輯統一: 顯示與篩選全面改用 startTime 計算。
+   v15.7.1 Changes:
+   1. 移除舊版資料自動轉換邏輯 (不再自動產生 startTime)，假設資料已為新格式。
+   2. 保留稀疏儲存優化 (optimizeRecord)。
 */
 
-console.log('motolog.js (v15.7.0): loaded');
+console.log('motolog.js (v15.7.1): loaded');
 
-const APP_VERSION = 'v15.7.0';
+const APP_VERSION = 'v15.7.1';
 const SETTINGS_KEY = 'motorcycleSettings';
 const BACKUP_KEY = 'lastBackupDate';
 const DIRTY_KEY = 'hasUnsyncedChanges';
@@ -48,7 +47,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
         initEventListeners();
         populateMaintTemplates();
-        populateMonthFilters(); // 注意：這會依賴 getRecordDateStr
+        populateMonthFilters(); 
         loadAllData();
         
         prefillForms();
@@ -164,13 +163,13 @@ function showToast(message, type = 'success') {
 }
 
 // === 核心工具：優化紀錄 (Data Optimization) ===
-// 1. 移除 redundant 欄位 (date, time)
+// 1. 移除 redundant 欄位 (date, time) - 如果 startTime 存在
 // 2. 移除空值 (null, "", [])
 // 3. 保留 0 (避免 NaN)
 function optimizeRecord(record) {
     const optimized = { ...record };
     
-    // 如果有 startTime，就可以移除 date 和 time
+    // 如果有 startTime，就可以安全移除舊的 date 和 time
     if (optimized.startTime) {
         delete optimized.date;
         delete optimized.time;
@@ -192,16 +191,15 @@ function optimizeRecord(record) {
 }
 
 // === 核心工具：從紀錄獲取日期/時間 ===
-// 相容舊資料 (date/time 欄位) 與新資料 (startTime)
 function getRecordTimestamp(r) {
     if (!r) return 0;
     if (r.startTime) return new Date(r.startTime).getTime();
     
-    // Fallback for legacy data
+    // 雖然移除轉換邏輯，但讀取時保留基本 fallback 以防萬一
     var dateStr = (r.date || "").slice(0, 10); 
     if (dateStr) {
         var timeStr = r.time || "00:00";
-        if (timeStr.includes('T')) { // Handle ISO garbage from Google Sheets
+        if (timeStr.includes('T')) { 
              try {
                 var d = new Date(timeStr);
                 timeStr = d.toTimeString().slice(0,5);
@@ -1318,25 +1316,8 @@ function restoreFromGoogleSheets() {
             // 輔助函式：清洗資料 (確保 startTime 存在，並轉為優化格式)
             const sanitize = (list) => {
                 if(!Array.isArray(list)) return [];
-                return list.map(item => {
-                    // 如果沒有 startTime 但有 date/time，補上 startTime
-                    if (!item.startTime && item.date) {
-                         // 處理 time 可能是 "1899..." 的問題
-                         let timeVal = item.time || "00:00";
-                         if (timeVal.includes('T')) {
-                             try {
-                                 let t = new Date(timeVal);
-                                 timeVal = t.toTimeString().slice(0,5);
-                             } catch(e) { timeVal = "00:00"; }
-                         }
-                         // 處理 date 可能是 "2025-10-27T..." 的問題
-                         let dateVal = item.date;
-                         if (dateVal.includes('T')) dateVal = dateVal.slice(0, 10);
-                         
-                         item.startTime = new Date(dateVal + 'T' + timeVal).toISOString();
-                    }
-                    return optimizeRecord(item); // 轉為新格式 (刪除 date/time)
-                });
+                // 移除自動轉換邏輯，只進行 optimizeRecord (清理空欄位)
+                return list.map(item => optimizeRecord(item));
             };
 
             if(d.ChargeLog) localStorage.setItem('chargeLog', JSON.stringify(sanitize(d.ChargeLog)));
