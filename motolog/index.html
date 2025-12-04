@@ -309,7 +309,6 @@
                     <div class="analytics-card"><h4>總里程</h4><p id="statTotalMileage">0 公里</p></div>
                     <div class="analytics-card"><h4>平均日里程</h4><p id="statAvgDaily">0 公里</p></div>
                     <div class="analytics-card"><h4>每公里總成本</h4><p id="statCostPerKm">0 NT$</p></div>
-                    <!-- 新增：充電成本/km -->
                     <div class="analytics-card"><h4>充電成本/km</h4><p id="statChargeCostPerKm">0 NT$</p></div>
                     <div class="analytics-card"><h4>總花費</h4><p id="statTotalCost">0 NT$</p></div>
                 </div>
@@ -439,9 +438,9 @@
                     <li><code>StatusLog</code></li>
                 </ul>
 
-                <h4>步驟 2：Apps Script</h4>
+                <h4>步驟 2：Apps Script (重要修正)</h4>
                 <p>1. 點擊上方選單「擴充功能」>「Apps Script」。</p>
-                <p>2. 刪除原有內容，貼上以下程式碼：</p>
+                <p>2. 刪除原有內容，貼上以下程式碼 (已修正數字變日期問題)：</p>
                 <pre><code>function doPost(e) {
   try {
     var data = JSON.parse(e.postData.contents);
@@ -486,7 +485,8 @@ function saveToSheet(ss, sheetName, dataArray) {
 function readSheet(ss, sheetName) {
   var sheet = ss.getSheetByName(sheetName);
   if (!sheet) return [];
-  var rows = sheet.getDataRange().getValues();
+  // 修正：使用 getDisplayValues() 確保讀到的是字串，避免數字被誤轉為 Date
+  var rows = sheet.getDataRange().getDisplayValues();
   if (rows.length < 2) return [];
   var headers = rows[0];
   var data = [];
@@ -516,9 +516,7 @@ function readSheet(ss, sheetName) {
                 </ul>
                 <p>4. 點擊部署，授權時選擇「進階」>「前往... (不安全)」>「允許」。</p>
                 <p>5. 複製產生的網址 (以 <code>/exec</code> 結尾)。</p>
-                
-                <h4>步驟 4：完成設定</h4>
-                <p>回到本系統，將網址貼入「API 欄位」並儲存，即可開始同步！</p>
+                <p style="color:var(--danger); font-weight:bold;">※ 注意：若已部署過，請點擊「管理部署作業」>「鉛筆圖示」> 版本選擇「新版本」> 部署，才能套用新程式碼。</p>
             </div>
             <div class="modal-footer">
                 <button class="btn btn-primary btn-full btn-lg" onclick="document.getElementById('closeTutorialModal').click()">我瞭解了</button>
