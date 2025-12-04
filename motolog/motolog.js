@@ -1,12 +1,11 @@
 /* motolog.js
-   v15.7.1 Changes:
-   1. 移除舊版資料自動轉換邏輯 (不再自動產生 startTime)，假設資料已為新格式。
-   2. 保留稀疏儲存優化 (optimizeRecord)。
+   v15.7.2 Changes:
+   1. 雲端還原強化：增加針對 odo 欄位的防呆檢查，若內容為 1900 年份的日期字串(Google Sheets 誤判)，則強制歸零或忽略。
 */
 
-console.log('motolog.js (v15.7.1): loaded');
+console.log('motolog.js (v15.7.2): loaded');
 
-const APP_VERSION = 'v15.7.1';
+const APP_VERSION = 'v15.7.2';
 const SETTINGS_KEY = 'motorcycleSettings';
 const BACKUP_KEY = 'lastBackupDate';
 const DIRTY_KEY = 'hasUnsyncedChanges';
@@ -1313,11 +1312,15 @@ function restoreFromGoogleSheets() {
         if(data.status === 'success' && data.data) {
             var d = data.data;
 
-            // 輔助函式：清洗資料 (確保 startTime 存在，並轉為優化格式)
             const sanitize = (list) => {
                 if(!Array.isArray(list)) return [];
-                // 移除自動轉換邏輯，只進行 optimizeRecord (清理空欄位)
-                return list.map(item => optimizeRecord(item));
+                return list.map(item => {
+                    // 防呆：如果 odo 欄位內容看起來像是 1900 年的 ISO 日期字串，代表 Google Sheets 格式錯誤，強制忽略或歸零
+                    if (typeof item.odo === 'string' && item.odo.startsWith('1900')) {
+                        item.odo = 0; 
+                    }
+                    return optimizeRecord(item);
+                });
             };
 
             if(d.ChargeLog) localStorage.setItem('chargeLog', JSON.stringify(sanitize(d.ChargeLog)));
