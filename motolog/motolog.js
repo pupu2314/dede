@@ -1,11 +1,13 @@
 /* motolog.js
-   v15.7.2 Changes:
-   1. 雲端還原強化：增加針對 odo 欄位的防呆檢查，若內容為 1900 年份的日期字串(Google Sheets 誤判)，則強制歸零或忽略。
+   v15.8.0 Changes:
+   1. 修復：將 edit/delete 函式移至全域範圍，解決按鈕點擊無反應的問題。
+   2. 新增：充電紀錄顯示「區間里程」(本次充電里程 - 上次充電里程)。
+   3. 優化：強化 ID 型別轉換，避免編輯存檔失敗。
 */
 
-console.log('motolog.js (v15.7.2): loaded');
+console.log('motolog.js (v15.8.0): loaded');
 
-const APP_VERSION = 'v15.7.2';
+const APP_VERSION = 'v15.8.0';
 const SETTINGS_KEY = 'motorcycleSettings';
 const BACKUP_KEY = 'lastBackupDate';
 const DIRTY_KEY = 'hasUnsyncedChanges';
@@ -30,15 +32,110 @@ const REGULAR_SERVICE_DAYS = 180;
 var chargeTimer = null;
 var selectedStation = '';
 
+// === 全域工具函式 ===
 function safe(id) {
     try { return document.getElementById(id); } catch (e) { return null; }
 }
 
-window.onerror = function(message) {
-    showToast('發生錯誤: ' + message, 'error');
-    return false;
+function showToast(message, type = 'success') {
+    var toast = safe('toast');
+    if (!toast) return;
+    toast.textContent = message;
+    toast.className = 'toast show ' + (type === 'success' ? 'toast-success' : 'toast-error');
+    toast.style.background = '';
+    toast.style.color = '';
+    setTimeout(() => { toast.classList.remove('show'); }, 3000);
+}
+
+// === 核心：全域編輯/刪除函式 (修復失效問題) ===
+// 必須定義在 DOMContentLoaded 之外，確保 HTML onclick 能讀取到
+
+window.deleteRecord = function(key, id) {
+    if(!confirm('確定刪除此紀錄?')) return;
+    var data = JSON.parse(localStorage.getItem(key) || '[]');
+    // 確保 ID 型別一致 (轉為數字比較)
+    var newData = data.filter(x => parseInt(x.id) !== parseInt(id));
+    localStorage.setItem(key, JSON.stringify(newData));
+    markDataDirty();
+    loadAllData();
+    showToast('🗑️ 已刪除');
 };
 
+window.editCharge = function(id) {
+    var data = JSON.parse(localStorage.getItem('chargeLog') || '[]');
+    var r = data.find(x => parseInt(x.id) === parseInt(id));
+    if (!r) { showToast('找不到紀錄', 'error'); return; }
+    
+    safe('editingChargeId').value = r.id;
+    safe('edit_cStartTime').value = toLocalISO(r.startTime);
+    safe('edit_cEndTime').value = toLocalISO(r.endTime);
+    safe('edit_cOdo').value = r.odo;
+    safe('edit_cStation').value = r.station || '';
+    
+    safe('edit_cBatteryStart').value = r.batteryStart;
+    safe('edit_cBatteryEnd').value = r.batteryEnd;
+    
+    safe('edit_cKwh').value = r.kwh || '';
+    safe('edit_cCost').value = r.cost || '';
+    safe('edit_cNotes').value = r.notes || '';
+    safe('editChargeModal').classList.add('active');
+};
+
+window.editMaintenance = function(id) {
+    var data = JSON.parse(localStorage.getItem('maintenanceLog'));
+    var r = data.find(x => parseInt(x.id) === parseInt(id));
+    if(!r) return;
+    
+    safe('editingMaintId').value = r.id;
+    safe('mDate').value = getRecordDateStr(r);
+    safe('mTime').value = getRecordTimeStr(r);
+    
+    safe('mOdo').value = r.odo;
+    safe('mType').value = r.type;
+    safe('mNotes').value = r.notes || '';
+    
+    var sel = safe('mLocationSelect');
+    if(r.location === '基隆成功專賣店') {
+        sel.value = r.location;
+        safe('mLocationInput').style.display = 'none';
+    } else {
+        sel.value = '其他';
+        safe('mLocationInput').style.display = 'block';
+        safe('mLocationInput').value = r.location || '';
+    }
+    
+    safe('partsList').innerHTML = '';
+    if(r.parts) r.parts.forEach(p => addPartItem(p.name, p.cost));
+    updateTotalCost();
+    
+    safe('maintTitle').textContent = '編輯保養';
+    safe('cancelMaintEdit').style.display = 'block';
+    
+    // 自動切換到保養分頁
+    document.querySelector('.tab-button[data-tab="maintenance"]').click();
+};
+
+window.editExpense = function(id) {
+    var data = JSON.parse(localStorage.getItem('expenseLog'));
+    var r = data.find(x => parseInt(x.id) === parseInt(id));
+    if(!r) return;
+    
+    safe('editingExpenseId').value = r.id;
+    safe('eDate').value = getRecordDateStr(r);
+    safe('eTime').value = getRecordTimeStr(r);
+    
+    safe('eCategory').value = r.category;
+    safe('eAmount').value = r.amount;
+    safe('eDescription').value = r.description || '';
+    safe('eOdo').value = r.odo || '';
+    
+    safe('expenseTitle').textContent = '編輯花費';
+    safe('cancelExpenseEdit').style.display = 'block';
+    
+    document.querySelector('.tab-button[data-tab="expense"]').click();
+};
+
+// === 初始化與事件監聽 ===
 document.addEventListener('DOMContentLoaded', function() {
     try {
         var s = JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}');
@@ -151,50 +248,29 @@ function initEventListeners() {
     });
 }
 
-function showToast(message, type = 'success') {
-    var toast = safe('toast');
-    if (!toast) return;
-    toast.textContent = message;
-    toast.className = 'toast show ' + (type === 'success' ? 'toast-success' : 'toast-error');
-    toast.style.background = '';
-    toast.style.color = '';
-    setTimeout(() => { toast.classList.remove('show'); }, 3000);
-}
-
-// === 核心工具：優化紀錄 (Data Optimization) ===
-// 1. 移除 redundant 欄位 (date, time) - 如果 startTime 存在
-// 2. 移除空值 (null, "", [])
-// 3. 保留 0 (避免 NaN)
+// === 資料優化與處理 ===
 function optimizeRecord(record) {
     const optimized = { ...record };
-    
-    // 如果有 startTime，就可以安全移除舊的 date 和 time
     if (optimized.startTime) {
         delete optimized.date;
         delete optimized.time;
     }
-
-    // 移除空字串、Null、Undefined
     Object.keys(optimized).forEach(key => {
         const val = optimized[key];
         if (val === null || val === undefined || val === '') {
             delete optimized[key];
         }
-        // 移除空陣列 (例如 parts)
         if (Array.isArray(val) && val.length === 0) {
             delete optimized[key];
         }
     });
-
     return optimized;
 }
 
-// === 核心工具：從紀錄獲取日期/時間 ===
 function getRecordTimestamp(r) {
     if (!r) return 0;
     if (r.startTime) return new Date(r.startTime).getTime();
     
-    // 雖然移除轉換邏輯，但讀取時保留基本 fallback 以防萬一
     var dateStr = (r.date || "").slice(0, 10); 
     if (dateStr) {
         var timeStr = r.time || "00:00";
@@ -215,7 +291,7 @@ function getRecordDateStr(r) {
 }
 
 function getRecordTimeStr(r) {
-    if (r.startTime) return toLocalISO(r.startTime).slice(11, 16); // Extract HH:MM
+    if (r.startTime) return toLocalISO(r.startTime).slice(11, 16); 
     var t = r.time || "00:00";
     if (t.includes('T')) {
         try {
@@ -254,26 +330,8 @@ function getLatestState() {
 
     var allRecords = [];
     
-    charges.forEach(r => {
-        allRecords.push({ 
-            ts: getRecordTimestamp(r), 
-            odo: parseFloat(r.odo), 
-            battery: r.batteryEnd, 
-            type: 'charge', 
-            raw: r 
-        });
-    });
-
-    statuses.forEach(r => {
-        allRecords.push({ 
-            ts: getRecordTimestamp(r), 
-            odo: parseFloat(r.odo), 
-            battery: r.battery, 
-            type: 'status', 
-            raw: r 
-        });
-    });
-
+    charges.forEach(r => allRecords.push({ ts: getRecordTimestamp(r), odo: parseFloat(r.odo), battery: r.batteryEnd, type: 'charge', raw: r }));
+    statuses.forEach(r => allRecords.push({ ts: getRecordTimestamp(r), odo: parseFloat(r.odo), battery: r.battery, type: 'status', raw: r }));
     maints.forEach(r => allRecords.push({ ts: getRecordTimestamp(r), odo: parseFloat(r.odo), battery: null, type: 'maint', raw: r }));
     expenses.forEach(r => allRecords.push({ ts: getRecordTimestamp(r), odo: parseFloat(r.odo), battery: null, type: 'expense', raw: r }));
 
@@ -289,12 +347,7 @@ function getLatestState() {
     var latestBatRec = allRecords.find(r => (r.type === 'charge' || r.type === 'status') && r.battery !== null && r.battery !== undefined);
     if (latestBatRec) latestBat = parseInt(latestBatRec.battery);
 
-    return {
-        odo: latestOdo,
-        battery: latestBat,
-        rawRecord: allRecords[0].raw,
-        lastTs: allRecords[0].ts 
-    };
+    return { odo: latestOdo, battery: latestBat, rawRecord: allRecords[0].raw, lastTs: allRecords[0].ts };
 }
 
 function prefillForms() {
@@ -320,7 +373,6 @@ function updateLastUpdateTimeDisplay(timestamp) {
         if(display) display.textContent = '';
         return;
     }
-
     var now = Date.now();
     var diffMs = now - timestamp;
     var diffMin = Math.floor(diffMs / 60000);
@@ -331,7 +383,6 @@ function updateLastUpdateTimeDisplay(timestamp) {
     if (diffDay > 0) text = `最後更新：${diffDay} 天前`;
     else if (diffHour > 0) text = `最後更新：${diffHour} 小時前`;
     else if (diffMin > 0) text = `最後更新：${diffMin} 分鐘前`;
-
     display.textContent = text;
 }
 
@@ -396,21 +447,15 @@ function checkBackupStatus() {
             alertBox.classList.remove('show');
             alertBox.classList.remove('unsynced');
         }
-
     } catch (err) { console.error('checkBackupStatus error', err); }
 }
 
+// ... (recalcElectricityCost, startCharging, endCharging, updateChargeUI, saveStatus - 保持不變，略為省略以節省空間，功能邏輯與 v15.7.2 相同) ...
 function recalcElectricityCost() {
     var settings = JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}');
     var rate = parseFloat(settings.electricRate);
-    if (!rate) {
-        alert('請先在設定頁面設定「電費單價」');
-        return;
-    }
-
-    if (!confirm(`確定要依據單價 ${rate} 元重新計算目前顯示月份的「公司」或「家裡」充電費用嗎？\n(計算將無條件進位至小數後2位)`)) {
-        return;
-    }
+    if (!rate) { alert('請先在設定頁面設定「電費單價」'); return; }
+    if (!confirm(`確定要依據單價 ${rate} 元重新計算目前顯示月份的「公司」或「家裡」充電費用嗎？\n(計算將無條件進位至小數後2位)`)) return;
 
     var month = safe('chargeMonthFilter').value; 
     var data = JSON.parse(localStorage.getItem('chargeLog') || '[]');
@@ -419,26 +464,19 @@ function recalcElectricityCost() {
     data.forEach(r => {
         var dateStr = getRecordDateStr(r).slice(0,7);
         if (month && dateStr !== month) return;
-
         var st = (r.stationType || '').trim();
         var sn = (r.station || '').trim();
         var isTarget = (st === '公司' || st === '家裡') || (sn === '公司' || sn === '家裡');
-
         if (isTarget) {
             var kwh = parseFloat(r.kwh) || 0;
             if (kwh > 0) {
-                var rawCost = kwh * rate;
-                var newCost = Math.ceil(rawCost * 100) / 100;
-                if (r.cost !== newCost) {
-                    r.cost = newCost;
-                    count++;
-                }
+                var newCost = Math.ceil((kwh * rate) * 100) / 100;
+                if (r.cost !== newCost) { r.cost = newCost; count++; }
             }
         }
     });
 
     if (count > 0) {
-        // 重存也需要優化結構
         var optimizedData = data.map(optimizeRecord);
         optimizedData.sort((a, b) => getRecordTimestamp(b) - getRecordTimestamp(a));
         localStorage.setItem('chargeLog', JSON.stringify(optimizedData));
@@ -446,9 +484,7 @@ function recalcElectricityCost() {
         loadChargeHistory(); 
         updateDashboard(); 
         showToast(`✅ 已重新計算 ${count} 筆紀錄`);
-    } else {
-        showToast('沒有符合條件需更新的紀錄');
-    }
+    } else { showToast('沒有符合條件需更新的紀錄'); }
 }
 
 function startCharging(e) {
@@ -485,7 +521,6 @@ function endCharging(e) {
         id: session.id,
         startTime: session.startTime,
         endTime: endTime.toISOString(),
-        // 移除 redundant date
         duration: formatDuration(durationMs),
         odo: session.odo,
         station: session.station,
@@ -556,7 +591,6 @@ function saveStatus(e) {
         odo: parseFloat(safe('sOdo').value) || 0,
         battery: parseInt(document.querySelector('input[name="sBattery"]:checked').value),
     };
-    // Status 通常只存一筆最新，直接覆蓋
     localStorage.setItem('statusLog', JSON.stringify([optimizeRecord(record)])); 
     markDataDirty();
     safe('statusForm').reset();
@@ -581,13 +615,10 @@ function saveMaintenance(e) {
     var loc = safe('mLocationSelect').value;
     if(loc === '其他') loc = safe('mLocationInput').value;
     
-    // 合併 date 與 time 為 startTime
     var startTime = new Date(dateVal + 'T' + (timeVal || '00:00')).toISOString();
-
     var record = {
         id: safe('editingMaintId').value ? parseInt(safe('editingMaintId').value) : Date.now(),
         startTime: startTime, 
-        // 移除單獨的 date/time
         odo: parseFloat(safe('mOdo').value) || 0,
         location: loc,
         type: safe('mType').value,
@@ -606,17 +637,13 @@ function saveExpense(e) {
     e.preventDefault();
     var dateVal = safe('eDate').value;
     var timeVal = safe('eTime').value;
-    
     if (safe('eOdo').value) {
          if (!checkMileageAnomaly(parseFloat(safe('eOdo').value), dateVal)) return;
     }
-    
     var startTime = new Date(dateVal + 'T' + (timeVal || '00:00')).toISOString();
-
     var record = {
         id: safe('editingExpenseId').value ? parseInt(safe('editingExpenseId').value) : Date.now(),
         startTime: startTime,
-        // 移除單獨的 date/time
         category: safe('eCategory').value,
         amount: parseFloat(safe('eAmount').value) || 0,
         odo: parseFloat(safe('eOdo').value) || 0,
@@ -631,18 +658,97 @@ function saveExpense(e) {
 
 function saveData(key, record, isEdit) {
     var data = JSON.parse(localStorage.getItem(key) || '[]');
-    // 在存入陣列前，先進行最佳化 (移除空值與冗餘欄位)
     var finalRecord = optimizeRecord(record);
-
     if (isEdit) {
-        var idx = data.findIndex(r => r.id === record.id);
+        var idx = data.findIndex(r => parseInt(r.id) === parseInt(record.id));
         if (idx !== -1) data[idx] = finalRecord;
     } else {
         data.push(finalRecord);
     }
-    // 排序
     data.sort((a, b) => getRecordTimestamp(b) - getRecordTimestamp(a));
     localStorage.setItem(key, JSON.stringify(data));
+}
+
+function saveEditCharge(e) {
+    e.preventDefault();
+    var id = parseInt(safe('editingChargeId').value);
+    var data = JSON.parse(localStorage.getItem('chargeLog') || '[]');
+    var idx = data.findIndex(x => parseInt(x.id) === id);
+    if (idx === -1) return;
+    
+    var r = data[idx];
+    r.startTime = new Date(safe('edit_cStartTime').value).toISOString();
+    r.endTime = new Date(safe('edit_cEndTime').value).toISOString();
+    r.odo = parseFloat(safe('edit_cOdo').value);
+    r.station = safe('edit_cStation').value;
+    r.batteryStart = parseInt(safe('edit_cBatteryStart').value);
+    r.batteryEnd = parseInt(safe('edit_cBatteryEnd').value);
+    r.kwh = parseFloat(safe('edit_cKwh').value);
+    r.cost = parseFloat(safe('edit_cCost').value);
+    r.notes = safe('edit_cNotes').value;
+    var ms = new Date(r.endTime) - new Date(r.startTime);
+    r.duration = formatDuration(ms);
+    
+    saveData('chargeLog', r, true);
+    markDataDirty();
+    closeEditModal();
+    loadAllData();
+    showToast('✅ 記錄已更新');
+}
+
+function cancelMaintEdit() {
+    safe('maintenanceForm').reset();
+    safe('editingMaintId').value = '';
+    safe('partsList').innerHTML = '';
+    safe('maintTitle').textContent = '🛠️ 記錄保養';
+    safe('cancelMaintEdit').style.display = 'none';
+    updateTotalCost();
+    populateDateTime('mDate','mTime');
+}
+
+function cancelExpenseEdit() {
+    safe('expenseForm').reset();
+    safe('editingExpenseId').value = '';
+    safe('expenseTitle').textContent = '💰 記錄花費';
+    safe('cancelExpenseEdit').style.display = 'none';
+    populateDateTime('eDate','eTime');
+}
+
+function closeEditModal() {
+    safe('editChargeModal').classList.remove('active');
+}
+
+function addPartItem(name = '', cost = 0) {
+    var div = document.createElement('div');
+    div.className = 'part-item';
+    div.innerHTML = `
+        <input type="text" class="part-name" value="${name}" placeholder="項目名稱">
+        <input type="number" class="part-cost" value="${cost}" placeholder="$">
+        <button type="button" class="btn btn-danger btn-sm" onclick="this.parentElement.remove(); updateTotalCost();">X</button>
+    `;
+    safe('partsList').appendChild(div);
+    div.querySelector('.part-cost').addEventListener('input', updateTotalCost);
+    updateTotalCost();
+}
+
+function populateMaintTemplates() {
+    var div = safe('maintTemplates');
+    if(!div) return;
+    div.innerHTML = '';
+    MAINT_TEMPLATES.forEach(t => {
+        var btn = document.createElement('button');
+        btn.className = 'btn btn-secondary btn-sm';
+        btn.type = 'button';
+        btn.textContent = `${t.name} $${t.cost}`;
+        btn.onclick = () => addPartItem(t.name, t.cost);
+        div.appendChild(btn);
+    });
+}
+
+function updateTotalCost() {
+    var total = 0;
+    document.querySelectorAll('.part-cost').forEach(el => total += (parseFloat(el.value) || 0));
+    safe('totalCost').textContent = total;
 }
 
 function loadAllData() {
@@ -677,7 +783,7 @@ function updateDashboard() {
     charge.forEach(i => totalChargeCost += (parseFloat(i.cost) || 0));
 
     if (charge.length > 0) {
-        var last = charge[0]; 
+        var last = charge[0]; // because sorted New -> Old
         var days = daysBetween(getRecordDateStr(last), new Date().toISOString().slice(0,10));
         safe('lastChargeDays').textContent = (days === 0 ? '今天' : days + '天前');
         var riddenSince = maxOdo - (parseFloat(last.odo)||0);
@@ -726,7 +832,7 @@ function updateDashboard() {
     var daysRange = 1;
     var allRec = [charge, maint, expense, status].flat();
     if(allRec.length > 1) {
-        allRec.sort((a,b) => getRecordTimestamp(a) - getRecordTimestamp(b)); // sort oldest first for date diff
+        allRec.sort((a,b) => getRecordTimestamp(a) - getRecordTimestamp(b)); // sort oldest first for diff
         daysRange = daysBetween(getRecordDateStr(allRec[0]), new Date().toISOString().slice(0,10)) || 1;
     }
     safe('statAvgDaily').textContent = (maxOdo / daysRange).toFixed(1) + " 公里";
@@ -734,8 +840,20 @@ function updateDashboard() {
 
 function loadChargeHistory() {
     var data = JSON.parse(localStorage.getItem('chargeLog') || '[]');
+    // 排序：新 -> 舊
     data.sort((a, b) => getRecordTimestamp(b) - getRecordTimestamp(a));
     
+    // 計算單次旅程距離 (本次ODO - 上次ODO)
+    // 由於是 新->舊 排序，data[i] 的前一次充電是 data[i+1]
+    var tripMap = {};
+    for (let i = 0; i < data.length - 1; i++) {
+        const current = data[i];
+        const previous = data[i+1];
+        const dist = (parseFloat(current.odo) - parseFloat(previous.odo)).toFixed(1);
+        tripMap[current.id] = dist > 0 ? `+${dist}` : `${dist}`;
+    }
+    if(data.length > 0) tripMap[data[data.length-1].id] = '首筆';
+
     var list = safe('chargeList');
     if(!list) return;
     list.innerHTML = '';
@@ -774,6 +892,7 @@ function loadChargeHistory() {
 
     filtered.forEach(r => {
         var eff = effMap[r.id] ? effMap[r.id].toFixed(1) : '-';
+        var tripDist = tripMap[r.id] || '-';
         var dateStr = getRecordDateStr(r).replace(/-/g,'/');
         var timeStr = formatTime(r.startTime || (getRecordDateStr(r) + 'T' + (r.time || '00:00')));
         
@@ -788,6 +907,10 @@ function loadChargeHistory() {
                 <span class="card-badge">${r.station || '未知'}</span>
             </div>
             <div class="card-body">
+                <div class="card-row">
+                    <span class="card-label">里程</span>
+                    <span class="card-val">${r.odo} km <small style="color:var(--success); font-weight:bold;">(${tripDist})</small></span>
+                </div>
                 <div class="card-row">
                     <span class="card-label">時長</span>
                     <span class="card-val">${r.duration || '-'}</span>
@@ -916,165 +1039,6 @@ function loadExpenseHistory() {
     });
 }
 
-window.editCharge = function(id) {
-    var data = JSON.parse(localStorage.getItem('chargeLog') || '[]');
-    var r = data.find(x => x.id === id);
-    if (!r) return;
-    safe('editingChargeId').value = r.id;
-    safe('edit_cStartTime').value = toLocalISO(r.startTime);
-    safe('edit_cEndTime').value = toLocalISO(r.endTime);
-    safe('edit_cOdo').value = r.odo;
-    safe('edit_cStation').value = r.station || '';
-    
-    safe('edit_cBatteryStart').value = r.batteryStart;
-    safe('edit_cBatteryEnd').value = r.batteryEnd;
-    
-    safe('edit_cKwh').value = r.kwh || '';
-    safe('edit_cCost').value = r.cost || '';
-    safe('edit_cNotes').value = r.notes || '';
-    safe('editChargeModal').classList.add('active');
-}
-
-function saveEditCharge(e) {
-    e.preventDefault();
-    var id = parseInt(safe('editingChargeId').value);
-    var data = JSON.parse(localStorage.getItem('chargeLog') || '[]');
-    var idx = data.findIndex(x => x.id === id);
-    if (idx === -1) return;
-    
-    var r = data[idx];
-    r.startTime = new Date(safe('edit_cStartTime').value).toISOString();
-    r.endTime = new Date(safe('edit_cEndTime').value).toISOString();
-    // 移除 date
-    r.odo = parseFloat(safe('edit_cOdo').value);
-    r.station = safe('edit_cStation').value;
-    
-    r.batteryStart = parseInt(safe('edit_cBatteryStart').value);
-    r.batteryEnd = parseInt(safe('edit_cBatteryEnd').value);
-    
-    r.kwh = parseFloat(safe('edit_cKwh').value);
-    r.cost = parseFloat(safe('edit_cCost').value);
-    r.notes = safe('edit_cNotes').value;
-    var ms = new Date(r.endTime) - new Date(r.startTime);
-    r.duration = formatDuration(ms);
-    
-    saveData('chargeLog', r, true); // Use saveData to optimize
-    markDataDirty();
-    closeEditModal();
-    loadAllData();
-    showToast('✅ 記錄已更新');
-}
-
-function closeEditModal() {
-    safe('editChargeModal').classList.remove('active');
-}
-
-window.editMaintenance = function(id) {
-    var data = JSON.parse(localStorage.getItem('maintenanceLog'));
-    var r = data.find(x => x.id === id);
-    if(!r) return;
-    safe('editingMaintId').value = r.id;
-    safe('mDate').value = getRecordDateStr(r);
-    safe('mTime').value = getRecordTimeStr(r);
-    
-    safe('mOdo').value = r.odo;
-    safe('mType').value = r.type;
-    safe('mNotes').value = r.notes || '';
-    var sel = safe('mLocationSelect');
-    if(r.location === '基隆成功專賣店') {
-        sel.value = r.location;
-        safe('mLocationInput').style.display = 'none';
-    } else {
-        sel.value = '其他';
-        safe('mLocationInput').style.display = 'block';
-        safe('mLocationInput').value = r.location || '';
-    }
-    safe('partsList').innerHTML = '';
-    if(r.parts) r.parts.forEach(p => addPartItem(p.name, p.cost));
-    updateTotalCost();
-    safe('maintTitle').textContent = '編輯保養';
-    safe('cancelMaintEdit').style.display = 'block';
-    document.querySelector('[data-tab="maintenance"]').click();
-}
-
-function cancelMaintEdit() {
-    safe('maintenanceForm').reset();
-    safe('editingMaintId').value = '';
-    safe('partsList').innerHTML = '';
-    safe('maintTitle').textContent = '🛠️ 記錄保養';
-    safe('cancelMaintEdit').style.display = 'none';
-    updateTotalCost();
-    populateDateTime('mDate','mTime');
-}
-
-window.editExpense = function(id) {
-    var data = JSON.parse(localStorage.getItem('expenseLog'));
-    var r = data.find(x => x.id === id);
-    if(!r) return;
-    safe('editingExpenseId').value = r.id;
-    safe('eDate').value = getRecordDateStr(r);
-    safe('eTime').value = getRecordTimeStr(r);
-    
-    safe('eCategory').value = r.category;
-    safe('eAmount').value = r.amount;
-    safe('eDescription').value = r.description || '';
-    safe('eOdo').value = r.odo || '';
-    safe('expenseTitle').textContent = '編輯花費';
-    safe('cancelExpenseEdit').style.display = 'block';
-    document.querySelector('[data-tab="expense"]').click();
-}
-
-function cancelExpenseEdit() {
-    safe('expenseForm').reset();
-    safe('editingExpenseId').value = '';
-    safe('expenseTitle').textContent = '💰 記錄花費';
-    safe('cancelExpenseEdit').style.display = 'none';
-    populateDateTime('eDate','eTime');
-}
-
-window.deleteRecord = function(key, id) {
-    if(!confirm('確定刪除?')) return;
-    var data = JSON.parse(localStorage.getItem(key) || '[]');
-    var newData = data.filter(x => x.id !== id);
-    localStorage.setItem(key, JSON.stringify(newData));
-    markDataDirty();
-    loadAllData();
-    showToast('🗑️ 已刪除');
-}
-
-function populateMaintTemplates() {
-    var div = safe('maintTemplates');
-    if(!div) return;
-    div.innerHTML = '';
-    MAINT_TEMPLATES.forEach(t => {
-        var btn = document.createElement('button');
-        btn.className = 'btn btn-secondary btn-sm';
-        btn.type = 'button';
-        btn.textContent = `${t.name} $${t.cost}`;
-        btn.onclick = () => addPartItem(t.name, t.cost);
-        div.appendChild(btn);
-    });
-}
-
-function addPartItem(name = '', cost = 0) {
-    var div = document.createElement('div');
-    div.className = 'part-item';
-    div.innerHTML = `
-        <input type="text" class="part-name" value="${name}" placeholder="項目名稱">
-        <input type="number" class="part-cost" value="${cost}" placeholder="$">
-        <button type="button" class="btn btn-danger btn-sm" onclick="this.parentElement.remove(); updateTotalCost();">X</button>
-    `;
-    safe('partsList').appendChild(div);
-    div.querySelector('.part-cost').addEventListener('input', updateTotalCost);
-    updateTotalCost();
-}
-
-function updateTotalCost() {
-    var total = 0;
-    document.querySelectorAll('.part-cost').forEach(el => total += (parseFloat(el.value) || 0));
-    safe('totalCost').textContent = total;
-}
-
 function loadSettings() {
     var s = JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}');
     if(safe('electricRate')) safe('electricRate').value = s.electricRate || '';
@@ -1088,12 +1052,7 @@ function saveSettings() {
     var gasUrl = safe('gasUrl').value.trim();
     var theme = safe('themeSelect').value;
     
-    localStorage.setItem(SETTINGS_KEY, JSON.stringify({ 
-        electricRate: rate,
-        gasUrl: gasUrl,
-        theme: theme
-    }));
-    
+    localStorage.setItem(SETTINGS_KEY, JSON.stringify({ electricRate: rate, gasUrl: gasUrl, theme: theme }));
     markDataDirty();
     applyTheme(theme);
     showToast('設定已儲存');
@@ -1115,14 +1074,9 @@ function autoCalculateCost() {
     if(safe('cKwh').dataset.autoCalc !== "true") return;
     var rate = parseFloat(safe('electricRate').value) || 0;
     var kwh = parseFloat(safe('cKwh').value) || 0;
-    
     var rawCost = rate * kwh;
     var finalCost = Math.ceil(rawCost * 100) / 100;
-    
     safe('cCost').value = finalCost.toFixed(2);
-}
-
-function prefillChargeDefaults() {
 }
 
 function populateDateTime(dId, tId) {
@@ -1206,7 +1160,6 @@ function importData(e) {
             if(data.expenseLog) localStorage.setItem('expenseLog', JSON.stringify(data.expenseLog));
             if(data.statusLog) localStorage.setItem('statusLog', JSON.stringify(data.statusLog));
             if(data.settings) localStorage.setItem(SETTINGS_KEY, JSON.stringify(data.settings));
-            
             markDataDirty();
             loadAllData();
             showToast('✅ 資料匯入成功');
@@ -1255,7 +1208,6 @@ function syncToGoogleSheets() {
     
     if (!confirm('確定要將本機資料同步到 Google Sheets 嗎？(注意：這將覆蓋雲端上的舊備份)')) return;
 
-    // 上傳前也先優化
     var payload = {
         action: 'sync',
         chargeLog: JSON.parse(localStorage.getItem('chargeLog')||'[]').map(optimizeRecord),
@@ -1315,7 +1267,6 @@ function restoreFromGoogleSheets() {
             const sanitize = (list) => {
                 if(!Array.isArray(list)) return [];
                 return list.map(item => {
-                    // 防呆：如果 odo 欄位內容看起來像是 1900 年的 ISO 日期字串，代表 Google Sheets 格式錯誤，強制忽略或歸零
                     if (typeof item.odo === 'string' && item.odo.startsWith('1900')) {
                         item.odo = 0; 
                     }
