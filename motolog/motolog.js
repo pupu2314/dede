@@ -1,13 +1,12 @@
 /* motolog.js
-   v15.8.0 Changes:
-   1. 修復：將 edit/delete 函式移至全域範圍，解決按鈕點擊無反應的問題。
-   2. 新增：充電紀錄顯示「區間里程」(本次充電里程 - 上次充電里程)。
-   3. 優化：強化 ID 型別轉換，避免編輯存檔失敗。
+   v15.9.0 Changes:
+   1. 介面優化：在儀表板「下次保養」下方，新增顯示「保養後已騎乘里程」。
+   2. 邏輯確認：確保充電紀錄的最新狀態是取用「充電後 (batteryEnd)」的電量。
 */
 
-console.log('motolog.js (v15.8.0): loaded');
+console.log('motolog.js (v15.9.0): loaded');
 
-const APP_VERSION = 'v15.8.0';
+const APP_VERSION = 'v15.9.0';
 const SETTINGS_KEY = 'motorcycleSettings';
 const BACKUP_KEY = 'lastBackupDate';
 const DIRTY_KEY = 'hasUnsyncedChanges';
@@ -47,13 +46,10 @@ function showToast(message, type = 'success') {
     setTimeout(() => { toast.classList.remove('show'); }, 3000);
 }
 
-// === 核心：全域編輯/刪除函式 (修復失效問題) ===
-// 必須定義在 DOMContentLoaded 之外，確保 HTML onclick 能讀取到
-
+// === 核心：全域編輯/刪除函式 ===
 window.deleteRecord = function(key, id) {
     if(!confirm('確定刪除此紀錄?')) return;
     var data = JSON.parse(localStorage.getItem(key) || '[]');
-    // 確保 ID 型別一致 (轉為數字比較)
     var newData = data.filter(x => parseInt(x.id) !== parseInt(id));
     localStorage.setItem(key, JSON.stringify(newData));
     markDataDirty();
@@ -110,8 +106,6 @@ window.editMaintenance = function(id) {
     
     safe('maintTitle').textContent = '編輯保養';
     safe('cancelMaintEdit').style.display = 'block';
-    
-    // 自動切換到保養分頁
     document.querySelector('.tab-button[data-tab="maintenance"]').click();
 };
 
@@ -131,11 +125,10 @@ window.editExpense = function(id) {
     
     safe('expenseTitle').textContent = '編輯花費';
     safe('cancelExpenseEdit').style.display = 'block';
-    
     document.querySelector('.tab-button[data-tab="expense"]').click();
 };
 
-// === 初始化與事件監聽 ===
+// === 初始化 ===
 document.addEventListener('DOMContentLoaded', function() {
     try {
         var s = JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}');
@@ -248,7 +241,7 @@ function initEventListeners() {
     });
 }
 
-// === 資料優化與處理 ===
+// === 資料處理 ===
 function optimizeRecord(record) {
     const optimized = { ...record };
     if (optimized.startTime) {
@@ -257,12 +250,8 @@ function optimizeRecord(record) {
     }
     Object.keys(optimized).forEach(key => {
         const val = optimized[key];
-        if (val === null || val === undefined || val === '') {
-            delete optimized[key];
-        }
-        if (Array.isArray(val) && val.length === 0) {
-            delete optimized[key];
-        }
+        if (val === null || val === undefined || val === '') delete optimized[key];
+        if (Array.isArray(val) && val.length === 0) delete optimized[key];
     });
     return optimized;
 }
@@ -294,10 +283,7 @@ function getRecordTimeStr(r) {
     if (r.startTime) return toLocalISO(r.startTime).slice(11, 16); 
     var t = r.time || "00:00";
     if (t.includes('T')) {
-        try {
-            var d = new Date(t);
-            return d.toTimeString().slice(0,5);
-        } catch(e){ return "00:00"; }
+        try { return new Date(t).toTimeString().slice(0,5); } catch(e){ return "00:00"; }
     }
     return t.slice(0, 5);
 }
@@ -305,12 +291,10 @@ function getRecordTimeStr(r) {
 function checkMileageAnomaly(newOdo, recordDateStr) {
     var latestData = getLatestState();
     var latest = latestData.rawRecord;
-    
     if (!latest) return true; 
     
     var lastDateVal = getRecordTimestamp(latest);
     var newDateVal = new Date(recordDateStr).getTime();
-    
     var lastOdo = parseFloat(latest.odo) || 0;
     var diffKm = newOdo - lastOdo;
     var diffDays = (newDateVal - lastDateVal) / (1000 * 60 * 60 * 24);
@@ -330,12 +314,13 @@ function getLatestState() {
 
     var allRecords = [];
     
+    // 充電紀錄：battery 取用 batteryEnd (符合需求：充電後電量)
     charges.forEach(r => allRecords.push({ ts: getRecordTimestamp(r), odo: parseFloat(r.odo), battery: r.batteryEnd, type: 'charge', raw: r }));
     statuses.forEach(r => allRecords.push({ ts: getRecordTimestamp(r), odo: parseFloat(r.odo), battery: r.battery, type: 'status', raw: r }));
     maints.forEach(r => allRecords.push({ ts: getRecordTimestamp(r), odo: parseFloat(r.odo), battery: null, type: 'maint', raw: r }));
     expenses.forEach(r => allRecords.push({ ts: getRecordTimestamp(r), odo: parseFloat(r.odo), battery: null, type: 'expense', raw: r }));
 
-    allRecords.sort((a, b) => b.ts - a.ts);
+    allRecords.sort((a, b) => b.ts - a.ts); // 排序：新 -> 舊
 
     if (allRecords.length === 0) return { odo: 0, battery: null, rawRecord: null, lastTs: 0 };
 
@@ -343,6 +328,7 @@ function getLatestState() {
     var latestOdoRec = allRecords.find(r => r.odo > 0);
     if (latestOdoRec) latestOdo = latestOdoRec.odo;
 
+    // 尋找最新的電量記錄 (包含充電與狀態更新)
     var latestBat = null;
     var latestBatRec = allRecords.find(r => (r.type === 'charge' || r.type === 'status') && r.battery !== null && r.battery !== undefined);
     if (latestBatRec) latestBat = parseInt(latestBatRec.battery);
@@ -369,10 +355,7 @@ function prefillForms() {
 
 function updateLastUpdateTimeDisplay(timestamp) {
     var display = safe('lastUpdateInfo');
-    if (!display || !timestamp) {
-        if(display) display.textContent = '';
-        return;
-    }
+    if (!display || !timestamp) { if(display) display.textContent = ''; return; }
     var now = Date.now();
     var diffMs = now - timestamp;
     var diffMin = Math.floor(diffMs / 60000);
@@ -414,34 +397,23 @@ function checkBackupStatus() {
             showMsg = true;
             isUnsyncedAlert = true;
             msgText = '⚠️ 您有新變更尚未同步到雲端 [立即同步]';
-            clickAction = function() {
-                syncToGoogleSheets();
-                this.classList.remove('show');
-            };
+            clickAction = function() { syncToGoogleSheets(); this.classList.remove('show'); };
         } 
         else if (!lastBackup || (daysBetween(lastBackup, new Date().toISOString().slice(0,10)) > 30)) {
             showMsg = true;
             if (settings.gasUrl) {
                 msgText = '☁️ 系統偵測到您很久未備份，點此<b>立即同步到雲端</b>';
-                clickAction = function() {
-                    syncToGoogleSheets();
-                    this.classList.remove('show');
-                };
+                clickAction = function() { syncToGoogleSheets(); this.classList.remove('show'); };
             } else {
                 msgText = '⚠️ 您尚未備份過資料，點此<b>前往設定頁面匯出</b>';
-                clickAction = function() {
-                    var settingTabBtn = document.querySelector('.tab-button[data-tab="settings"]');
-                    if(settingTabBtn) settingTabBtn.click();
-                    this.classList.remove('show');
-                };
+                clickAction = function() { document.querySelector('.tab-button[data-tab="settings"]').click(); this.classList.remove('show'); };
             }
         }
 
         if (showMsg) {
             alertBox.innerHTML = msgText;
             alertBox.onclick = clickAction;
-            if (isUnsyncedAlert) alertBox.classList.add('unsynced');
-            else alertBox.classList.remove('unsynced');
+            if (isUnsyncedAlert) alertBox.classList.add('unsynced'); else alertBox.classList.remove('unsynced');
             alertBox.classList.add('show');
         } else {
             alertBox.classList.remove('show');
@@ -450,7 +422,6 @@ function checkBackupStatus() {
     } catch (err) { console.error('checkBackupStatus error', err); }
 }
 
-// ... (recalcElectricityCost, startCharging, endCharging, updateChargeUI, saveStatus - 保持不變，略為省略以節省空間，功能邏輯與 v15.7.2 相同) ...
 function recalcElectricityCost() {
     var settings = JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}');
     var rate = parseFloat(settings.electricRate);
@@ -783,7 +754,7 @@ function updateDashboard() {
     charge.forEach(i => totalChargeCost += (parseFloat(i.cost) || 0));
 
     if (charge.length > 0) {
-        var last = charge[0]; // because sorted New -> Old
+        var last = charge[0]; 
         var days = daysBetween(getRecordDateStr(last), new Date().toISOString().slice(0,10));
         safe('lastChargeDays').textContent = (days === 0 ? '今天' : days + '天前');
         var riddenSince = maxOdo - (parseFloat(last.odo)||0);
@@ -794,6 +765,9 @@ function updateDashboard() {
     }
 
     var regularMaint = maint.filter(m => m.type === '定期保養');
+    // 確保保養資料也是依照日期排序，以便抓到「最後一次」
+    regularMaint.sort((a, b) => getRecordTimestamp(b) - getRecordTimestamp(a));
+
     if (regularMaint.length > 0) {
         var lastMaint = regularMaint[0];
         var kmSince = maxOdo - (parseFloat(lastMaint.odo)||0);
@@ -801,24 +775,28 @@ function updateDashboard() {
         var daysSince = daysBetween(getRecordDateStr(lastMaint), new Date().toISOString().slice(0,10));
         var daysLeft = REGULAR_SERVICE_DAYS - daysSince;
         
+        // 顯示「保養後已騎 X km」
+        var noteHtml = `<div style="font-size:0.8rem; color:var(--secondary); margin-top:2px;">保養後已騎 ${Math.round(kmSince)} km</div>`;
+
         if (kmLeft < 0 || daysLeft < 0) {
             safe('nextServiceStatus').textContent = "已超過";
             safe('nextServiceStatus').style.color = "var(--danger)";
-            safe('nextServiceDate').textContent = "建議立即保養";
+            safe('nextServiceDate').innerHTML = "建議立即保養" + noteHtml;
         } else {
             safe('nextServiceStatus').textContent = `${daysLeft} 天後`;
             safe('nextServiceStatus').style.color = "var(--primary)";
-            safe('nextServiceDate').textContent = `或 ${Math.round(kmLeft)} 公里`;
+            safe('nextServiceDate').innerHTML = `或 ${Math.round(kmLeft)} 公里` + noteHtml;
         }
     } else {
         var firstLeft = 300 - maxOdo;
+        var noteHtml = `<div style="font-size:0.8rem; color:var(--secondary); margin-top:2px;">新車累計 ${Math.round(maxOdo)} km</div>`;
         if (firstLeft > 0) {
             safe('nextServiceStatus').textContent = "新車訓車期";
-            safe('nextServiceDate').textContent = `剩餘 ${Math.round(firstLeft)} 公里`;
+            safe('nextServiceDate').innerHTML = `剩餘 ${Math.round(firstLeft)} 公里` + noteHtml;
         } else {
             safe('nextServiceStatus').textContent = "請進行首次保養";
             safe('nextServiceStatus').style.color = "var(--danger)";
-            safe('nextServiceDate').textContent = "已達 300 公里";
+            safe('nextServiceDate').innerHTML = "已達 300 公里" + noteHtml;
         }
     }
     
@@ -832,7 +810,7 @@ function updateDashboard() {
     var daysRange = 1;
     var allRec = [charge, maint, expense, status].flat();
     if(allRec.length > 1) {
-        allRec.sort((a,b) => getRecordTimestamp(a) - getRecordTimestamp(b)); // sort oldest first for diff
+        allRec.sort((a,b) => getRecordTimestamp(a) - getRecordTimestamp(b)); 
         daysRange = daysBetween(getRecordDateStr(allRec[0]), new Date().toISOString().slice(0,10)) || 1;
     }
     safe('statAvgDaily').textContent = (maxOdo / daysRange).toFixed(1) + " 公里";
@@ -840,11 +818,8 @@ function updateDashboard() {
 
 function loadChargeHistory() {
     var data = JSON.parse(localStorage.getItem('chargeLog') || '[]');
-    // 排序：新 -> 舊
     data.sort((a, b) => getRecordTimestamp(b) - getRecordTimestamp(a));
     
-    // 計算單次旅程距離 (本次ODO - 上次ODO)
-    // 由於是 新->舊 排序，data[i] 的前一次充電是 data[i+1]
     var tripMap = {};
     for (let i = 0; i < data.length - 1; i++) {
         const current = data[i];
