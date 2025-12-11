@@ -1,0 +1,790 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>雪舞北陸：2025 冬季旅程助手 (正式行前版)</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Fonts & Icons -->
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,1,0" rel="stylesheet">
+    <style>
+        body { font-family: 'Noto Sans TC', sans-serif; background-color: #f8fafc; color: #334155; }
+        
+        /* Smooth Tab Transitions */
+        .tab-content { display: none; animation: fadeIn 0.4s ease-in-out; }
+        .tab-content.active { display: block; }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Checklist Styles */
+        .checklist-item { transition: all 0.2s; border: 1px solid transparent; }
+        .checklist-item:hover { background-color: #f1f5f9; }
+        .checklist-item.checked .check-box { background-color: #0ea5e9; border-color: #0ea5e9; }
+        .checklist-item.checked .check-icon { opacity: 1; transform: scale(1); }
+        .checklist-item.checked .item-text { text-decoration: line-through; color: #94a3b8; }
+        .checklist-item.checked { background-color: #f8fafc; border-color: #e2e8f0; opacity: 0.7; }
+        
+        /* Cute Illustration Containers */
+        .illustration-container {
+            background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 0.75rem;
+            border: 2px solid #e0f2fe;
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background-color: #cbd5e1; border-radius: 3px; }
+        
+        /* Badge Styles */
+        .badge { display: inline-flex; align-items: center; padding: 0.125rem 0.5rem; border-radius: 9999px; font-size: 0.7rem; font-weight: 600; margin-right: 0.25rem; }
+        .badge-blue { background-color: #e0f2fe; color: #0369a1; }
+        .badge-amber { background-color: #fef3c7; color: #b45309; }
+        .badge-rose { background-color: #ffe4e6; color: #be123c; }
+        .badge-emerald { background-color: #d1fae5; color: #047857; }
+        
+        /* Important Info Card */
+        .info-card { background: linear-gradient(to right, #fff, #f8fafc); border-left: 4px solid #3b82f6; }
+    </style>
+</head>
+<body class="antialiased pb-24 md:pb-12 bg-slate-50">
+
+    <!-- Desktop Action Bar -->
+    <div class="fixed top-4 right-4 z-50 flex gap-2 hidden md:flex">
+        <button onclick="downloadPage()" class="bg-slate-800 hover:bg-slate-700 text-white px-5 py-2.5 rounded-full text-sm font-bold flex items-center shadow-lg transition transform hover:-translate-y-0.5 border border-slate-600">
+            <span class="material-symbols-outlined text-[20px] mr-2">download</span> 匯出網頁 (可離線使用)
+        </button>
+    </div>
+
+    <!-- Mobile Bottom Nav -->
+    <nav class="md:hidden fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur border-t border-slate-200 z-40 flex justify-around p-2 pb-safe shadow-[0_-4px_10px_-1px_rgba(0,0,0,0.05)]">
+        <button id="nav-packing" onclick="switchTab('packing')" class="nav-btn flex flex-col items-center text-sky-600 w-full">
+            <span class="material-symbols-outlined">backpack</span>
+            <span class="text-[10px] font-bold mt-1">行李</span>
+        </button>
+        <button id="nav-itinerary" onclick="switchTab('itinerary')" class="nav-btn flex flex-col items-center text-slate-400 w-full">
+            <span class="material-symbols-outlined">styler</span>
+            <span class="text-[10px] font-bold mt-1">行程</span>
+        </button>
+        <button id="nav-map" onclick="switchTab('map')" class="nav-btn flex flex-col items-center text-slate-400 w-full">
+            <span class="material-symbols-outlined">map</span>
+            <span class="text-[10px] font-bold mt-1">地圖</span>
+        </button>
+        <button onclick="downloadPage()" class="nav-btn flex flex-col items-center text-slate-800 w-full border-l border-slate-100 bg-slate-50">
+            <span class="material-symbols-outlined">save</span>
+            <span class="text-[10px] font-bold mt-1">存檔</span>
+        </button>
+    </nav>
+
+    <!-- Header -->
+    <header class="relative h-48 md:h-60 overflow-hidden bg-slate-900 flex items-center justify-center">
+        <!-- Cute Winter SVG Background (Embedded) -->
+        <svg class="absolute inset-0 w-full h-full object-cover opacity-80" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 400" preserveAspectRatio="xMidYMid slice">
+            <defs>
+                <linearGradient id="skyGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+                    <stop offset="0%" style="stop-color:#1e293b;stop-opacity:1" />
+                    <stop offset="100%" style="stop-color:#334155;stop-opacity:1" />
+                </linearGradient>
+            </defs>
+            <rect width="100%" height="100%" fill="url(#skyGradient)" />
+            <!-- Stars -->
+            <circle cx="100" cy="50" r="1.5" fill="white" opacity="0.6"><animate attributeName="opacity" values="0.6;1;0.6" dur="3s" repeatCount="indefinite" /></circle>
+            <circle cx="500" cy="80" r="1" fill="white" opacity="0.4" />
+            <circle cx="700" cy="30" r="2" fill="white" opacity="0.5" />
+            <!-- Mountains -->
+            <path d="M-50,400 L200,150 L450,400 Z" fill="#475569" opacity="0.5" />
+            <path d="M300,400 L600,100 L900,400 Z" fill="#64748b" opacity="0.4" />
+            <!-- Snow particles -->
+            <circle cx="50" cy="50" r="2" fill="white" opacity="0.5"><animate attributeName="cy" from="-10" to="410" dur="8s" repeatCount="indefinite" /></circle>
+            <circle cx="250" cy="20" r="3" fill="white" opacity="0.3"><animate attributeName="cy" from="-10" to="410" dur="12s" repeatCount="indefinite" /></circle>
+            <circle cx="450" cy="80" r="2" fill="white" opacity="0.6"><animate attributeName="cy" from="-10" to="410" dur="10s" repeatCount="indefinite" /></circle>
+        </svg>
+        <div class="relative z-10 text-center px-4">
+            <h1 class="text-3xl md:text-5xl font-bold text-white mb-2 tracking-wider drop-shadow-lg">雪舞北陸</h1>
+            <div class="inline-flex items-center bg-white/10 backdrop-blur-md px-4 py-1.5 rounded-full border border-white/20 mt-2">
+                <span class="material-symbols-outlined text-sky-300 text-sm mr-2">flight</span>
+                <span class="text-sky-100 text-sm font-mono tracking-widest">2025.12.24 - 12.28</span>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="max-w-4xl mx-auto px-4 py-6 -mt-8 relative z-20">
+        
+        <!-- Desktop Tabs -->
+        <div class="hidden md:flex bg-white rounded-xl shadow-sm border border-slate-200 p-1.5 mb-8">
+            <button id="tab-packing" onclick="switchTab('packing')" class="tab-btn flex-1 py-3 rounded-lg text-sm font-bold flex items-center justify-center gap-2 transition bg-sky-50 text-sky-600 shadow-sm ring-1 ring-slate-200">
+                <span class="material-symbols-outlined">backpack</span> 智慧行李清單
+            </button>
+            <button id="tab-itinerary" onclick="switchTab('itinerary')" class="tab-btn flex-1 py-3 rounded-lg text-sm font-bold flex items-center justify-center gap-2 transition text-slate-500 hover:bg-slate-50">
+                <span class="material-symbols-outlined">styler</span> 五日行程 & 聯絡
+            </button>
+            <button id="tab-map" onclick="switchTab('map')" class="tab-btn flex-1 py-3 rounded-lg text-sm font-bold flex items-center justify-center gap-2 transition text-slate-500 hover:bg-slate-50">
+                <span class="material-symbols-outlined">map</span> 景點導航地圖
+            </button>
+        </div>
+
+        <!-- TAB 1: PACKING LIST -->
+        <div id="content-packing" class="tab-content active">
+            
+            <!-- Rules Alert -->
+            <div class="bg-white border-l-4 border-rose-500 p-5 rounded-xl mb-6 shadow-sm flex flex-col md:flex-row gap-4 items-start">
+                <div class="bg-rose-50 p-3 rounded-full flex-shrink-0">
+                    <span class="material-symbols-outlined text-rose-500 text-2xl">no_backpack</span>
+                </div>
+                <div class="flex-1">
+                    <h3 class="text-rose-800 font-bold text-base mb-2">小白必看：飛安禁運規則</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        <div class="flex items-center text-sm text-slate-700 bg-rose-50 px-3 py-2 rounded-lg border border-rose-100">
+                            <span class="material-symbols-outlined text-rose-500 mr-2">battery_charging_full</span>
+                            <span><strong>行動電源/藍牙耳機</strong><br>👉 務必<span class="text-rose-600 font-bold">隨身帶上飛機</span></span>
+                        </div>
+                        <div class="flex items-center text-sm text-slate-700 bg-rose-50 px-3 py-2 rounded-lg border border-rose-100">
+                            <span class="material-symbols-outlined text-rose-500 mr-2">water_drop</span>
+                            <span><strong>液體 (>100ml)</strong><br>👉 務必<span class="text-rose-600 font-bold">放入托運行李</span></span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="grid md:grid-cols-2 gap-6">
+                <!-- Carry On -->
+                <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden flex flex-col h-full">
+                    <div class="bg-sky-600 px-5 py-3 flex justify-between items-center text-white">
+                        <div class="flex items-center gap-2 font-bold text-lg">
+                            <span class="material-symbols-outlined">flight_takeoff</span> 隨身背包
+                        </div>
+                        <span class="text-[11px] bg-white/20 backdrop-blur px-2 py-1 rounded font-bold">跟著人走</span>
+                    </div>
+                    <div id="list-carry" class="p-3 space-y-1 flex-1">
+                        <!-- JS Rendered Items -->
+                    </div>
+                </div>
+
+                <!-- Checked -->
+                <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden flex flex-col h-full">
+                    <div class="bg-indigo-600 px-5 py-3 flex justify-between items-center text-white">
+                        <div class="flex items-center gap-2 font-bold text-lg">
+                            <span class="material-symbols-outlined">luggage</span> 托運行李
+                        </div>
+                        <span class="text-[11px] bg-white/20 backdrop-blur px-2 py-1 rounded font-bold">櫃台交寄</span>
+                    </div>
+                    <div id="list-checked" class="p-3 space-y-1">
+                         <!-- JS Rendered Items -->
+                    </div>
+                    
+                    <!-- Medicine Area -->
+                    <div class="mx-3 mb-3 mt-auto bg-amber-50 rounded-lg border border-amber-100 p-3">
+                        <h4 class="text-xs font-bold text-amber-800 mb-2 flex items-center border-b border-amber-200 pb-1">
+                            <span class="material-symbols-outlined text-[16px] mr-1">medical_services</span> 藥品保健 (建議托運)
+                        </h4>
+                        <div id="list-meds" class="space-y-1">
+                             <!-- JS Rendered Items -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- TAB 2: ITINERARY (Updated based on PDF) -->
+        <div id="content-itinerary" class="tab-content">
+            <div class="space-y-6">
+
+                <!-- MEETING & CONTACT INFO (NEW!) -->
+                <div class="bg-white rounded-2xl shadow-lg border-l-4 border-amber-500 overflow-hidden">
+                    <div class="bg-amber-50 px-6 py-4 border-b border-amber-100 flex items-center gap-3">
+                        <span class="material-symbols-outlined text-amber-600 text-2xl">campaign</span>
+                        <h2 class="font-bold text-lg text-amber-800">集合與緊急聯絡</h2>
+                    </div>
+                    <div class="p-6 grid md:grid-cols-2 gap-6">
+                        <div>
+                            <h3 class="text-sm font-bold text-slate-500 mb-2 uppercase tracking-wide">集合資訊</h3>
+                            <div class="bg-slate-50 rounded-lg p-3 border border-slate-200">
+                                <div class="text-2xl font-bold text-slate-800 mb-1">12/24 (三) 05:35</div>
+                                <div class="flex items-start gap-2 text-slate-700">
+                                    <span class="material-symbols-outlined text-slate-400 mt-0.5">location_on</span>
+                                    <span>桃園機場<strong>第二航廈</strong><br>3樓 <strong>6號</strong> 團體櫃檯 (中華航空)</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div>
+                            <h3 class="text-sm font-bold text-slate-500 mb-2 uppercase tracking-wide">聯絡團隊</h3>
+                            <div class="space-y-2">
+                                <div class="flex items-center justify-between p-2 bg-slate-50 rounded border border-slate-100">
+                                    <span class="text-slate-600 font-bold text-sm">領隊：曾如輝 先生</span>
+                                    <a href="tel:0937939303" class="text-blue-600 font-mono text-sm hover:underline">0937-939-303</a>
+                                </div>
+                                <div class="flex items-center justify-between p-2 bg-slate-50 rounded border border-slate-100">
+                                    <span class="text-slate-600 font-bold text-sm">送機：小蕭</span>
+                                    <a href="tel:0988152034" class="text-blue-600 font-mono text-sm hover:underline">0988-152-034</a>
+                                </div>
+                                <div class="text-[10px] text-slate-400 text-right">領隊日本號碼：+81-90-3146-6857</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Day 1 -->
+                <div class="bg-white rounded-2xl p-6 shadow-sm border border-slate-200 flex flex-col md:flex-row gap-6">
+                    <div class="w-full md:w-1/3 illustration-container h-40 md:h-auto relative overflow-hidden group">
+                        <!-- SVG: Magome -->
+                        <svg class="w-full h-full transform transition group-hover:scale-105 duration-700" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 150">
+                            <rect width="100%" height="100%" fill="#f1f5f9"/>
+                            <path d="M50,120 L50,60 L100,30 L150,60 L150,120 Z" fill="#94a3b8"/>
+                            <rect x="70" y="80" width="60" height="40" fill="#cbd5e1"/>
+                            <rect x="85" y="90" width="30" height="30" fill="#475569"/>
+                            <line x1="100" y1="60" x2="100" y2="80" stroke="#ef4444" stroke-width="2"/>
+                            <circle cx="100" cy="85" r="5" fill="#ef4444"/>
+                            <path d="M45,60 L100,25 L155,60 L155,65 L100,30 L45,65 Z" fill="white"/>
+                            <circle cx="20" cy="20" r="2" fill="#cbd5e1" opacity="0.5"/>
+                            <text x="100" y="140" font-size="10" fill="#64748b" text-anchor="middle" font-weight="bold">馬籠宿</text>
+                        </svg>
+                    </div>
+                    <div class="flex-1">
+                        <div class="flex justify-between items-start mb-3">
+                            <div>
+                                <h3 class="font-bold text-xl text-slate-800">Day 1: 名古屋、惠那峽、馬籠宿</h3>
+                                <div class="flex gap-2 mt-1">
+                                    <span class="badge badge-blue">✈️ CI154 (07:35-11:05)</span>
+                                    <span class="badge badge-amber">江戶風情</span>
+                                </div>
+                            </div>
+                            <span class="bg-slate-100 text-slate-600 text-xs px-2 py-1 rounded font-mono border border-slate-200">12/24</span>
+                        </div>
+                        <p class="text-sm text-slate-600 mb-4 leading-relaxed">
+                            午餐享用名古屋炸蝦飯糰。抵達後前往壯麗的<span class="font-bold text-slate-800">惠那峽展望台</span>，接著漫步於古老的驛站<span class="font-bold text-slate-800">馬籠宿</span>。
+                        </p>
+                        <!-- Wear -->
+                        <div class="bg-slate-50 p-3 rounded-lg text-sm text-slate-600 border border-slate-200 flex gap-3 mb-3">
+                            <div class="bg-white p-1.5 rounded-full h-8 w-8 flex items-center justify-center text-lg shadow-sm border border-slate-100">👔</div>
+                            <div>
+                                <strong class="text-slate-800 block text-xs">穿搭：舒適洋蔥式</strong>
+                                機上與車內有暖氣。建議內穿薄長袖，外加好脫的保暖外套。
+                            </div>
+                        </div>
+                        <!-- Hotel -->
+                        <div class="flex items-start text-xs text-slate-500 bg-slate-50 p-2 rounded border border-slate-100">
+                            <span class="material-symbols-outlined text-[16px] mr-1.5 text-indigo-400">hotel</span>
+                            <span><strong>住宿：</strong>蓼科 RESORT (Tateshina Resort) <br>TEL: +81-0266-67-2626</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Day 2 -->
+                <div class="bg-white rounded-2xl p-6 shadow-sm border border-slate-200 flex flex-col md:flex-row gap-6">
+                    <div class="w-full md:w-1/3 illustration-container h-40 md:h-auto relative overflow-hidden group">
+                        <!-- SVG: Snow Monkey -->
+                        <svg class="w-full h-full transform transition group-hover:scale-105 duration-700" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 150">
+                            <rect width="100%" height="100%" fill="#ffe4e6"/>
+                            <ellipse cx="100" cy="120" rx="80" ry="20" fill="#bae6fd"/>
+                            <circle cx="100" cy="90" r="30" fill="#a16207"/>
+                            <circle cx="100" cy="95" r="20" fill="#fecaca"/>
+                            <circle cx="92" cy="90" r="2" fill="#333"/>
+                            <circle cx="108" cy="90" r="2" fill="#333"/>
+                            <ellipse cx="100" cy="100" rx="5" ry="3" fill="#333" opacity="0.2"/>
+                            <circle cx="85" cy="95" r="5" fill="#fca5a5" opacity="0.6"/>
+                            <circle cx="115" cy="95" r="5" fill="#fca5a5" opacity="0.6"/>
+                            <path d="M120,60 Q130,50 120,40" stroke="white" stroke-width="2" fill="none" opacity="0.7"/>
+                            <text x="100" y="140" font-size="10" fill="#be123c" text-anchor="middle" font-weight="bold">地獄谷野猿公苑</text>
+                        </svg>
+                    </div>
+                    <div class="flex-1">
+                        <div class="flex justify-between items-start mb-3">
+                            <div>
+                                <h3 class="font-bold text-xl text-slate-800">Day 2: 雪猴公苑、小布施、善光寺</h3>
+                                <div class="flex gap-2 mt-1">
+                                    <span class="badge badge-rose">⚠️ 需步行</span>
+                                    <span class="badge badge-emerald">文化財</span>
+                                </div>
+                            </div>
+                            <span class="bg-slate-100 text-slate-600 text-xs px-2 py-1 rounded font-mono border border-slate-200">12/25</span>
+                        </div>
+                        <p class="text-sm text-slate-600 mb-4 leading-relaxed">
+                            <span class="text-rose-500 font-bold">重點日！</span>步行進入雪山看猴子泡溫泉，隨後前往栗子之鄉<span class="font-bold text-slate-800">小布施</span>散策，並參拜國寶<span class="font-bold text-slate-800">善光寺</span>。午餐為信州鄉土料理。
+                        </p>
+                        <!-- Wear -->
+                        <div class="bg-rose-50 p-3 rounded-lg text-sm text-rose-800 border border-rose-100 flex gap-3 mb-3">
+                            <div class="bg-white p-1.5 rounded-full h-8 w-8 flex items-center justify-center text-lg shadow-sm border border-rose-100">🥾</div>
+                            <div>
+                                <strong class="text-rose-700 block text-xs">穿搭：防滑防水 (最重要)</strong>
+                                嚴禁平底布鞋！一定要穿深齒痕的雪靴。褲管建議塞入襪子中。
+                            </div>
+                        </div>
+                        <!-- Hotel -->
+                        <div class="flex items-start text-xs text-slate-500 bg-slate-50 p-2 rounded border border-slate-100">
+                            <span class="material-symbols-outlined text-[16px] mr-1.5 text-indigo-400">hotel</span>
+                            <span><strong>住宿：</strong>上山田溫泉 圓山莊 (Kamiyamada Onsen Marusanso)<br>TEL: +81-0262-75-1119</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Day 3 -->
+                <div class="bg-white rounded-2xl p-6 shadow-sm border border-slate-200 flex flex-col md:flex-row gap-6">
+                    <div class="w-full md:w-1/3 illustration-container h-40 md:h-auto relative overflow-hidden group">
+                        <!-- SVG: Shirakawa -->
+                        <svg class="w-full h-full transform transition group-hover:scale-105 duration-700" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 150">
+                            <rect width="100%" height="100%" fill="#e0f2fe"/>
+                            <path d="M100,40 L40,120 L160,120 Z" fill="#78350f"/>
+                            <path d="M100,35 L30,120 L45,120 L100,50 L155,120 L170,120 Z" fill="white" stroke="#e2e8f0" stroke-width="1"/>
+                            <rect x="85" y="90" width="10" height="10" fill="#fef08a"/>
+                            <rect x="105" y="90" width="10" height="10" fill="#fef08a"/>
+                            <circle cx="50" cy="30" r="2" fill="white"/>
+                            <circle cx="150" cy="50" r="2" fill="white"/>
+                            <circle cx="20" cy="80" r="2" fill="white"/>
+                            <text x="100" y="140" font-size="10" fill="#0369a1" text-anchor="middle" font-weight="bold">白川鄉合掌村</text>
+                        </svg>
+                    </div>
+                    <div class="flex-1">
+                        <div class="flex justify-between items-start mb-3">
+                            <div>
+                                <h3 class="font-bold text-xl text-slate-800">Day 3: 高山老街、合掌村、兼六園</h3>
+                                <div class="flex gap-2 mt-1">
+                                    <span class="badge badge-amber">世界遺產</span>
+                                    <span class="badge badge-emerald">日本三大名園</span>
+                                </div>
+                            </div>
+                            <span class="bg-slate-100 text-slate-600 text-xs px-2 py-1 rounded font-mono border border-slate-200">12/26</span>
+                        </div>
+                        <p class="text-sm text-slate-600 mb-4 leading-relaxed">
+                            上午遊覽<span class="font-bold text-slate-800">高山三之町古街</span>，午餐享用飛驒牛料理。下午前往<span class="font-bold text-slate-800">合掌村</span>與金澤<span class="font-bold text-slate-800">兼六園</span>，晚上自由逛香林坊彩燈。
+                        </p>
+                        <!-- Wear -->
+                        <div class="bg-sky-50 p-3 rounded-lg text-sm text-sky-800 border border-sky-100 flex gap-3 mb-3">
+                            <div class="bg-white p-1.5 rounded-full h-8 w-8 flex items-center justify-center text-lg shadow-sm border border-sky-100">🧣</div>
+                            <div>
+                                <strong class="text-sky-700 block text-xs">穿搭：極致保暖全配</strong>
+                                戶外時間長且極冷。發熱衣、毛衣、羽絨外套、毛帽、圍巾、手套缺一不可。
+                            </div>
+                        </div>
+                         <!-- Hotel -->
+                         <div class="flex items-start text-xs text-slate-500 bg-slate-50 p-2 rounded border border-slate-100">
+                            <span class="material-symbols-outlined text-[16px] mr-1.5 text-indigo-400">hotel</span>
+                            <span><strong>住宿：</strong>Hotel Amanek 金澤<br>TEL: 076-224-0700</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Day 4 -->
+                <div class="bg-white rounded-2xl p-6 shadow-sm border border-slate-200 flex flex-col md:flex-row gap-6">
+                    <div class="w-full md:w-1/3 illustration-container h-40 md:h-auto relative overflow-hidden group">
+                        <!-- SVG: Boat -->
+                        <svg class="w-full h-full transform transition group-hover:scale-105 duration-700" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 150">
+                            <rect width="100%" height="100%" fill="#f0f9ff"/>
+                            <path d="M0,120 Q50,110 100,120 T200,120 L200,150 L0,150 Z" fill="#38bdf8"/>
+                            <path d="M50,90 L150,90 L140,120 L60,120 Z" fill="#fbbf24"/>
+                            <rect x="80" y="70" width="40" height="20" fill="#fff"/>
+                            <rect x="85" y="75" width="10" height="10" fill="#38bdf8"/>
+                            <rect x="105" y="75" width="10" height="10" fill="#38bdf8"/>
+                            <text x="100" y="50" font-size="10" fill="#0284c7" text-anchor="middle" font-weight="bold">庄川峽遊船</text>
+                        </svg>
+                    </div>
+                    <div class="flex-1">
+                        <div class="flex justify-between items-start mb-3">
+                            <div>
+                                <h3 class="font-bold text-xl text-slate-800">Day 4: 庄川峽、長良川鐵道、郡上</h3>
+                                <div class="flex gap-2 mt-1">
+                                    <span class="badge badge-blue">遊船</span>
+                                    <span class="badge badge-amber">鐵道體驗</span>
+                                </div>
+                            </div>
+                            <span class="bg-slate-100 text-slate-600 text-xs px-2 py-1 rounded font-mono border border-slate-200">12/27</span>
+                        </div>
+                        <p class="text-sm text-slate-600 mb-4 leading-relaxed">
+                            搭乘<span class="font-bold text-slate-800">庄川峽遊覽船</span>，參觀天空之城<span class="font-bold text-slate-800">郡上八幡城</span>，並體驗<span class="font-bold text-slate-800">長良川鐵道</span>。
+                        </p>
+                        <!-- Wear -->
+                        <div class="bg-slate-50 p-3 rounded-lg text-sm text-slate-600 border border-slate-200 flex gap-3 mb-3">
+                            <div class="bg-white p-1.5 rounded-full h-8 w-8 flex items-center justify-center text-lg shadow-sm border border-slate-100">🧥</div>
+                            <div>
+                                <strong class="text-slate-800 block text-xs">穿搭：防風 + 暈車藥</strong>
+                                船上風大帽子戴好。易暈車者請提早半小時吃暈車藥 (山路較多)。
+                            </div>
+                        </div>
+                         <!-- Hotel -->
+                         <div class="flex items-start text-xs text-slate-500 bg-slate-50 p-2 rounded border border-slate-100">
+                            <span class="material-symbols-outlined text-[16px] mr-1.5 text-indigo-400">hotel</span>
+                            <span><strong>住宿：</strong>名古屋納屋橋 Kuretake Inn (吳竹)<br>TEL: +81-52-561-1211</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Day 5 -->
+                <div class="bg-white rounded-2xl p-6 shadow-sm border border-slate-200 flex flex-col md:flex-row gap-6">
+                    <div class="w-full md:w-1/3 illustration-container h-40 md:h-auto relative overflow-hidden group">
+                        <!-- SVG: Shopping -->
+                        <svg class="w-full h-full transform transition group-hover:scale-105 duration-700" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 150">
+                            <rect width="100%" height="100%" fill="#fff7ed"/>
+                            <path d="M70,70 L130,70 L130,120 L70,120 Z" fill="#f87171"/>
+                            <path d="M90,70 Q100,40 110,70" fill="none" stroke="#f87171" stroke-width="3"/>
+                            <path d="M150,40 L170,45 L150,55 Z" fill="#64748b"/>
+                            <text x="100" y="140" font-size="10" fill="#9a3412" text-anchor="middle" font-weight="bold">名古屋 -> 台灣</text>
+                        </svg>
+                    </div>
+                    <div class="flex-1">
+                        <div class="flex justify-between items-start mb-3">
+                            <div>
+                                <h3 class="font-bold text-xl text-slate-800">Day 5: 名古屋市區、返程</h3>
+                                <div class="flex gap-2 mt-1">
+                                    <span class="badge badge-blue">✈️ CI155 (12:05-14:40)</span>
+                                </div>
+                            </div>
+                            <span class="bg-slate-100 text-slate-600 text-xs px-2 py-1 rounded font-mono border border-slate-200">12/28</span>
+                        </div>
+                        <p class="text-sm text-slate-600 mb-4 leading-relaxed">
+                            早晨整理行李，前往中部國際機場免稅店最後採買，搭機返台。
+                        </p>
+                        <!-- Wear -->
+                        <div class="bg-indigo-50 p-3 rounded-lg text-sm text-indigo-800 border border-indigo-100 flex gap-3 mb-3">
+                            <div class="bg-white p-1.5 rounded-full h-8 w-8 flex items-center justify-center text-lg shadow-sm border border-indigo-100">✈️</div>
+                            <div>
+                                <strong class="text-indigo-700 block text-xs">穿搭：輕鬆打包</strong>
+                                厚重衣物可托運。身上穿著適合台灣天氣的衣物。
+                            </div>
+                        </div>
+                        <div class="flex items-start text-xs text-slate-500 bg-slate-50 p-2 rounded border border-slate-100">
+                            <span class="material-symbols-outlined text-[16px] mr-1.5 text-indigo-400">home</span>
+                            <span><strong>住宿：</strong>溫暖的家</span>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+        <!-- TAB 3: MAP (Updated Links) -->
+        <div id="content-map" class="tab-content">
+            <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
+                <div class="text-center mb-8">
+                    <h2 class="text-2xl font-bold text-slate-800">北陸精華景點地圖</h2>
+                    <p class="text-sm text-slate-500 mt-1">點擊下方按鈕可直接開啟 Google Maps 導航</p>
+                </div>
+                
+                <!-- SVG Interactive Map Graphic (Keep Simple) -->
+                <div class="relative w-full aspect-[4/3] md:aspect-[2/1] rounded-2xl overflow-hidden mb-6 bg-slate-100 border border-slate-200 shadow-inner group">
+                    <svg class="w-full h-full" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 350">
+                        <rect width="100%" height="100%" fill="#f1f5f9"/>
+                        <!-- Simple Map Outline -->
+                        <path d="M100,300 Q200,280 300,320 T500,250 T550,100" fill="none" stroke="#cbd5e1" stroke-width="4" stroke-dasharray="10,5"/>
+                        <!-- Connecting Lines -->
+                        <path d="M250,300 L400,280 L450,150 L350,120 L250,150 L250,300" fill="none" stroke="#94a3b8" stroke-width="2"/>
+                        
+                        <!-- Markers -->
+                        <g transform="translate(250, 300)"> <!-- Nagoya -->
+                            <circle r="8" fill="#3b82f6"/>
+                            <text y="20" text-anchor="middle" fill="#334155" font-size="12" font-weight="bold">名古屋</text>
+                            <text y="35" text-anchor="middle" fill="#64748b" font-size="10">Day 1/5</text>
+                        </g>
+                        <g transform="translate(400, 280)"> <!-- Magome -->
+                            <circle r="6" fill="#f59e0b"/>
+                            <text y="20" text-anchor="middle" fill="#334155" font-size="12" font-weight="bold">馬籠</text>
+                            <text y="35" text-anchor="middle" fill="#64748b" font-size="10">Day 1</text>
+                        </g>
+                        <g transform="translate(450, 150)"> <!-- Monkey -->
+                            <circle r="6" fill="#ef4444"/>
+                            <text y="-15" text-anchor="middle" fill="#334155" font-size="12" font-weight="bold">雪猴</text>
+                            <text y="-30" text-anchor="middle" fill="#64748b" font-size="10">Day 2</text>
+                        </g>
+                        <g transform="translate(250, 150)"> <!-- Shirakawa -->
+                            <circle r="8" fill="#0ea5e9"/>
+                            <text y="-15" text-anchor="middle" fill="#334155" font-size="12" font-weight="bold">合掌村</text>
+                            <text y="-30" text-anchor="middle" fill="#64748b" font-size="10">Day 3</text>
+                        </g>
+                         <g transform="translate(200, 100)"> <!-- Kanazawa -->
+                            <circle r="6" fill="#10b981"/>
+                            <text y="-15" text-anchor="middle" fill="#334155" font-size="12" font-weight="bold">金澤</text>
+                        </g>
+                        <g transform="translate(280, 200)"> <!-- Gujo -->
+                            <circle r="6" fill="#8b5cf6"/>
+                            <text y="20" text-anchor="middle" fill="#334155" font-size="12" font-weight="bold">郡上</text>
+                            <text y="35" text-anchor="middle" fill="#64748b" font-size="10">Day 4</text>
+                        </g>
+                    </svg>
+                </div>
+
+                <!-- Deep Links Grid -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <!-- Hotels (New) -->
+                     <a href="https://www.google.com/maps/search/?api=1&query=Tateshina+Resort+Hotel" target="_blank" class="flex items-center p-4 bg-white border border-l-4 border-l-indigo-400 border-slate-200 hover:shadow-md rounded-xl transition group">
+                        <span class="w-10 h-10 rounded-full bg-indigo-50 text-indigo-600 flex items-center justify-center mr-3 group-hover:scale-110 transition">
+                            <span class="material-symbols-outlined text-lg">hotel</span>
+                        </span>
+                        <div>
+                            <div class="font-bold text-slate-700 text-sm">蓼科 RESORT</div>
+                            <div class="text-[10px] text-slate-400">Day 1 住宿</div>
+                        </div>
+                        <span class="material-symbols-outlined ml-auto text-slate-300 group-hover:text-indigo-500 text-lg">open_in_new</span>
+                    </a>
+
+                    <a href="https://www.google.com/maps/search/?api=1&query=Marusanso+Kamiyamada" target="_blank" class="flex items-center p-4 bg-white border border-l-4 border-l-indigo-400 border-slate-200 hover:shadow-md rounded-xl transition group">
+                        <span class="w-10 h-10 rounded-full bg-indigo-50 text-indigo-600 flex items-center justify-center mr-3 group-hover:scale-110 transition">
+                            <span class="material-symbols-outlined text-lg">hotel</span>
+                        </span>
+                        <div>
+                            <div class="font-bold text-slate-700 text-sm">圓山莊</div>
+                            <div class="text-[10px] text-slate-400">Day 2 住宿</div>
+                        </div>
+                        <span class="material-symbols-outlined ml-auto text-slate-300 group-hover:text-indigo-500 text-lg">open_in_new</span>
+                    </a>
+
+                    <a href="https://www.google.com/maps/search/?api=1&query=Hotel+Amanek+Kanazawa" target="_blank" class="flex items-center p-4 bg-white border border-l-4 border-l-indigo-400 border-slate-200 hover:shadow-md rounded-xl transition group">
+                        <span class="w-10 h-10 rounded-full bg-indigo-50 text-indigo-600 flex items-center justify-center mr-3 group-hover:scale-110 transition">
+                            <span class="material-symbols-outlined text-lg">hotel</span>
+                        </span>
+                        <div>
+                            <div class="font-bold text-slate-700 text-sm">Amanek 金澤</div>
+                            <div class="text-[10px] text-slate-400">Day 3 住宿</div>
+                        </div>
+                        <span class="material-symbols-outlined ml-auto text-slate-300 group-hover:text-indigo-500 text-lg">open_in_new</span>
+                    </a>
+
+                    <a href="https://www.google.com/maps/search/?api=1&query=Nagoya+Station" target="_blank" class="flex items-center p-4 bg-slate-50 hover:bg-white border border-slate-200 hover:border-blue-400 rounded-xl transition group">
+                        <span class="w-10 h-10 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center mr-3 group-hover:scale-110 transition">
+                            <span class="material-symbols-outlined text-lg">train</span>
+                        </span>
+                        <div>
+                            <div class="font-bold text-slate-700 text-sm">名古屋車站</div>
+                            <div class="text-[10px] text-slate-400">交通樞紐</div>
+                        </div>
+                        <span class="material-symbols-outlined ml-auto text-slate-300 group-hover:text-blue-500 text-lg">open_in_new</span>
+                    </a>
+                    
+                    <a href="https://www.google.com/maps/search/?api=1&query=Magome-juku" target="_blank" class="flex items-center p-4 bg-slate-50 hover:bg-white border border-slate-200 hover:border-amber-400 rounded-xl transition group">
+                        <span class="w-10 h-10 rounded-full bg-amber-100 text-amber-600 flex items-center justify-center mr-3 group-hover:scale-110 transition">
+                            <span class="material-symbols-outlined text-lg">history</span>
+                        </span>
+                        <div>
+                            <div class="font-bold text-slate-700 text-sm">馬籠宿</div>
+                            <div class="text-[10px] text-slate-400">Day 1 江戶驛站</div>
+                        </div>
+                        <span class="material-symbols-outlined ml-auto text-slate-300 group-hover:text-amber-500 text-lg">open_in_new</span>
+                    </a>
+
+                    <a href="https://www.google.com/maps/search/?api=1&query=Jigokudani+Monkey+Park" target="_blank" class="flex items-center p-4 bg-slate-50 hover:bg-white border border-slate-200 hover:border-rose-400 rounded-xl transition group">
+                        <span class="w-10 h-10 rounded-full bg-rose-100 text-rose-600 flex items-center justify-center mr-3 group-hover:scale-110 transition">
+                            <span class="material-symbols-outlined text-lg">pets</span>
+                        </span>
+                        <div>
+                            <div class="font-bold text-slate-700 text-sm">地獄谷野猿公苑</div>
+                            <div class="text-[10px] text-slate-400">Day 2 雪猴溫泉</div>
+                        </div>
+                        <span class="material-symbols-outlined ml-auto text-slate-300 group-hover:text-rose-500 text-lg">open_in_new</span>
+                    </a>
+
+                    <a href="https://www.google.com/maps/search/?api=1&query=Obuse" target="_blank" class="flex items-center p-4 bg-slate-50 hover:bg-white border border-slate-200 hover:border-rose-400 rounded-xl transition group">
+                        <span class="w-10 h-10 rounded-full bg-rose-100 text-rose-600 flex items-center justify-center mr-3 group-hover:scale-110 transition">
+                            <span class="material-symbols-outlined text-lg">icecream</span>
+                        </span>
+                        <div>
+                            <div class="font-bold text-slate-700 text-sm">小布施町</div>
+                            <div class="text-[10px] text-slate-400">Day 2 栗子/北齋館</div>
+                        </div>
+                        <span class="material-symbols-outlined ml-auto text-slate-300 group-hover:text-rose-500 text-lg">open_in_new</span>
+                    </a>
+
+                    <a href="https://www.google.com/maps/search/?api=1&query=Takayama+Sanmachi+Suji" target="_blank" class="flex items-center p-4 bg-slate-50 hover:bg-white border border-slate-200 hover:border-sky-400 rounded-xl transition group">
+                        <span class="w-10 h-10 rounded-full bg-sky-100 text-sky-600 flex items-center justify-center mr-3 group-hover:scale-110 transition">
+                            <span class="material-symbols-outlined text-lg">storefront</span>
+                        </span>
+                        <div>
+                            <div class="font-bold text-slate-700 text-sm">高山三之町古街</div>
+                            <div class="text-[10px] text-slate-400">Day 3 小京都</div>
+                        </div>
+                        <span class="material-symbols-outlined ml-auto text-slate-300 group-hover:text-sky-500 text-lg">open_in_new</span>
+                    </a>
+
+                    <a href="https://www.google.com/maps/search/?api=1&query=Shirakawa-go" target="_blank" class="flex items-center p-4 bg-slate-50 hover:bg-white border border-slate-200 hover:border-sky-400 rounded-xl transition group">
+                        <span class="w-10 h-10 rounded-full bg-sky-100 text-sky-600 flex items-center justify-center mr-3 group-hover:scale-110 transition">
+                            <span class="material-symbols-outlined text-lg">cottage</span>
+                        </span>
+                        <div>
+                            <div class="font-bold text-slate-700 text-sm">白川鄉合掌村</div>
+                            <div class="text-[10px] text-slate-400">Day 3 世界遺產</div>
+                        </div>
+                        <span class="material-symbols-outlined ml-auto text-slate-300 group-hover:text-sky-500 text-lg">open_in_new</span>
+                    </a>
+                    
+                    <a href="https://www.google.com/maps/search/?api=1&query=Kenroku-en" target="_blank" class="flex items-center p-4 bg-slate-50 hover:bg-white border border-slate-200 hover:border-emerald-400 rounded-xl transition group">
+                        <span class="w-10 h-10 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center mr-3 group-hover:scale-110 transition">
+                            <span class="material-symbols-outlined text-lg">park</span>
+                        </span>
+                        <div>
+                            <div class="font-bold text-slate-700 text-sm">金澤兼六園</div>
+                            <div class="text-[10px] text-slate-400">Day 3 日本名園</div>
+                        </div>
+                        <span class="material-symbols-outlined ml-auto text-slate-300 group-hover:text-emerald-500 text-lg">open_in_new</span>
+                    </a>
+
+                    <a href="https://www.google.com/maps/search/?api=1&query=Shogawa+Gorge" target="_blank" class="flex items-center p-4 bg-slate-50 hover:bg-white border border-slate-200 hover:border-violet-400 rounded-xl transition group">
+                        <span class="w-10 h-10 rounded-full bg-violet-100 text-violet-600 flex items-center justify-center mr-3 group-hover:scale-110 transition">
+                            <span class="material-symbols-outlined text-lg">sailing</span>
+                        </span>
+                        <div>
+                            <div class="font-bold text-slate-700 text-sm">庄川峽遊船</div>
+                            <div class="text-[10px] text-slate-400">Day 4 水上賞雪</div>
+                        </div>
+                        <span class="material-symbols-outlined ml-auto text-slate-300 group-hover:text-violet-500 text-lg">open_in_new</span>
+                    </a>
+
+                    <a href="https://www.google.com/maps/search/?api=1&query=Gujo+Hachiman+Castle" target="_blank" class="flex items-center p-4 bg-slate-50 hover:bg-white border border-slate-200 hover:border-violet-400 rounded-xl transition group">
+                        <span class="w-10 h-10 rounded-full bg-violet-100 text-violet-600 flex items-center justify-center mr-3 group-hover:scale-110 transition">
+                            <span class="material-symbols-outlined text-lg">castle</span>
+                        </span>
+                        <div>
+                            <div class="font-bold text-slate-700 text-sm">郡上八幡城</div>
+                            <div class="text-[10px] text-slate-400">Day 4 天空之城</div>
+                        </div>
+                        <span class="material-symbols-outlined ml-auto text-slate-300 group-hover:text-violet-500 text-lg">open_in_new</span>
+                    </a>
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <script>
+        // --- 1. Checklist Data ---
+        const checklistData = {
+            carry: [
+                {id: "c_passport", text: "護照 (效期>6個月)", sub: "建議多帶一份影本", highlight: true, icon: "menu_book"},
+                {id: "c_cash", text: "日幣現金", sub: "約¥3-5萬，分開放", icon: "payments"},
+                {id: "c_tip", text: "導遊領隊小費", sub: "台幣現金 $1500 (放錢包)", highlight: false, icon: "attach_money"},
+                {id: "c_card", text: "信用卡 (JCB/Visa)", sub: "JCB在日本好用", icon: "credit_card"},
+                {id: "c_power", text: "行動電源 (必備)", sub: "嚴禁托運！建議帶2顆", highlight: true, icon: "battery_charging_full"},
+                {id: "c_bt", text: "藍牙耳機", sub: "充電盒含鋰電池，務必隨身", highlight: true, icon: "headphones"},
+                {id: "c_esim", text: "eSIM QR Code", sub: "截圖存手機相簿", icon: "qr_code"},
+                {id: "c_wifi", text: "手機/翻譯App", sub: "預先下載地圖", icon: "smartphone"},
+                {id: "c_pen", text: "原子筆 (1支)", sub: "機上填表用", icon: "edit"},
+                {id: "c_warm", text: "薄外套/圍巾", sub: "機上/機場調溫"}
+            ],
+            checked: [
+                {id: "k_bag", text: "購物袋 (摺疊)", sub: "裝戰利品或髒衣物", icon: "shopping_bag"},
+                {id: "k_charger", text: "手機/手錶充電器", sub: "線材與插頭 (無電池)", icon: "electrical_services"},
+                {id: "k_jacket", text: "防風羽絨外套 (必備)", sub: "若穿不下請放行李箱", highlight: true, icon: "checkroom"},
+                {id: "k_accessories", text: "保暖三寶", sub: "毛帽(蓋耳)/圍巾/防水手套", highlight: true, icon: "snowing"},
+                {id: "k_inner", text: "發熱衣 (Heattech)", sub: "3-4件，貼身穿", icon: "laundry"},
+                {id: "k_top", text: "毛衣/刷毛上衣", sub: "3件，中層保暖", icon: "dry_cleaning"},
+                {id: "k_pants", text: "保暖長褲/刷毛褲", sub: "3件", icon: "checkroom"},
+                {id: "k_underwear", text: "免洗內褲/襪子", sub: "5天份，襪子要厚", icon: "checkroom"},
+                {id: "k_toilet", text: "盥洗用品", sub: "牙刷/牙膏/洗面乳", icon: "toothbrush"},
+                {id: "k_lotion", text: "保濕用品 (乳液)", sub: "日本極乾，必備", highlight: true, icon: "face"},
+                {id: "k_liquid", text: "液體類 (>100ml)", sub: "化妝水/果凍/布丁", highlight: true, icon: "water_drop"},
+                {id: "k_tool", text: "修容組 (刀剪)", sub: "指甲刀/剪刀務必托運", icon: "content_cut"},
+                {id: "k_umb", text: "摺疊傘", sub: "防濕雪/雨", icon: "umbrella"},
+                {id: "k_supp", text: "保健食品", sub: "維他命等 (建議原包裝)", icon: "pill"}
+            ],
+            meds: [
+                {id: "m_chronic", text: "慢性處方籤藥品", sub: "帶足量+備用3天 (建議隨身帶一份證明)", highlight: true},
+                {id: "m_cold", text: "綜合感冒藥", sub: "伏冒/百保能"},
+                {id: "m_pain", text: "止痛退燒藥", sub: "EVE/普拿疼"},
+                {id: "m_stomach", text: "腸胃藥", sub: "若元錠/胃散"},
+                {id: "m_car", text: "暈車藥", sub: "山路多必備", highlight: true}
+            ]
+        };
+
+        // --- 2. Render Checklists ---
+        function renderList(containerId, items) {
+            const container = document.getElementById(containerId);
+            container.innerHTML = items.map(item => `
+                <div class="checklist-item flex items-start p-2.5 rounded-lg cursor-pointer mb-1 select-none group border border-transparent"
+                     id="${item.id}" onclick="toggleCheck('${item.id}')">
+                    <div class="check-box w-5 h-5 rounded-md border-2 border-slate-300 mr-3 flex items-center justify-center bg-white transition-all flex-shrink-0 mt-0.5 relative shadow-sm">
+                        <span class="material-symbols-outlined check-icon text-[14px] text-white opacity-0 transition-all font-bold">check</span>
+                    </div>
+                    <div>
+                        <div class="flex items-center">
+                            <span class="text-sm font-bold text-slate-700 item-text ${item.highlight ? 'text-rose-600' : ''}">${item.text}</span>
+                            ${item.icon ? `<span class="material-symbols-outlined text-[16px] ml-1.5 text-slate-400 group-hover:text-slate-500 transition">${item.icon}</span>` : ''}
+                        </div>
+                        <p class="text-[11px] text-slate-400 item-text mt-0.5 leading-tight">${item.sub}</p>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        renderList('list-carry', checklistData.carry);
+        renderList('list-checked', checklistData.checked);
+        renderList('list-meds', checklistData.meds);
+
+        // --- 3. Interaction Logic ---
+        function toggleCheck(id) {
+            const el = document.getElementById(id);
+            if(el) {
+                el.classList.toggle('checked');
+                if(el.classList.contains('checked')){
+                    el.setAttribute('data-checked', 'true');
+                } else {
+                    el.removeAttribute('data-checked');
+                }
+            }
+        }
+
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+            document.getElementById(`content-${tabId}`).classList.add('active');
+            
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.className = "tab-btn flex-1 py-3 rounded-lg text-sm font-bold flex items-center justify-center gap-2 transition text-slate-500 hover:bg-slate-50";
+            });
+            const activeDesktop = document.getElementById(`tab-${tabId}`);
+            if(activeDesktop) activeDesktop.className = "tab-btn flex-1 py-3 rounded-lg text-sm font-bold flex items-center justify-center gap-2 transition bg-sky-50 text-sky-600 shadow-sm ring-1 ring-slate-200";
+
+            document.querySelectorAll('.nav-btn').forEach(btn => {
+                btn.className = "nav-btn flex flex-col items-center text-slate-400 w-full";
+            });
+            const activeMobile = document.getElementById(`nav-${tabId}`);
+            if(activeMobile) activeMobile.className = "nav-btn flex flex-col items-center text-sky-600 w-full";
+            
+            window.scrollTo({top: 0, behavior: 'smooth'});
+        }
+
+        // --- 4. Export Function ---
+        function downloadPage() {
+            const clone = document.documentElement.cloneNode(true);
+            const checkedItems = document.querySelectorAll('.checklist-item.checked');
+            checkedItems.forEach(item => {
+                const cloneItem = clone.querySelector(`#${item.id}`);
+                if(cloneItem) {
+                    cloneItem.classList.add('checked');
+                    const box = cloneItem.querySelector('.check-box');
+                    if(box) {
+                        box.style.backgroundColor = '#0ea5e9';
+                        box.style.borderColor = '#0ea5e9';
+                    }
+                    const icon = cloneItem.querySelector('.check-icon');
+                    if(icon) {
+                        icon.style.opacity = '1';
+                        icon.style.transform = 'scale(1)';
+                    }
+                    const texts = cloneItem.querySelectorAll('.item-text');
+                    texts.forEach(t => {
+                        t.style.textDecoration = 'line-through';
+                        t.style.color = '#94a3b8';
+                    });
+                }
+            });
+
+            const exportBtns = clone.querySelectorAll('[onclick="downloadPage()"]');
+            exportBtns.forEach(btn => btn.style.display = 'none');
+
+            const htmlContent = `<!DOCTYPE html>\n` + clone.outerHTML;
+            const blob = new Blob([htmlContent], {type: 'text/html'});
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            const date = new Date().toISOString().split('T')[0];
+            a.download = `Japan_Trip_Planner_v3_${date}.html`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+    </script>
+</body>
+</html>
