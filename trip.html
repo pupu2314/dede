@@ -416,6 +416,166 @@
             <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
                 <div class="text-center mb-8">
                     <h2 class="text-2xl font-bold text-slate-800">北陸精華景點地圖</h2>
+                    <div style="text-align: center; margin-bottom: 15px;">
+    <button onclick="setDay(1)" class="map-btn">Day 1</button>
+    <button onclick="setDay(2)" class="map-btn">Day 2</button>
+    <button onclick="setDay(3)" class="map-btn">Day 3</button>
+    <button onclick="setDay(4)" class="map-btn">Day 4</button>
+    <button onclick="setDay(5)" class="map-btn">Day 5</button>
+    <button onclick="showAll()" class="map-btn">全行程</button>
+</div>
+
+<div id="map" style="height: 500px; width: 100%; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);"></div>
+
+<style>
+    .map-btn {
+        background-color: #f8f9fa;
+        border: 1px solid #ddd;
+        padding: 8px 15px;
+        margin: 2px;
+        border-radius: 20px;
+        cursor: pointer;
+        transition: 0.3s;
+    }
+    .map-btn:hover, .map-btn:focus {
+        background-color: #007bff;
+        color: white;
+    }
+</style>
+
+<script src="https://maps.googleapis.com/maps/api/js?key=YOUR_API_KEY&callback=initMap" async defer></script>
+
+<script>
+    let map;
+    let markers = [];
+    let flightPath = null;
+
+    // 行程資料庫 (包含經緯度與資訊)
+    const tourData = {
+        1: [
+            {lat: 34.8584, lng: 136.8054, title: "中部國際機場", info: "起點：CI154 抵達"},
+            {lat: 35.1709, lng: 136.8816, title: "名古屋 (午餐)", info: "炸蝦飯糰"},
+            {lat: 35.4526, lng: 137.4128, title: "惠那峽", info: "斷崖絕壁遊覽"},
+            {lat: 35.5268, lng: 137.5681, title: "馬籠宿", info: "江戶風情驛站"},
+            {lat: 36.0645, lng: 138.2635, title: "蓼科 RESORT", info: "住宿：溫泉飯店"}
+        ],
+        2: [
+            {lat: 36.0645, lng: 138.2635, title: "蓼科 RESORT", info: "出發"},
+            {lat: 36.7327, lng: 138.4621, title: "地獄谷野猿公苑", info: "雪猴泡湯 (步行4km)"},
+            {lat: 36.6938, lng: 138.3153, title: "小布施", info: "栗子之鄉午餐"},
+            {lat: 36.6617, lng: 138.1878, title: "善光寺", info: "國寶參拜"},
+            {lat: 36.4815, lng: 138.1465, title: "圓山莊", info: "住宿：上山田溫泉"}
+        ],
+        3: [
+            {lat: 36.4815, lng: 138.1465, title: "圓山莊", info: "出發"},
+            {lat: 36.1408, lng: 137.2596, title: "高山三之町", info: "飛驒小京都"},
+            {lat: 36.2561, lng: 136.9043, title: "白川鄉合掌村", info: "世界遺產童話村"},
+            {lat: 36.5621, lng: 136.6627, title: "兼六園", info: "日本三大名園"},
+            {lat: 36.5606, lng: 136.6534, title: "Hotel Amanek 金澤", info: "住宿：金澤市區"}
+        ],
+        4: [
+            {lat: 36.5606, lng: 136.6534, title: "Hotel Amanek 金澤", info: "出發"},
+            {lat: 36.5686, lng: 136.9850, title: "庄川峽", info: "雪景遊船"},
+            {lat: 35.7534, lng: 136.9615, title: "郡上八幡城", info: "天空之城"},
+            {lat: 35.6366, lng: 136.9174, title: "美濃白鳥/長良川鐵道", info: "鐵道體驗"},
+            {lat: 35.1664, lng: 136.8888, title: "Kuretake Inn 名古屋", info: "住宿：納屋橋"}
+        ],
+        5: [
+            {lat: 35.1664, lng: 136.8888, title: "Kuretake Inn 名古屋", info: "早晨出發"},
+            {lat: 35.1709, lng: 136.8816, title: "名古屋車站", info: "市區最後採買"},
+            {lat: 34.8584, lng: 136.8054, title: "中部國際機場", info: "CI155 返程"}
+        ]
+    };
+
+    function initMap() {
+        // 初始化地圖，中心點設在北陸地區
+        map = new google.maps.Map(document.getElementById("map"), {
+            zoom: 8,
+            center: {lat: 36.0, lng: 137.5},
+            styles: [ // 選用：簡潔風格樣式，可刪除
+                {featureType: "poi", elementType: "labels", stylers: [{ visibility: "off" }]} 
+            ]
+        });
+        showAll(); // 預設顯示全行程
+    }
+
+    function clearMap() {
+        for (let i = 0; i < markers.length; i++) {
+            markers[i].setMap(null);
+        }
+        markers = [];
+        if (flightPath) {
+            flightPath.setMap(null);
+        }
+    }
+
+    function setDay(day) {
+        clearMap();
+        const locations = tourData[day];
+        const pathCoordinates = [];
+        const bounds = new google.maps.LatLngBounds();
+
+        locations.forEach((loc, index) => {
+            // 建立標記
+            const marker = new google.maps.Marker({
+                position: {lat: loc.lat, lng: loc.lng},
+                map: map,
+                label: (index + 1).toString(), // 標示順序 1, 2, 3...
+                title: loc.title
+            });
+
+            // 點擊顯示資訊視窗
+            const infowindow = new google.maps.InfoWindow({
+                content: `<strong>${loc.title}</strong><br>${loc.info}<br><a href="https://www.google.com/maps/dir/?api=1&destination=${loc.lat},${loc.lng}" target="_blank">導航至此</a>`
+            });
+            marker.addListener("click", () => {
+                infowindow.open(map, marker);
+            });
+
+            markers.push(marker);
+            pathCoordinates.push({lat: loc.lat, lng: loc.lng});
+            bounds.extend({lat: loc.lat, lng: loc.lng});
+        });
+
+        // 繪製路徑線
+        flightPath = new google.maps.Polyline({
+            path: pathCoordinates,
+            geodesic: true,
+            strokeColor: "#FF0000",
+            strokeOpacity: 1.0,
+            strokeWeight: 2
+        });
+        flightPath.setMap(map);
+
+        // 自動調整地圖範圍以顯示所有點
+        map.fitBounds(bounds);
+    }
+
+    function showAll() {
+        clearMap();
+        const bounds = new google.maps.LatLngBounds();
+        // 遍歷所有天數把點都畫上去（這裡簡化只畫點，不畫複雜線條以免混亂）
+        for (let day in tourData) {
+            tourData[day].forEach(loc => {
+                const marker = new google.maps.Marker({
+                    position: {lat: loc.lat, lng: loc.lng},
+                    map: map,
+                    title: loc.title,
+                    icon: {
+                        path: google.maps.SymbolPath.CIRCLE,
+                        scale: 5,
+                        fillColor: "#007bff",
+                        fillOpacity: 0.8,
+                        strokeWeight: 1
+                    }
+                });
+                markers.push(marker);
+                bounds.extend({lat: loc.lat, lng: loc.lng});
+            });
+        }
+        map.fitBounds(bounds);
+    }
+</script>
                     <p class="text-sm text-slate-500 mt-1">點擊下方按鈕可直接開啟 Google Maps 導航</p>
                 </div>
                 
