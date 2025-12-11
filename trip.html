@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>雪舞北陸：2025 冬季旅程助手 (正式行前版)</title>
+    <title>雪舞北陸：2025 冬季旅程助手 (正式行程與導航)</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Fonts & Icons -->
@@ -49,6 +49,7 @@
         .badge-amber { background-color: #fef3c7; color: #b45309; }
         .badge-rose { background-color: #ffe4e6; color: #be123c; }
         .badge-emerald { background-color: #d1fae5; color: #047857; }
+        .badge-violet { background-color: #ede9fe; color: #6d28d9; }
         
         /* Important Info Card */
         .info-card { background: linear-gradient(to right, #fff, #f8fafc); border-left: 4px solid #3b82f6; }
@@ -147,8 +148,8 @@
                             <span><strong>行動電源/藍牙耳機</strong><br>👉 務必<span class="text-rose-600 font-bold">隨身帶上飛機</span></span>
                         </div>
                         <div class="flex items-center text-sm text-slate-700 bg-rose-50 px-3 py-2 rounded-lg border border-rose-100">
-                            <span class="material-symbols-outlined text-rose-500 mr-2">water_drop</span>
-                            <span><strong>液體 (>100ml)</strong><br>👉 務必<span class="text-rose-600 font-bold">放入托運行李</span></span>
+                            <span class="material-symbols-outlined text-rose-500 mr-2">local_fire_department</span>
+                            <span><strong>打火機 (限1個)</strong><br>👉 務必<span class="text-rose-600 font-bold">隨身 (嚴禁托運)</span></span>
                         </div>
                     </div>
                 </div>
@@ -197,7 +198,7 @@
         <div id="content-itinerary" class="tab-content">
             <div class="space-y-6">
 
-                <!-- MEETING & CONTACT INFO (NEW!) -->
+                <!-- MEETING & CONTACT INFO -->
                 <div class="bg-white rounded-2xl shadow-lg border-l-4 border-amber-500 overflow-hidden">
                     <div class="bg-amber-50 px-6 py-4 border-b border-amber-100 flex items-center gap-3">
                         <span class="material-symbols-outlined text-amber-600 text-2xl">campaign</span>
@@ -259,7 +260,7 @@
                             <span class="bg-slate-100 text-slate-600 text-xs px-2 py-1 rounded font-mono border border-slate-200">12/24</span>
                         </div>
                         <p class="text-sm text-slate-600 mb-4 leading-relaxed">
-                            午餐享用名古屋炸蝦飯糰。抵達後前往壯麗的<span class="font-bold text-slate-800">惠那峽展望台</span>，接著漫步於古老的驛站<span class="font-bold text-slate-800">馬籠宿</span>。
+                            午餐享用名古屋名物「炸蝦飯糰」。抵達後前往<span class="font-bold text-slate-800">惠那峽展望台</span>，欣賞受大自然侵蝕而成的斷崖絕壁。接著漫步於古老的驛站<span class="font-bold text-slate-800">馬籠宿</span>，感受江戶時代的繁榮景象。
                         </p>
                         <!-- Wear -->
                         <div class="bg-slate-50 p-3 rounded-lg text-sm text-slate-600 border border-slate-200 flex gap-3 mb-3">
@@ -298,23 +299,23 @@
                     <div class="flex-1">
                         <div class="flex justify-between items-start mb-3">
                             <div>
-                                <h3 class="font-bold text-xl text-slate-800">Day 2: 雪猴公苑、小布施、善光寺</h3>
+                                <h3 class="font-bold text-xl text-slate-800">Day 2: 雪猴、小布施、善光寺</h3>
                                 <div class="flex gap-2 mt-1">
-                                    <span class="badge badge-rose">⚠️ 需步行</span>
-                                    <span class="badge badge-emerald">文化財</span>
+                                    <span class="badge badge-rose">⚠️ 步行2KM</span>
+                                    <span class="badge badge-emerald">國寶</span>
                                 </div>
                             </div>
                             <span class="bg-slate-100 text-slate-600 text-xs px-2 py-1 rounded font-mono border border-slate-200">12/25</span>
                         </div>
                         <p class="text-sm text-slate-600 mb-4 leading-relaxed">
-                            <span class="text-rose-500 font-bold">重點日！</span>步行進入雪山看猴子泡溫泉，隨後前往栗子之鄉<span class="font-bold text-slate-800">小布施</span>散策，並參拜國寶<span class="font-bold text-slate-800">善光寺</span>。午餐為信州鄉土料理。
+                            <span class="text-rose-500 font-bold">體力挑戰！</span>步行來回約4公里雪路前往<span class="font-bold text-slate-800">地獄谷野猿公苑</span>，看雪猴泡湯。接著到栗子之鄉<span class="font-bold text-slate-800">小布施</span>享用栗子飯，漫步北齋館周邊。下午參拜一生必去一次的國寶<span class="font-bold text-slate-800">善光寺</span>。
                         </p>
                         <!-- Wear -->
                         <div class="bg-rose-50 p-3 rounded-lg text-sm text-rose-800 border border-rose-100 flex gap-3 mb-3">
                             <div class="bg-white p-1.5 rounded-full h-8 w-8 flex items-center justify-center text-lg shadow-sm border border-rose-100">🥾</div>
                             <div>
                                 <strong class="text-rose-700 block text-xs">穿搭：防滑防水 (最重要)</strong>
-                                嚴禁平底布鞋！一定要穿深齒痕的雪靴。褲管建議塞入襪子中。
+                                雪地濕滑，嚴禁平底布鞋！一定要穿深齒痕雪靴。
                             </div>
                         </div>
                         <!-- Hotel -->
@@ -344,7 +345,7 @@
                     <div class="flex-1">
                         <div class="flex justify-between items-start mb-3">
                             <div>
-                                <h3 class="font-bold text-xl text-slate-800">Day 3: 高山老街、合掌村、兼六園</h3>
+                                <h3 class="font-bold text-xl text-slate-800">Day 3: 高山、合掌村、兼六園、香林坊</h3>
                                 <div class="flex gap-2 mt-1">
                                     <span class="badge badge-amber">世界遺產</span>
                                     <span class="badge badge-emerald">日本三大名園</span>
@@ -353,7 +354,7 @@
                             <span class="bg-slate-100 text-slate-600 text-xs px-2 py-1 rounded font-mono border border-slate-200">12/26</span>
                         </div>
                         <p class="text-sm text-slate-600 mb-4 leading-relaxed">
-                            上午遊覽<span class="font-bold text-slate-800">高山三之町古街</span>，午餐享用飛驒牛料理。下午前往<span class="font-bold text-slate-800">合掌村</span>與金澤<span class="font-bold text-slate-800">兼六園</span>，晚上自由逛香林坊彩燈。
+                            走訪米其林三星<span class="font-bold text-slate-800">高山三之町古街</span>(小京都)。午後進入童話世界<span class="font-bold text-slate-800">白川鄉合掌村</span>。接著參觀金澤<span class="font-bold text-slate-800">兼六園</span>，欣賞冬季限定「雪吊」。晚上自由散策於<span class="font-bold text-slate-800">香林坊</span>，欣賞夢幻街道彩燈。
                         </p>
                         <!-- Wear -->
                         <div class="bg-sky-50 p-3 rounded-lg text-sm text-sky-800 border border-sky-100 flex gap-3 mb-3">
@@ -388,16 +389,17 @@
                     <div class="flex-1">
                         <div class="flex justify-between items-start mb-3">
                             <div>
-                                <h3 class="font-bold text-xl text-slate-800">Day 4: 庄川峽、長良川鐵道、郡上</h3>
+                                <h3 class="font-bold text-xl text-slate-800">Day 4: 庄川峽、郡上八幡、長良川鐵道</h3>
                                 <div class="flex gap-2 mt-1">
                                     <span class="badge badge-blue">遊船</span>
                                     <span class="badge badge-amber">鐵道體驗</span>
+                                    <span class="badge badge-violet">天空之城</span>
                                 </div>
                             </div>
                             <span class="bg-slate-100 text-slate-600 text-xs px-2 py-1 rounded font-mono border border-slate-200">12/27</span>
                         </div>
                         <p class="text-sm text-slate-600 mb-4 leading-relaxed">
-                            搭乘<span class="font-bold text-slate-800">庄川峽遊覽船</span>，參觀天空之城<span class="font-bold text-slate-800">郡上八幡城</span>，並體驗<span class="font-bold text-slate-800">長良川鐵道</span>。
+                            搭乘<span class="font-bold text-slate-800">庄川峽遊覽船</span>欣賞宛如水墨畫的雪景。接著前往<span class="font-bold text-slate-800">郡上八幡城</span>(天空之城)，並體驗一段<span class="font-bold text-slate-800">長良川鐵道</span>(美濃~郡上八幡)，欣賞沿途溪谷風光。
                         </p>
                         <!-- Wear -->
                         <div class="bg-slate-50 p-3 rounded-lg text-sm text-slate-600 border border-slate-200 flex gap-3 mb-3">
@@ -566,6 +568,17 @@
                         <span class="material-symbols-outlined ml-auto text-slate-300 group-hover:text-amber-500 text-lg">open_in_new</span>
                     </a>
 
+                    <a href="https://www.google.com/maps/search/?api=1&query=Zenkoji+Temple+Nagano" target="_blank" class="flex items-center p-4 bg-slate-50 hover:bg-white border border-slate-200 hover:border-amber-400 rounded-xl transition group">
+                        <span class="w-10 h-10 rounded-full bg-amber-100 text-amber-600 flex items-center justify-center mr-3 group-hover:scale-110 transition">
+                            <span class="material-symbols-outlined text-lg">temple_buddhist</span>
+                        </span>
+                        <div>
+                            <div class="font-bold text-slate-700 text-sm">善光寺</div>
+                            <div class="text-[10px] text-slate-400">Day 2 國寶/一生必參</div>
+                        </div>
+                        <span class="material-symbols-outlined ml-auto text-slate-300 group-hover:text-amber-500 text-lg">open_in_new</span>
+                    </a>
+
                     <a href="https://www.google.com/maps/search/?api=1&query=Jigokudani+Monkey+Park" target="_blank" class="flex items-center p-4 bg-slate-50 hover:bg-white border border-slate-200 hover:border-rose-400 rounded-xl transition group">
                         <span class="w-10 h-10 rounded-full bg-rose-100 text-rose-600 flex items-center justify-center mr-3 group-hover:scale-110 transition">
                             <span class="material-symbols-outlined text-lg">pets</span>
@@ -621,6 +634,17 @@
                         <span class="material-symbols-outlined ml-auto text-slate-300 group-hover:text-emerald-500 text-lg">open_in_new</span>
                     </a>
 
+                    <a href="https://www.google.com/maps/search/?api=1&query=Korinbo+Kanazawa" target="_blank" class="flex items-center p-4 bg-slate-50 hover:bg-white border border-slate-200 hover:border-emerald-400 rounded-xl transition group">
+                        <span class="w-10 h-10 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center mr-3 group-hover:scale-110 transition">
+                            <span class="material-symbols-outlined text-lg">light_mode</span>
+                        </span>
+                        <div>
+                            <div class="font-bold text-slate-700 text-sm">香林坊</div>
+                            <div class="text-[10px] text-slate-400">Day 3 夢幻點燈</div>
+                        </div>
+                        <span class="material-symbols-outlined ml-auto text-slate-300 group-hover:text-emerald-500 text-lg">open_in_new</span>
+                    </a>
+
                     <a href="https://www.google.com/maps/search/?api=1&query=Shogawa+Gorge" target="_blank" class="flex items-center p-4 bg-slate-50 hover:bg-white border border-slate-200 hover:border-violet-400 rounded-xl transition group">
                         <span class="w-10 h-10 rounded-full bg-violet-100 text-violet-600 flex items-center justify-center mr-3 group-hover:scale-110 transition">
                             <span class="material-symbols-outlined text-lg">sailing</span>
@@ -653,6 +677,8 @@
         const checklistData = {
             carry: [
                 {id: "c_passport", text: "護照 (效期>6個月)", sub: "建議多帶一份影本", highlight: true, icon: "menu_book"},
+                {id: "c_lighter", text: "打火機 (限1個)", sub: "必須隨身！嚴禁托運", highlight: true, icon: "local_fire_department"},
+                {id: "c_thermos", text: "保溫瓶", sub: "安檢前需倒空", icon: "water_bottle"},
                 {id: "c_cash", text: "日幣現金", sub: "約¥3-5萬，分開放", icon: "payments"},
                 {id: "c_tip", text: "導遊領隊小費", sub: "台幣現金 $1500 (放錢包)", highlight: false, icon: "attach_money"},
                 {id: "c_card", text: "信用卡 (JCB/Visa)", sub: "JCB在日本好用", icon: "credit_card"},
@@ -665,6 +691,7 @@
             ],
             checked: [
                 {id: "k_bag", text: "購物袋 (摺疊)", sub: "裝戰利品或髒衣物", icon: "shopping_bag"},
+                {id: "k_cigs", text: "香菸", sub: "注意入境規定 (限1條)", icon: "smoking_rooms"},
                 {id: "k_charger", text: "手機/手錶充電器", sub: "線材與插頭 (無電池)", icon: "electrical_services"},
                 {id: "k_jacket", text: "防風羽絨外套 (必備)", sub: "若穿不下請放行李箱", highlight: true, icon: "checkroom"},
                 {id: "k_accessories", text: "保暖三寶", sub: "毛帽(蓋耳)/圍巾/防水手套", highlight: true, icon: "snowing"},
@@ -779,7 +806,7 @@
             const a = document.createElement('a');
             a.href = url;
             const date = new Date().toISOString().split('T')[0];
-            a.download = `Japan_Trip_Planner_v3_${date}.html`;
+            a.download = `Japan_Trip_Planner_v4_${date}.html`;
             document.body.appendChild(a);
             a.click();
             document.body.removeChild(a);
