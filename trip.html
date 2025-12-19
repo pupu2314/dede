@@ -12,1586 +12,1586 @@
 	<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700&amp;display=swap" rel="stylesheet">
 	<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,1,0" rel="stylesheet">
 	<style>
-	       body {
-	           font-family: 'Noto Sans TC', sans-serif;
-	           background-color: #f8fafc;
-	           color: #334155;
-	       }
+	          body {
+	              font-family: 'Noto Sans TC', sans-serif;
+	              background-color: #f8fafc;
+	              color: #334155;
+	          }
 
-	       /* Smooth Tab Transitions */
-	       .tab-content {
-	           display: none;
-	           animation: fadeIn 0.4s ease-in-out;
-	       }
+	          /* Smooth Tab Transitions */
+	          .tab-content {
+	              display: none;
+	              animation: fadeIn 0.4s ease-in-out;
+	          }
 
-	       .tab-content.active {
-	           display: block;
-	       }
+	          .tab-content.active {
+	              display: block;
+	          }
 
-	       @keyframes fadeIn {
-	           from {
-	               opacity: 0;
-	               transform: translateY(10px);
-	           }
+	          @keyframes fadeIn {
+	              from {
+	                  opacity: 0;
+	                  transform: translateY(10px);
+	              }
 
-	           to {
-	               opacity: 1;
-	               transform: translateY(0);
-	           }
-	       }
+	              to {
+	                  opacity: 1;
+	                  transform: translateY(0);
+	              }
+	          }
 
-	       /* Checklist Styles */
-	       .checklist-item {
-	           transition: all 0.2s;
-	           border: 1px solid transparent;
-	       }
+	          /* Checklist Styles */
+	          .checklist-item {
+	              transition: all 0.2s;
+	              border: 1px solid transparent;
+	          }
 
-	       .checklist-item:hover {
-	           background-color: #f1f5f9;
-	       }
+	          .checklist-item:hover {
+	              background-color: #f1f5f9;
+	          }
 
-	       .checklist-item.checked .check-box {
-	           background-color: #0ea5e9;
-	           border-color: #0ea5e9;
-	       }
+	          .checklist-item.checked .check-box {
+	              background-color: #0ea5e9;
+	              border-color: #0ea5e9;
+	          }
 
-	       .checklist-item.checked .check-icon {
-	           opacity: 1;
-	           transform: scale(1);
-	       }
+	          .checklist-item.checked .check-icon {
+	              opacity: 1;
+	              transform: scale(1);
+	          }
 
-	       .checklist-item.checked .item-text {
-	           text-decoration: line-through;
-	           color: #94a3b8;
-	       }
+	          .checklist-item.checked .item-text {
+	              text-decoration: line-through;
+	              color: #94a3b8;
+	          }
 
-	       .checklist-item.checked {
-	           background-color: #f8fafc;
-	           border-color: #e2e8f0;
-	           opacity: 0.7;
-	       }
+	          .checklist-item.checked {
+	              background-color: #f8fafc;
+	              border-color: #e2e8f0;
+	              opacity: 0.7;
+	          }
 
-	       /* Image Containers */
-	       .illustration-container {
-	           background: #e2e8f0;
-	           display: flex;
-	           align-items: center;
-	           justify-content: center;
-	           border-radius: 0.75rem;
-	           overflow: hidden;
-	           border: 1px solid #cbd5e1;
-	       }
+	          /* Image Containers */
+	          .illustration-container {
+	              background: #e2e8f0;
+	              display: flex;
+	              align-items: center;
+	              justify-content: center;
+	              border-radius: 0.75rem;
+	              overflow: hidden;
+	              border: 1px solid #cbd5e1;
+	          }
 
-	       /* Badge Styles */
-	       .badge {
-	           display: inline-flex;
-	           align-items: center;
-	           padding: 0.125rem 0.5rem;
-	           border-radius: 9999px;
-	           font-size: 0.7rem;
-	           font-weight: 600;
-	           margin-right: 0.25rem;
-	       }
+	          /* Badge Styles */
+	          .badge {
+	              display: inline-flex;
+	              align-items: center;
+	              padding: 0.125rem 0.5rem;
+	              border-radius: 9999px;
+	              font-size: 0.7rem;
+	              font-weight: 600;
+	              margin-right: 0.25rem;
+	          }
 
-	       .badge-blue {
-	           background-color: #e0f2fe;
-	           color: #0369a1;
-	       }
+	          .badge-blue {
+	              background-color: #e0f2fe;
+	              color: #0369a1;
+	          }
 
-	       .badge-amber {
-	           background-color: #fef3c7;
-	           color: #b45309;
-	       }
+	          .badge-amber {
+	              background-color: #fef3c7;
+	              color: #b45309;
+	          }
 
-	       .badge-rose {
-	           background-color: #ffe4e6;
-	           color: #be123c;
-	       }
+	          .badge-rose {
+	              background-color: #ffe4e6;
+	              color: #be123c;
+	          }
 
-	       .badge-emerald {
-	           background-color: #d1fae5;
-	           color: #047857;
-	       }
+	          .badge-emerald {
+	              background-color: #d1fae5;
+	              color: #047857;
+	          }
 
-	       .badge-violet {
-	           background-color: #ede9fe;
-	           color: #6d28d9;
-	       }
+	          .badge-violet {
+	              background-color: #ede9fe;
+	              color: #6d28d9;
+	          }
 
-	       .badge-red {
-	           background-color: #fee2e2;
-	           color: #991b1b;
-	       }
+	          .badge-red {
+	              background-color: #fee2e2;
+	              color: #991b1b;
+	          }
 
-	       /* Important Info Card */
-	       .info-card {
-	           background: linear-gradient(to right, #fff, #f8fafc);
-	           border-left: 4px solid #3b82f6;
-	       }
+	          /* Important Info Card */
+	          .info-card {
+	              background: linear-gradient(to right, #fff, #f8fafc);
+	              border-left: 4px solid #3b82f6;
+	          }
 	</style>
 	<style>
-	       *,
-	       ::before,
-	       ::after {
-	           --tw-border-spacing-x: 0;
-	           --tw-border-spacing-y: 0;
-	           --tw-translate-x: 0;
-	           --tw-translate-y: 0;
-	           --tw-rotate: 0;
-	           --tw-skew-x: 0;
-	           --tw-skew-y: 0;
-	           --tw-scale-x: 1;
-	           --tw-scale-y: 1;
-	           --tw-pan-x: ;
-	           --tw-pan-y: ;
-	           --tw-pinch-zoom: ;
-	           --tw-scroll-snap-strictness: proximity;
-	           --tw-gradient-from-position: ;
-	           --tw-gradient-via-position: ;
-	           --tw-gradient-to-position: ;
-	           --tw-ordinal: ;
-	           --tw-slashed-zero: ;
-	           --tw-numeric-figure: ;
-	           --tw-numeric-spacing: ;
-	           --tw-numeric-fraction: ;
-	           --tw-ring-inset: ;
-	           --tw-ring-offset-width: 0px;
-	           --tw-ring-offset-color: #fff;
-	           --tw-ring-color: rgb(59 130 246 / 0.5);
-	           --tw-ring-offset-shadow: 0 0 #0000;
-	           --tw-ring-shadow: 0 0 #0000;
-	           --tw-shadow: 0 0 #0000;
-	           --tw-shadow-colored: 0 0 #0000;
-	           --tw-blur: ;
-	           --tw-brightness: ;
-	           --tw-contrast: ;
-	           --tw-grayscale: ;
-	           --tw-hue-rotate: ;
-	           --tw-invert: ;
-	           --tw-saturate: ;
-	           --tw-sepia: ;
-	           --tw-drop-shadow: ;
-	           --tw-backdrop-blur: ;
-	           --tw-backdrop-brightness: ;
-	           --tw-backdrop-contrast: ;
-	           --tw-backdrop-grayscale: ;
-	           --tw-backdrop-hue-rotate: ;
-	           --tw-backdrop-invert: ;
-	           --tw-backdrop-opacity: ;
-	           --tw-backdrop-saturate: ;
-	           --tw-backdrop-sepia: ;
-	           --tw-contain-size: ;
-	           --tw-contain-layout: ;
-	           --tw-contain-paint: ;
-	           --tw-contain-style:
-	       }
-
-	       ::backdrop {
-	           --tw-border-spacing-x: 0;
-	           --tw-border-spacing-y: 0;
-	           --tw-translate-x: 0;
-	           --tw-translate-y: 0;
-	           --tw-rotate: 0;
-	           --tw-skew-x: 0;
-	           --tw-skew-y: 0;
-	           --tw-scale-x: 1;
-	           --tw-scale-y: 1;
-	           --tw-pan-x: ;
-	           --tw-pan-y: ;
-	           --tw-pinch-zoom: ;
-	           --tw-scroll-snap-strictness: proximity;
-	           --tw-gradient-from-position: ;
-	           --tw-gradient-via-position: ;
-	           --tw-gradient-to-position: ;
-	           --tw-ordinal: ;
-	           --tw-slashed-zero: ;
-	           --tw-numeric-figure: ;
-	           --tw-numeric-spacing: ;
-	           --tw-numeric-fraction: ;
-	           --tw-ring-inset: ;
-	           --tw-ring-offset-width: 0px;
-	           --tw-ring-offset-color: #fff;
-	           --tw-ring-color: rgb(59 130 246 / 0.5);
-	           --tw-ring-offset-shadow: 0 0 #0000;
-	           --tw-ring-shadow: 0 0 #0000;
-	           --tw-shadow: 0 0 #0000;
-	           --tw-shadow-colored: 0 0 #0000;
-	           --tw-blur: ;
-	           --tw-brightness: ;
-	           --tw-contrast: ;
-	           --tw-grayscale: ;
-	           --tw-hue-rotate: ;
-	           --tw-invert: ;
-	           --tw-saturate: ;
-	           --tw-sepia: ;
-	           --tw-drop-shadow: ;
-	           --tw-backdrop-blur: ;
-	           --tw-backdrop-brightness: ;
-	           --tw-backdrop-contrast: ;
-	           --tw-backdrop-grayscale: ;
-	           --tw-backdrop-hue-rotate: ;
-	           --tw-backdrop-invert: ;
-	           --tw-backdrop-opacity: ;
-	           --tw-backdrop-saturate: ;
-	           --tw-backdrop-sepia: ;
-	           --tw-contain-size: ;
-	           --tw-contain-layout: ;
-	           --tw-contain-paint: ;
-	           --tw-contain-style:
-	       }
-
-	       /* ! tailwindcss v3.4.17 | MIT License | https://tailwindcss.com */
-	       *,
-	       ::after,
-	       ::before {
-	           box-sizing: border-box;
-	           border-width: 0;
-	           border-style: solid;
-	           border-color: #e5e7eb
-	       }
-
-	       ::after,
-	       ::before {
-	           --tw-content: ''
-	       }
-
-	       :host,
-	       html {
-	           line-height: 1.5;
-	           -webkit-text-size-adjust: 100%;
-	           -moz-tab-size: 4;
-	           tab-size: 4;
-	           font-family: ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
-	           font-feature-settings: normal;
-	           font-variation-settings: normal;
-	           -webkit-tap-highlight-color: transparent
-	       }
-
-	       body {
-	           margin: 0;
-	           line-height: inherit
-	       }
-
-	       hr {
-	           height: 0;
-	           color: inherit;
-	           border-top-width: 1px
-	       }
-
-	       abbr:where([title]) {
-	           -webkit-text-decoration: underline dotted;
-	           text-decoration: underline dotted
-	       }
-
-	       h1,
-	       h2,
-	       h3,
-	       h4,
-	       h5,
-	       h6 {
-	           font-size: inherit;
-	           font-weight: inherit
-	       }
-
-	       a {
-	           color: inherit;
-	           text-decoration: inherit
-	       }
-
-	       b,
-	       strong {
-	           font-weight: bolder
-	       }
-
-	       code,
-	       kbd,
-	       pre,
-	       samp {
-	           font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
-	           font-feature-settings: normal;
-	           font-variation-settings: normal;
-	           font-size: 1em
-	       }
-
-	       small {
-	           font-size: 80%
-	       }
-
-	       sub,
-	       sup {
-	           font-size: 75%;
-	           line-height: 0;
-	           position: relative;
-	           vertical-align: baseline
-	       }
-
-	       sub {
-	           bottom: -.25em
-	       }
-
-	       sup {
-	           top: -.5em
-	       }
-
-	       table {
-	           text-indent: 0;
-	           border-color: inherit;
-	           border-collapse: collapse
-	       }
-
-	       button,
-	       input,
-	       optgroup,
-	       select,
-	       textarea {
-	           font-family: inherit;
-	           font-feature-settings: inherit;
-	           font-variation-settings: inherit;
-	           font-size: 100%;
-	           font-weight: inherit;
-	           line-height: inherit;
-	           letter-spacing: inherit;
-	           color: inherit;
-	           margin: 0;
-	           padding: 0
-	       }
-
-	       button,
-	       select {
-	           text-transform: none
-	       }
-
-	       button,
-	       input:where([type=button]),
-	       input:where([type=reset]),
-	       input:where([type=submit]) {
-	           -webkit-appearance: button;
-	           background-color: transparent;
-	           background-image: none
-	       }
-
-	       :-moz-focusring {
-	           outline: auto
-	       }
-
-	       :-moz-ui-invalid {
-	           box-shadow: none
-	       }
-
-	       progress {
-	           vertical-align: baseline
-	       }
-
-	       ::-webkit-inner-spin-button,
-	       ::-webkit-outer-spin-button {
-	           height: auto
-	       }
-
-	       [type=search] {
-	           -webkit-appearance: textfield;
-	           outline-offset: -2px
-	       }
-
-	       ::-webkit-search-decoration {
-	           -webkit-appearance: none
-	       }
-
-	       ::-webkit-file-upload-button {
-	           -webkit-appearance: button;
-	           font: inherit
-	       }
-
-	       summary {
-	           display: list-item
-	       }
-
-	       blockquote,
-	       dd,
-	       dl,
-	       figure,
-	       h1,
-	       h2,
-	       h3,
-	       h4,
-	       h5,
-	       h6,
-	       hr,
-	       p,
-	       pre {
-	           margin: 0
-	       }
-
-	       fieldset {
-	           margin: 0;
-	           padding: 0
-	       }
-
-	       legend {
-	           padding: 0
-	       }
-
-	       menu,
-	       ol,
-	       ul {
-	           list-style: none;
-	           margin: 0;
-	           padding: 0
-	       }
-
-	       dialog {
-	           padding: 0
-	       }
-
-	       textarea {
-	           resize: vertical
-	       }
-
-	       input::placeholder,
-	       textarea::placeholder {
-	           opacity: 1;
-	           color: #9ca3af
-	       }
-
-	       [role=button],
-	       button {
-	           cursor: pointer
-	       }
-
-	       :disabled {
-	           cursor: default
-	       }
-
-	       audio,
-	       canvas,
-	       embed,
-	       iframe,
-	       img,
-	       object,
-	       svg,
-	       video {
-	           display: block;
-	           vertical-align: middle
-	       }
-
-	       img,
-	       video {
-	           max-width: 100%;
-	           height: auto
-	       }
-
-	       [hidden]:where(:not([hidden=until-found])) {
-	           display: none
-	       }
-
-	       .fixed {
-	           position: fixed
-	       }
-
-	       .absolute {
-	           position: absolute
-	       }
-
-	       .relative {
-	           position: relative
-	       }
-
-	       .inset-0 {
-	           inset: 0px
-	       }
-
-	       .bottom-0 {
-	           bottom: 0px
-	       }
-
-	       .left-0 {
-	           left: 0px
-	       }
-
-	       .right-0 {
-	           right: 0px
-	       }
-
-	       .right-4 {
-	           right: 1rem
-	       }
-
-	       .top-4 {
-	           top: 1rem
-	       }
-
-	       .z-10 {
-	           z-index: 10
-	       }
-
-	       .z-20 {
-	           z-index: 20
-	       }
-
-	       .z-40 {
-	           z-index: 40
-	       }
-
-	       .z-50 {
-	           z-index: 50
-	       }
-
-	       .mx-3 {
-	           margin-left: 0.75rem;
-	           margin-right: 0.75rem
-	       }
-
-	       .mx-auto {
-	           margin-left: auto;
-	           margin-right: auto
-	       }
-
-	       .-mt-8 {
-	           margin-top: -2rem
-	       }
-
-	       .mb-2 {
-	           margin-bottom: 0.5rem
-	       }
-
-	       .mb-3 {
-	           margin-bottom: 0.75rem
-	       }
-
-	       .mb-4 {
-	           margin-bottom: 1rem
-	       }
-
-	       .mb-6 {
-	           margin-bottom: 1.5rem
-	       }
-
-	       .mb-8 {
-	           margin-bottom: 2rem
-	       }
-
-	       .mr-1 {
-	           margin-right: 0.25rem
-	       }
-
-	       .mr-1\.5 {
-	           margin-right: 0.375rem
-	       }
-
-	       .mr-2 {
-	           margin-right: 0.5rem
-	       }
-
-	       .mt-1 {
-	           margin-top: 0.25rem
-	       }
-
-	       .mt-2 {
-	           margin-top: 0.5rem
-	       }
-
-	       .mt-auto {
-	           margin-top: auto
-	       }
-
-	       .ml-auto {
-	           margin-left: auto
-	       }
-
-	       .mr-3 {
-	           margin-right: 0.75rem
-	       }
-
-	       .mb-1 {
-	           margin-bottom: 0.25rem
-	       }
-
-	       .ml-1\.5 {
-	           margin-left: 0.375rem
-	       }
-
-	       .mt-0\.5 {
-	           margin-top: 0.125rem
-	       }
-
-	       .block {
-	           display: block
-	       }
-
-	       .flex {
-	           display: flex
-	       }
-
-	       .inline-flex {
-	           display: inline-flex
-	       }
-
-	       .grid {
-	           display: grid
-	       }
-
-	       .hidden {
-	           display: none
-	       }
-
-	       .aspect-\[4\/3\] {
-	           aspect-ratio: 4/3
-	       }
-
-	       .h-48 {
-	           height: 12rem
-	       }
-
-	       .h-8 {
-	           height: 2rem
-	       }
-
-	       .h-full {
-	           height: 100%
-	       }
-
-	       .h-10 {
-	           height: 2.5rem
-	       }
-
-	       .h-5 {
-	           height: 1.25rem
-	       }
-
-	       .w-8 {
-	           width: 2rem
-	       }
-
-	       .w-full {
-	           width: 100%
-	       }
-
-	       .w-10 {
-	           width: 2.5rem
-	       }
-
-	       .w-5 {
-	           width: 1.25rem
-	       }
-
-	       .max-w-4xl {
-	           max-width: 56rem
-	       }
-
-	       .flex-1 {
-	           flex: 1 1 0%
-	       }
-
-	       .flex-shrink-0 {
-	           flex-shrink: 0
-	       }
-
-	       .transform {
-	           transform: translate(var(--tw-translate-x), var(--tw-translate-y)) rotate(var(--tw-rotate)) skewX(var(--tw-skew-x)) skewY(var(--tw-skew-y)) scaleX(var(--tw-scale-x)) scaleY(var(--tw-scale-y))
-	       }
-
-	       .cursor-pointer {
-	           cursor: pointer
-	       }
-
-	       .select-none {
-	           -webkit-user-select: none;
-	           user-select: none
-	       }
-
-	       .grid-cols-1 {
-	           grid-template-columns: repeat(1, minmax(0, 1fr))
-	       }
-
-	       .flex-col {
-	           flex-direction: column
-	       }
-
-	       .items-start {
-	           align-items: flex-start
-	       }
-
-	       .items-center {
-	           align-items: center
-	       }
-
-	       .justify-center {
-	           justify-content: center
-	       }
-
-	       .justify-between {
-	           justify-content: space-between
-	       }
-
-	       .justify-around {
-	           justify-content: space-around
-	       }
-
-	       .gap-2 {
-	           gap: 0.5rem
-	       }
-
-	       .gap-3 {
-	           gap: 0.75rem
-	       }
-
-	       .gap-4 {
-	           gap: 1rem
-	       }
-
-	       .gap-6 {
-	           gap: 1.5rem
-	       }
-
-	       .space-y-1> :not([hidden])~ :not([hidden]) {
-	           --tw-space-y-reverse: 0;
-	           margin-top: calc(0.25rem * calc(1 - var(--tw-space-y-reverse)));
-	           margin-bottom: calc(0.25rem * var(--tw-space-y-reverse))
-	       }
-
-	       .space-y-2> :not([hidden])~ :not([hidden]) {
-	           --tw-space-y-reverse: 0;
-	           margin-top: calc(0.5rem * calc(1 - var(--tw-space-y-reverse)));
-	           margin-bottom: calc(0.5rem * var(--tw-space-y-reverse))
-	       }
-
-	       .space-y-3> :not([hidden])~ :not([hidden]) {
-	           --tw-space-y-reverse: 0;
-	           margin-top: calc(0.75rem * calc(1 - var(--tw-space-y-reverse)));
-	           margin-bottom: calc(0.75rem * var(--tw-space-y-reverse))
-	       }
-
-	       .space-y-6> :not([hidden])~ :not([hidden]) {
-	           --tw-space-y-reverse: 0;
-	           margin-top: calc(1.5rem * calc(1 - var(--tw-space-y-reverse)));
-	           margin-bottom: calc(1.5rem * var(--tw-space-y-reverse))
-	       }
-
-	       .overflow-hidden {
-	           overflow: hidden
-	       }
-
-	       .rounded {
-	           border-radius: 0.25rem
-	       }
-
-	       .rounded-2xl {
-	           border-radius: 1rem
-	       }
-
-	       .rounded-full {
-	           border-radius: 9999px
-	       }
-
-	       .rounded-lg {
-	           border-radius: 0.5rem
-	       }
-
-	       .rounded-xl {
-	           border-radius: 0.75rem
-	       }
-
-	       .rounded-md {
-	           border-radius: 0.375rem
-	       }
-
-	       .border {
-	           border-width: 1px
-	       }
-
-	       .border-2 {
-	           border-width: 2px
-	       }
-
-	       .border-b {
-	           border-bottom-width: 1px
-	       }
-
-	       .border-l {
-	           border-left-width: 1px
-	       }
-
-	       .border-l-4 {
-	           border-left-width: 4px
-	       }
-
-	       .border-t {
-	           border-top-width: 1px
-	       }
-
-	       .border-amber-100 {
-	           --tw-border-opacity: 1;
-	           border-color: rgb(254 243 199 / var(--tw-border-opacity, 1))
-	       }
-
-	       .border-amber-200 {
-	           --tw-border-opacity: 1;
-	           border-color: rgb(253 230 138 / var(--tw-border-opacity, 1))
-	       }
-
-	       .border-indigo-100 {
-	           --tw-border-opacity: 1;
-	           border-color: rgb(224 231 255 / var(--tw-border-opacity, 1))
-	       }
-
-	       .border-red-100 {
-	           --tw-border-opacity: 1;
-	           border-color: rgb(254 226 226 / var(--tw-border-opacity, 1))
-	       }
-
-	       .border-red-200 {
-	           --tw-border-opacity: 1;
-	           border-color: rgb(254 202 202 / var(--tw-border-opacity, 1))
-	       }
-
-	       .border-red-500 {
-	           --tw-border-opacity: 1;
-	           border-color: rgb(239 68 68 / var(--tw-border-opacity, 1))
-	       }
-
-	       .border-rose-100 {
-	           --tw-border-opacity: 1;
-	           border-color: rgb(255 228 230 / var(--tw-border-opacity, 1))
-	       }
-
-	       .border-rose-500 {
-	           --tw-border-opacity: 1;
-	           border-color: rgb(244 63 94 / var(--tw-border-opacity, 1))
-	       }
-
-	       .border-sky-100 {
-	           --tw-border-opacity: 1;
-	           border-color: rgb(224 242 254 / var(--tw-border-opacity, 1))
-	       }
-
-	       .border-slate-100 {
-	           --tw-border-opacity: 1;
-	           border-color: rgb(241 245 249 / var(--tw-border-opacity, 1))
-	       }
-
-	       .border-slate-200 {
-	           --tw-border-opacity: 1;
-	           border-color: rgb(226 232 240 / var(--tw-border-opacity, 1))
-	       }
-
-	       .border-slate-600 {
-	           --tw-border-opacity: 1;
-	           border-color: rgb(71 85 105 / var(--tw-border-opacity, 1))
-	       }
-
-	       .border-white\/20 {
-	           border-color: rgb(255 255 255 / 0.2)
-	       }
-
-	       .border-slate-300 {
-	           --tw-border-opacity: 1;
-	           border-color: rgb(203 213 225 / var(--tw-border-opacity, 1))
-	       }
-
-	       .border-transparent {
-	           border-color: transparent
-	       }
-
-	       .border-l-indigo-400 {
-	           --tw-border-opacity: 1;
-	           border-left-color: rgb(129 140 248 / var(--tw-border-opacity, 1))
-	       }
-
-	       .bg-amber-100 {
-	           --tw-bg-opacity: 1;
-	           background-color: rgb(254 243 199 / var(--tw-bg-opacity, 1))
-	       }
-
-	       .bg-amber-50 {
-	           --tw-bg-opacity: 1;
-	           background-color: rgb(255 251 235 / var(--tw-bg-opacity, 1))
-	       }
-
-	       .bg-indigo-50 {
-	           --tw-bg-opacity: 1;
-	           background-color: rgb(238 242 255 / var(--tw-bg-opacity, 1))
-	       }
-
-	       .bg-indigo-600 {
-	           --tw-bg-opacity: 1;
-	           background-color: rgb(79 70 229 / var(--tw-bg-opacity, 1))
-	       }
-
-	       .bg-red-50 {
-	           --tw-bg-opacity: 1;
-	           background-color: rgb(254 242 242 / var(--tw-bg-opacity, 1))
-	       }
-
-	       .bg-rose-50 {
-	           --tw-bg-opacity: 1;
-	           background-color: rgb(255 241 242 / var(--tw-bg-opacity, 1))
-	       }
-
-	       .bg-sky-50 {
-	           --tw-bg-opacity: 1;
-	           background-color: rgb(240 249 255 / var(--tw-bg-opacity, 1))
-	       }
-
-	       .bg-sky-600 {
-	           --tw-bg-opacity: 1;
-	           background-color: rgb(2 132 199 / var(--tw-bg-opacity, 1))
-	       }
-
-	       .bg-slate-100 {
-	           --tw-bg-opacity: 1;
-	           background-color: rgb(241 245 249 / var(--tw-bg-opacity, 1))
-	       }
-
-	       .bg-slate-50 {
-	           --tw-bg-opacity: 1;
-	           background-color: rgb(248 250 252 / var(--tw-bg-opacity, 1))
-	       }
-
-	       .bg-slate-800 {
-	           --tw-bg-opacity: 1;
-	           background-color: rgb(30 41 59 / var(--tw-bg-opacity, 1))
-	       }
-
-	       .bg-slate-900 {
-	           --tw-bg-opacity: 1;
-	           background-color: rgb(15 23 42 / var(--tw-bg-opacity, 1))
-	       }
-
-	       .bg-white {
-	           --tw-bg-opacity: 1;
-	           background-color: rgb(255 255 255 / var(--tw-bg-opacity, 1))
-	       }
-
-	       .bg-white\/10 {
-	           background-color: rgb(255 255 255 / 0.1)
-	       }
-
-	       .bg-white\/20 {
-	           background-color: rgb(255 255 255 / 0.2)
-	       }
-
-	       .bg-white\/95 {
-	           background-color: rgb(255 255 255 / 0.95)
-	       }
-
-	       .bg-blue-100 {
-	           --tw-bg-opacity: 1;
-	           background-color: rgb(219 234 254 / var(--tw-bg-opacity, 1))
-	       }
-
-	       .bg-emerald-100 {
-	           --tw-bg-opacity: 1;
-	           background-color: rgb(209 250 229 / var(--tw-bg-opacity, 1))
-	       }
-
-	       .bg-rose-100 {
-	           --tw-bg-opacity: 1;
-	           background-color: rgb(255 228 230 / var(--tw-bg-opacity, 1))
-	       }
-
-	       .bg-sky-100 {
-	           --tw-bg-opacity: 1;
-	           background-color: rgb(224 242 254 / var(--tw-bg-opacity, 1))
-	       }
-
-	       .bg-violet-100 {
-	           --tw-bg-opacity: 1;
-	           background-color: rgb(237 233 254 / var(--tw-bg-opacity, 1))
-	       }
-
-	       .object-contain {
-	           object-fit: contain
-	       }
-
-	       .object-cover {
-	           object-fit: cover
-	       }
-
-	       .p-1\.5 {
-	           padding: 0.375rem
-	       }
-
-	       .p-2 {
-	           padding: 0.5rem
-	       }
-
-	       .p-3 {
-	           padding: 0.75rem
-	       }
-
-	       .p-4 {
-	           padding: 1rem
-	       }
-
-	       .p-5 {
-	           padding: 1.25rem
-	       }
-
-	       .p-6 {
-	           padding: 1.5rem
-	       }
-
-	       .p-2\.5 {
-	           padding: 0.625rem
-	       }
-
-	       .px-2 {
-	           padding-left: 0.5rem;
-	           padding-right: 0.5rem
-	       }
-
-	       .px-3 {
-	           padding-left: 0.75rem;
-	           padding-right: 0.75rem
-	       }
-
-	       .px-4 {
-	           padding-left: 1rem;
-	           padding-right: 1rem
-	       }
-
-	       .px-5 {
-	           padding-left: 1.25rem;
-	           padding-right: 1.25rem
-	       }
-
-	       .px-6 {
-	           padding-left: 1.5rem;
-	           padding-right: 1.5rem
-	       }
-
-	       .py-1 {
-	           padding-top: 0.25rem;
-	           padding-bottom: 0.25rem
-	       }
-
-	       .py-1\.5 {
-	           padding-top: 0.375rem;
-	           padding-bottom: 0.375rem
-	       }
-
-	       .py-2 {
-	           padding-top: 0.5rem;
-	           padding-bottom: 0.5rem
-	       }
-
-	       .py-2\.5 {
-	           padding-top: 0.625rem;
-	           padding-bottom: 0.625rem
-	       }
-
-	       .py-3 {
-	           padding-top: 0.75rem;
-	           padding-bottom: 0.75rem
-	       }
-
-	       .py-4 {
-	           padding-top: 1rem;
-	           padding-bottom: 1rem
-	       }
-
-	       .py-6 {
-	           padding-top: 1.5rem;
-	           padding-bottom: 1.5rem
-	       }
-
-	       .pb-1 {
-	           padding-bottom: 0.25rem
-	       }
-
-	       .pb-24 {
-	           padding-bottom: 6rem
-	       }
-
-	       .text-center {
-	           text-align: center
-	       }
-
-	       .text-right {
-	           text-align: right
-	       }
-
-	       .font-mono {
-	           font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace
-	       }
-
-	       .text-2xl {
-	           font-size: 1.5rem;
-	           line-height: 2rem
-	       }
-
-	       .text-3xl {
-	           font-size: 1.875rem;
-	           line-height: 2.25rem
-	       }
-
-	       .text-\[10px\] {
-	           font-size: 10px
-	       }
-
-	       .text-\[11px\] {
-	           font-size: 11px
-	       }
-
-	       .text-\[16px\] {
-	           font-size: 16px
-	       }
-
-	       .text-\[20px\] {
-	           font-size: 20px
-	       }
-
-	       .text-base {
-	           font-size: 1rem;
-	           line-height: 1.5rem
-	       }
-
-	       .text-lg {
-	           font-size: 1.125rem;
-	           line-height: 1.75rem
-	       }
-
-	       .text-sm {
-	           font-size: 0.875rem;
-	           line-height: 1.25rem
-	       }
-
-	       .text-xl {
-	           font-size: 1.25rem;
-	           line-height: 1.75rem
-	       }
-
-	       .text-xs {
-	           font-size: 0.75rem;
-	           line-height: 1rem
-	       }
-
-	       .text-\[14px\] {
-	           font-size: 14px
-	       }
-
-	       .font-bold {
-	           font-weight: 700
-	       }
-
-	       .uppercase {
-	           text-transform: uppercase
-	       }
-
-	       .leading-relaxed {
-	           line-height: 1.625
-	       }
-
-	       .leading-tight {
-	           line-height: 1.25
-	       }
-
-	       .tracking-wide {
-	           letter-spacing: 0.025em
-	       }
-
-	       .tracking-wider {
-	           letter-spacing: 0.05em
-	       }
-
-	       .tracking-widest {
-	           letter-spacing: 0.1em
-	       }
-
-	       .text-amber-600 {
-	           --tw-text-opacity: 1;
-	           color: rgb(217 119 6 / var(--tw-text-opacity, 1))
-	       }
-
-	       .text-amber-800 {
-	           --tw-text-opacity: 1;
-	           color: rgb(146 64 14 / var(--tw-text-opacity, 1))
-	       }
-
-	       .text-blue-600 {
-	           --tw-text-opacity: 1;
-	           color: rgb(37 99 235 / var(--tw-text-opacity, 1))
-	       }
-
-	       .text-indigo-400 {
-	           --tw-text-opacity: 1;
-	           color: rgb(129 140 248 / var(--tw-text-opacity, 1))
-	       }
-
-	       .text-indigo-700 {
-	           --tw-text-opacity: 1;
-	           color: rgb(67 56 202 / var(--tw-text-opacity, 1))
-	       }
-
-	       .text-indigo-800 {
-	           --tw-text-opacity: 1;
-	           color: rgb(55 48 163 / var(--tw-text-opacity, 1))
-	       }
-
-	       .text-red-600 {
-	           --tw-text-opacity: 1;
-	           color: rgb(220 38 38 / var(--tw-text-opacity, 1))
-	       }
-
-	       .text-red-800 {
-	           --tw-text-opacity: 1;
-	           color: rgb(153 27 27 / var(--tw-text-opacity, 1))
-	       }
-
-	       .text-rose-500 {
-	           --tw-text-opacity: 1;
-	           color: rgb(244 63 94 / var(--tw-text-opacity, 1))
-	       }
-
-	       .text-rose-600 {
-	           --tw-text-opacity: 1;
-	           color: rgb(225 29 72 / var(--tw-text-opacity, 1))
-	       }
-
-	       .text-rose-700 {
-	           --tw-text-opacity: 1;
-	           color: rgb(190 18 60 / var(--tw-text-opacity, 1))
-	       }
-
-	       .text-rose-800 {
-	           --tw-text-opacity: 1;
-	           color: rgb(159 18 57 / var(--tw-text-opacity, 1))
-	       }
-
-	       .text-sky-100 {
-	           --tw-text-opacity: 1;
-	           color: rgb(224 242 254 / var(--tw-text-opacity, 1))
-	       }
-
-	       .text-sky-300 {
-	           --tw-text-opacity: 1;
-	           color: rgb(125 211 252 / var(--tw-text-opacity, 1))
-	       }
-
-	       .text-sky-600 {
-	           --tw-text-opacity: 1;
-	           color: rgb(2 132 199 / var(--tw-text-opacity, 1))
-	       }
-
-	       .text-sky-700 {
-	           --tw-text-opacity: 1;
-	           color: rgb(3 105 161 / var(--tw-text-opacity, 1))
-	       }
-
-	       .text-sky-800 {
-	           --tw-text-opacity: 1;
-	           color: rgb(7 89 133 / var(--tw-text-opacity, 1))
-	       }
-
-	       .text-slate-400 {
-	           --tw-text-opacity: 1;
-	           color: rgb(148 163 184 / var(--tw-text-opacity, 1))
-	       }
-
-	       .text-slate-500 {
-	           --tw-text-opacity: 1;
-	           color: rgb(100 116 139 / var(--tw-text-opacity, 1))
-	       }
-
-	       .text-slate-600 {
-	           --tw-text-opacity: 1;
-	           color: rgb(71 85 105 / var(--tw-text-opacity, 1))
-	       }
-
-	       .text-slate-700 {
-	           --tw-text-opacity: 1;
-	           color: rgb(51 65 85 / var(--tw-text-opacity, 1))
-	       }
-
-	       .text-slate-800 {
-	           --tw-text-opacity: 1;
-	           color: rgb(30 41 59 / var(--tw-text-opacity, 1))
-	       }
-
-	       .text-white {
-	           --tw-text-opacity: 1;
-	           color: rgb(255 255 255 / var(--tw-text-opacity, 1))
-	       }
-
-	       .text-emerald-600 {
-	           --tw-text-opacity: 1;
-	           color: rgb(5 150 105 / var(--tw-text-opacity, 1))
-	       }
-
-	       .text-indigo-600 {
-	           --tw-text-opacity: 1;
-	           color: rgb(79 70 229 / var(--tw-text-opacity, 1))
-	       }
-
-	       .text-slate-300 {
-	           --tw-text-opacity: 1;
-	           color: rgb(203 213 225 / var(--tw-text-opacity, 1))
-	       }
-
-	       .text-violet-600 {
-	           --tw-text-opacity: 1;
-	           color: rgb(124 58 237 / var(--tw-text-opacity, 1))
-	       }
-
-	       .antialiased {
-	           -webkit-font-smoothing: antialiased;
-	           -moz-osx-font-smoothing: grayscale
-	       }
-
-	       .opacity-80 {
-	           opacity: 0.8
-	       }
-
-	       .opacity-0 {
-	           opacity: 0
-	       }
-
-	       .shadow-\[0_-4px_10px_-1px_rgba\(0\2c 0\2c 0\2c 0\.05\)\] {
-	           --tw-shadow: 0 -4px 10px -1px rgba(0, 0, 0, 0.05);
-	           --tw-shadow-colored: 0 -4px 10px -1px var(--tw-shadow-color);
-	           box-shadow: var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000), var(--tw-shadow)
-	       }
-
-	       .shadow-lg {
-	           --tw-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
-	           --tw-shadow-colored: 0 10px 15px -3px var(--tw-shadow-color), 0 4px 6px -4px var(--tw-shadow-color);
-	           box-shadow: var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000), var(--tw-shadow)
-	       }
-
-	       .shadow-sm {
-	           --tw-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
-	           --tw-shadow-colored: 0 1px 2px 0 var(--tw-shadow-color);
-	           box-shadow: var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000), var(--tw-shadow)
-	       }
-
-	       .shadow-inner {
-	           --tw-shadow: inset 0 2px 4px 0 rgb(0 0 0 / 0.05);
-	           --tw-shadow-colored: inset 0 2px 4px 0 var(--tw-shadow-color);
-	           box-shadow: var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000), var(--tw-shadow)
-	       }
-
-	       .ring-1 {
-	           --tw-ring-offset-shadow: var(--tw-ring-inset) 0 0 0 var(--tw-ring-offset-width) var(--tw-ring-offset-color);
-	           --tw-ring-shadow: var(--tw-ring-inset) 0 0 0 calc(1px + var(--tw-ring-offset-width)) var(--tw-ring-color);
-	           box-shadow: var(--tw-ring-offset-shadow), var(--tw-ring-shadow), var(--tw-shadow, 0 0 #0000)
-	       }
-
-	       .ring-slate-200 {
-	           --tw-ring-opacity: 1;
-	           --tw-ring-color: rgb(226 232 240 / var(--tw-ring-opacity, 1))
-	       }
-
-	       .drop-shadow-lg {
-	           --tw-drop-shadow: drop-shadow(0 10px 8px rgb(0 0 0 / 0.04)) drop-shadow(0 4px 3px rgb(0 0 0 / 0.1));
-	           filter: var(--tw-blur) var(--tw-brightness) var(--tw-contrast) var(--tw-grayscale) var(--tw-hue-rotate) var(--tw-invert) var(--tw-saturate) var(--tw-sepia) var(--tw-drop-shadow)
-	       }
-
-	       .backdrop-blur {
-	           --tw-backdrop-blur: blur(8px);
-	           -webkit-backdrop-filter: var(--tw-backdrop-blur) var(--tw-backdrop-brightness) var(--tw-backdrop-contrast) var(--tw-backdrop-grayscale) var(--tw-backdrop-hue-rotate) var(--tw-backdrop-invert) var(--tw-backdrop-opacity) var(--tw-backdrop-saturate) var(--tw-backdrop-sepia);
-	           backdrop-filter: var(--tw-backdrop-blur) var(--tw-backdrop-brightness) var(--tw-backdrop-contrast) var(--tw-backdrop-grayscale) var(--tw-backdrop-hue-rotate) var(--tw-backdrop-invert) var(--tw-backdrop-opacity) var(--tw-backdrop-saturate) var(--tw-backdrop-sepia)
-	       }
-
-	       .backdrop-blur-md {
-	           --tw-backdrop-blur: blur(12px);
-	           -webkit-backdrop-filter: var(--tw-backdrop-blur) var(--tw-backdrop-brightness) var(--tw-backdrop-contrast) var(--tw-backdrop-grayscale) var(--tw-backdrop-hue-rotate) var(--tw-backdrop-invert) var(--tw-backdrop-opacity) var(--tw-backdrop-saturate) var(--tw-backdrop-sepia);
-	           backdrop-filter: var(--tw-backdrop-blur) var(--tw-backdrop-brightness) var(--tw-backdrop-contrast) var(--tw-backdrop-grayscale) var(--tw-backdrop-hue-rotate) var(--tw-backdrop-invert) var(--tw-backdrop-opacity) var(--tw-backdrop-saturate) var(--tw-backdrop-sepia)
-	       }
-
-	       .transition {
-	           transition-property: color, background-color, border-color, fill, stroke, opacity, box-shadow, transform, filter, -webkit-text-decoration-color, -webkit-backdrop-filter;
-	           transition-property: color, background-color, border-color, text-decoration-color, fill, stroke, opacity, box-shadow, transform, filter, backdrop-filter;
-	           transition-property: color, background-color, border-color, text-decoration-color, fill, stroke, opacity, box-shadow, transform, filter, backdrop-filter, -webkit-text-decoration-color, -webkit-backdrop-filter;
-	           transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
-	           transition-duration: 150ms
-	       }
-
-	       .transition-all {
-	           transition-property: all;
-	           transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
-	           transition-duration: 150ms
-	       }
-
-	       .duration-700 {
-	           transition-duration: 700ms
-	       }
-
-	       .hover\:-translate-y-0\.5:hover {
-	           --tw-translate-y: -0.125rem;
-	           transform: translate(var(--tw-translate-x), var(--tw-translate-y)) rotate(var(--tw-rotate)) skewX(var(--tw-skew-x)) skewY(var(--tw-skew-y)) scaleX(var(--tw-scale-x)) scaleY(var(--tw-scale-y))
-	       }
-
-	       .hover\:border-amber-400:hover {
-	           --tw-border-opacity: 1;
-	           border-color: rgb(251 191 36 / var(--tw-border-opacity, 1))
-	       }
-
-	       .hover\:border-blue-400:hover {
-	           --tw-border-opacity: 1;
-	           border-color: rgb(96 165 250 / var(--tw-border-opacity, 1))
-	       }
-
-	       .hover\:border-emerald-400:hover {
-	           --tw-border-opacity: 1;
-	           border-color: rgb(52 211 153 / var(--tw-border-opacity, 1))
-	       }
-
-	       .hover\:border-rose-400:hover {
-	           --tw-border-opacity: 1;
-	           border-color: rgb(251 113 133 / var(--tw-border-opacity, 1))
-	       }
-
-	       .hover\:border-sky-400:hover {
-	           --tw-border-opacity: 1;
-	           border-color: rgb(56 189 248 / var(--tw-border-opacity, 1))
-	       }
-
-	       .hover\:border-violet-400:hover {
-	           --tw-border-opacity: 1;
-	           border-color: rgb(167 139 250 / var(--tw-border-opacity, 1))
-	       }
-
-	       .hover\:bg-red-100:hover {
-	           --tw-bg-opacity: 1;
-	           background-color: rgb(254 226 226 / var(--tw-bg-opacity, 1))
-	       }
-
-	       .hover\:bg-red-50:hover {
-	           --tw-bg-opacity: 1;
-	           background-color: rgb(254 242 242 / var(--tw-bg-opacity, 1))
-	       }
-
-	       .hover\:bg-slate-50:hover {
-	           --tw-bg-opacity: 1;
-	           background-color: rgb(248 250 252 / var(--tw-bg-opacity, 1))
-	       }
-
-	       .hover\:bg-slate-700:hover {
-	           --tw-bg-opacity: 1;
-	           background-color: rgb(51 65 85 / var(--tw-bg-opacity, 1))
-	       }
-
-	       .hover\:bg-white:hover {
-	           --tw-bg-opacity: 1;
-	           background-color: rgb(255 255 255 / var(--tw-bg-opacity, 1))
-	       }
-
-	       .hover\:underline:hover {
-	           -webkit-text-decoration-line: underline;
-	           text-decoration-line: underline
-	       }
-
-	       .hover\:shadow-md:hover {
-	           --tw-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
-	           --tw-shadow-colored: 0 4px 6px -1px var(--tw-shadow-color), 0 2px 4px -2px var(--tw-shadow-color);
-	           box-shadow: var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000), var(--tw-shadow)
-	       }
-
-	       .group:hover .group-hover\:scale-105 {
-	           --tw-scale-x: 1.05;
-	           --tw-scale-y: 1.05;
-	           transform: translate(var(--tw-translate-x), var(--tw-translate-y)) rotate(var(--tw-rotate)) skewX(var(--tw-skew-x)) skewY(var(--tw-skew-y)) scaleX(var(--tw-scale-x)) scaleY(var(--tw-scale-y))
-	       }
-
-	       .group:hover .group-hover\:scale-110 {
-	           --tw-scale-x: 1.1;
-	           --tw-scale-y: 1.1;
-	           transform: translate(var(--tw-translate-x), var(--tw-translate-y)) rotate(var(--tw-rotate)) skewX(var(--tw-skew-x)) skewY(var(--tw-skew-y)) scaleX(var(--tw-scale-x)) scaleY(var(--tw-scale-y))
-	       }
-
-	       .group:hover .group-hover\:text-amber-500 {
-	           --tw-text-opacity: 1;
-	           color: rgb(245 158 11 / var(--tw-text-opacity, 1))
-	       }
-
-	       .group:hover .group-hover\:text-blue-500 {
-	           --tw-text-opacity: 1;
-	           color: rgb(59 130 246 / var(--tw-text-opacity, 1))
-	       }
-
-	       .group:hover .group-hover\:text-emerald-500 {
-	           --tw-text-opacity: 1;
-	           color: rgb(16 185 129 / var(--tw-text-opacity, 1))
-	       }
-
-	       .group:hover .group-hover\:text-indigo-500 {
-	           --tw-text-opacity: 1;
-	           color: rgb(99 102 241 / var(--tw-text-opacity, 1))
-	       }
-
-	       .group:hover .group-hover\:text-rose-500 {
-	           --tw-text-opacity: 1;
-	           color: rgb(244 63 94 / var(--tw-text-opacity, 1))
-	       }
-
-	       .group:hover .group-hover\:text-sky-500 {
-	           --tw-text-opacity: 1;
-	           color: rgb(14 165 233 / var(--tw-text-opacity, 1))
-	       }
-
-	       .group:hover .group-hover\:text-violet-500 {
-	           --tw-text-opacity: 1;
-	           color: rgb(139 92 246 / var(--tw-text-opacity, 1))
-	       }
-
-	       .group:hover .group-hover\:text-slate-500 {
-	           --tw-text-opacity: 1;
-	           color: rgb(100 116 139 / var(--tw-text-opacity, 1))
-	       }
-
-	       @media (min-width: 640px) {
-	           .sm\:grid-cols-2 {
-	               grid-template-columns: repeat(2, minmax(0, 1fr))
-	           }
-	       }
-
-	       @media (min-width: 768px) {
-	           .md\:flex {
-	               display: flex
-	           }
-
-	           .md\:hidden {
-	               display: none
-	           }
-
-	           .md\:aspect-\[2\/1\] {
-	               aspect-ratio: 2/1
-	           }
-
-	           .md\:h-60 {
-	               height: 15rem
-	           }
-
-	           .md\:h-auto {
-	               height: auto
-	           }
-
-	           .md\:w-1\/3 {
-	               width: 33.333333%
-	           }
-
-	           .md\:grid-cols-2 {
-	               grid-template-columns: repeat(2, minmax(0, 1fr))
-	           }
-
-	           .md\:flex-row {
-	               flex-direction: row
-	           }
-
-	           .md\:pb-12 {
-	               padding-bottom: 3rem
-	           }
-
-	           .md\:text-5xl {
-	               font-size: 3rem;
-	               line-height: 1
-	           }
-	       }
-
-	       @media (min-width: 1024px) {
-	           .lg\:grid-cols-3 {
-	               grid-template-columns: repeat(3, minmax(0, 1fr))
-	           }
-	       }
+	          *,
+	          ::before,
+	          ::after {
+	              --tw-border-spacing-x: 0;
+	              --tw-border-spacing-y: 0;
+	              --tw-translate-x: 0;
+	              --tw-translate-y: 0;
+	              --tw-rotate: 0;
+	              --tw-skew-x: 0;
+	              --tw-skew-y: 0;
+	              --tw-scale-x: 1;
+	              --tw-scale-y: 1;
+	              --tw-pan-x: ;
+	              --tw-pan-y: ;
+	              --tw-pinch-zoom: ;
+	              --tw-scroll-snap-strictness: proximity;
+	              --tw-gradient-from-position: ;
+	              --tw-gradient-via-position: ;
+	              --tw-gradient-to-position: ;
+	              --tw-ordinal: ;
+	              --tw-slashed-zero: ;
+	              --tw-numeric-figure: ;
+	              --tw-numeric-spacing: ;
+	              --tw-numeric-fraction: ;
+	              --tw-ring-inset: ;
+	              --tw-ring-offset-width: 0px;
+	              --tw-ring-offset-color: #fff;
+	              --tw-ring-color: rgb(59 130 246 / 0.5);
+	              --tw-ring-offset-shadow: 0 0 #0000;
+	              --tw-ring-shadow: 0 0 #0000;
+	              --tw-shadow: 0 0 #0000;
+	              --tw-shadow-colored: 0 0 #0000;
+	              --tw-blur: ;
+	              --tw-brightness: ;
+	              --tw-contrast: ;
+	              --tw-grayscale: ;
+	              --tw-hue-rotate: ;
+	              --tw-invert: ;
+	              --tw-saturate: ;
+	              --tw-sepia: ;
+	              --tw-drop-shadow: ;
+	              --tw-backdrop-blur: ;
+	              --tw-backdrop-brightness: ;
+	              --tw-backdrop-contrast: ;
+	              --tw-backdrop-grayscale: ;
+	              --tw-backdrop-hue-rotate: ;
+	              --tw-backdrop-invert: ;
+	              --tw-backdrop-opacity: ;
+	              --tw-backdrop-saturate: ;
+	              --tw-backdrop-sepia: ;
+	              --tw-contain-size: ;
+	              --tw-contain-layout: ;
+	              --tw-contain-paint: ;
+	              --tw-contain-style:
+	          }
+
+	          ::backdrop {
+	              --tw-border-spacing-x: 0;
+	              --tw-border-spacing-y: 0;
+	              --tw-translate-x: 0;
+	              --tw-translate-y: 0;
+	              --tw-rotate: 0;
+	              --tw-skew-x: 0;
+	              --tw-skew-y: 0;
+	              --tw-scale-x: 1;
+	              --tw-scale-y: 1;
+	              --tw-pan-x: ;
+	              --tw-pan-y: ;
+	              --tw-pinch-zoom: ;
+	              --tw-scroll-snap-strictness: proximity;
+	              --tw-gradient-from-position: ;
+	              --tw-gradient-via-position: ;
+	              --tw-gradient-to-position: ;
+	              --tw-ordinal: ;
+	              --tw-slashed-zero: ;
+	              --tw-numeric-figure: ;
+	              --tw-numeric-spacing: ;
+	              --tw-numeric-fraction: ;
+	              --tw-ring-inset: ;
+	              --tw-ring-offset-width: 0px;
+	              --tw-ring-offset-color: #fff;
+	              --tw-ring-color: rgb(59 130 246 / 0.5);
+	              --tw-ring-offset-shadow: 0 0 #0000;
+	              --tw-ring-shadow: 0 0 #0000;
+	              --tw-shadow: 0 0 #0000;
+	              --tw-shadow-colored: 0 0 #0000;
+	              --tw-blur: ;
+	              --tw-brightness: ;
+	              --tw-contrast: ;
+	              --tw-grayscale: ;
+	              --tw-hue-rotate: ;
+	              --tw-invert: ;
+	              --tw-saturate: ;
+	              --tw-sepia: ;
+	              --tw-drop-shadow: ;
+	              --tw-backdrop-blur: ;
+	              --tw-backdrop-brightness: ;
+	              --tw-backdrop-contrast: ;
+	              --tw-backdrop-grayscale: ;
+	              --tw-backdrop-hue-rotate: ;
+	              --tw-backdrop-invert: ;
+	              --tw-backdrop-opacity: ;
+	              --tw-backdrop-saturate: ;
+	              --tw-backdrop-sepia: ;
+	              --tw-contain-size: ;
+	              --tw-contain-layout: ;
+	              --tw-contain-paint: ;
+	              --tw-contain-style:
+	          }
+
+	          /* ! tailwindcss v3.4.17 | MIT License | https://tailwindcss.com */
+	          *,
+	          ::after,
+	          ::before {
+	              box-sizing: border-box;
+	              border-width: 0;
+	              border-style: solid;
+	              border-color: #e5e7eb
+	          }
+
+	          ::after,
+	          ::before {
+	              --tw-content: ''
+	          }
+
+	          :host,
+	          html {
+	              line-height: 1.5;
+	              -webkit-text-size-adjust: 100%;
+	              -moz-tab-size: 4;
+	              tab-size: 4;
+	              font-family: ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+	              font-feature-settings: normal;
+	              font-variation-settings: normal;
+	              -webkit-tap-highlight-color: transparent
+	          }
+
+	          body {
+	              margin: 0;
+	              line-height: inherit
+	          }
+
+	          hr {
+	              height: 0;
+	              color: inherit;
+	              border-top-width: 1px
+	          }
+
+	          abbr:where([title]) {
+	              -webkit-text-decoration: underline dotted;
+	              text-decoration: underline dotted
+	          }
+
+	          h1,
+	          h2,
+	          h3,
+	          h4,
+	          h5,
+	          h6 {
+	              font-size: inherit;
+	              font-weight: inherit
+	          }
+
+	          a {
+	              color: inherit;
+	              text-decoration: inherit
+	          }
+
+	          b,
+	          strong {
+	              font-weight: bolder
+	          }
+
+	          code,
+	          kbd,
+	          pre,
+	          samp {
+	              font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+	              font-feature-settings: normal;
+	              font-variation-settings: normal;
+	              font-size: 1em
+	          }
+
+	          small {
+	              font-size: 80%
+	          }
+
+	          sub,
+	          sup {
+	              font-size: 75%;
+	              line-height: 0;
+	              position: relative;
+	              vertical-align: baseline
+	          }
+
+	          sub {
+	              bottom: -.25em
+	          }
+
+	          sup {
+	              top: -.5em
+	          }
+
+	          table {
+	              text-indent: 0;
+	              border-color: inherit;
+	              border-collapse: collapse
+	          }
+
+	          button,
+	          input,
+	          optgroup,
+	          select,
+	          textarea {
+	              font-family: inherit;
+	              font-feature-settings: inherit;
+	              font-variation-settings: inherit;
+	              font-size: 100%;
+	              font-weight: inherit;
+	              line-height: inherit;
+	              letter-spacing: inherit;
+	              color: inherit;
+	              margin: 0;
+	              padding: 0
+	          }
+
+	          button,
+	          select {
+	              text-transform: none
+	          }
+
+	          button,
+	          input:where([type=button]),
+	          input:where([type=reset]),
+	          input:where([type=submit]) {
+	              -webkit-appearance: button;
+	              background-color: transparent;
+	              background-image: none
+	          }
+
+	          :-moz-focusring {
+	              outline: auto
+	          }
+
+	          :-moz-ui-invalid {
+	              box-shadow: none
+	          }
+
+	          progress {
+	              vertical-align: baseline
+	          }
+
+	          ::-webkit-inner-spin-button,
+	          ::-webkit-outer-spin-button {
+	              height: auto
+	          }
+
+	          [type=search] {
+	              -webkit-appearance: textfield;
+	              outline-offset: -2px
+	          }
+
+	          ::-webkit-search-decoration {
+	              -webkit-appearance: none
+	          }
+
+	          ::-webkit-file-upload-button {
+	              -webkit-appearance: button;
+	              font: inherit
+	          }
+
+	          summary {
+	              display: list-item
+	          }
+
+	          blockquote,
+	          dd,
+	          dl,
+	          figure,
+	          h1,
+	          h2,
+	          h3,
+	          h4,
+	          h5,
+	          h6,
+	          hr,
+	          p,
+	          pre {
+	              margin: 0
+	          }
+
+	          fieldset {
+	              margin: 0;
+	              padding: 0
+	          }
+
+	          legend {
+	              padding: 0
+	          }
+
+	          menu,
+	          ol,
+	          ul {
+	              list-style: none;
+	              margin: 0;
+	              padding: 0
+	          }
+
+	          dialog {
+	              padding: 0
+	          }
+
+	          textarea {
+	              resize: vertical
+	          }
+
+	          input::placeholder,
+	          textarea::placeholder {
+	              opacity: 1;
+	              color: #9ca3af
+	          }
+
+	          [role=button],
+	          button {
+	              cursor: pointer
+	          }
+
+	          :disabled {
+	              cursor: default
+	          }
+
+	          audio,
+	          canvas,
+	          embed,
+	          iframe,
+	          img,
+	          object,
+	          svg,
+	          video {
+	              display: block;
+	              vertical-align: middle
+	          }
+
+	          img,
+	          video {
+	              max-width: 100%;
+	              height: auto
+	          }
+
+	          [hidden]:where(:not([hidden=until-found])) {
+	              display: none
+	          }
+
+	          .fixed {
+	              position: fixed
+	          }
+
+	          .absolute {
+	              position: absolute
+	          }
+
+	          .relative {
+	              position: relative
+	          }
+
+	          .inset-0 {
+	              inset: 0px
+	          }
+
+	          .bottom-0 {
+	              bottom: 0px
+	          }
+
+	          .left-0 {
+	              left: 0px
+	          }
+
+	          .right-0 {
+	              right: 0px
+	          }
+
+	          .right-4 {
+	              right: 1rem
+	          }
+
+	          .top-4 {
+	              top: 1rem
+	          }
+
+	          .z-10 {
+	              z-index: 10
+	          }
+
+	          .z-20 {
+	              z-index: 20
+	          }
+
+	          .z-40 {
+	              z-index: 40
+	          }
+
+	          .z-50 {
+	              z-index: 50
+	          }
+
+	          .mx-3 {
+	              margin-left: 0.75rem;
+	              margin-right: 0.75rem
+	          }
+
+	          .mx-auto {
+	              margin-left: auto;
+	              margin-right: auto
+	          }
+
+	          .-mt-8 {
+	              margin-top: -2rem
+	          }
+
+	          .mb-2 {
+	              margin-bottom: 0.5rem
+	          }
+
+	          .mb-3 {
+	              margin-bottom: 0.75rem
+	          }
+
+	          .mb-4 {
+	              margin-bottom: 1rem
+	          }
+
+	          .mb-6 {
+	              margin-bottom: 1.5rem
+	          }
+
+	          .mb-8 {
+	              margin-bottom: 2rem
+	          }
+
+	          .mr-1 {
+	              margin-right: 0.25rem
+	          }
+
+	          .mr-1\.5 {
+	              margin-right: 0.375rem
+	          }
+
+	          .mr-2 {
+	              margin-right: 0.5rem
+	          }
+
+	          .mt-1 {
+	              margin-top: 0.25rem
+	          }
+
+	          .mt-2 {
+	              margin-top: 0.5rem
+	          }
+
+	          .mt-auto {
+	              margin-top: auto
+	          }
+
+	          .ml-auto {
+	              margin-left: auto
+	          }
+
+	          .mr-3 {
+	              margin-right: 0.75rem
+	          }
+
+	          .mb-1 {
+	              margin-bottom: 0.25rem
+	          }
+
+	          .ml-1\.5 {
+	              margin-left: 0.375rem
+	          }
+
+	          .mt-0\.5 {
+	              margin-top: 0.125rem
+	          }
+
+	          .block {
+	              display: block
+	          }
+
+	          .flex {
+	              display: flex
+	          }
+
+	          .inline-flex {
+	              display: inline-flex
+	          }
+
+	          .grid {
+	              display: grid
+	          }
+
+	          .hidden {
+	              display: none
+	          }
+
+	          .aspect-\[4\/3\] {
+	              aspect-ratio: 4/3
+	          }
+
+	          .h-48 {
+	              height: 12rem
+	          }
+
+	          .h-8 {
+	              height: 2rem
+	          }
+
+	          .h-full {
+	              height: 100%
+	          }
+
+	          .h-10 {
+	              height: 2.5rem
+	          }
+
+	          .h-5 {
+	              height: 1.25rem
+	          }
+
+	          .w-8 {
+	              width: 2rem
+	          }
+
+	          .w-full {
+	              width: 100%
+	          }
+
+	          .w-10 {
+	              width: 2.5rem
+	          }
+
+	          .w-5 {
+	              width: 1.25rem
+	          }
+
+	          .max-w-4xl {
+	              max-width: 56rem
+	          }
+
+	          .flex-1 {
+	              flex: 1 1 0%
+	          }
+
+	          .flex-shrink-0 {
+	              flex-shrink: 0
+	          }
+
+	          .transform {
+	              transform: translate(var(--tw-translate-x), var(--tw-translate-y)) rotate(var(--tw-rotate)) skewX(var(--tw-skew-x)) skewY(var(--tw-skew-y)) scaleX(var(--tw-scale-x)) scaleY(var(--tw-scale-y))
+	          }
+
+	          .cursor-pointer {
+	              cursor: pointer
+	          }
+
+	          .select-none {
+	              -webkit-user-select: none;
+	              user-select: none
+	          }
+
+	          .grid-cols-1 {
+	              grid-template-columns: repeat(1, minmax(0, 1fr))
+	          }
+
+	          .flex-col {
+	              flex-direction: column
+	          }
+
+	          .items-start {
+	              align-items: flex-start
+	          }
+
+	          .items-center {
+	              align-items: center
+	          }
+
+	          .justify-center {
+	              justify-content: center
+	          }
+
+	          .justify-between {
+	              justify-content: space-between
+	          }
+
+	          .justify-around {
+	              justify-content: space-around
+	          }
+
+	          .gap-2 {
+	              gap: 0.5rem
+	          }
+
+	          .gap-3 {
+	              gap: 0.75rem
+	          }
+
+	          .gap-4 {
+	              gap: 1rem
+	          }
+
+	          .gap-6 {
+	              gap: 1.5rem
+	          }
+
+	          .space-y-1> :not([hidden])~ :not([hidden]) {
+	              --tw-space-y-reverse: 0;
+	              margin-top: calc(0.25rem * calc(1 - var(--tw-space-y-reverse)));
+	              margin-bottom: calc(0.25rem * var(--tw-space-y-reverse))
+	          }
+
+	          .space-y-2> :not([hidden])~ :not([hidden]) {
+	              --tw-space-y-reverse: 0;
+	              margin-top: calc(0.5rem * calc(1 - var(--tw-space-y-reverse)));
+	              margin-bottom: calc(0.5rem * var(--tw-space-y-reverse))
+	          }
+
+	          .space-y-3> :not([hidden])~ :not([hidden]) {
+	              --tw-space-y-reverse: 0;
+	              margin-top: calc(0.75rem * calc(1 - var(--tw-space-y-reverse)));
+	              margin-bottom: calc(0.75rem * var(--tw-space-y-reverse))
+	          }
+
+	          .space-y-6> :not([hidden])~ :not([hidden]) {
+	              --tw-space-y-reverse: 0;
+	              margin-top: calc(1.5rem * calc(1 - var(--tw-space-y-reverse)));
+	              margin-bottom: calc(1.5rem * var(--tw-space-y-reverse))
+	          }
+
+	          .overflow-hidden {
+	              overflow: hidden
+	          }
+
+	          .rounded {
+	              border-radius: 0.25rem
+	          }
+
+	          .rounded-2xl {
+	              border-radius: 1rem
+	          }
+
+	          .rounded-full {
+	              border-radius: 9999px
+	          }
+
+	          .rounded-lg {
+	              border-radius: 0.5rem
+	          }
+
+	          .rounded-xl {
+	              border-radius: 0.75rem
+	          }
+
+	          .rounded-md {
+	              border-radius: 0.375rem
+	          }
+
+	          .border {
+	              border-width: 1px
+	          }
+
+	          .border-2 {
+	              border-width: 2px
+	          }
+
+	          .border-b {
+	              border-bottom-width: 1px
+	          }
+
+	          .border-l {
+	              border-left-width: 1px
+	          }
+
+	          .border-l-4 {
+	              border-left-width: 4px
+	          }
+
+	          .border-t {
+	              border-top-width: 1px
+	          }
+
+	          .border-amber-100 {
+	              --tw-border-opacity: 1;
+	              border-color: rgb(254 243 199 / var(--tw-border-opacity, 1))
+	          }
+
+	          .border-amber-200 {
+	              --tw-border-opacity: 1;
+	              border-color: rgb(253 230 138 / var(--tw-border-opacity, 1))
+	          }
+
+	          .border-indigo-100 {
+	              --tw-border-opacity: 1;
+	              border-color: rgb(224 231 255 / var(--tw-border-opacity, 1))
+	          }
+
+	          .border-red-100 {
+	              --tw-border-opacity: 1;
+	              border-color: rgb(254 226 226 / var(--tw-border-opacity, 1))
+	          }
+
+	          .border-red-200 {
+	              --tw-border-opacity: 1;
+	              border-color: rgb(254 202 202 / var(--tw-border-opacity, 1))
+	          }
+
+	          .border-red-500 {
+	              --tw-border-opacity: 1;
+	              border-color: rgb(239 68 68 / var(--tw-border-opacity, 1))
+	          }
+
+	          .border-rose-100 {
+	              --tw-border-opacity: 1;
+	              border-color: rgb(255 228 230 / var(--tw-border-opacity, 1))
+	          }
+
+	          .border-rose-500 {
+	              --tw-border-opacity: 1;
+	              border-color: rgb(244 63 94 / var(--tw-border-opacity, 1))
+	          }
+
+	          .border-sky-100 {
+	              --tw-border-opacity: 1;
+	              border-color: rgb(224 242 254 / var(--tw-border-opacity, 1))
+	          }
+
+	          .border-slate-100 {
+	              --tw-border-opacity: 1;
+	              border-color: rgb(241 245 249 / var(--tw-border-opacity, 1))
+	          }
+
+	          .border-slate-200 {
+	              --tw-border-opacity: 1;
+	              border-color: rgb(226 232 240 / var(--tw-border-opacity, 1))
+	          }
+
+	          .border-slate-600 {
+	              --tw-border-opacity: 1;
+	              border-color: rgb(71 85 105 / var(--tw-border-opacity, 1))
+	          }
+
+	          .border-white\/20 {
+	              border-color: rgb(255 255 255 / 0.2)
+	          }
+
+	          .border-slate-300 {
+	              --tw-border-opacity: 1;
+	              border-color: rgb(203 213 225 / var(--tw-border-opacity, 1))
+	          }
+
+	          .border-transparent {
+	              border-color: transparent
+	          }
+
+	          .border-l-indigo-400 {
+	              --tw-border-opacity: 1;
+	              border-left-color: rgb(129 140 248 / var(--tw-border-opacity, 1))
+	          }
+
+	          .bg-amber-100 {
+	              --tw-bg-opacity: 1;
+	              background-color: rgb(254 243 199 / var(--tw-bg-opacity, 1))
+	          }
+
+	          .bg-amber-50 {
+	              --tw-bg-opacity: 1;
+	              background-color: rgb(255 251 235 / var(--tw-bg-opacity, 1))
+	          }
+
+	          .bg-indigo-50 {
+	              --tw-bg-opacity: 1;
+	              background-color: rgb(238 242 255 / var(--tw-bg-opacity, 1))
+	          }
+
+	          .bg-indigo-600 {
+	              --tw-bg-opacity: 1;
+	              background-color: rgb(79 70 229 / var(--tw-bg-opacity, 1))
+	          }
+
+	          .bg-red-50 {
+	              --tw-bg-opacity: 1;
+	              background-color: rgb(254 242 242 / var(--tw-bg-opacity, 1))
+	          }
+
+	          .bg-rose-50 {
+	              --tw-bg-opacity: 1;
+	              background-color: rgb(255 241 242 / var(--tw-bg-opacity, 1))
+	          }
+
+	          .bg-sky-50 {
+	              --tw-bg-opacity: 1;
+	              background-color: rgb(240 249 255 / var(--tw-bg-opacity, 1))
+	          }
+
+	          .bg-sky-600 {
+	              --tw-bg-opacity: 1;
+	              background-color: rgb(2 132 199 / var(--tw-bg-opacity, 1))
+	          }
+
+	          .bg-slate-100 {
+	              --tw-bg-opacity: 1;
+	              background-color: rgb(241 245 249 / var(--tw-bg-opacity, 1))
+	          }
+
+	          .bg-slate-50 {
+	              --tw-bg-opacity: 1;
+	              background-color: rgb(248 250 252 / var(--tw-bg-opacity, 1))
+	          }
+
+	          .bg-slate-800 {
+	              --tw-bg-opacity: 1;
+	              background-color: rgb(30 41 59 / var(--tw-bg-opacity, 1))
+	          }
+
+	          .bg-slate-900 {
+	              --tw-bg-opacity: 1;
+	              background-color: rgb(15 23 42 / var(--tw-bg-opacity, 1))
+	          }
+
+	          .bg-white {
+	              --tw-bg-opacity: 1;
+	              background-color: rgb(255 255 255 / var(--tw-bg-opacity, 1))
+	          }
+
+	          .bg-white\/10 {
+	              background-color: rgb(255 255 255 / 0.1)
+	          }
+
+	          .bg-white\/20 {
+	              background-color: rgb(255 255 255 / 0.2)
+	          }
+
+	          .bg-white\/95 {
+	              background-color: rgb(255 255 255 / 0.95)
+	          }
+
+	          .bg-blue-100 {
+	              --tw-bg-opacity: 1;
+	              background-color: rgb(219 234 254 / var(--tw-bg-opacity, 1))
+	          }
+
+	          .bg-emerald-100 {
+	              --tw-bg-opacity: 1;
+	              background-color: rgb(209 250 229 / var(--tw-bg-opacity, 1))
+	          }
+
+	          .bg-rose-100 {
+	              --tw-bg-opacity: 1;
+	              background-color: rgb(255 228 230 / var(--tw-bg-opacity, 1))
+	          }
+
+	          .bg-sky-100 {
+	              --tw-bg-opacity: 1;
+	              background-color: rgb(224 242 254 / var(--tw-bg-opacity, 1))
+	          }
+
+	          .bg-violet-100 {
+	              --tw-bg-opacity: 1;
+	              background-color: rgb(237 233 254 / var(--tw-bg-opacity, 1))
+	          }
+
+	          .object-contain {
+	              object-fit: contain
+	          }
+
+	          .object-cover {
+	              object-fit: cover
+	          }
+
+	          .p-1\.5 {
+	              padding: 0.375rem
+	          }
+
+	          .p-2 {
+	              padding: 0.5rem
+	          }
+
+	          .p-3 {
+	              padding: 0.75rem
+	          }
+
+	          .p-4 {
+	              padding: 1rem
+	          }
+
+	          .p-5 {
+	              padding: 1.25rem
+	          }
+
+	          .p-6 {
+	              padding: 1.5rem
+	          }
+
+	          .p-2\.5 {
+	              padding: 0.625rem
+	          }
+
+	          .px-2 {
+	              padding-left: 0.5rem;
+	              padding-right: 0.5rem
+	          }
+
+	          .px-3 {
+	              padding-left: 0.75rem;
+	              padding-right: 0.75rem
+	          }
+
+	          .px-4 {
+	              padding-left: 1rem;
+	              padding-right: 1rem
+	          }
+
+	          .px-5 {
+	              padding-left: 1.25rem;
+	              padding-right: 1.25rem
+	          }
+
+	          .px-6 {
+	              padding-left: 1.5rem;
+	              padding-right: 1.5rem
+	          }
+
+	          .py-1 {
+	              padding-top: 0.25rem;
+	              padding-bottom: 0.25rem
+	          }
+
+	          .py-1\.5 {
+	              padding-top: 0.375rem;
+	              padding-bottom: 0.375rem
+	          }
+
+	          .py-2 {
+	              padding-top: 0.5rem;
+	              padding-bottom: 0.5rem
+	          }
+
+	          .py-2\.5 {
+	              padding-top: 0.625rem;
+	              padding-bottom: 0.625rem
+	          }
+
+	          .py-3 {
+	              padding-top: 0.75rem;
+	              padding-bottom: 0.75rem
+	          }
+
+	          .py-4 {
+	              padding-top: 1rem;
+	              padding-bottom: 1rem
+	          }
+
+	          .py-6 {
+	              padding-top: 1.5rem;
+	              padding-bottom: 1.5rem
+	          }
+
+	          .pb-1 {
+	              padding-bottom: 0.25rem
+	          }
+
+	          .pb-24 {
+	              padding-bottom: 6rem
+	          }
+
+	          .text-center {
+	              text-align: center
+	          }
+
+	          .text-right {
+	              text-align: right
+	          }
+
+	          .font-mono {
+	              font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace
+	          }
+
+	          .text-2xl {
+	              font-size: 1.5rem;
+	              line-height: 2rem
+	          }
+
+	          .text-3xl {
+	              font-size: 1.875rem;
+	              line-height: 2.25rem
+	          }
+
+	          .text-\[10px\] {
+	              font-size: 10px
+	          }
+
+	          .text-\[11px\] {
+	              font-size: 11px
+	          }
+
+	          .text-\[16px\] {
+	              font-size: 16px
+	          }
+
+	          .text-\[20px\] {
+	              font-size: 20px
+	          }
+
+	          .text-base {
+	              font-size: 1rem;
+	              line-height: 1.5rem
+	          }
+
+	          .text-lg {
+	              font-size: 1.125rem;
+	              line-height: 1.75rem
+	          }
+
+	          .text-sm {
+	              font-size: 0.875rem;
+	              line-height: 1.25rem
+	          }
+
+	          .text-xl {
+	              font-size: 1.25rem;
+	              line-height: 1.75rem
+	          }
+
+	          .text-xs {
+	              font-size: 0.75rem;
+	              line-height: 1rem
+	          }
+
+	          .text-\[14px\] {
+	              font-size: 14px
+	          }
+
+	          .font-bold {
+	              font-weight: 700
+	          }
+
+	          .uppercase {
+	              text-transform: uppercase
+	          }
+
+	          .leading-relaxed {
+	              line-height: 1.625
+	          }
+
+	          .leading-tight {
+	              line-height: 1.25
+	          }
+
+	          .tracking-wide {
+	              letter-spacing: 0.025em
+	          }
+
+	          .tracking-wider {
+	              letter-spacing: 0.05em
+	          }
+
+	          .tracking-widest {
+	              letter-spacing: 0.1em
+	          }
+
+	          .text-amber-600 {
+	              --tw-text-opacity: 1;
+	              color: rgb(217 119 6 / var(--tw-text-opacity, 1))
+	          }
+
+	          .text-amber-800 {
+	              --tw-text-opacity: 1;
+	              color: rgb(146 64 14 / var(--tw-text-opacity, 1))
+	          }
+
+	          .text-blue-600 {
+	              --tw-text-opacity: 1;
+	              color: rgb(37 99 235 / var(--tw-text-opacity, 1))
+	          }
+
+	          .text-indigo-400 {
+	              --tw-text-opacity: 1;
+	              color: rgb(129 140 248 / var(--tw-text-opacity, 1))
+	          }
+
+	          .text-indigo-700 {
+	              --tw-text-opacity: 1;
+	              color: rgb(67 56 202 / var(--tw-text-opacity, 1))
+	          }
+
+	          .text-indigo-800 {
+	              --tw-text-opacity: 1;
+	              color: rgb(55 48 163 / var(--tw-text-opacity, 1))
+	          }
+
+	          .text-red-600 {
+	              --tw-text-opacity: 1;
+	              color: rgb(220 38 38 / var(--tw-text-opacity, 1))
+	          }
+
+	          .text-red-800 {
+	              --tw-text-opacity: 1;
+	              color: rgb(153 27 27 / var(--tw-text-opacity, 1))
+	          }
+
+	          .text-rose-500 {
+	              --tw-text-opacity: 1;
+	              color: rgb(244 63 94 / var(--tw-text-opacity, 1))
+	          }
+
+	          .text-rose-600 {
+	              --tw-text-opacity: 1;
+	              color: rgb(225 29 72 / var(--tw-text-opacity, 1))
+	          }
+
+	          .text-rose-700 {
+	              --tw-text-opacity: 1;
+	              color: rgb(190 18 60 / var(--tw-text-opacity, 1))
+	          }
+
+	          .text-rose-800 {
+	              --tw-text-opacity: 1;
+	              color: rgb(159 18 57 / var(--tw-text-opacity, 1))
+	          }
+
+	          .text-sky-100 {
+	              --tw-text-opacity: 1;
+	              color: rgb(224 242 254 / var(--tw-text-opacity, 1))
+	          }
+
+	          .text-sky-300 {
+	              --tw-text-opacity: 1;
+	              color: rgb(125 211 252 / var(--tw-text-opacity, 1))
+	          }
+
+	          .text-sky-600 {
+	              --tw-text-opacity: 1;
+	              color: rgb(2 132 199 / var(--tw-text-opacity, 1))
+	          }
+
+	          .text-sky-700 {
+	              --tw-text-opacity: 1;
+	              color: rgb(3 105 161 / var(--tw-text-opacity, 1))
+	          }
+
+	          .text-sky-800 {
+	              --tw-text-opacity: 1;
+	              color: rgb(7 89 133 / var(--tw-text-opacity, 1))
+	          }
+
+	          .text-slate-400 {
+	              --tw-text-opacity: 1;
+	              color: rgb(148 163 184 / var(--tw-text-opacity, 1))
+	          }
+
+	          .text-slate-500 {
+	              --tw-text-opacity: 1;
+	              color: rgb(100 116 139 / var(--tw-text-opacity, 1))
+	          }
+
+	          .text-slate-600 {
+	              --tw-text-opacity: 1;
+	              color: rgb(71 85 105 / var(--tw-text-opacity, 1))
+	          }
+
+	          .text-slate-700 {
+	              --tw-text-opacity: 1;
+	              color: rgb(51 65 85 / var(--tw-text-opacity, 1))
+	          }
+
+	          .text-slate-800 {
+	              --tw-text-opacity: 1;
+	              color: rgb(30 41 59 / var(--tw-text-opacity, 1))
+	          }
+
+	          .text-white {
+	              --tw-text-opacity: 1;
+	              color: rgb(255 255 255 / var(--tw-text-opacity, 1))
+	          }
+
+	          .text-emerald-600 {
+	              --tw-text-opacity: 1;
+	              color: rgb(5 150 105 / var(--tw-text-opacity, 1))
+	          }
+
+	          .text-indigo-600 {
+	              --tw-text-opacity: 1;
+	              color: rgb(79 70 229 / var(--tw-text-opacity, 1))
+	          }
+
+	          .text-slate-300 {
+	              --tw-text-opacity: 1;
+	              color: rgb(203 213 225 / var(--tw-text-opacity, 1))
+	          }
+
+	          .text-violet-600 {
+	              --tw-text-opacity: 1;
+	              color: rgb(124 58 237 / var(--tw-text-opacity, 1))
+	          }
+
+	          .antialiased {
+	              -webkit-font-smoothing: antialiased;
+	              -moz-osx-font-smoothing: grayscale
+	          }
+
+	          .opacity-80 {
+	              opacity: 0.8
+	          }
+
+	          .opacity-0 {
+	              opacity: 0
+	          }
+
+	          .shadow-\[0_-4px_10px_-1px_rgba\(0\2c 0\2c 0\2c 0\.05\)\] {
+	              --tw-shadow: 0 -4px 10px -1px rgba(0, 0, 0, 0.05);
+	              --tw-shadow-colored: 0 -4px 10px -1px var(--tw-shadow-color);
+	              box-shadow: var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000), var(--tw-shadow)
+	          }
+
+	          .shadow-lg {
+	              --tw-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+	              --tw-shadow-colored: 0 10px 15px -3px var(--tw-shadow-color), 0 4px 6px -4px var(--tw-shadow-color);
+	              box-shadow: var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000), var(--tw-shadow)
+	          }
+
+	          .shadow-sm {
+	              --tw-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+	              --tw-shadow-colored: 0 1px 2px 0 var(--tw-shadow-color);
+	              box-shadow: var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000), var(--tw-shadow)
+	          }
+
+	          .shadow-inner {
+	              --tw-shadow: inset 0 2px 4px 0 rgb(0 0 0 / 0.05);
+	              --tw-shadow-colored: inset 0 2px 4px 0 var(--tw-shadow-color);
+	              box-shadow: var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000), var(--tw-shadow)
+	          }
+
+	          .ring-1 {
+	              --tw-ring-offset-shadow: var(--tw-ring-inset) 0 0 0 var(--tw-ring-offset-width) var(--tw-ring-offset-color);
+	              --tw-ring-shadow: var(--tw-ring-inset) 0 0 0 calc(1px + var(--tw-ring-offset-width)) var(--tw-ring-color);
+	              box-shadow: var(--tw-ring-offset-shadow), var(--tw-ring-shadow), var(--tw-shadow, 0 0 #0000)
+	          }
+
+	          .ring-slate-200 {
+	              --tw-ring-opacity: 1;
+	              --tw-ring-color: rgb(226 232 240 / var(--tw-ring-opacity, 1))
+	          }
+
+	          .drop-shadow-lg {
+	              --tw-drop-shadow: drop-shadow(0 10px 8px rgb(0 0 0 / 0.04)) drop-shadow(0 4px 3px rgb(0 0 0 / 0.1));
+	              filter: var(--tw-blur) var(--tw-brightness) var(--tw-contrast) var(--tw-grayscale) var(--tw-hue-rotate) var(--tw-invert) var(--tw-saturate) var(--tw-sepia) var(--tw-drop-shadow)
+	          }
+
+	          .backdrop-blur {
+	              --tw-backdrop-blur: blur(8px);
+	              -webkit-backdrop-filter: var(--tw-backdrop-blur) var(--tw-backdrop-brightness) var(--tw-backdrop-contrast) var(--tw-backdrop-grayscale) var(--tw-backdrop-hue-rotate) var(--tw-backdrop-invert) var(--tw-backdrop-opacity) var(--tw-backdrop-saturate) var(--tw-backdrop-sepia);
+	              backdrop-filter: var(--tw-backdrop-blur) var(--tw-backdrop-brightness) var(--tw-backdrop-contrast) var(--tw-backdrop-grayscale) var(--tw-backdrop-hue-rotate) var(--tw-backdrop-invert) var(--tw-backdrop-opacity) var(--tw-backdrop-saturate) var(--tw-backdrop-sepia)
+	          }
+
+	          .backdrop-blur-md {
+	              --tw-backdrop-blur: blur(12px);
+	              -webkit-backdrop-filter: var(--tw-backdrop-blur) var(--tw-backdrop-brightness) var(--tw-backdrop-contrast) var(--tw-backdrop-grayscale) var(--tw-backdrop-hue-rotate) var(--tw-backdrop-invert) var(--tw-backdrop-opacity) var(--tw-backdrop-saturate) var(--tw-backdrop-sepia);
+	              backdrop-filter: var(--tw-backdrop-blur) var(--tw-backdrop-brightness) var(--tw-backdrop-contrast) var(--tw-backdrop-grayscale) var(--tw-backdrop-hue-rotate) var(--tw-backdrop-invert) var(--tw-backdrop-opacity) var(--tw-backdrop-saturate) var(--tw-backdrop-sepia)
+	          }
+
+	          .transition {
+	              transition-property: color, background-color, border-color, fill, stroke, opacity, box-shadow, transform, filter, -webkit-text-decoration-color, -webkit-backdrop-filter;
+	              transition-property: color, background-color, border-color, text-decoration-color, fill, stroke, opacity, box-shadow, transform, filter, backdrop-filter;
+	              transition-property: color, background-color, border-color, text-decoration-color, fill, stroke, opacity, box-shadow, transform, filter, backdrop-filter, -webkit-text-decoration-color, -webkit-backdrop-filter;
+	              transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+	              transition-duration: 150ms
+	          }
+
+	          .transition-all {
+	              transition-property: all;
+	              transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+	              transition-duration: 150ms
+	          }
+
+	          .duration-700 {
+	              transition-duration: 700ms
+	          }
+
+	          .hover\:-translate-y-0\.5:hover {
+	              --tw-translate-y: -0.125rem;
+	              transform: translate(var(--tw-translate-x), var(--tw-translate-y)) rotate(var(--tw-rotate)) skewX(var(--tw-skew-x)) skewY(var(--tw-skew-y)) scaleX(var(--tw-scale-x)) scaleY(var(--tw-scale-y))
+	          }
+
+	          .hover\:border-amber-400:hover {
+	              --tw-border-opacity: 1;
+	              border-color: rgb(251 191 36 / var(--tw-border-opacity, 1))
+	          }
+
+	          .hover\:border-blue-400:hover {
+	              --tw-border-opacity: 1;
+	              border-color: rgb(96 165 250 / var(--tw-border-opacity, 1))
+	          }
+
+	          .hover\:border-emerald-400:hover {
+	              --tw-border-opacity: 1;
+	              border-color: rgb(52 211 153 / var(--tw-border-opacity, 1))
+	          }
+
+	          .hover\:border-rose-400:hover {
+	              --tw-border-opacity: 1;
+	              border-color: rgb(251 113 133 / var(--tw-border-opacity, 1))
+	          }
+
+	          .hover\:border-sky-400:hover {
+	              --tw-border-opacity: 1;
+	              border-color: rgb(56 189 248 / var(--tw-border-opacity, 1))
+	          }
+
+	          .hover\:border-violet-400:hover {
+	              --tw-border-opacity: 1;
+	              border-color: rgb(167 139 250 / var(--tw-border-opacity, 1))
+	          }
+
+	          .hover\:bg-red-100:hover {
+	              --tw-bg-opacity: 1;
+	              background-color: rgb(254 226 226 / var(--tw-bg-opacity, 1))
+	          }
+
+	          .hover\:bg-red-50:hover {
+	              --tw-bg-opacity: 1;
+	              background-color: rgb(254 242 242 / var(--tw-bg-opacity, 1))
+	          }
+
+	          .hover\:bg-slate-50:hover {
+	              --tw-bg-opacity: 1;
+	              background-color: rgb(248 250 252 / var(--tw-bg-opacity, 1))
+	          }
+
+	          .hover\:bg-slate-700:hover {
+	              --tw-bg-opacity: 1;
+	              background-color: rgb(51 65 85 / var(--tw-bg-opacity, 1))
+	          }
+
+	          .hover\:bg-white:hover {
+	              --tw-bg-opacity: 1;
+	              background-color: rgb(255 255 255 / var(--tw-bg-opacity, 1))
+	          }
+
+	          .hover\:underline:hover {
+	              -webkit-text-decoration-line: underline;
+	              text-decoration-line: underline
+	          }
+
+	          .hover\:shadow-md:hover {
+	              --tw-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+	              --tw-shadow-colored: 0 4px 6px -1px var(--tw-shadow-color), 0 2px 4px -2px var(--tw-shadow-color);
+	              box-shadow: var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000), var(--tw-shadow)
+	          }
+
+	          .group:hover .group-hover\:scale-105 {
+	              --tw-scale-x: 1.05;
+	              --tw-scale-y: 1.05;
+	              transform: translate(var(--tw-translate-x), var(--tw-translate-y)) rotate(var(--tw-rotate)) skewX(var(--tw-skew-x)) skewY(var(--tw-skew-y)) scaleX(var(--tw-scale-x)) scaleY(var(--tw-scale-y))
+	          }
+
+	          .group:hover .group-hover\:scale-110 {
+	              --tw-scale-x: 1.1;
+	              --tw-scale-y: 1.1;
+	              transform: translate(var(--tw-translate-x), var(--tw-translate-y)) rotate(var(--tw-rotate)) skewX(var(--tw-skew-x)) skewY(var(--tw-skew-y)) scaleX(var(--tw-scale-x)) scaleY(var(--tw-scale-y))
+	          }
+
+	          .group:hover .group-hover\:text-amber-500 {
+	              --tw-text-opacity: 1;
+	              color: rgb(245 158 11 / var(--tw-text-opacity, 1))
+	          }
+
+	          .group:hover .group-hover\:text-blue-500 {
+	              --tw-text-opacity: 1;
+	              color: rgb(59 130 246 / var(--tw-text-opacity, 1))
+	          }
+
+	          .group:hover .group-hover\:text-emerald-500 {
+	              --tw-text-opacity: 1;
+	              color: rgb(16 185 129 / var(--tw-text-opacity, 1))
+	          }
+
+	          .group:hover .group-hover\:text-indigo-500 {
+	              --tw-text-opacity: 1;
+	              color: rgb(99 102 241 / var(--tw-text-opacity, 1))
+	          }
+
+	          .group:hover .group-hover\:text-rose-500 {
+	              --tw-text-opacity: 1;
+	              color: rgb(244 63 94 / var(--tw-text-opacity, 1))
+	          }
+
+	          .group:hover .group-hover\:text-sky-500 {
+	              --tw-text-opacity: 1;
+	              color: rgb(14 165 233 / var(--tw-text-opacity, 1))
+	          }
+
+	          .group:hover .group-hover\:text-violet-500 {
+	              --tw-text-opacity: 1;
+	              color: rgb(139 92 246 / var(--tw-text-opacity, 1))
+	          }
+
+	          .group:hover .group-hover\:text-slate-500 {
+	              --tw-text-opacity: 1;
+	              color: rgb(100 116 139 / var(--tw-text-opacity, 1))
+	          }
+
+	          @media (min-width: 640px) {
+	              .sm\:grid-cols-2 {
+	                  grid-template-columns: repeat(2, minmax(0, 1fr))
+	              }
+	          }
+
+	          @media (min-width: 768px) {
+	              .md\:flex {
+	                  display: flex
+	              }
+
+	              .md\:hidden {
+	                  display: none
+	              }
+
+	              .md\:aspect-\[2\/1\] {
+	                  aspect-ratio: 2/1
+	              }
+
+	              .md\:h-60 {
+	                  height: 15rem
+	              }
+
+	              .md\:h-auto {
+	                  height: auto
+	              }
+
+	              .md\:w-1\/3 {
+	                  width: 33.333333%
+	              }
+
+	              .md\:grid-cols-2 {
+	                  grid-template-columns: repeat(2, minmax(0, 1fr))
+	              }
+
+	              .md\:flex-row {
+	                  flex-direction: row
+	              }
+
+	              .md\:pb-12 {
+	                  padding-bottom: 3rem
+	              }
+
+	              .md\:text-5xl {
+	                  font-size: 3rem;
+	                  line-height: 1
+	              }
+	          }
+
+	          @media (min-width: 1024px) {
+	              .lg\:grid-cols-3 {
+	                  grid-template-columns: repeat(3, minmax(0, 1fr))
+	              }
+	          }
 	</style>
 	<script charset="UTF-8" src="https://maps.googleapis.com/maps-api-v3/api/js/63/5d/intl/zh_tw/common.js" type="text/javascript">
 	</script> 
@@ -2354,295 +2354,295 @@
 						</div>
 					</div>
 					<style>
-					                   .map-btn {
-					                       background-color: #f8f9fa;
-					                       border: 1px solid #ddd;
-					                       padding: 8px 15px;
-					                       margin: 2px;
-					                       border-radius: 20px;
-					                       cursor: pointer;
-					                       transition: 0.3s;
-					                   }
+					                                  .map-btn {
+					                                      background-color: #f8f9fa;
+					                                      border: 1px solid #ddd;
+					                                      padding: 8px 15px;
+					                                      margin: 2px;
+					                                      border-radius: 20px;
+					                                      cursor: pointer;
+					                                      transition: 0.3s;
+					                                  }
 
-					                   .map-btn:hover,
-					                   .map-btn:focus {
-					                       background-color: #007bff;
-					                       color: white;
-					                   }
+					                                  .map-btn:hover,
+					                                  .map-btn:focus {
+					                                      background-color: #007bff;
+					                                      color: white;
+					                                  }
 					</style>
-					<script async defer src="https://maps.googleapis.com/maps/api/js?key=AIzaSyB5cjr3fF7WrQq3de1FhJRkd8NCIjD3-Ng&amp;callback=initMap">
+					<script async defer src="https://maps.googleapis.com/maps/api/js?key=AIzaSyB5cjr3fF7WrQq3de1FhJRkd8NCIjD3-Ng&callback=initMap">
 					</script> 
 					<script>
-					                   let map;
-					                   let markers = [];
-					                   let flightPath = null;
+					                                  let map;
+					                                  let markers = [];
+					                                  let flightPath = null;
 
-					                   // 行程資料庫 (包含經緯度與資訊)
-					                   const tourData = {
-					                       1: [{
-					                               lat: 34.8584,
-					                               lng: 136.8054,
-					                               title: "中部國際機場",
-					                               info: "起點：CI154 抵達"
-					                           },
-					                           {
-					                               lat: 35.1709,
-					                               lng: 136.8816,
-					                               title: "名古屋 (午餐)",
-					                               info: "炸蝦飯糰"
-					                           },
-					                           {
-					                               lat: 35.4526,
-					                               lng: 137.4128,
-					                               title: "惠那峽",
-					                               info: "斷崖絕壁遊覽"
-					                           },
-					                           {
-					                               lat: 35.5268,
-					                               lng: 137.5681,
-					                               title: "馬籠宿",
-					                               info: "江戶風情驛站"
-					                           },
-					                           {
-					                               lat: 36.0645,
-					                               lng: 138.2635,
-					                               title: "蓼科 RESORT",
-					                               info: "住宿：溫泉飯店"
-					                           }
-					                       ],
-					                       2: [{
-					                               lat: 36.0645,
-					                               lng: 138.2635,
-					                               title: "蓼科 RESORT",
-					                               info: "出發"
-					                           },
-					                           {
-					                               lat: 36.7327,
-					                               lng: 138.4621,
-					                               title: "地獄谷野猿公苑",
-					                               info: "雪猴泡湯 (步行4km)"
-					                           },
-					                           {
-					                               lat: 36.6938,
-					                               lng: 138.3153,
-					                               title: "小布施",
-					                               info: "栗子之鄉午餐"
-					                           },
-					                           {
-					                               lat: 36.6617,
-					                               lng: 138.1878,
-					                               title: "善光寺",
-					                               info: "國寶參拜"
-					                           },
-					                           {
-					                               lat: 36.4815,
-					                               lng: 138.1465,
-					                               title: "圓山莊",
-					                               info: "住宿：上山田溫泉"
-					                           }
-					                       ],
-					                       3: [{
-					                               lat: 36.4815,
-					                               lng: 138.1465,
-					                               title: "圓山莊",
-					                               info: "出發"
-					                           },
-					                           {
-					                               lat: 36.1408,
-					                               lng: 137.2596,
-					                               title: "高山三之町",
-					                               info: "飛驒小京都"
-					                           },
-					                           {
-					                               lat: 36.2561,
-					                               lng: 136.9043,
-					                               title: "白川鄉合掌村",
-					                               info: "世界遺產童話村"
-					                           },
-					                           {
-					                               lat: 36.5621,
-					                               lng: 136.6627,
-					                               title: "兼六園",
-					                               info: "日本三大名園"
-					                           },
-					                           {
-					                               lat: 36.5627,
-					                               lng: 136.6540,
-					                               title: "金澤香林坊",
-					                               info: "日本北陸最繁華的商圈"
-					                           },
-					                           {
-					                               lat: 36.5606,
-					                               lng: 136.6534,
-					                               title: "Hotel Amanek 金澤",
-					                               info: "住宿：金澤市區"
-					                           }
-					                       ],
-					                       4: [{
-					                               lat: 36.5606,
-					                               lng: 136.6534,
-					                               title: "Hotel Amanek 金澤",
-					                               info: "出發"
-					                           },
-					                           {
-					                               lat: 36.5686,
-					                               lng: 136.9850,
-					                               title: "庄川峽",
-					                               info: "雪景遊船"
-					                           },
-					                           {
-					                               lat: 35.7534,
-					                               lng: 136.9615,
-					                               title: "郡上八幡城",
-					                               info: "天空之城"
-					                           },
-					                           {
-					                               lat: 35.6366,
-					                               lng: 136.9174,
-					                               title: "美濃白鳥/長良川鐵道",
-					                               info: "鐵道體驗"
-					                           },
-					                           {
-					                               lat: 35.1664,
-					                               lng: 136.8888,
-					                               title: "Kuretake Inn 名古屋",
-					                               info: "住宿：納屋橋"
-					                           }
-					                       ],
-					                       5: [{
-					                               lat: 35.1664,
-					                               lng: 136.8888,
-					                               title: "Kuretake Inn 名古屋",
-					                               info: "早晨出發"
-					                           },
-					                           {
-					                               lat: 34.8584,
-					                               lng: 136.8054,
-					                               title: "中部國際機場",
-					                               info: "CI155 返程"
-					                           }
-					                       ]
-					                   };
+					                                  // 行程資料庫 (包含經緯度與資訊)
+					                                  const tourData = {
+					                                      1: [{
+					                                              lat: 34.8584,
+					                                              lng: 136.8054,
+					                                              title: "中部國際機場",
+					                                              info: "起點：CI154 抵達"
+					                                          },
+					                                          {
+					                                              lat: 35.1709,
+					                                              lng: 136.8816,
+					                                              title: "名古屋 (午餐)",
+					                                              info: "炸蝦飯糰"
+					                                          },
+					                                          {
+					                                              lat: 35.4526,
+					                                              lng: 137.4128,
+					                                              title: "惠那峽",
+					                                              info: "斷崖絕壁遊覽"
+					                                          },
+					                                          {
+					                                              lat: 35.5268,
+					                                              lng: 137.5681,
+					                                              title: "馬籠宿",
+					                                              info: "江戶風情驛站"
+					                                          },
+					                                          {
+					                                              lat: 36.0645,
+					                                              lng: 138.2635,
+					                                              title: "蓼科 RESORT",
+					                                              info: "住宿：溫泉飯店"
+					                                          }
+					                                      ],
+					                                      2: [{
+					                                              lat: 36.0645,
+					                                              lng: 138.2635,
+					                                              title: "蓼科 RESORT",
+					                                              info: "出發"
+					                                          },
+					                                          {
+					                                              lat: 36.7327,
+					                                              lng: 138.4621,
+					                                              title: "地獄谷野猿公苑",
+					                                              info: "雪猴泡湯 (步行4km)"
+					                                          },
+					                                          {
+					                                              lat: 36.6938,
+					                                              lng: 138.3153,
+					                                              title: "小布施",
+					                                              info: "栗子之鄉午餐"
+					                                          },
+					                                          {
+					                                              lat: 36.6617,
+					                                              lng: 138.1878,
+					                                              title: "善光寺",
+					                                              info: "國寶參拜"
+					                                          },
+					                                          {
+					                                              lat: 36.4815,
+					                                              lng: 138.1465,
+					                                              title: "圓山莊",
+					                                              info: "住宿：上山田溫泉"
+					                                          }
+					                                      ],
+					                                      3: [{
+					                                              lat: 36.4815,
+					                                              lng: 138.1465,
+					                                              title: "圓山莊",
+					                                              info: "出發"
+					                                          },
+					                                          {
+					                                              lat: 36.1408,
+					                                              lng: 137.2596,
+					                                              title: "高山三之町",
+					                                              info: "飛驒小京都"
+					                                          },
+					                                          {
+					                                              lat: 36.2561,
+					                                              lng: 136.9043,
+					                                              title: "白川鄉合掌村",
+					                                              info: "世界遺產童話村"
+					                                          },
+					                                          {
+					                                              lat: 36.5621,
+					                                              lng: 136.6627,
+					                                              title: "兼六園",
+					                                              info: "日本三大名園"
+					                                          },
+					                                          {
+					                                              lat: 36.5627,
+					                                              lng: 136.6540,
+					                                              title: "金澤香林坊",
+					                                              info: "日本北陸最繁華的商圈"
+					                                          },
+					                                          {
+					                                              lat: 36.5606,
+					                                              lng: 136.6534,
+					                                              title: "Hotel Amanek 金澤",
+					                                              info: "住宿：金澤市區"
+					                                          }
+					                                      ],
+					                                      4: [{
+					                                              lat: 36.5606,
+					                                              lng: 136.6534,
+					                                              title: "Hotel Amanek 金澤",
+					                                              info: "出發"
+					                                          },
+					                                          {
+					                                              lat: 36.5686,
+					                                              lng: 136.9850,
+					                                              title: "庄川峽",
+					                                              info: "雪景遊船"
+					                                          },
+					                                          {
+					                                              lat: 35.7534,
+					                                              lng: 136.9615,
+					                                              title: "郡上八幡城",
+					                                              info: "天空之城"
+					                                          },
+					                                          {
+					                                              lat: 35.6366,
+					                                              lng: 136.9174,
+					                                              title: "美濃白鳥/長良川鐵道",
+					                                              info: "鐵道體驗"
+					                                          },
+					                                          {
+					                                              lat: 35.1664,
+					                                              lng: 136.8888,
+					                                              title: "Kuretake Inn 名古屋",
+					                                              info: "住宿：納屋橋"
+					                                          }
+					                                      ],
+					                                      5: [{
+					                                              lat: 35.1664,
+					                                              lng: 136.8888,
+					                                              title: "Kuretake Inn 名古屋",
+					                                              info: "早晨出發"
+					                                          },
+					                                          {
+					                                              lat: 34.8584,
+					                                              lng: 136.8054,
+					                                              title: "中部國際機場",
+					                                              info: "CI155 返程"
+					                                          }
+					                                      ]
+					                                  };
 
-					                   function initMap() {
-					                       // 初始化地圖，中心點設在北陸地區
-					                       map = new google.maps.Map(document.getElementById("map"), {
-					                           zoom: 8,
-					                           center: {
-					                               lat: 36.0,
-					                               lng: 137.5
-					                           },
-					                           styles: [ // 選用：簡潔風格樣式，可刪除
-					                               {
-					                                   featureType: "poi",
-					                                   elementType: "labels",
-					                                   stylers: [{
-					                                       visibility: "off"
-					                                   }]
-					                               }
-					                           ]
-					                       });
-					                       showAll(); // 預設顯示全行程
-					                   }
+					                                  function initMap() {
+					                                      // 初始化地圖，中心點設在北陸地區
+					                                      map = new google.maps.Map(document.getElementById("map"), {
+					                                          zoom: 8,
+					                                          center: {
+					                                              lat: 36.0,
+					                                              lng: 137.5
+					                                          },
+					                                          styles: [ // 選用：簡潔風格樣式，可刪除
+					                                              {
+					                                                  featureType: "poi",
+					                                                  elementType: "labels",
+					                                                  stylers: [{
+					                                                      visibility: "off"
+					                                                  }]
+					                                              }
+					                                          ]
+					                                      });
+					                                      showAll(); // 預設顯示全行程
+					                                  }
 
-					                   function clearMap() {
-					                       for (let i = 0; i < markers.length; i++) {
-					                           markers[i].setMap(null);
-					                       }
-					                       markers = [];
-					                       if (flightPath) {
-					                           flightPath.setMap(null);
-					                       }
-					                   }
+					                                  function clearMap() {
+					                                      for (let i = 0; i < markers.length; i++) {
+					                                          markers[i].setMap(null);
+					                                      }
+					                                      markers = [];
+					                                      if (flightPath) {
+					                                          flightPath.setMap(null);
+					                                      }
+					                                  }
 
-					                   function setDay(day) {
-					                       clearMap();
-					                       const locations = tourData[day];
-					                       const pathCoordinates = [];
-					                       const bounds = new google.maps.LatLngBounds();
+					                                  function setDay(day) {
+					                                      clearMap();
+					                                      const locations = tourData[day];
+					                                      const pathCoordinates = [];
+					                                      const bounds = new google.maps.LatLngBounds();
 
-					                       locations.forEach((loc, index) => {
-					                           // 建立標記
-					                           const marker = new google.maps.Marker({
-					                               position: {
-					                                   lat: loc.lat,
-					                                   lng: loc.lng
-					                               },
-					                               map: map,
-					                               label: (index + 1).toString(), // 標示順序 1, 2, 3...
-					                               title: loc.title
-					                           });
+					                                      locations.forEach((loc, index) => {
+					                                          // 建立標記
+					                                          const marker = new google.maps.Marker({
+					                                              position: {
+					                                                  lat: loc.lat,
+					                                                  lng: loc.lng
+					                                              },
+					                                              map: map,
+					                                              label: (index + 1).toString(), // 標示順序 1, 2, 3...
+					                                              title: loc.title
+					                                          });
 
-					                           // 點擊顯示資訊視窗
-					                           const infowindow = new google.maps.InfoWindow({
-					                               content: `<strong>${loc.title}<\/strong><br>${loc.info}<br><a href="https://www.google.com/maps/dir/?api=1&destination=${loc.lat},${loc.lng}" target="_blank">導航至此<\/a>`
-					                           });
-					                           marker.addListener("click", () => {
-					                               infowindow.open(map, marker);
-					                           });
+					                                          // 點擊顯示資訊視窗
+					                                          const infowindow = new google.maps.InfoWindow({
+					                                              content: `<strong>${loc.title}<\/strong><br>${loc.info}<br><a href="https://www.google.com/maps/dir/?api=1&destination=${loc.lat},${loc.lng}" target="_blank">導航至此<\/a>`
+					                                          });
+					                                          marker.addListener("click", () => {
+					                                              infowindow.open(map, marker);
+					                                          });
 
-					                           markers.push(marker);
-					                           pathCoordinates.push({
-					                               lat: loc.lat,
-					                               lng: loc.lng
-					                           });
-					                           bounds.extend({
-					                               lat: loc.lat,
-					                               lng: loc.lng
-					                           });
-					                       });
+					                                          markers.push(marker);
+					                                          pathCoordinates.push({
+					                                              lat: loc.lat,
+					                                              lng: loc.lng
+					                                          });
+					                                          bounds.extend({
+					                                              lat: loc.lat,
+					                                              lng: loc.lng
+					                                          });
+					                                      });
 
-					                       // 繪製路徑線
-					                       flightPath = new google.maps.Polyline({
-					                           path: pathCoordinates,
-					                           geodesic: true,
-					                           strokeColor: "#FF0000",
-					                           strokeOpacity: 1.0,
-					                           strokeWeight: 2
-					                       });
-					                       flightPath.setMap(map);
+					                                      // 繪製路徑線
+					                                      flightPath = new google.maps.Polyline({
+					                                          path: pathCoordinates,
+					                                          geodesic: true,
+					                                          strokeColor: "#FF0000",
+					                                          strokeOpacity: 1.0,
+					                                          strokeWeight: 2
+					                                      });
+					                                      flightPath.setMap(map);
 
-					                       // 自動調整地圖範圍以顯示所有點
-					                       map.fitBounds(bounds);
-					                   }
+					                                      // 自動調整地圖範圍以顯示所有點
+					                                      map.fitBounds(bounds);
+					                                  }
 
-					                   function showAll() {
-					                       clearMap();
-					                       const bounds = new google.maps.LatLngBounds();
-					                       // 遍歷所有天數把點都畫上去（這裡簡化只畫點，不畫複雜線條以免混亂）
-					                       for (let day in tourData) {
-					                           tourData[day].forEach(loc => {
-					                               const marker = new google.maps.Marker({
-					                                   position: {
-					                                       lat: loc.lat,
-					                                       lng: loc.lng
-					                                   },
-					                                   map: map,
-					                                   title: loc.title,
-					                                   icon: {
-					                                       path: google.maps.SymbolPath.CIRCLE,
-					                                       scale: 5,
-					                                       fillColor: "#007bff",
-					                                       fillOpacity: 0.8,
-					                                       strokeWeight: 1
-					                                   }
-					                               });
-					                               markers.push(marker);
-					                               bounds.extend({
-					                                   lat: loc.lat,
-					                                   lng: loc.lng
-					                               });
-					                           });
-					                       }
-					                       map.fitBounds(bounds);
-					                   }
+					                                  function showAll() {
+					                                      clearMap();
+					                                      const bounds = new google.maps.LatLngBounds();
+					                                      // 遍歷所有天數把點都畫上去（這裡簡化只畫點，不畫複雜線條以免混亂）
+					                                      for (let day in tourData) {
+					                                          tourData[day].forEach(loc => {
+					                                              const marker = new google.maps.Marker({
+					                                                  position: {
+					                                                      lat: loc.lat,
+					                                                      lng: loc.lng
+					                                                  },
+					                                                  map: map,
+					                                                  title: loc.title,
+					                                                  icon: {
+					                                                      path: google.maps.SymbolPath.CIRCLE,
+					                                                      scale: 5,
+					                                                      fillColor: "#007bff",
+					                                                      fillOpacity: 0.8,
+					                                                      strokeWeight: 1
+					                                                  }
+					                                              });
+					                                              markers.push(marker);
+					                                              bounds.extend({
+					                                                  lat: loc.lat,
+					                                                  lng: loc.lng
+					                                              });
+					                                          });
+					                                      }
+					                                      map.fitBounds(bounds);
+					                                  }
 					</script>
 					<p class="text-sm text-slate-500 mt-1">點擊下方按鈕可直接開啟 Google Maps 導航</p>
 				</div><!-- Map Image Replacement -->
 				<div class="relative w-full aspect-[4/3] md:aspect-[2/1] rounded-2xl overflow-hidden mb-6 bg-slate-100 border border-slate-200 shadow-inner group"><img alt="Route Map" class="w-full h-full object-contain" onerror="this.style.opacity='0.5'" src="map_img.png"></div><!-- Deep Links Grid -->
 				<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
 					<!-- Hotels (New) -->
-					 <a class="flex items-center p-4 bg-white border border-l-4 border-l-indigo-400 border-slate-200 hover:shadow-md rounded-xl transition group" href="https://www.google.com/maps/search/?api=1&amp;query=Tateshina+Resort+Hotel" target="_blank"><span class="w-10 h-10 rounded-full bg-indigo-50 text-indigo-600 flex items-center justify-center mr-3 group-hover:scale-110 transition"><span class="material-symbols-outlined text-lg">hotel</span></span>
+					<a class="flex items-center p-4 bg-white border border-l-4 border-l-indigo-400 border-slate-200 hover:shadow-md rounded-xl transition group" href="https://www.google.com/maps/search/?api=1&amp;query=Tateshina+Resort+Hotel" target="_blank"><span class="w-10 h-10 rounded-full bg-indigo-50 text-indigo-600 flex items-center justify-center mr-3 group-hover:scale-110 transition"><span class="material-symbols-outlined text-lg">hotel</span></span>
 					<div>
 						<div class="font-bold text-slate-700 text-sm">
 							蓼科 RESORT
@@ -2760,425 +2760,438 @@
 		</div>
 	</main>
 	<script>
-	       // --- 1. Checklist Data ---
-	       const checklistData = {
-	           carry: [{
-	                   id: "c_passport",
-	                   text: "護照 (效期>6個月)",
-	                   sub: "建議多帶一份影本或翻拍",
-	                   highlight: true,
-	                   icon: "menu_book"
-	               },
-	               {
-	                   id: "c_lighter",
-	                   text: "打火機 (限1個，非藍焰防風打火機)",
-	                   sub: "必須隨身！嚴禁托運",
-	                   highlight: true,
-	                   icon: "local_fire_department"
-	               },
-	               {
-	                   id: "c_mask",
-	                   text: "口罩",
-	                   sub: "防疫與保暖",
-	                   icon: "masks"
-	               },
-	               {
-	                   id: "c_sanitizer",
-	                   text: "乾洗手 (<100ml)",
-	                   sub: "防疫必備，注意容量",
-	                   icon: "sanitizer"
-	               },
-	               {
-	                   id: "c_lipbalm",
-	                   text: "護唇膏",
-	                   sub: "日本乾燥必備",
-	                   icon: "face"
-	               },
-	               {
-	                   id: "c_thermos",
-	                   text: "保溫瓶",
-	                   sub: "安檢前需倒空",
-	                   icon: "water_bottle"
-	               },
-	               {
-	                   id: "c_cash",
-	                   text: "日幣現金",
-	                   sub: "約¥3-5萬，分開放",
-	                   icon: "payments"
-	               },
-	               {
-	                   id: "c_tip",
-	                   text: "導遊領隊小費",
-	                   sub: "台幣現金 $1500 (放錢包)",
-	                   highlight: false,
-	                   icon: "attach_money"
-	               },
-	               {
-	                   id: "c_card",
-	                   text: "信用卡 (JCB/Visa)",
-	                   sub: "JCB在日本好用",
-	                   icon: "credit_card"
-	               },
-	               {
-	                   id: "c_power",
-	                   text: "行動電源 (必備)",
-	                   sub: "嚴禁托運！建議帶2顆，全程禁止使用！",
-	                   highlight: true,
-	                   icon: "battery_charging_full"
-	               },
-	               {
-	                   id: "c_bt",
-	                   text: "藍牙耳機",
-	                   sub: "充電盒含鋰電池，務必隨身",
-	                   highlight: true,
-	                   icon: "headphones"
-	               },
-	               {
-	                   id: "c_esim",
-	                   text: "eSIM QR Code",
-	                   sub: "截圖存手機相簿",
-	                   icon: "qr_code"
-	               },
-	               {
-	                   id: "c_wifi",
-	                   text: "手機/翻譯App",
-	                   sub: "預先下載地圖",
-	                   icon: "smartphone"
-	               },
-	               {
-	                   id: "c_pen",
-	                   text: "原子筆 (1支)",
-	                   sub: "機上填表用",
-	                   icon: "edit"
-	               },
-	               {
-	                   id: "c_warm",
-	                   text: "薄外套/圍巾",
-	                   sub: "機上/機場調溫"
-	               },
-	               {
-	                   id: "c_warm2",
-	                   text: "護身符",
-	                   sub: "保平安"
-	               },
-	               {
-	                   id: "c_warm2",
-	                   text: "暖暖包",
-	                   sub: "未開封的一次性暖暖包"
-	               },
-	               {
-	                   id: "c_warm3",
-	                   text: "鞋子",
-	                   sub: "防寒鞋，直接穿出門"
-	               }
-	           ],
-	           checked: [{
-	                   id: "k_bag",
-	                   text: "購物袋 (摺疊)",
-	                   sub: "裝戰利品或髒衣物",
-	                   icon: "shopping_bag"
-	               },
-	               {
-	                   id: "k_cigs",
-	                   text: "香菸",
-	                   sub: "注意入境規定 (限1條)",
-	                   icon: "smoking_rooms"
-	               },
-	               {
-	                   id: "k_mask",
-	                   text: "口罩 (備用)",
-	                   sub: "防疫與保暖",
-	                   icon: "masks"
-	               },
-	               {
-	                   id: "k_charger",
-	                   text: "手機/手錶充電器",
-	                   sub: "線材與插頭 (無電池)",
-	                   icon: "electrical_services"
-	               },
-	               {
-	                   id: "k_jacket",
-	                   text: "防風羽絨外套 (必備)",
-	                   sub: "若穿不下請放行李箱",
-	                   highlight: true,
-	                   icon: "checkroom"
-	               },
-	               {
-	                   id: "k_accessories",
-	                   text: "保暖三寶",
-	                   sub: "毛帽(蓋耳)/圍巾/防水手套",
-	                   highlight: true,
-	                   icon: "snowing"
-	               },
-	               {
-	                   id: "k_inner",
-	                   text: "發熱衣 (Heattech)",
-	                   sub: "3-4件，貼身穿",
-	                   icon: "laundry"
-	               },
-	               {
-	                   id: "k_top",
-	                   text: "毛衣/刷毛上衣",
-	                   sub: "3件，中層保暖",
-	                   icon: "dry_cleaning"
-	               },
-	               {
-	                   id: "k_pants",
-	                   text: "保暖長褲/刷毛褲",
-	                   sub: "3件",
-	                   icon: "checkroom"
-	               },
-	               {
-	                   id: "k_underwear",
-	                   text: "免洗內褲/襪子",
-	                   sub: "5天份，襪子要厚",
-	                   icon: "checkroom"
-	               },
-	               {
-	                   id: "k_toilet",
-	                   text: "盥洗用品",
-	                   sub: "牙刷/牙膏/洗面乳",
-	                   icon: "toothbrush"
-	               },
-	               {
-	                   id: "k_lotion",
-	                   text: "保濕用品 (乳液)",
-	                   sub: "日本極乾，必備",
-	                   highlight: true,
-	                   icon: "face"
-	               },
-	               {
-	                   id: "k_liquid",
-	                   text: "液體類 (>100ml)",
-	                   sub: "化妝水/果凍/布丁",
-	                   highlight: true,
-	                   icon: "water_drop"
-	               },
-	               {
-	                   id: "k_tool",
-	                   text: "修容組 (刀剪)",
-	                   sub: "鼻毛刀/刮鬍刀務必托運",
-	                   icon: "content_cut"
-	               },
-	               {
-	                   id: "k_umb",
-	                   text: "摺疊傘",
-	                   sub: "防濕雪/雨",
-	                   icon: "umbrella"
-	               },
-	               {
-	                   id: "k_supp",
-	                   text: "保健食品",
-	                   sub: "維他命等 (建議原包裝)",
-	                   icon: "pill"
-	               },
-	               {
-	                   id: "k_resttime",
-	                   text: "休足時間",
-	                   sub: "藉由貼敷達到足部清涼、放鬆的效果",
-	                   icon: "pill"
-	               },
-	               {
-	                   id: "k_anessa",
-	                   text: "安耐曬",
-	                   sub: "防曬保護",
-	                   icon: ""
-	               },
-	               {
-	                   id: "k_camera",
-	                   text: "拍立得",
-	                   sub: "",
-	                   icon: "camera"
-	               },
-	               {
-	                   id: "k_Anti-slipshoecovers",
-	                   text: "防滑鞋套",
-	                   sub: "",
-	                   icon: ""
-	               }
-	           ],
-	           meds: [{
-	                   id: "m_chronic",
-	                   text: "慢性處方籤藥品",
-	                   sub: "帶足量+備用3天 (建議隨身帶一份證明)",
-	                   highlight: true
-	               },
-	               {
-	                   id: "m_cold",
-	                   text: "綜合感冒藥",
-	                   sub: "伏冒/百保能"
-	               },
-	               {
-	                   id: "m_pain",
-	                   text: "止痛退燒藥",
-	                   sub: "EVE/普拿疼"
-	               },
-	               {
-	                   id: "m_stomach",
-	                   text: "腸胃藥",
-	                   sub: "若元錠/胃散"
-	               },
-	               {
-	                   id: "m_car",
-	                   text: "暈車藥",
-	                   sub: "山路多必備",
-	                   highlight: true
-	               },
-	               {
-	                   id: "m_Colchicine",
-	                   text: "秋水仙素",
-	                   sub: "減輕痛風疼痛的消炎藥",
-	                   highlight: true
-	               }
-	           ]
-	       };
+	          // --- 1. Checklist Data ---
+	          const checklistData = {
+	              carry: [{
+	                      id: "c_passport",
+	                      text: "護照 (效期>6個月)",
+	                      sub: "建議多帶一份影本或翻拍",
+	                      highlight: true,
+	                      icon: "menu_book"
+	                  },
+	                  {
+	                      id: "c_lighter",
+	                      text: "打火機 (限1個，非藍焰防風打火機)",
+	                      sub: "必須隨身！嚴禁托運",
+	                      highlight: true,
+	                      icon: "local_fire_department"
+	                  },
+	                  {
+	                      id: "c_mask",
+	                      text: "口罩",
+	                      sub: "防疫與保暖",
+	                      icon: "masks"
+	                  },
+	                  {
+	                      id: "c_sanitizer",
+	                      text: "乾洗手 (<100ml)",
+	                      sub: "防疫必備，注意容量",
+	                      icon: "sanitizer"
+	                  },
+	                  {
+	                      id: "c_lipbalm",
+	                      text: "護唇膏",
+	                      sub: "日本乾燥必備",
+	                      icon: "face"
+	                  },
+	                  {
+	                      id: "c_thermos",
+	                      text: "保溫瓶",
+	                      sub: "安檢前需倒空",
+	                      icon: "water_bottle"
+	                  },
+	                  {
+	                      id: "c_cash",
+	                      text: "日幣現金",
+	                      sub: "約¥3-5萬，分開放",
+	                      icon: "payments"
+	                  },
+	                  {
+	                      id: "c_tip",
+	                      text: "導遊領隊小費",
+	                      sub: "台幣現金 $1500 (放錢包)",
+	                      highlight: false,
+	                      icon: "attach_money"
+	                  },
+	                  {
+	                      id: "c_card",
+	                      text: "信用卡 (JCB/Visa)",
+	                      sub: "JCB在日本好用",
+	                      icon: "credit_card"
+	                  },
+	                  {
+	                      id: "c_power",
+	                      text: "行動電源 (必備)",
+	                      sub: "嚴禁托運！建議帶2顆，全程禁止使用！",
+	                      highlight: true,
+	                      icon: "battery_charging_full"
+	                  },
+	                  {
+	                      id: "c_bt",
+	                      text: "藍牙耳機",
+	                      sub: "充電盒含鋰電池，務必隨身",
+	                      highlight: true,
+	                      icon: "headphones"
+	                  },
+	                  {
+	                      id: "c_esim",
+	                      text: "eSIM QR Code",
+	                      sub: "截圖存手機相簿",
+	                      icon: "qr_code"
+	                  },
+	                  {
+	                      id: "c_wifi",
+	                      text: "手機/翻譯App",
+	                      sub: "預先下載地圖",
+	                      icon: "smartphone"
+	                  },
+	                  {
+	                      id: "c_pen",
+	                      text: "原子筆 (1支)",
+	                      sub: "機上填表用",
+	                      icon: "edit"
+	                  },
+	                  {
+	                      id: "c_warm",
+	                      text: "薄外套/圍巾",
+	                      sub: "機上/機場調溫",
+	                      icon: "Apparel"
+	                  },
+	                  {
+	                      id: "c_amulet",
+	                      text: "護身符",
+	                      sub: "保平安",
+	                      icon: "nest_eco_leaf"
+	                  },
+	                  {
+	                      id: "c_warm2",
+	                      text: "暖暖包",
+	                      sub: "未開封的一次性暖暖包",
+	                      icon: "Heat"
 
-	       // --- 2. Render Checklists ---
-	       function renderList(containerId, items) {
-	           const container = document.getElementById(containerId);
-	           container.innerHTML = items.map(item => `
-	               <div class="checklist-item flex items-start p-2.5 rounded-lg cursor-pointer mb-1 select-none group border border-transparent"
-	                    id="${item.id}" onclick="toggleCheck('${item.id}')">
-	                   <div class="check-box w-5 h-5 rounded-md border-2 border-slate-300 mr-3 flex items-center justify-center bg-white transition-all flex-shrink-0 mt-0.5 relative shadow-sm">
-	                       <span class="material-symbols-outlined check-icon text-[14px] text-white opacity-0 transition-all font-bold">check<\/span>
-	                   <\/div>
-	                   <div>
-	                       <div class="flex items-center">
-	                           <span class="text-sm font-bold text-slate-700 item-text ${item.highlight ? 'text-rose-600' : ''}">${item.text}<\/span>
-	                           ${item.icon ? `<span class="material-symbols-outlined text-[16px] ml-1.5 text-slate-400 group-hover:text-slate-500 transition">${item.icon}<\/span>` : ''}
-	                       <\/div>
-	                       <p class="text-[11px] text-slate-400 item-text mt-0.5 leading-tight">${item.sub}<\/p>
-	                   <\/div>
-	               <\/div>
-	           `).join('');
-	       }
+	                  },
+	                  {
+	                      id: "c_warm3",
+	                      text: "鞋子",
+	                      sub: "防寒鞋，直接穿出門",
+	                      icon: "Steps"
 
-	       renderList('list-carry', checklistData.carry);
-	       renderList('list-checked', checklistData.checked);
-	       renderList('list-meds', checklistData.meds);
+	                  }
+	              ],
+	              checked: [{
+	                      id: "k_bag",
+	                      text: "購物袋 (摺疊)",
+	                      sub: "裝戰利品或髒衣物",
+	                      icon: "shopping_bag"
+	                  },
+	                  {
+	                      id: "k_cigs",
+	                      text: "香菸",
+	                      sub: "注意入境規定 (限1條)",
+	                      icon: "smoking_rooms"
+	                  },
+	                  {
+	                      id: "k_mask",
+	                      text: "口罩 (備用)",
+	                      sub: "防疫與保暖",
+	                      icon: "masks"
+	                  },
+	                  {
+	                      id: "k_charger",
+	                      text: "手機/手錶充電器",
+	                      sub: "線材與插頭 (無電池)",
+	                      icon: "electrical_services"
+	                  },
+	                  {
+	                      id: "k_jacket",
+	                      text: "防風羽絨外套 (必備)",
+	                      sub: "若穿不下請放行李箱",
+	                      highlight: true,
+	                      icon: "checkroom"
+	                  },
+	                  {
+	                      id: "k_accessories",
+	                      text: "保暖三寶",
+	                      sub: "毛帽(蓋耳)/圍巾/防水手套",
+	                      highlight: true,
+	                      icon: "snowing"
+	                  },
+	                  {
+	                      id: "k_inner",
+	                      text: "發熱衣 (Heattech)",
+	                      sub: "3-4件，貼身穿",
+	                      icon: "laundry"
+	                  },
+	                  {
+	                      id: "k_top",
+	                      text: "毛衣/刷毛上衣",
+	                      sub: "3件，中層保暖",
+	                      icon: "dry_cleaning"
+	                  },
+	                  {
+	                      id: "k_pants",
+	                      text: "保暖長褲/刷毛褲",
+	                      sub: "3件",
+	                      icon: "checkroom"
+	                  },
+	                  {
+	                      id: "k_underwear",
+	                      text: "免洗內褲/襪子",
+	                      sub: "5天份，襪子要厚",
+	                      icon: "checkroom"
+	                  },
+	                  {
+	                      id: "k_toilet",
+	                      text: "盥洗用品",
+	                      sub: "牙刷/牙膏/洗面乳",
+	                      icon: "Cleaning_Bucket"
+	                  },
+	                  {
+	                      id: "k_lotion",
+	                      text: "保濕用品 (乳液)",
+	                      sub: "日本極乾，必備",
+	                      highlight: true,
+	                      icon: "face"
+	                  },
+	                  {
+	                      id: "k_liquid",
+	                      text: "液體類 (>100ml)",
+	                      sub: "化妝水/果凍/布丁",
+	                      highlight: true,
+	                      icon: "water_drop"
+	                  },
+	                  {
+	                      id: "k_tool",
+	                      text: "修容組 (刀剪)",
+	                      sub: "鼻毛刀/刮鬍刀務必托運",
+	                      icon: "content_cut"
+	                  },
+	                  {
+	                      id: "k_umb",
+	                      text: "摺疊傘",
+	                      sub: "防濕雪/雨",
+	                      icon: "umbrella"
+	                  },
+	                  {
+	                      id: "k_supp",
+	                      text: "保健食品",
+	                      sub: "維他命等 (建議原包裝)",
+	                      icon: "pill"
+	                  },
+	                  {
+	                      id: "k_resttime",
+	                      text: "休足時間",
+	                      sub: "藉由貼敷達到足部清涼、放鬆的效果",
+	                      icon: "pill"
+	                  },
+	                  {
+	                      id: "k_anessa",
+	                      text: "安耐曬",
+	                      sub: "防曬保護",
+	                      icon: "Sanitizer"
+	                  },
+	                  {
+	                      id: "k_camera",
+	                      text: "拍立得",
+	                      sub: "",
+	                      icon: "camera"
+	                  },
+	                  {
+	                      id: "k_Anti-slipshoecovers",
+	                      text: "防滑鞋套",
+	                      sub: "",
+	                      icon: "ice_skating"
+	                  }
+	              ],
+	              meds: [{
+	                      id: "m_chronic",
+	                      text: "慢性處方籤藥品",
+	                      sub: "帶足量+備用3天 (建議隨身帶一份證明)",
+	                      highlight: true
+	                  },
+	                  {
+	                      id: "m_cold",
+	                      text: "綜合感冒藥",
+	                      sub: "伏冒/百保能"
+	                  },
+	                  {
+	                      id: "m_pain",
+	                      text: "止痛退燒藥",
+	                      sub: "EVE/普拿疼"
+	                  },
+	                  {
+	                      id: "m_stomach",
+	                      text: "腸胃藥",
+	                      sub: "若元錠/胃散"
+	                  },
+	                  {
+	                      id: "m_car",
+	                      text: "暈車藥",
+	                      sub: "山路多必備",
+	                      highlight: true
+	                  },
+	                  {
+	                      id: "m_Colchicine",
+	                      text: "秋水仙素",
+	                      sub: "減輕痛風疼痛的消炎藥",
+	                      highlight: true
+	                  },
+	                  {
+	                      id: "m_WandShine",
+	                      text: "保養品",
+	                      sub: "痘膚潤、木瓜霜、膚潤康還有若蘭仙施",
+	                      highlight: true
+	                  }
 
-	       // --- 3. Local Storage Functions ---
-	       const STORAGE_KEY = 'japan_trip_checklist_2025';
+	              ]
+	          };
 
-	       function saveChecklistState() {
-	           const checkedItems = [];
-	           document.querySelectorAll('.checklist-item.checked').forEach(item => {
-	               checkedItems.push(item.id);
-	           });
-	           localStorage.setItem(STORAGE_KEY, JSON.stringify(checkedItems));
-	       }
+	          // --- 2. Render Checklists ---
+	          function renderList(containerId, items) {
+	              const container = document.getElementById(containerId);
+	              container.innerHTML = items.map(item => `
+	                  <div class="checklist-item flex items-start p-2.5 rounded-lg cursor-pointer mb-1 select-none group border border-transparent"
+	                       id="${item.id}" onclick="toggleCheck('${item.id}')">
+	                      <div class="check-box w-5 h-5 rounded-md border-2 border-slate-300 mr-3 flex items-center justify-center bg-white transition-all flex-shrink-0 mt-0.5 relative shadow-sm">
+	                          <span class="material-symbols-outlined check-icon text-[14px] text-white opacity-0 transition-all font-bold">check<\/span>
+	                      <\/div>
+	                      <div>
+	                          <div class="flex items-center">
+	                              <span class="text-sm font-bold text-slate-700 item-text ${item.highlight ? 'text-rose-600' : ''}">${item.text}<\/span>
+	                              ${item.icon ? `<span class="material-symbols-outlined text-[16px] ml-1.5 text-slate-400 group-hover:text-slate-500 transition">${item.icon}<\/span>` : ''}
+	                          <\/div>
+	                          <p class="text-[11px] text-slate-400 item-text mt-0.5 leading-tight">${item.sub}<\/p>
+	                      <\/div>
+	                  <\/div>
+	              `).join('');
+	          }
 
-	       function loadChecklistState() {
-	           const savedData = localStorage.getItem(STORAGE_KEY);
-	           if (savedData) {
-	               try {
-	                   const checkedItems = JSON.parse(savedData);
-	                   checkedItems.forEach(id => {
-	                       const el = document.getElementById(id);
-	                       if (el) {
-	                           el.classList.add('checked');
-	                       }
-	                   });
-	               } catch (e) {
-	                   console.error('Failed to load checklist state:', e);
-	               }
-	           }
-	       }
+	          renderList('list-carry', checklistData.carry);
+	          renderList('list-checked', checklistData.checked);
+	          renderList('list-meds', checklistData.meds);
 
-	       function clearChecklistState() {
-	           if (confirm('確定要清除所有勾選記錄嗎？此操作無法復原。')) {
-	               localStorage.removeItem(STORAGE_KEY);
-	               document.querySelectorAll('.checklist-item.checked').forEach(item => {
-	                   item.classList.remove('checked');
-	               });
-	               alert('已清除所有勾選記錄！');
-	           }
-	       }
+	          // --- 3. Local Storage Functions ---
+	          const STORAGE_KEY = 'japan_trip_checklist_2025';
 
-	       // --- 4. Interaction Logic ---
-	       function toggleCheck(id) {
-	           const el = document.getElementById(id);
-	           if (el) {
-	               el.classList.toggle('checked');
-	               if (el.classList.contains('checked')) {
-	                   el.setAttribute('data-checked', 'true');
-	               } else {
-	                   el.removeAttribute('data-checked');
-	               }
-	               saveChecklistState();
-	           }
-	       }
+	          function saveChecklistState() {
+	              const checkedItems = [];
+	              document.querySelectorAll('.checklist-item.checked').forEach(item => {
+	                  checkedItems.push(item.id);
+	              });
+	              localStorage.setItem(STORAGE_KEY, JSON.stringify(checkedItems));
+	          }
 
-	       function switchTab(tabId) {
-	           document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
-	           document.getElementById(`content-${tabId}`).classList.add('active');
+	          function loadChecklistState() {
+	              const savedData = localStorage.getItem(STORAGE_KEY);
+	              if (savedData) {
+	                  try {
+	                      const checkedItems = JSON.parse(savedData);
+	                      checkedItems.forEach(id => {
+	                          const el = document.getElementById(id);
+	                          if (el) {
+	                              el.classList.add('checked');
+	                          }
+	                      });
+	                  } catch (e) {
+	                      console.error('Failed to load checklist state:', e);
+	                  }
+	              }
+	          }
 
-	           document.querySelectorAll('.tab-btn').forEach(btn => {
-	               btn.className = "tab-btn flex-1 py-3 rounded-lg text-sm font-bold flex items-center justify-center gap-2 transition text-slate-500 hover:bg-slate-50";
-	           });
-	           const activeDesktop = document.getElementById(`tab-${tabId}`);
-	           if (activeDesktop) activeDesktop.className = "tab-btn flex-1 py-3 rounded-lg text-sm font-bold flex items-center justify-center gap-2 transition bg-sky-50 text-sky-600 shadow-sm ring-1 ring-slate-200";
+	          function clearChecklistState() {
+	              if (confirm('確定要清除所有勾選記錄嗎？此操作無法復原。')) {
+	                  localStorage.removeItem(STORAGE_KEY);
+	                  document.querySelectorAll('.checklist-item.checked').forEach(item => {
+	                      item.classList.remove('checked');
+	                  });
+	                  alert('已清除所有勾選記錄！');
+	              }
+	          }
 
-	           document.querySelectorAll('.nav-btn').forEach(btn => {
-	               btn.className = "nav-btn flex flex-col items-center text-slate-400 w-full";
-	           });
-	           const activeMobile = document.getElementById(`nav-${tabId}`);
-	           if (activeMobile) activeMobile.className = "nav-btn flex flex-col items-center text-sky-600 w-full";
+	          // --- 4. Interaction Logic ---
+	          function toggleCheck(id) {
+	              const el = document.getElementById(id);
+	              if (el) {
+	                  el.classList.toggle('checked');
+	                  if (el.classList.contains('checked')) {
+	                      el.setAttribute('data-checked', 'true');
+	                  } else {
+	                      el.removeAttribute('data-checked');
+	                  }
+	                  saveChecklistState();
+	              }
+	          }
 
-	           window.scrollTo({
-	               top: 0,
-	               behavior: 'smooth'
-	           });
-	       }
+	          function switchTab(tabId) {
+	              document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+	              document.getElementById(`content-${tabId}`).classList.add('active');
 
-	       // --- 5. Initialize on Load ---
-	       window.addEventListener('DOMContentLoaded', function() {
-	           loadChecklistState();
-	       });
+	              document.querySelectorAll('.tab-btn').forEach(btn => {
+	                  btn.className = "tab-btn flex-1 py-3 rounded-lg text-sm font-bold flex items-center justify-center gap-2 transition text-slate-500 hover:bg-slate-50";
+	              });
+	              const activeDesktop = document.getElementById(`tab-${tabId}`);
+	              if (activeDesktop) activeDesktop.className = "tab-btn flex-1 py-3 rounded-lg text-sm font-bold flex items-center justify-center gap-2 transition bg-sky-50 text-sky-600 shadow-sm ring-1 ring-slate-200";
 
-	       // --- 4. Export Function ---
-	       function downloadPage() {
-	           const clone = document.documentElement.cloneNode(true);
-	           const checkedItems = document.querySelectorAll('.checklist-item.checked');
-	           checkedItems.forEach(item => {
-	               const cloneItem = clone.querySelector(`#${item.id}`);
-	               if (cloneItem) {
-	                   cloneItem.classList.add('checked');
-	                   const box = cloneItem.querySelector('.check-box');
-	                   if (box) {
-	                       box.style.backgroundColor = '#0ea5e9';
-	                       box.style.borderColor = '#0ea5e9';
-	                   }
-	                   const icon = cloneItem.querySelector('.check-icon');
-	                   if (icon) {
-	                       icon.style.opacity = '1';
-	                       icon.style.transform = 'scale(1)';
-	                   }
-	                   const texts = cloneItem.querySelectorAll('.item-text');
-	                   texts.forEach(t => {
-	                       t.style.textDecoration = 'line-through';
-	                       t.style.color = '#94a3b8';
-	                   });
-	               }
-	           });
+	              document.querySelectorAll('.nav-btn').forEach(btn => {
+	                  btn.className = "nav-btn flex flex-col items-center text-slate-400 w-full";
+	              });
+	              const activeMobile = document.getElementById(`nav-${tabId}`);
+	              if (activeMobile) activeMobile.className = "nav-btn flex flex-col items-center text-sky-600 w-full";
 
-	           const exportBtns = clone.querySelectorAll('[onclick="downloadPage()"]');
-	           exportBtns.forEach(btn => btn.style.display = 'none');
+	              window.scrollTo({
+	                  top: 0,
+	                  behavior: 'smooth'
+	              });
+	          }
 
-	           const htmlContent = `<!DOCTYPE html>\n` + clone.outerHTML;
-	           const blob = new Blob([htmlContent], {
-	               type: 'text/html'
-	           });
-	           const url = URL.createObjectURL(blob);
-	           const a = document.createElement('a');
-	           a.href = url;
-	           const date = new Date().toISOString().split('T')[0];
-	           a.download = `Japan_Trip_Planner_v5_${date}.html`;
-	           document.body.appendChild(a);
-	           a.click();
-	           document.body.removeChild(a);
-	           URL.revokeObjectURL(url);
-	       }
+	          // --- 5. Initialize on Load ---
+	          window.addEventListener('DOMContentLoaded', function() {
+	              loadChecklistState();
+	          });
+
+	          // --- 4. Export Function ---
+	          function downloadPage() {
+	              const clone = document.documentElement.cloneNode(true);
+	              const checkedItems = document.querySelectorAll('.checklist-item.checked');
+	              checkedItems.forEach(item => {
+	                  const cloneItem = clone.querySelector(`#${item.id}`);
+	                  if (cloneItem) {
+	                      cloneItem.classList.add('checked');
+	                      const box = cloneItem.querySelector('.check-box');
+	                      if (box) {
+	                          box.style.backgroundColor = '#0ea5e9';
+	                          box.style.borderColor = '#0ea5e9';
+	                      }
+	                      const icon = cloneItem.querySelector('.check-icon');
+	                      if (icon) {
+	                          icon.style.opacity = '1';
+	                          icon.style.transform = 'scale(1)';
+	                      }
+	                      const texts = cloneItem.querySelectorAll('.item-text');
+	                      texts.forEach(t => {
+	                          t.style.textDecoration = 'line-through';
+	                          t.style.color = '#94a3b8';
+	                      });
+	                  }
+	              });
+
+	              const exportBtns = clone.querySelectorAll('[onclick="downloadPage()"]');
+	              exportBtns.forEach(btn => btn.style.display = 'none');
+
+	              const htmlContent = `<!DOCTYPE html>\n` + clone.outerHTML;
+	              const blob = new Blob([htmlContent], {
+	                  type: 'text/html'
+	              });
+	              const url = URL.createObjectURL(blob);
+	              const a = document.createElement('a');
+	              a.href = url;
+	              const date = new Date().toISOString().split('T')[0];
+	              a.download = `Japan_Trip_Planner_v5_${date}.html`;
+	              document.body.appendChild(a);
+	              a.click();
+	              document.body.removeChild(a);
+	              URL.revokeObjectURL(url);
+	          }
 	</script>
 </body>
 </html>
