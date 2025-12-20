@@ -501,11 +501,18 @@
     };
 
     function initMap() {
-        // 初始化地圖，中心點設在北陸地區
-        map = new google.maps.Map(document.getElementById("map"), {
+        // 防止重複初始化
+        if (map) return;
+        
+        // 確保 DOM 元素存在
+        const mapElement = document.getElementById("map");
+        if (!mapElement) return;
+        
+        // 初始化地圖,中心點設在北陸地區
+        map = new google.maps.Map(mapElement, {
             zoom: 8,
             center: {lat: 36.0, lng: 137.5},
-            styles: [ // 選用：簡潔風格樣式，可刪除
+            styles: [ // 選用:簡潔風格樣式,可刪除
                 {featureType: "poi", elementType: "labels", stylers: [{ visibility: "off" }]} 
             ]
         });
