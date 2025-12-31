@@ -123,14 +123,6 @@
           "id": "beard",
           "name": "鬍子熱蠟除毛(八字鬍與下巴)",
           "price": 1000,
-          "promotions": [
-            {
-              "label": "1月優惠",
-              "price": 900,
-              "start": "2026-1-01",
-              "end": "2026-1-31"
-            }
-          ]
         },
         {
           "id": "private_combo_part",
