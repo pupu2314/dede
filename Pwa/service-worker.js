@@ -1,5 +1,6 @@
-const CACHE_NAME = 'price-calculator-v26.1'; // 建議更新快取版本名稱
-// 需要被快取的檔案清單
+// 更新版本號
+const CACHE_NAME = 'price-calculator-v26.1-2'; 
+
 const urlsToCache = [
     'index.html',
     'check.html',
@@ -15,50 +16,66 @@ const urlsToCache = [
     'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js'
 ];
 
-// 1. 安裝 Service Worker
+// 1. 安裝階段：強制從網路抓取最新資源存入快取
 self.addEventListener('install', event => {
-    self.skipWaiting(); // 強制新的 Service Worker 立即啟用
+    self.skipWaiting(); 
     event.waitUntil(
-        caches.open(CACHE_NAME)
-            .then(cache => {
-                console.log('Opened cache and caching files');
-                return cache.addAll(urlsToCache);
+        caches.open(CACHE_NAME).then(cache => {
+            console.log('正在更新快取資源...');
+            // 使用 map 包裝請求，加入 cache: 'reload' 確保抓到的是伺服器上的新版
+            const cachePromises = urlsToCache.map(url => {
+                const request = new Request(url, { cache: 'reload' });
+                return fetch(request).then(response => {
+                    if (response.ok) {
+                        return cache.put(url, response);
+                    }
+                    return Promise.reject(`無法抓取資源: ${url}`);
+                }).catch(err => console.error(err));
+            });
+            return Promise.all(cachePromises);
+        })
+    );
+});
+
+// 2. 啟用階段：刪除舊快取並立即接管頁面
+self.addEventListener('activate', event => {
+    event.waitUntil(
+        Promise.all([
+            // 讓新的 Service Worker 立即控制所有頁面
+            self.clients.claim(),
+            // 清理舊版本快取
+            caches.keys().then(cacheNames => {
+                return Promise.all(
+                    cacheNames.map(cacheName => {
+                        if (cacheName !== CACHE_NAME) {
+                            console.log('刪除舊快取:', cacheName);
+                            return caches.delete(cacheName);
+                        }
+                    })
+                );
+            })
+        ])
+    );
+});
+
+// 3. 攔截請求：網路優先 (Network First)
+self.addEventListener('fetch', event => {
+    // 排除跨域或非 GET 的請求（依需求調整）
+    if (event.request.method !== 'GET') return;
+
+    event.respondWith(
+        fetch(event.request)
+            .then(networkResponse => {
+                // 成功取得網路資料，更新快取
+                const responseClone = networkResponse.clone();
+                caches.open(CACHE_NAME).then(cache => {
+                    cache.put(event.request, responseClone);
+                });
+                return networkResponse;
+            })
+            .catch(() => {
+                // 網路失敗（離線），回傳快取
+                return caches.match(event.request);
             })
     );
 });
-
-// 2. 攔截網路請求 (策略改為：網路優先，失敗才讀快取)
-// 這對 services.json 的更新比較友善
-self.addEventListener('fetch', event => {
-    event.respondWith(
-        fetch(event.request).then(networkResponse => {
-            // 如果成功從網路取得，就存入快取並回傳
-            return caches.open(CACHE_NAME).then(cache => {
-                cache.put(event.request, networkResponse.clone());
-                return networkResponse;
-            });
-        }).catch(() => {
-            // 如果網路請求失敗 (例如離線)，就從快取中尋找
-            return caches.match(event.request);
-        })
-    );
-});
-
-// 3. 啟用 Service Worker 與管理舊快取
-self.addEventListener('activate', event => {
-    const cacheWhitelist = [CACHE_NAME];
-    event.waitUntil(
-        caches.keys().then(cacheNames => {
-            return Promise.all(
-                cacheNames.map(cacheName => {
-                    // 如果快取名稱不在白名單中，就刪除它
-                    if (cacheWhitelist.indexOf(cacheName) === -1) {
-                        console.log('Deleting old cache:', cacheName);
-                        return caches.delete(cacheName);
-                    }
-                })
-            );
-        })
-    );
-});
-
