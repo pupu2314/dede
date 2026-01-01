@@ -412,3 +412,44 @@ function initCalculatorPage() {
     dom.selectAllFilteredBtn.addEventListener('click', () => selectFiltered(true));
     dom.deselectAllFilteredBtn.addEventListener('click', () => selectFiltered(false));
 }
+
+// 監聽來自 Service Worker 的訊息
+if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.addEventListener('message', event => {
+        if (event.data && event.data.type === 'SW_STATUS') {
+            showNotice(event.data.message);
+        }
+    });
+}
+
+// 簡易的通知顯示函式 (你可以改用你的 CSS 樣式)
+function showNotice(msg) {
+    let noticeDiv = document.getElementById('sw-notice');
+    if (!noticeDiv) {
+        noticeDiv = document.createElement('div');
+        noticeDiv.id = 'sw-notice';
+        // 樣式設定：固定在底部、半透明黑底白字、圓角
+        Object.assign(noticeDiv.style, {
+            position: 'fixed',
+            bottom: '20px',
+            left: '50%',
+            transform: 'translateX(-50%)',
+            backgroundColor: 'rgba(0,0,0,0.7)',
+            color: '#fff',
+            padding: '10px 20px',
+            borderRadius: '25px',
+            fontSize: '14px',
+            zIndex: '9999',
+            transition: 'opacity 0.5s'
+        });
+        document.body.appendChild(noticeDiv);
+    }
+    
+    noticeDiv.innerText = msg;
+    noticeDiv.style.opacity = '1';
+    
+    // 5秒後自動消失
+    setTimeout(() => {
+        noticeDiv.style.opacity = '0';
+    }, 5000);
+}
