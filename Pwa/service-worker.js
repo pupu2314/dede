@@ -1,5 +1,11 @@
-// 更新版本號
-const CACHE_NAME = 'price-calculator-v26.1-2'; 
+/**
+ * 穩定版 Service Worker
+ * 策略：網路優先 (Network First) 但加入超時處理
+ * 確保在離線或網路極差時能快速切換回快取
+ */
+
+const CACHE_NAME = 'price-calculator-v26.1.3';
+const OFFLINE_URL = 'index.html'; // 離線時的基本頁面
 
 const urlsToCache = [
     'index.html',
@@ -16,57 +22,47 @@ const urlsToCache = [
     'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js'
 ];
 
-// 1. 安裝階段：強制從網路抓取最新資源存入快取
+// 1. 安裝：快取必要資源
 self.addEventListener('install', event => {
-    self.skipWaiting(); 
+    self.skipWaiting();
     event.waitUntil(
         caches.open(CACHE_NAME).then(cache => {
-            console.log('正在更新快取資源...');
-            // 使用 map 包裝請求，加入 cache: 'reload' 確保抓到的是伺服器上的新版
-            const cachePromises = urlsToCache.map(url => {
-                const request = new Request(url, { cache: 'reload' });
-                return fetch(request).then(response => {
-                    if (response.ok) {
-                        return cache.put(url, response);
-                    }
-                    return Promise.reject(`無法抓取資源: ${url}`);
-                }).catch(err => console.error(err));
-            });
-            return Promise.all(cachePromises);
+            console.log('正在預載入離線資源...');
+            // 使用 reload 確保抓到最新檔案存入快取
+            return Promise.all(
+                urlsToCache.map(url => {
+                    return fetch(new Request(url, { cache: 'reload' }))
+                        .then(res => cache.put(url, res))
+                        .catch(err => console.warn(`預載入失敗: ${url}`, err));
+                })
+            );
         })
     );
 });
 
-// 2. 啟用階段：刪除舊快取並立即接管頁面
+// 2. 啟用：清理舊快取並接管
 self.addEventListener('activate', event => {
     event.waitUntil(
         Promise.all([
-            // 讓新的 Service Worker 立即控制所有頁面
             self.clients.claim(),
-            // 清理舊版本快取
-            caches.keys().then(cacheNames => {
-                return Promise.all(
-                    cacheNames.map(cacheName => {
-                        if (cacheName !== CACHE_NAME) {
-                            console.log('刪除舊快取:', cacheName);
-                            return caches.delete(cacheName);
-                        }
-                    })
-                );
-            })
+            caches.keys().then(keys => Promise.all(
+                keys.map(key => {
+                    if (key !== CACHE_NAME) return caches.delete(key);
+                })
+            ))
         ])
     );
 });
 
-// 3. 攔截請求：網路優先 (Network First)
+// 3. 攔截請求：處理網路不穩定
 self.addEventListener('fetch', event => {
-    // 排除跨域或非 GET 的請求（依需求調整）
     if (event.request.method !== 'GET') return;
 
     event.respondWith(
-        fetch(event.request)
+        // 嘗試從網路抓取，並設定超時 (例如 3 秒)
+        fetchWithTimeout(event.request, 3000)
             .then(networkResponse => {
-                // 成功取得網路資料，更新快取
+                // 如果網路成功，更新快取並回傳
                 const responseClone = networkResponse.clone();
                 caches.open(CACHE_NAME).then(cache => {
                     cache.put(event.request, responseClone);
@@ -74,8 +70,34 @@ self.addEventListener('fetch', event => {
                 return networkResponse;
             })
             .catch(() => {
-                // 網路失敗（離線），回傳快取
-                return caches.match(event.request);
+                // 如果網路超時或完全斷線，則讀取快取
+                return caches.match(event.request).then(cachedResponse => {
+                    if (cachedResponse) {
+                        return cachedResponse;
+                    }
+                    // 如果快取也沒有 (通常不應該發生)，回傳離線首頁
+                    return caches.match(OFFLINE_URL);
+                });
             })
     );
 });
+
+/**
+ * 輔助函式：幫 fetch 加上時間限制
+ * 防止在網路極慢 (2G/不穩定) 時頁面卡死
+ */
+function fetchWithTimeout(request, timeout = 3000) {
+    return new Promise((resolve, reject) => {
+        const timer = setTimeout(() => reject(new Error('網路請求超時')), timeout);
+        fetch(request).then(
+            response => {
+                clearTimeout(timer);
+                resolve(response);
+            },
+            err => {
+                clearTimeout(timer);
+                reject(err);
+            }
+        );
+    });
+}
