@@ -1,4 +1,4 @@
-const CACHE_NAME = 'price-calculator-v25.12'; // 建議更新快取版本名稱
+const CACHE_NAME = 'price-calculator-v26.1'; // 建議更新快取版本名稱
 // 需要被快取的檔案清單
 const urlsToCache = [
     'index.html',
