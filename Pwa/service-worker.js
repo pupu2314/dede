@@ -3,7 +3,7 @@
  * 策略：網路優先 (Network First) + 超時控制
  */
 
-const CACHE_NAME = 'price-calculator-v26.1.4';
+const CACHE_NAME = 'price-calculator-v26.1.5';
 const OFFLINE_URL = 'index.html';
 
 const urlsToCache = [
