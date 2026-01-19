@@ -140,15 +140,14 @@
     }
 
     // --- 特休計算邏輯 (核心) ---
-    function getLeaveEntitlementByTenure(years) {
+function getLeaveEntitlementByTenure(years) {
         if (years < 0.5) return 0;
         if (years < 1) return 3;
         if (years < 2) return 7;
         if (years < 3) return 10;
         if (years < 5) return 14;
-        if (years < 10) return 15;
-        // 10年以上，每1年加給1日，加至30日為止
-        let days = 15 + Math.floor(years - 10);
+        if (years < 10) return 15;      
+        let days = 16 + Math.floor(years - 10);
         return Math.min(days, 30);
     }
 
