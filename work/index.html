@@ -18,7 +18,7 @@
 </head>
 <body>
     <div class="container main-layout">
-        <h1 class="app-title">加班費計算機 <small>v2.6</small></h1>
+        <h1 class="app-title">加班費計算機 <small>v2.7</small></h1>
         
         <!-- 未同步提醒條 (預設隱藏) -->
         <div id="unsynced-alert" class="sync-alert-bar" style="display: none;">
@@ -30,6 +30,7 @@
         <nav class="tabs-nav">
             <button class="tab-btn" data-tab="settings">設定</button>
             <button class="tab-btn active" data-tab="punch">加班</button>
+            <button class="tab-btn" data-tab="leave">特休</button> <!-- 新增特休分頁按鈕 -->
             <button class="tab-btn" data-tab="records">紀錄</button>
             <button class="tab-btn" data-tab="backup">備份</button>
         </nav>
@@ -40,7 +41,7 @@
             <ul style="text-align: left; margin: 0.5rem 0;">
                 <li>📱 資料預設儲存在<strong>本地瀏覽器</strong>中。</li>
                 <li>☁️ <strong>免費雲端同步：</strong>支援 Google Apps Script (GAS) 同步！</li>
-                <li>⚠️ 建議每日進行雲端同步或本地備份。</li>
+                <li>🏖️ <strong>新功能：</strong>新增特休假計算與管理功能。</li>
             </ul>
             <p style="margin-top: 1rem;">請先至「設定」分頁完成基本資料，然後開始記錄！</p>
             <button id="close-welcome" class="btn-secondary btn-small" style="margin-top: 0.5rem;">我知道了</button>
@@ -54,19 +55,19 @@
                     <div class="form-group">
                         <label for="user-name">姓名 (選填)</label>
                         <input type="text" id="user-name" placeholder="例如:王小明" aria-label="使用者姓名">
-                        <small style="color: var(--secondary-color); display: block; margin-top: 0.25rem;">
-                            💡 設定姓名方便提交給人資時區分
-                        </small>
                     </div>
+                    <div class="form-group" style="background: #eef7ff; padding: 10px; border-radius: 4px; border: 1px solid #cfe2ff;">
+                        <label for="onboard-date" style="color: #0056b3;">📅 到職日期 (計算特休用)</label>
+                        <input type="date" id="onboard-date" aria-label="到職日期">
+                        <small style="color: var(--secondary-color);">* 系統將依此日期自動採用「曆年制」計算特休天數</small>
+                    </div>
+                    <hr>
                     <div class="form-group"><label>薪資類型</label><div class="radio-group"><label><input type="radio" name="salaryType" value="monthly" checked> 月薪</label><label><input type="radio" name="salaryType" value="hourly"> 時薪</label></div></div>
                     <div class="form-group"><label for="salary">薪資金額 (NTD)</label><input type="number" id="salary" min="0" step="1" placeholder="例如:40000" aria-label="薪資金額"></div>
                     <div class="form-group"><label for="hourly-rate">換算時薪 (自動)</label><input type="number" id="hourly-rate" readonly aria-label="換算後的時薪"></div>
                     <div class="form-group">
                         <label for="payday">發薪日期 (每月幾號)</label>
                         <input type="number" id="payday" min="1" max="31" value="1" placeholder="例如:15" aria-label="發薪日期">
-                        <small style="color: var(--secondary-color); display: block; margin-top: 0.25rem;">
-                            💡 設定發薪日用於計算加班費區間。例如:15日發薪代表前月15日至該月14日為一個計薪週期
-                        </small>
                     </div>
                     <hr>
                     <div class="form-group">
@@ -80,15 +81,6 @@
                     </div>
                     <button id="save-settings">儲存設定</button>
                 </div>
-            </div>
-            <div class="disclaimer" style="font-size: 0.8rem; color: var(--secondary-color); margin-top: 1.5rem; border-top: 1px solid var(--border-color); padding-top: 1rem;">
-                <h4>免責聲明與計算依據</h4>
-                <p>本工具計算結果僅供參考,實際加班費請以公司人資或會計部門計算為準。</p>
-                <p><strong>計算依據:</strong> 依據勞動基準法第24條,加班費率如下:<br>
-                • 平日延長工時: 前2小時 × 1.34倍,第3小時起 × 1.67倍<br>
-                • 休息日: 前2小時 × 1.34倍,第3-8小時 × 1.67倍,第9小時起 × 2.67倍<br>
-                • 國定假日: × 1倍(另給工資)<br>
-                • 月薪換算時薪: 月薪 ÷ 240小時</p>
             </div>
         </div>
 
@@ -129,7 +121,80 @@
             </div>
         </div>
 
-        <!-- 分頁 3: 紀錄 -->
+        <!-- 分頁 3: 特休 (新功能) -->
+        <div id="tab-leave" class="tab-content">
+            <div class="card" id="leave-summary-card">
+                <h2>特休假管理 (曆年制)</h2>
+                
+                <div id="leave-setup-hint" style="display: none; text-align: center; padding: 2rem;">
+                    <p>請先至「設定」分頁設定<strong>到職日期</strong>，以啟用特休計算功能。</p>
+                    <button class="btn-secondary" onclick="document.querySelector('[data-tab=\'settings\']').click()">前往設定</button>
+                </div>
+
+                <div id="leave-dashboard" style="display: none;">
+                    <!-- 年度概況卡片 -->
+                    <div class="leave-stats-grid">
+                        <div class="leave-stat-box current-year">
+                            <h4>今年度 (<span id="leave-current-year"></span>)</h4>
+                            <div class="stat-value"><span id="leave-current-total">0</span> <small>天</small></div>
+                            <div class="stat-desc">曆年制應給天數</div>
+                        </div>
+                        <div class="leave-stat-box last-year">
+                            <h4>去年度遞延</h4>
+                            <div class="stat-value"><span id="leave-last-remain">0</span> <small>天</small></div>
+                            <div class="stat-desc">去年未休完時數</div>
+                        </div>
+                        <div class="leave-stat-box remaining">
+                            <h4>目前剩餘</h4>
+                            <div class="stat-value highlight"><span id="leave-balance">0</span> <small>天</small></div>
+                            <div class="stat-desc">總額 - 已使用</div>
+                        </div>
+                    </div>
+
+                    <hr style="margin: 1.5rem 0;">
+
+                    <!-- 請假操作區 -->
+                    <h3>📋 登記請假</h3>
+                    <div class="grid-container single-column-grid" style="gap: 1rem;">
+                        <div class="form-group">
+                            <label>請假日期</label>
+                            <input type="date" id="leave-date">
+                        </div>
+                        <div class="form-group">
+                            <label>請假時數 (1天 = 8小時)</label>
+                            <div style="display: flex; gap: 0.5rem;">
+                                <input type="number" id="leave-hours" value="8" min="0.5" step="0.5" style="flex: 1;">
+                                <button class="btn-secondary" id="leave-btn-4h" style="flex: 0 0 auto;">半天(4h)</button>
+                                <button class="btn-secondary" id="leave-btn-8h" style="flex: 0 0 auto;">全天(8h)</button>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label>事由 (選填)</label>
+                            <input type="text" id="leave-reason" placeholder="例如: 處理私事">
+                        </div>
+                        <button id="add-leave-record">新增特休紀錄</button>
+                    </div>
+
+                    <!-- 使用紀錄列表 -->
+                    <h3 style="margin-top: 1.5rem;">📅 使用明細 (今年)</h3>
+                    <table id="leave-history-table">
+                        <thead>
+                            <tr>
+                                <th>日期</th>
+                                <th>時數</th>
+                                <th>事由</th>
+                                <th>操作</th>
+                            </tr>
+                        </thead>
+                        <tbody id="leave-history-body">
+                            <!-- JS 填充 -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- 分頁 4: 紀錄 -->
         <div id="tab-records" class="tab-content">
             <div id="capture-area" class="card">
                 <h2>加班紀錄與總覽</h2>
@@ -151,7 +216,7 @@
             </div>
         </div>
         
-        <!-- 分頁 4: 備份 (資料管理) -->
+        <!-- 分頁 5: 備份 (資料管理) -->
         <div id="tab-backup" class="tab-content">
             <div class="card">
                 <h2>資料管理</h2>
