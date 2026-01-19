@@ -1,6 +1,7 @@
 /**
- * 加班費計算機 v2.7 - JavaScript
- * - 新增特休計算功能 (曆年制)
+ * 加班費計算機 v2.8.1 - JavaScript
+ * - 實作曆年制特休「分段計給」邏輯
+ * - 實作特殊小數點進位規則
  */
 
 (function() {
@@ -46,7 +47,7 @@
     const punchStartBtn = document.getElementById('punch-start');
     const punchEndBtn = document.getElementById('punch-end');
     const forceFullCalcToggle = document.getElementById('force-full-calc-toggle');
-    const onboardDateInput = document.getElementById('onboard-date'); // 新增到職日輸入
+    const onboardDateInput = document.getElementById('onboard-date');
     
     // GAS Sync DOM
     const gasUrlInput = document.getElementById('gas-url-input');
@@ -139,7 +140,9 @@
         }, 3000);
     }
 
-    // --- 特休計算邏輯 (核心) ---
+    // --- 特休計算邏輯 (核心更新) ---
+    
+    // 依據年資取得法定特休天數
     function getLeaveEntitlementByTenure(years) {
         if (years < 0.5) return 0;
         if (years < 1) return 3;
@@ -152,112 +155,176 @@
         return Math.min(days, 30);
     }
 
-    // 計算曆年制特休天數
+    // 計算兩個日期間的「月數」與「剩餘日數」 (用於比例計算)
+    function getDurationInMonthsAndDays(startDate, endDate) {
+        // endDate is inclusive for the period, so we treat calculation as boundary based
+        // 邏輯: 從 startDate 開始，累加月份直到超過 endDate
+        let months = 0;
+        let tempDate = new Date(startDate);
+        
+        while (true) {
+            // 嘗試加一個月
+            let nextMonth = new Date(tempDate);
+            nextMonth.setMonth(nextMonth.getMonth() + 1);
+            
+            // 如果加一個月後超過了 endDate (的隔天，因為 endDate 是包含在內的)，則停止
+            // 比較基準: endDate 的 23:59:59 vs nextMonth 00:00:00
+            // 簡單作法: 比較日期物件
+            // 修正: 為了符合 (6 + 0/30) 的邏輯，如果 1/1 到 6/30，應該是 6個月 0天
+            // 1/1 + 1 month -> 2/1. 
+            // 目標是計算到 endDate (含) 的長度
+            
+            // 為了方便計算，我們將 endDate + 1 天作為終點界線
+            let boundaryDate = new Date(endDate);
+            boundaryDate.setDate(boundaryDate.getDate() + 1);
+            
+            if (nextMonth <= boundaryDate) {
+                months++;
+                tempDate = nextMonth;
+            } else {
+                break;
+            }
+        }
+        
+        // 剩餘天數
+        let boundaryDate = new Date(endDate);
+        boundaryDate.setDate(boundaryDate.getDate() + 1);
+        let diffTime = boundaryDate - tempDate;
+        let days = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+        
+        return { months, days };
+    }
+
+    // 特殊進位邏輯: 先計算至小數第2位，判斷小數第2位若大於1則進位
+    function customRound(num) {
+        // 1. 先保留兩位小數 (無條件捨去第3位以後，或四捨五入? 
+        // 依題目 "計算至小數第2位"，通常指精確算出後看第2位。
+        // 為了避免浮點數誤差，先乘1000處理)
+        
+        // 使用四捨五入到第2位作為 "計算至小數第2位" 的基礎
+        // 或者直接截斷? 依照範例 18.5 是剛好的。
+        // 假設 raw value 是 18.423... -> 18.42 -> 2>1 -> 18.5
+        
+        let rounded2 = Math.floor(num * 100) / 100; 
+        
+        // 取出小數點第2位
+        // (18.42 * 100) % 10 = 1842 % 10 = 2
+        // 處理浮點數精度問題
+        let secondDecimal = Math.floor((num * 100).toFixed(1)) % 10;
+        
+        if (secondDecimal > 1) {
+            // 第一位小數進位 (無條件進位到小數點第一位)
+            // 例如 18.42 -> 18.5
+            // Math.floor(18.42 * 10) / 10 = 18.4. 然後 + 0.1
+            return (Math.floor(num * 10) / 10) + 0.1;
+        } else {
+            // 捨去第2位
+            return Math.floor(num * 10) / 10;
+        }
+    }
+
+    // 計算曆年制特休天數 (分段計給)
     function calculateCalendarYearLeave(onboardDateStr, targetYear) {
         if (!onboardDateStr) return 0;
         const onboard = new Date(onboardDateStr);
         const yearStart = new Date(targetYear, 0, 1);
-        const yearEnd = new Date(targetYear, 11, 31);
+        const yearEnd = new Date(targetYear, 11, 31); // 12/31
         
-        // 如果今年還沒入職，天數為0
-        if (onboard > yearEnd) return 0;
+        if (onboard.getFullYear() > targetYear) return 0;
 
         // 週年日 (今年的週年日)
         let anniversary = new Date(onboard);
         anniversary.setFullYear(targetYear);
 
-        // 計算兩個時段的年資 (Period 1: 1/1 ~ Anniversary-1, Period 2: Anniversary ~ 12/31)
-        // 1. Period 1 年資: targetYear - onboardYear - 1 (尚未滿週年)
-        // 2. Period 2 年資: targetYear - onboardYear (已滿週年)
+        // 判斷分段點
+        // Period 1: 1/1 ~ 週年日前一日
+        // Period 2: 週年日 ~ 12/31
         
-        const tenurePrev = targetYear - onboard.getFullYear() - 1;
-        const tenureCurr = targetYear - onboard.getFullYear();
-
-        // 取得法規天數
-        const daysPrev = getLeaveEntitlementByTenure(Math.max(0, tenurePrev + 0.5)); // +0.5 是為了判斷是否滿半年
-        // 修正: 勞基法是用滿幾年給幾天，所以用 tenureCurr 查表即可 (但需考慮滿半年)
-        // 邏輯修正:
-        // 在 Anniversary 之前，是適用「去年的年資」
-        // 在 Anniversary 之後，是適用「今年的年資」
+        // 計算 Period 1 的年資 (滿 N-1 年，邁向 N 年) -> 應給 N-1 年年資的假 (若是第一年則為0或滿半年的假)
+        // 計算 Period 2 的年資 (滿 N 年) -> 應給 N 年年資的假
         
-        // 為了精確計算，使用天數比例
-        // 1/1 ~ 週年日前一日的天數
-        let daysInPeriod1 = 0;
-        let daysInPeriod2 = 0;
+        // 特例處理: 到職第一年 (targetYear == onboardYear)
+        // 1/1 ~ 到職日: 無
+        // 到職日 ~ 12/31: 累積年資中 (尚未滿1年，但可能滿半年)
+        // 依曆年制慣例，第一年通常給 0 或依比例給滿半年的假 (若年底前滿半年)
+        // 這裡採用標準分段公式邏輯:
         
-        if (anniversary > yearEnd) {
-            // 週年日在明年 (例如 12/31 到職)，整年都是 Period 1
-            daysInPeriod1 = 365; // 簡化
-        } else if (anniversary < yearStart) {
-            // 週年日在去年 (理論上不會發生，因為 anniversary 是設為 targetYear)
-            daysInPeriod2 = 365;
-        } else {
-            // 一般情況: 1/1 --- Anniversary --- 12/31
-            const msPerDay = 24 * 60 * 60 * 1000;
-            daysInPeriod1 = (anniversary - yearStart) / msPerDay; // 1/1 到週年日
-            daysInPeriod2 = (yearEnd - anniversary) / msPerDay + 1; // 週年日 到 12/31
+        // 取得 Period 1 適用之完整年資權利
+        // 例如 2026年計算，2020/7/1 到職。
+        // Period 1 (1/1~6/30): 年資算 5年 (滿5年未滿6年) -> 給 15 天
+        // Period 2 (7/1~12/31): 年資算 6年 (滿6年) -> 給 15 天 (5~10年都15天)
+        
+        // 取得年資整數
+        const yearsServed = targetYear - onboard.getFullYear();
+        
+        // 定義區間日期
+        let p1_start = yearStart;
+        let p1_end = new Date(anniversary); p1_end.setDate(p1_end.getDate() - 1);
+        
+        let p2_start = anniversary;
+        let p2_end = yearEnd;
+        
+        // 處理邊界 (如週年日是 1/1)
+        if (anniversary <= yearStart) {
+            p1_end = null; // 無 Period 1
+            p2_start = yearStart;
         }
         
-        const totalDaysInYear = 365 + (targetYear % 4 === 0 ? 1 : 0); // 閏年簡化判斷
+        let totalDays = 0;
 
-        // 判斷該時段適用的年資級距
-        // Period 1 的年資是 (targetYear - 1) - onboardYear
-        // Period 2 的年資是 targetYear - onboardYear
-        // 但是要處理「滿半年」的特殊情況
+        // --- 計算 Period 1 ---
+        if (p1_end && p1_end >= p1_start) {
+            // 適用年資: yearsServed - 1 (但要處理滿半年)
+            // 準確來說，這段期間的年資是 yearsServed - 1 + (fraction)
+            // 我們直接用 yearsServed - 1 來查表 "滿x年" 的天數
+            // 但如果是第1年(yearsServed=1)，P1是 0.5~1年，應給3天? 還是0?
+            // 依照勞動部範例: 
+            // 到職 106.7.1. 
+            // 107.1.1 ~ 107.6.30 (P1): 年資 0.5年. 權利 3天. 比例 6/12. -> 1.5天
+            
+            // 計算 P1 結束時的精確年資
+            let p1_tenure = (p1_end - onboard) / (365 * 24 * 60 * 60 * 1000);
+            // 查表取得該段期間 "若滿整年" 的權利 (取 floor 或是級距)
+            // 這裡邏輯要小心：分段給假是用 "該段期間所屬的年資級距總天數" * "該段佔全年的比例"
+            
+            // P1 區間所屬的年資級距: 
+            // 若 7/1 到職. 1/1~6/30 是屬於 "未滿週年" 的那一年.
+            // 級距判定: 看 P1 期間「滿了幾年」. 
+            // P1 期間皆為 yearsServed - 1 (以及加上 fraction). 
+            // 應取 getLeaveEntitlementByTenure(yearsServed - 1 + 0.5?)
+            // 正確做法：查 "滿 yearsServed - 1 年" 的假. 
+            // 特例: 若 yearsServed=1, 則 P1 是 "滿 0.5 年". 給 3 天.
+            
+            let entitlement1 = 0;
+            if (yearsServed === 1) {
+                // 檢查 P1 是否包含 "滿6個月" 的時間點
+                // 曆年制通常寬鬆認定，只要該年度有跨過 6個月門檻，該段比例就以 3 天計算
+                entitlement1 = 3; 
+            } else if (yearsServed > 0) {
+                entitlement1 = getLeaveEntitlementByTenure(yearsServed - 1);
+            }
+            
+            // 計算比例: (月 + 日/30) / 12
+            const duration = getDurationInMonthsAndDays(p1_start, p1_end);
+            const ratio = (duration.months + (duration.days / 30)) / 12;
+            
+            totalDays += entitlement1 * ratio;
+        }
+
+        // --- 計算 Period 2 ---
+        if (p2_start <= p2_end) {
+            // 適用年資: yearsServed
+            let entitlement2 = getLeaveEntitlementByTenure(yearsServed);
+            
+            // 計算比例
+            const duration = getDurationInMonthsAndDays(p2_start, p2_end);
+            const ratio = (duration.months + (duration.days / 30)) / 12;
+            
+            totalDays += entitlement2 * ratio;
+        }
         
-        // 為了簡化且符合一般曆年制試算表：
-        // 比例1 = (該年度特休天數) * (在職天數 / 365)
-        
-        // 我們直接計算兩個區段應得天數並加總
-        // 區段1 (1/1 ~ 到職日前一日): 適用「上一年度年資」的給假標準
-        // 區段2 (到職日 ~ 12/31): 適用「當年度年資」的給假標準
-        
-        // 精確年資計算 (以 Period 1 結束點和 Period 2 結束點來看)
-        // 實際上曆年制公式通常是：
-        // (上一年資給假天數 * 上一年資在今年佔的天數 / 365) + (今年資給假天數 * 今年資在今年佔的天數 / 365)
-        
-        // 重新釐清年資:
-        // 假設 2022/7/1 到職. 計算 2023 年 (targetYear)
-        // 1/1 ~ 6/30: 年資 0.5年. 適用「滿半年」標準 (3天). 佔 181 天. -> 3 * (181/365)
-        // 7/1 ~ 12/31: 年資 1年. 適用「滿1年」標準 (7天). 佔 184 天. -> 7 * (184/365)
-        
-        // 計算 Period 1 的年資 (以 Anniversary 為基準點，未滿該週年)
-        const seniority1 = (new Date(targetYear, onboard.getMonth(), onboard.getDate()) - onboard) / (365 * 24 * 60 * 60 * 1000); 
-        // 計算 Period 2 的年資 (滿該週年)
-        const seniority2 = seniority1 + 1; // 其實不用這麼複雜，直接用整數年資查表即可
-        
-        // 修正後的邏輯:
-        // 年資整數 N = targetYear - onboardYear
-        // 1/1 ~ Anniversary: 屬於第 N 年 (未滿 N+1)，享有「滿 N 年」的權利
-        // Anniversary ~ 12/31: 屬於第 N+1 年，享有「滿 N+1 年」的權利
-        
-        // 需特別處理 < 1年的情況
-        // 範例: 2023/7/1 到職
-        // 2024/1/1 ~ 6/30: 滿 0.5 年 -> 3天
-        // 2024/7/1 ~ 12/31: 滿 1 年 -> 7天
-        
-        const yearsServedAtAnniversary = targetYear - onboard.getFullYear();
-        
-        const ruleDays1 = getLeaveEntitlementByTenure(Math.max(0, yearsServedAtAnniversary - 1 + 0.01)); // 上一個級距 (用+0.01避開0)
-        // 特例: 如果是滿半年(0.5)，上面的 yearsServedAtAnniversary 是 1 (跨年了)，但 1/1~6/30 是算 0.5~1 的區間
-        
-        // 更精確的做法:
-        // Period 1 的資格認定點: Anniversary 前一天. 年資 = AnniversaryDate - OnboardDate - 1 day
-        // Period 2 的資格認定點: 12/31. 年資 = Dec31 - OnboardDate
-        
-        const p1_date = new Date(anniversary); p1_date.setDate(p1_date.getDate() - 1);
-        const p1_years = (p1_date - onboard) / (365 * 24 * 60 * 60 * 1000);
-        
-        const p2_date = yearEnd;
-        const p2_years = (p2_date - onboard) / (365 * 24 * 60 * 60 * 1000);
-        
-        const entitlement1 = getLeaveEntitlementByTenure(p1_years);
-        const entitlement2 = getLeaveEntitlementByTenure(p2_years);
-        
-        // 依比例加總
-        let total = (entitlement1 * (daysInPeriod1 / totalDaysInYear)) + (entitlement2 * (daysInPeriod2 / totalDaysInYear));
-        
-        return Math.round(total * 100) / 100; // 取小數點後兩位
+        // 套用特殊進位邏輯
+        return customRound(totalDays);
     }
 
     function renderLeaveTab() {
@@ -274,38 +341,34 @@
         const currentYear = new Date().getFullYear();
         const lastYear = currentYear - 1;
         
-        // 1. 計算應給天數
+        // 1. 計算應給天數 (使用新邏輯)
         const leaveThisYear = calculateCalendarYearLeave(onboardDate, currentYear);
         const leaveLastYear = calculateCalendarYearLeave(onboardDate, lastYear);
         
-        // 2. 計算已使用天數 (從 records 中篩選)
-        // 篩選今年的特休紀錄
+        // 2. 計算已使用天數
         const usedThisYear = records
             .filter(r => r.type === 'special_leave' && new Date(r.start).getFullYear() === currentYear)
             .reduce((sum, r) => {
-                const hours = parseFloat(r.reason.match(/(\d+(\.\d+)?)h/)?.[1] || 8); // 從備註解析時數，預設8
-                return sum + (hours / 8); // 換算成天
+                const hours = parseFloat(r.reason.match(/(\d+(\.\d+)?)h/)?.[1] || 8); 
+                return sum + (hours / 8); 
             }, 0);
 
-        // 篩選去年的特休紀錄 (用於計算遞延剩餘)
         const usedLastYear = records
             .filter(r => r.type === 'special_leave' && new Date(r.start).getFullYear() === lastYear)
             .reduce((sum, r) => sum + (parseFloat(r.reason.match(/(\d+(\.\d+)?)h/)?.[1] || 8) / 8), 0);
             
         // 3. 計算餘額
-        // 去年剩餘 = 去年應給 - 去年已休 (若 < 0 則為 0)
         let remainLastYear = Math.max(0, leaveLastYear - usedLastYear);
-        // 四捨五入到小數點2位
+        // 餘額通常也建議套用相同的進位或捨去邏輯，這裡簡單四捨五入至小數2位
         remainLastYear = Math.round(remainLastYear * 100) / 100;
         
-        // 今年總餘額 = 今年應給 + 去年遞延 - 今年已休
         const balance = (leaveThisYear + remainLastYear) - usedThisYear;
         
         // 4. 更新 UI
         document.getElementById('leave-current-year').textContent = currentYear;
-        document.getElementById('leave-current-total').textContent = leaveThisYear.toFixed(2);
-        document.getElementById('leave-last-remain').textContent = remainLastYear.toFixed(2);
-        document.getElementById('leave-balance').textContent = balance.toFixed(2);
+        document.getElementById('leave-current-total').textContent = leaveThisYear.toFixed(2).replace(/\.00$/, ''); // 去除 .00
+        document.getElementById('leave-last-remain').textContent = remainLastYear.toFixed(2).replace(/\.00$/, '');
+        document.getElementById('leave-balance').textContent = balance.toFixed(2).replace(/\.00$/, '');
         
         if (balance < 0) {
             document.getElementById('leave-balance').style.color = 'var(--danger-color)';
@@ -318,7 +381,6 @@
         tbody.innerHTML = '';
         const leaveRecords = records.filter(r => r.type === 'special_leave' && new Date(r.start).getFullYear() === currentYear);
         
-        // 排序
         leaveRecords.sort((a, b) => new Date(b.start) - new Date(a.start));
         
         if (leaveRecords.length === 0) {
@@ -328,7 +390,6 @@
                 const row = tbody.insertRow();
                 const dateStr = new Date(rec.start).toLocaleDateString();
                 const hours = rec.reason.match(/(\d+(\.\d+)?)h/)?.[1] || '8';
-                // 移除備註中的時數標記，只顯示純文字
                 const cleanReason = rec.reason.replace(/\(\d+(\.\d+)?h\)/, '').trim();
                 
                 row.innerHTML = `
@@ -355,15 +416,10 @@
             return;
         }
         
-        // 構造一個 record 物件
-        // 特休的格式： start = 日期T00:00, end = 日期T00:00 (不重要，主要是日期)
-        // type = 'special_leave'
-        // reason = '事由 (8h)' -> 把時數存在 reason 方便解析，或利用 reason 欄位
-        
         const fullReason = `${reasonVal} (${hoursVal}h)`;
         const newRecord = {
             id: `leave_${Date.now()}`,
-            start: `${dateVal}T09:00`, // 預設 9:00
+            start: `${dateVal}T09:00`,
             end: `${dateVal}T18:00`,
             type: 'special_leave',
             reason: fullReason,
@@ -372,10 +428,9 @@
         
         records.push(newRecord);
         saveRecords();
-        renderLeaveTab(); // 重新計算並顯示
-        render(); // 更新主畫面 (雖然切換 Tab 才會看到)
+        renderLeaveTab();
+        render(); // Update main UI
         
-        // 清空表單
         document.getElementById('leave-reason').value = '';
         showToast('特休紀錄已新增');
     }
@@ -388,7 +443,7 @@
                 userName: '',
                 salaryType: 'monthly',
                 salary: 0,
-                onboardDate: '', // 新增
+                onboardDate: '',
                 workStart: "09:00",
                 workEnd: "18:00",
                 breakStart: "12:00",
@@ -410,7 +465,6 @@
             document.getElementById('break-start').value = settings.breakStart;
             document.getElementById('break-end').value = settings.breakEnd;
             
-            // 載入到職日
             if (settings.onboardDate) {
                 onboardDateInput.value = settings.onboardDate;
             }
@@ -437,7 +491,7 @@
                 userName: escapeHtml(document.getElementById('user-name').value.trim()),
                 salaryType: document.querySelector('input[name="salaryType"]:checked').value,
                 salary: salary,
-                onboardDate: onboardDateInput.value, // 儲存到職日
+                onboardDate: onboardDateInput.value,
                 payday: parseInt(document.getElementById('payday').value) || 1,
                 workStart: document.getElementById('work-start').value,
                 workEnd: document.getElementById('work-end').value,
@@ -452,7 +506,6 @@
             
             alert('設定已儲存! 您現在可以開始記錄加班了。');
             
-            // 如果有設定到職日，嘗試重新渲染特休頁
             if (settings.onboardDate) {
                 renderLeaveTab();
             }
@@ -571,7 +624,6 @@
             records = records.filter(record => record.id !== id);
             saveRecords();
             render();
-            // 如果是在特休分頁刪除，也要更新特休分頁
             if (document.getElementById('tab-leave').classList.contains('active')) {
                 renderLeaveTab();
             }
@@ -581,7 +633,6 @@
     function editRecord(id) {
         const record = records.find(rec => rec.id === id);
         if (record) {
-            // 如果是特休紀錄，不支援在加班分頁編輯 (簡單起見，建議刪除重建立)
             if (record.type === 'special_leave') {
                 alert('特休紀錄請至「特休」分頁管理 (目前僅支援刪除後重新新增)');
                 switchTab('leave');
@@ -626,8 +677,6 @@
         
         const conflicts = records.filter(rec => {
             if (rec.id === newRecord.id) return false;
-            // 忽略特休紀錄的重疊檢查 (因為特休可能只請半天，但系統紀錄是全天區間，需更細緻處理)
-            // 這裡簡單處理：如果是加班紀錄，才檢查重疊
             if (rec.type === 'special_leave') return false; 
             
             const recStart = new Date(rec.start).getTime();
@@ -729,7 +778,6 @@
         document.getElementById('mode-punch').disabled = isPunchedIn;
     }
 
-    // 計算相關函式 (保持不變)
     function calculateNetOvertimeHours(record) {
         let recordStart = new Date(record.start).getTime();
         let recordEnd = new Date(record.end).getTime();
@@ -801,11 +849,10 @@
         return { start: periodStart, end: periodEnd, displayText: `${formatDate(periodStart)} ~ ${formatDate(periodEnd)}` };
     };
 
-    // --- 預設月份邏輯 ---
     function getDefaultMonthValue() {
         const today = new Date();
         const currentYear = today.getFullYear();
-        const currentMonth = today.getMonth(); // 0-11
+        const currentMonth = today.getMonth();
         const currentDay = today.getDate();
         const payday = settings.payday || 1;
 
@@ -821,7 +868,6 @@
         }
     }
 
-    // --- 檢查同步狀態 ---
     function checkSyncStatus() {
         const lastSync = localStorage.getItem(STORAGE_KEYS.LAST_SYNC) || 0;
         const lastMod = localStorage.getItem(STORAGE_KEYS.LAST_MODIFIED) || 0;
@@ -833,10 +879,8 @@
         }
     }
 
-    // 渲染相關函式
     function render() {
         const filteredRecords = filterRecords(monthFilter.value);
-        // 過濾掉特休紀錄，以免混在加班列表中
         const overtimeRecords = filteredRecords.filter(r => r.type !== 'special_leave');
         const dailyGroups = groupRecordsByDay(overtimeRecords);
         renderTable(recordsBody, dailyGroups);
@@ -844,7 +888,6 @@
         updatePayPeriodHint();
         checkSyncStatus();
         
-        // 如果當前是特休分頁，也更新特休UI
         if (document.getElementById('tab-leave').classList.contains('active')) {
             renderLeaveTab();
         }
