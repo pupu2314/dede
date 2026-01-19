@@ -1,7 +1,6 @@
 /**
- * 加班費計算機 v2.6 - JavaScript
- * - 新增 Toast 通知功能
- * - 優化同步提醒與狀態顯示
+ * 加班費計算機 v2.7 - JavaScript
+ * - 新增特休計算功能 (曆年制)
  */
 
 (function() {
@@ -47,6 +46,7 @@
     const punchStartBtn = document.getElementById('punch-start');
     const punchEndBtn = document.getElementById('punch-end');
     const forceFullCalcToggle = document.getElementById('force-full-calc-toggle');
+    const onboardDateInput = document.getElementById('onboard-date'); // 新增到職日輸入
     
     // GAS Sync DOM
     const gasUrlInput = document.getElementById('gas-url-input');
@@ -131,18 +131,256 @@
         checkSyncStatus();
     }
 
-    // --- 新增: Toast 提示功能 ---
     function showToast(message, type = 'info') {
         toastEl.textContent = message;
         toastEl.className = 'toast show ' + type;
-        
-        // 3秒後自動消失
         setTimeout(() => {
             toastEl.className = toastEl.className.replace('show', '');
         }, 3000);
     }
 
-    // --- 核心邏輯函式 ---
+    // --- 特休計算邏輯 (核心) ---
+    function getLeaveEntitlementByTenure(years) {
+        if (years < 0.5) return 0;
+        if (years < 1) return 3;
+        if (years < 2) return 7;
+        if (years < 3) return 10;
+        if (years < 5) return 14;
+        if (years < 10) return 15;
+        // 10年以上，每1年加給1日，加至30日為止
+        let days = 15 + Math.floor(years - 10);
+        return Math.min(days, 30);
+    }
+
+    // 計算曆年制特休天數
+    function calculateCalendarYearLeave(onboardDateStr, targetYear) {
+        if (!onboardDateStr) return 0;
+        const onboard = new Date(onboardDateStr);
+        const yearStart = new Date(targetYear, 0, 1);
+        const yearEnd = new Date(targetYear, 11, 31);
+        
+        // 如果今年還沒入職，天數為0
+        if (onboard > yearEnd) return 0;
+
+        // 週年日 (今年的週年日)
+        let anniversary = new Date(onboard);
+        anniversary.setFullYear(targetYear);
+
+        // 計算兩個時段的年資 (Period 1: 1/1 ~ Anniversary-1, Period 2: Anniversary ~ 12/31)
+        // 1. Period 1 年資: targetYear - onboardYear - 1 (尚未滿週年)
+        // 2. Period 2 年資: targetYear - onboardYear (已滿週年)
+        
+        const tenurePrev = targetYear - onboard.getFullYear() - 1;
+        const tenureCurr = targetYear - onboard.getFullYear();
+
+        // 取得法規天數
+        const daysPrev = getLeaveEntitlementByTenure(Math.max(0, tenurePrev + 0.5)); // +0.5 是為了判斷是否滿半年
+        // 修正: 勞基法是用滿幾年給幾天，所以用 tenureCurr 查表即可 (但需考慮滿半年)
+        // 邏輯修正:
+        // 在 Anniversary 之前，是適用「去年的年資」
+        // 在 Anniversary 之後，是適用「今年的年資」
+        
+        // 為了精確計算，使用天數比例
+        // 1/1 ~ 週年日前一日的天數
+        let daysInPeriod1 = 0;
+        let daysInPeriod2 = 0;
+        
+        if (anniversary > yearEnd) {
+            // 週年日在明年 (例如 12/31 到職)，整年都是 Period 1
+            daysInPeriod1 = 365; // 簡化
+        } else if (anniversary < yearStart) {
+            // 週年日在去年 (理論上不會發生，因為 anniversary 是設為 targetYear)
+            daysInPeriod2 = 365;
+        } else {
+            // 一般情況: 1/1 --- Anniversary --- 12/31
+            const msPerDay = 24 * 60 * 60 * 1000;
+            daysInPeriod1 = (anniversary - yearStart) / msPerDay; // 1/1 到週年日
+            daysInPeriod2 = (yearEnd - anniversary) / msPerDay + 1; // 週年日 到 12/31
+        }
+        
+        const totalDaysInYear = 365 + (targetYear % 4 === 0 ? 1 : 0); // 閏年簡化判斷
+
+        // 判斷該時段適用的年資級距
+        // Period 1 的年資是 (targetYear - 1) - onboardYear
+        // Period 2 的年資是 targetYear - onboardYear
+        // 但是要處理「滿半年」的特殊情況
+        
+        // 為了簡化且符合一般曆年制試算表：
+        // 比例1 = (該年度特休天數) * (在職天數 / 365)
+        
+        // 我們直接計算兩個區段應得天數並加總
+        // 區段1 (1/1 ~ 到職日前一日): 適用「上一年度年資」的給假標準
+        // 區段2 (到職日 ~ 12/31): 適用「當年度年資」的給假標準
+        
+        // 精確年資計算 (以 Period 1 結束點和 Period 2 結束點來看)
+        // 實際上曆年制公式通常是：
+        // (上一年資給假天數 * 上一年資在今年佔的天數 / 365) + (今年資給假天數 * 今年資在今年佔的天數 / 365)
+        
+        // 重新釐清年資:
+        // 假設 2022/7/1 到職. 計算 2023 年 (targetYear)
+        // 1/1 ~ 6/30: 年資 0.5年. 適用「滿半年」標準 (3天). 佔 181 天. -> 3 * (181/365)
+        // 7/1 ~ 12/31: 年資 1年. 適用「滿1年」標準 (7天). 佔 184 天. -> 7 * (184/365)
+        
+        // 計算 Period 1 的年資 (以 Anniversary 為基準點，未滿該週年)
+        const seniority1 = (new Date(targetYear, onboard.getMonth(), onboard.getDate()) - onboard) / (365 * 24 * 60 * 60 * 1000); 
+        // 計算 Period 2 的年資 (滿該週年)
+        const seniority2 = seniority1 + 1; // 其實不用這麼複雜，直接用整數年資查表即可
+        
+        // 修正後的邏輯:
+        // 年資整數 N = targetYear - onboardYear
+        // 1/1 ~ Anniversary: 屬於第 N 年 (未滿 N+1)，享有「滿 N 年」的權利
+        // Anniversary ~ 12/31: 屬於第 N+1 年，享有「滿 N+1 年」的權利
+        
+        // 需特別處理 < 1年的情況
+        // 範例: 2023/7/1 到職
+        // 2024/1/1 ~ 6/30: 滿 0.5 年 -> 3天
+        // 2024/7/1 ~ 12/31: 滿 1 年 -> 7天
+        
+        const yearsServedAtAnniversary = targetYear - onboard.getFullYear();
+        
+        const ruleDays1 = getLeaveEntitlementByTenure(Math.max(0, yearsServedAtAnniversary - 1 + 0.01)); // 上一個級距 (用+0.01避開0)
+        // 特例: 如果是滿半年(0.5)，上面的 yearsServedAtAnniversary 是 1 (跨年了)，但 1/1~6/30 是算 0.5~1 的區間
+        
+        // 更精確的做法:
+        // Period 1 的資格認定點: Anniversary 前一天. 年資 = AnniversaryDate - OnboardDate - 1 day
+        // Period 2 的資格認定點: 12/31. 年資 = Dec31 - OnboardDate
+        
+        const p1_date = new Date(anniversary); p1_date.setDate(p1_date.getDate() - 1);
+        const p1_years = (p1_date - onboard) / (365 * 24 * 60 * 60 * 1000);
+        
+        const p2_date = yearEnd;
+        const p2_years = (p2_date - onboard) / (365 * 24 * 60 * 60 * 1000);
+        
+        const entitlement1 = getLeaveEntitlementByTenure(p1_years);
+        const entitlement2 = getLeaveEntitlementByTenure(p2_years);
+        
+        // 依比例加總
+        let total = (entitlement1 * (daysInPeriod1 / totalDaysInYear)) + (entitlement2 * (daysInPeriod2 / totalDaysInYear));
+        
+        return Math.round(total * 100) / 100; // 取小數點後兩位
+    }
+
+    function renderLeaveTab() {
+        const onboardDate = settings.onboardDate;
+        if (!onboardDate) {
+            document.getElementById('leave-setup-hint').style.display = 'block';
+            document.getElementById('leave-dashboard').style.display = 'none';
+            return;
+        }
+        
+        document.getElementById('leave-setup-hint').style.display = 'none';
+        document.getElementById('leave-dashboard').style.display = 'block';
+        
+        const currentYear = new Date().getFullYear();
+        const lastYear = currentYear - 1;
+        
+        // 1. 計算應給天數
+        const leaveThisYear = calculateCalendarYearLeave(onboardDate, currentYear);
+        const leaveLastYear = calculateCalendarYearLeave(onboardDate, lastYear);
+        
+        // 2. 計算已使用天數 (從 records 中篩選)
+        // 篩選今年的特休紀錄
+        const usedThisYear = records
+            .filter(r => r.type === 'special_leave' && new Date(r.start).getFullYear() === currentYear)
+            .reduce((sum, r) => {
+                const hours = parseFloat(r.reason.match(/(\d+(\.\d+)?)h/)?.[1] || 8); // 從備註解析時數，預設8
+                return sum + (hours / 8); // 換算成天
+            }, 0);
+
+        // 篩選去年的特休紀錄 (用於計算遞延剩餘)
+        const usedLastYear = records
+            .filter(r => r.type === 'special_leave' && new Date(r.start).getFullYear() === lastYear)
+            .reduce((sum, r) => sum + (parseFloat(r.reason.match(/(\d+(\.\d+)?)h/)?.[1] || 8) / 8), 0);
+            
+        // 3. 計算餘額
+        // 去年剩餘 = 去年應給 - 去年已休 (若 < 0 則為 0)
+        let remainLastYear = Math.max(0, leaveLastYear - usedLastYear);
+        // 四捨五入到小數點2位
+        remainLastYear = Math.round(remainLastYear * 100) / 100;
+        
+        // 今年總餘額 = 今年應給 + 去年遞延 - 今年已休
+        const balance = (leaveThisYear + remainLastYear) - usedThisYear;
+        
+        // 4. 更新 UI
+        document.getElementById('leave-current-year').textContent = currentYear;
+        document.getElementById('leave-current-total').textContent = leaveThisYear.toFixed(2);
+        document.getElementById('leave-last-remain').textContent = remainLastYear.toFixed(2);
+        document.getElementById('leave-balance').textContent = balance.toFixed(2);
+        
+        if (balance < 0) {
+            document.getElementById('leave-balance').style.color = 'var(--danger-color)';
+        } else {
+            document.getElementById('leave-balance').style.color = 'var(--success-color)';
+        }
+
+        // 5. 渲染列表
+        const tbody = document.getElementById('leave-history-body');
+        tbody.innerHTML = '';
+        const leaveRecords = records.filter(r => r.type === 'special_leave' && new Date(r.start).getFullYear() === currentYear);
+        
+        // 排序
+        leaveRecords.sort((a, b) => new Date(b.start) - new Date(a.start));
+        
+        if (leaveRecords.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; color:#888;">今年尚無特休紀錄</td></tr>';
+        } else {
+            leaveRecords.forEach(rec => {
+                const row = tbody.insertRow();
+                const dateStr = new Date(rec.start).toLocaleDateString();
+                const hours = rec.reason.match(/(\d+(\.\d+)?)h/)?.[1] || '8';
+                // 移除備註中的時數標記，只顯示純文字
+                const cleanReason = rec.reason.replace(/\(\d+(\.\d+)?h\)/, '').trim();
+                
+                row.innerHTML = `
+                    <td>${dateStr}</td>
+                    <td>${hours}h</td>
+                    <td>${escapeHtml(cleanReason)}</td>
+                    <td><button class="btn-small btn-danger" onclick="app.deleteRecord('${rec.id}')">刪除</button></td>
+                `;
+            });
+        }
+    }
+
+    function addLeaveRecord() {
+        const dateVal = document.getElementById('leave-date').value;
+        const hoursVal = document.getElementById('leave-hours').value;
+        const reasonVal = document.getElementById('leave-reason').value;
+        
+        if (!dateVal) {
+            alert('請選擇日期');
+            return;
+        }
+        if (!hoursVal || parseFloat(hoursVal) <= 0) {
+            alert('請輸入有效時數');
+            return;
+        }
+        
+        // 構造一個 record 物件
+        // 特休的格式： start = 日期T00:00, end = 日期T00:00 (不重要，主要是日期)
+        // type = 'special_leave'
+        // reason = '事由 (8h)' -> 把時數存在 reason 方便解析，或利用 reason 欄位
+        
+        const fullReason = `${reasonVal} (${hoursVal}h)`;
+        const newRecord = {
+            id: `leave_${Date.now()}`,
+            start: `${dateVal}T09:00`, // 預設 9:00
+            end: `${dateVal}T18:00`,
+            type: 'special_leave',
+            reason: fullReason,
+            forceFullCalculation: false
+        };
+        
+        records.push(newRecord);
+        saveRecords();
+        renderLeaveTab(); // 重新計算並顯示
+        render(); // 更新主畫面 (雖然切換 Tab 才會看到)
+        
+        // 清空表單
+        document.getElementById('leave-reason').value = '';
+        showToast('特休紀錄已新增');
+    }
+
+    // --- 核心邏輯函式 (原有) ---
     function loadSettings() {
         try {
             const savedSettings = JSON.parse(localStorage.getItem(STORAGE_KEYS.SETTINGS));
@@ -150,6 +388,7 @@
                 userName: '',
                 salaryType: 'monthly',
                 salary: 0,
+                onboardDate: '', // 新增
                 workStart: "09:00",
                 workEnd: "18:00",
                 breakStart: "12:00",
@@ -170,6 +409,11 @@
             document.getElementById('work-end').value = settings.workEnd;
             document.getElementById('break-start').value = settings.breakStart;
             document.getElementById('break-end').value = settings.breakEnd;
+            
+            // 載入到職日
+            if (settings.onboardDate) {
+                onboardDateInput.value = settings.onboardDate;
+            }
             
             calculateHourlyRate();
         } catch (error) {
@@ -193,6 +437,7 @@
                 userName: escapeHtml(document.getElementById('user-name').value.trim()),
                 salaryType: document.querySelector('input[name="salaryType"]:checked').value,
                 salary: salary,
+                onboardDate: onboardDateInput.value, // 儲存到職日
                 payday: parseInt(document.getElementById('payday').value) || 1,
                 workStart: document.getElementById('work-start').value,
                 workEnd: document.getElementById('work-end').value,
@@ -206,6 +451,12 @@
             updatePayPeriodHint();
             
             alert('設定已儲存! 您現在可以開始記錄加班了。');
+            
+            // 如果有設定到職日，嘗試重新渲染特休頁
+            if (settings.onboardDate) {
+                renderLeaveTab();
+            }
+            
             switchTab('punch');
             render();
             
@@ -305,7 +556,7 @@
         }
         
         saveRecords();
-        localStorage.removeItem(STORAGE_KEYS.TEMP_RECORD); // 成功新增後清除暫存
+        localStorage.removeItem(STORAGE_KEYS.TEMP_RECORD);
         loadRecords();
         render();
         clearForm();
@@ -320,12 +571,23 @@
             records = records.filter(record => record.id !== id);
             saveRecords();
             render();
+            // 如果是在特休分頁刪除，也要更新特休分頁
+            if (document.getElementById('tab-leave').classList.contains('active')) {
+                renderLeaveTab();
+            }
         }
     }
 
     function editRecord(id) {
         const record = records.find(rec => rec.id === id);
         if (record) {
+            // 如果是特休紀錄，不支援在加班分頁編輯 (簡單起見，建議刪除重建立)
+            if (record.type === 'special_leave') {
+                alert('特休紀錄請至「特休」分頁管理 (目前僅支援刪除後重新新增)');
+                switchTab('leave');
+                return;
+            }
+
             switchTab('punch');
             switchMode('manual', false);
             document.getElementById('start-time').value = record.start;
@@ -364,6 +626,10 @@
         
         const conflicts = records.filter(rec => {
             if (rec.id === newRecord.id) return false;
+            // 忽略特休紀錄的重疊檢查 (因為特休可能只請半天，但系統紀錄是全天區間，需更細緻處理)
+            // 這裡簡單處理：如果是加班紀錄，才檢查重疊
+            if (rec.type === 'special_leave') return false; 
+            
             const recStart = new Date(rec.start).getTime();
             const recEnd = new Date(rec.end).getTime();
             return newStart < recEnd && newEnd > recStart;
@@ -427,7 +693,6 @@
         startTimer(new Date(tempRecord.start));
     }
     
-    // 結束打卡
     function endPunch() {
         const tempRecordJSON = localStorage.getItem(STORAGE_KEYS.TEMP_RECORD);
         if (!tempRecordJSON) return;
@@ -436,7 +701,6 @@
         if (tempRecord.start && !tempRecord.end) {
             stopTimer();
             
-            // 記錄結束時間
             const endTime = new Date();
             tempRecord.end = endTime.toISOString();
             tempRecord.reason = document.getElementById('overtime-reason').value || tempRecord.reason;
@@ -549,9 +813,7 @@
             return today.toISOString().substring(0, 7);
         }
 
-        // 當天日期 >= 發薪日，顯示下個月
         if (currentDay >= payday) {
-            // setMonth 會自動處理年份進位 (如 11月+1 = 明年1月)
             const nextMonthDate = new Date(currentYear, currentMonth + 1, 1);
             return nextMonthDate.toISOString().substring(0, 7);
         } else {
@@ -574,13 +836,19 @@
     // 渲染相關函式
     function render() {
         const filteredRecords = filterRecords(monthFilter.value);
-        const dailyGroups = groupRecordsByDay(filteredRecords);
+        // 過濾掉特休紀錄，以免混在加班列表中
+        const overtimeRecords = filteredRecords.filter(r => r.type !== 'special_leave');
+        const dailyGroups = groupRecordsByDay(overtimeRecords);
         renderTable(recordsBody, dailyGroups);
         renderSummary(dailyGroups, monthFilter.value);
         updatePayPeriodHint();
         checkSyncStatus();
+        
+        // 如果當前是特休分頁，也更新特休UI
+        if (document.getElementById('tab-leave').classList.contains('active')) {
+            renderLeaveTab();
+        }
     }
-    // ... filterRecords, groupRecordsByDay, renderTable, renderSummary, updatePayPeriodHint, toggleDetails, generateExportHTML, exportResultsAsImage, exportCSV (保持不變) ...
     
     function filterRecords(filterValue) {
         if (!filterValue) return records;
@@ -787,7 +1055,6 @@
         }
     }
 
-    // 移除舊的 static sync status
     function updateSyncStatus(msg, type = 'info') {
         syncStatusEl.style.display = 'block';
         syncStatusEl.textContent = msg;
@@ -796,7 +1063,6 @@
         else if (type === 'error') syncStatusEl.style.color = 'var(--danger-color)';
         else syncStatusEl.style.color = 'var(--text-color)';
         
-        // 同時顯示 Toast
         showToast(msg, type);
     }
 
@@ -895,8 +1161,11 @@
                 content.style.display = 'none';
             }
         });
+        
         if (tabId === 'records') {
             render();
+        } else if (tabId === 'leave') {
+            renderLeaveTab();
         }
     }
 
@@ -960,7 +1229,6 @@
         document.getElementById('backup-modal').classList.remove('show');
     }
 
-    // 修改 restoreState 以支援打卡後切換模式
     function restoreState() {
         const tempRecordJSON = localStorage.getItem(STORAGE_KEYS.TEMP_RECORD);
         if (!tempRecordJSON) {
@@ -993,7 +1261,6 @@
             document.getElementById('end-time').value = formatDateTimeLocal(new Date(tempRecord.end));
             restoreFormFields();
             
-            // 提示改為較柔和的顏色
             restoreMsgEl.textContent = '您有已打卡但未儲存的紀錄，已自動填入表單。請確認後按下新增。';
             restoreMsgEl.style.display = 'block';
         }
@@ -1004,6 +1271,7 @@
         if (hash === '#punch') switchTab('punch');
         else if (hash === '#records') switchTab('records');
         else if (hash === '#settings') switchTab('settings');
+        else if (hash === '#leave') switchTab('leave');
         
         if (hash) {
             setTimeout(() => { history.replaceState(null, null, ' '); }, 1000);
@@ -1065,6 +1333,12 @@
         document.getElementById('export-csv').addEventListener('click', exportCSV);
         
         document.getElementById('close-welcome').addEventListener('click', closeWelcomeMessage);
+        
+        // 特休按鈕事件
+        document.getElementById('add-leave-record').addEventListener('click', addLeaveRecord);
+        document.getElementById('leave-btn-4h').addEventListener('click', () => document.getElementById('leave-hours').value = 4);
+        document.getElementById('leave-btn-8h').addEventListener('click', () => document.getElementById('leave-hours').value = 8);
+        document.getElementById('leave-date').valueAsDate = new Date(); // 預設今天
         
         tabButtons.forEach(btn => {
             btn.addEventListener('click', () => { switchTab(btn.dataset.tab); });
