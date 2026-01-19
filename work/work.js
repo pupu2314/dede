@@ -1,5 +1,5 @@
 /**
- * 加班費計算機 v2.8.1 - JavaScript
+ * 加班費計算機 v2.8.2 - JavaScript
  * - 實作曆年制特休「分段計給」邏輯
  * - 實作特殊小數點進位規則
  */
@@ -155,176 +155,95 @@
         return Math.min(days, 30);
     }
 
-    // 計算兩個日期間的「月數」與「剩餘日數」 (用於比例計算)
-    function getDurationInMonthsAndDays(startDate, endDate) {
-        // endDate is inclusive for the period, so we treat calculation as boundary based
-        // 邏輯: 從 startDate 開始，累加月份直到超過 endDate
-        let months = 0;
-        let tempDate = new Date(startDate);
-        
-        while (true) {
-            // 嘗試加一個月
-            let nextMonth = new Date(tempDate);
-            nextMonth.setMonth(nextMonth.getMonth() + 1);
-            
-            // 如果加一個月後超過了 endDate (的隔天，因為 endDate 是包含在內的)，則停止
-            // 比較基準: endDate 的 23:59:59 vs nextMonth 00:00:00
-            // 簡單作法: 比較日期物件
-            // 修正: 為了符合 (6 + 0/30) 的邏輯，如果 1/1 到 6/30，應該是 6個月 0天
-            // 1/1 + 1 month -> 2/1. 
-            // 目標是計算到 endDate (含) 的長度
-            
-            // 為了方便計算，我們將 endDate + 1 天作為終點界線
-            let boundaryDate = new Date(endDate);
-            boundaryDate.setDate(boundaryDate.getDate() + 1);
-            
-            if (nextMonth <= boundaryDate) {
-                months++;
-                tempDate = nextMonth;
-            } else {
-                break;
-            }
-        }
-        
-        // 剩餘天數
-        let boundaryDate = new Date(endDate);
-        boundaryDate.setDate(boundaryDate.getDate() + 1);
-        let diffTime = boundaryDate - tempDate;
-        let days = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-        
-        return { months, days };
-    }
-
     // 特殊進位邏輯: 先計算至小數第2位，判斷小數第2位若大於1則進位
+    // 例如 18.42 -> 18.5 (2>1), 18.41 -> 18.4 (1<=1)
     function customRound(num) {
-        // 1. 先保留兩位小數 (無條件捨去第3位以後，或四捨五入? 
-        // 依題目 "計算至小數第2位"，通常指精確算出後看第2位。
-        // 為了避免浮點數誤差，先乘1000處理)
+        // 先轉為固定小數點後2位的字串，避免浮點數誤差
+        const fixedStr = num.toFixed(2);
+        const parts = fixedStr.split('.');
+        const integerPart = parseInt(parts[0]);
+        const decimalPartStr = parts[1]; // "42"
         
-        // 使用四捨五入到第2位作為 "計算至小數第2位" 的基礎
-        // 或者直接截斷? 依照範例 18.5 是剛好的。
-        // 假設 raw value 是 18.423... -> 18.42 -> 2>1 -> 18.5
+        const digit1 = parseInt(decimalPartStr[0]); // 4
+        const digit2 = parseInt(decimalPartStr[1]); // 2
         
-        let rounded2 = Math.floor(num * 100) / 100; 
+        let result = integerPart + (digit1 / 10);
         
-        // 取出小數點第2位
-        // (18.42 * 100) % 10 = 1842 % 10 = 2
-        // 處理浮點數精度問題
-        let secondDecimal = Math.floor((num * 100).toFixed(1)) % 10;
-        
-        if (secondDecimal > 1) {
-            // 第一位小數進位 (無條件進位到小數點第一位)
-            // 例如 18.42 -> 18.5
-            // Math.floor(18.42 * 10) / 10 = 18.4. 然後 + 0.1
-            return (Math.floor(num * 10) / 10) + 0.1;
-        } else {
-            // 捨去第2位
-            return Math.floor(num * 10) / 10;
+        if (digit2 > 1) {
+            result += 0.1;
         }
+        
+        // 處理浮點數加法誤差 (例如 18.4 + 0.1 可能變成 18.500000001)
+        return Math.round(result * 10) / 10;
     }
 
-    // 計算曆年制特休天數 (分段計給)
+    // 計算曆年制特休天數 (依據使用者的分段公式)
+    // 公式: (M + D/30)/12 * Entitlement
     function calculateCalendarYearLeave(onboardDateStr, targetYear) {
         if (!onboardDateStr) return 0;
         const onboard = new Date(onboardDateStr);
-        const yearStart = new Date(targetYear, 0, 1);
-        const yearEnd = new Date(targetYear, 11, 31); // 12/31
         
+        // 如果 targetYear 還沒入職，天數為0
         if (onboard.getFullYear() > targetYear) return 0;
 
-        // 週年日 (今年的週年日)
-        let anniversary = new Date(onboard);
-        anniversary.setFullYear(targetYear);
-
-        // 判斷分段點
-        // Period 1: 1/1 ~ 週年日前一日
-        // Period 2: 週年日 ~ 12/31
-        
-        // 計算 Period 1 的年資 (滿 N-1 年，邁向 N 年) -> 應給 N-1 年年資的假 (若是第一年則為0或滿半年的假)
-        // 計算 Period 2 的年資 (滿 N 年) -> 應給 N 年年資的假
-        
-        // 特例處理: 到職第一年 (targetYear == onboardYear)
-        // 1/1 ~ 到職日: 無
-        // 到職日 ~ 12/31: 累積年資中 (尚未滿1年，但可能滿半年)
-        // 依曆年制慣例，第一年通常給 0 或依比例給滿半年的假 (若年底前滿半年)
-        // 這裡採用標準分段公式邏輯:
-        
-        // 取得 Period 1 適用之完整年資權利
-        // 例如 2026年計算，2020/7/1 到職。
-        // Period 1 (1/1~6/30): 年資算 5年 (滿5年未滿6年) -> 給 15 天
-        // Period 2 (7/1~12/31): 年資算 6年 (滿6年) -> 給 15 天 (5~10年都15天)
-        
-        // 取得年資整數
+        // 計算到 targetYear 的年資 (整數年)
         const yearsServed = targetYear - onboard.getFullYear();
         
-        // 定義區間日期
-        let p1_start = yearStart;
-        let p1_end = new Date(anniversary); p1_end.setDate(p1_end.getDate() - 1);
-        
-        let p2_start = anniversary;
-        let p2_end = yearEnd;
-        
-        // 處理邊界 (如週年日是 1/1)
-        if (anniversary <= yearStart) {
-            p1_end = null; // 無 Period 1
-            p2_start = yearStart;
-        }
-        
-        let totalDays = 0;
+        // 週年日 (今年的週年日)
+        const anniversaryMonth = onboard.getMonth(); // 0-based
+        const anniversaryDay = onboard.getDate();    // 1-based
 
-        // --- 計算 Period 1 ---
-        if (p1_end && p1_end >= p1_start) {
-            // 適用年資: yearsServed - 1 (但要處理滿半年)
-            // 準確來說，這段期間的年資是 yearsServed - 1 + (fraction)
-            // 我們直接用 yearsServed - 1 來查表 "滿x年" 的天數
-            // 但如果是第1年(yearsServed=1)，P1是 0.5~1年，應給3天? 還是0?
-            // 依照勞動部範例: 
-            // 到職 106.7.1. 
-            // 107.1.1 ~ 107.6.30 (P1): 年資 0.5年. 權利 3天. 比例 6/12. -> 1.5天
-            
-            // 計算 P1 結束時的精確年資
-            let p1_tenure = (p1_end - onboard) / (365 * 24 * 60 * 60 * 1000);
-            // 查表取得該段期間 "若滿整年" 的權利 (取 floor 或是級距)
-            // 這裡邏輯要小心：分段給假是用 "該段期間所屬的年資級距總天數" * "該段佔全年的比例"
-            
-            // P1 區間所屬的年資級距: 
-            // 若 7/1 到職. 1/1~6/30 是屬於 "未滿週年" 的那一年.
-            // 級距判定: 看 P1 期間「滿了幾年」. 
-            // P1 期間皆為 yearsServed - 1 (以及加上 fraction). 
-            // 應取 getLeaveEntitlementByTenure(yearsServed - 1 + 0.5?)
-            // 正確做法：查 "滿 yearsServed - 1 年" 的假. 
-            // 特例: 若 yearsServed=1, 則 P1 是 "滿 0.5 年". 給 3 天.
-            
-            let entitlement1 = 0;
-            if (yearsServed === 1) {
-                // 檢查 P1 是否包含 "滿6個月" 的時間點
-                // 曆年制通常寬鬆認定，只要該年度有跨過 6個月門檻，該段比例就以 3 天計算
-                entitlement1 = 3; 
-            } else if (yearsServed > 0) {
-                entitlement1 = getLeaveEntitlementByTenure(yearsServed - 1);
-            }
-            
-            // 計算比例: (月 + 日/30) / 12
-            const duration = getDurationInMonthsAndDays(p1_start, p1_end);
-            const ratio = (duration.months + (duration.days / 30)) / 12;
-            
-            totalDays += entitlement1 * ratio;
+        // Period 1: 1/1 ~ 週年日前一日
+        // 長度計算: 直接用週年日的 Month 和 Day
+        // 假設週年日是 7月1日 (Month=6, Day=1)
+        // 1/1 ~ 6/30 的長度正好是 6個月 0天
+        // 公式中的 M = 6, D = 0.
+        // 所以 Period 1 的月份數 = anniversaryMonth
+        // Period 1 的日數 = anniversaryDay - 1
+        
+        // 處理日數為 -1 的情況 (例如1日到職，減1變0日，正確)
+        // 這裡的邏輯是將 1/1 到 Anniversary 的間隔標準化
+        
+        const p1_months = anniversaryMonth;
+        const p1_days = anniversaryDay - 1;
+        
+        // 計算比例 Ratio 1
+        const ratio1 = (p1_months + (p1_days / 30)) / 12;
+        
+        // Period 2: 週年日 ~ 12/31
+        // 比例 Ratio 2 = 1 - Ratio 1 (公式邏輯: 19 - Ratio1 * 19 = (1-Ratio1)*19)
+        const ratio2 = 1 - ratio1;
+
+        // 取得權利天數
+        // Period 1 適用年資: yearsServed - 1
+        // Period 2 適用年資: yearsServed
+        
+        let entitlement1 = 0;
+        let entitlement2 = 0;
+
+        // 處理 Period 1 的特例
+        if (yearsServed === 1) {
+            // 第1年 (例如 2025/7/1 到職，算 2026)
+            // Period 1 (Jan-Jun) 是 0.5~1年年資 -> 3天
+            entitlement1 = 3;
+        } else if (yearsServed > 1) {
+            entitlement1 = getLeaveEntitlementByTenure(yearsServed - 1);
+        } else {
+            // yearsServed == 0 (到職當年)，通常 P1 無假
+            entitlement1 = 0;
         }
 
-        // --- 計算 Period 2 ---
-        if (p2_start <= p2_end) {
-            // 適用年資: yearsServed
-            let entitlement2 = getLeaveEntitlementByTenure(yearsServed);
-            
-            // 計算比例
-            const duration = getDurationInMonthsAndDays(p2_start, p2_end);
-            const ratio = (duration.months + (duration.days / 30)) / 12;
-            
-            totalDays += entitlement2 * ratio;
-        }
+        // 處理 Period 2
+        // yearsServed == 0 (到職當年)，P2 是 0~0.5年 -> 0天
+        // yearsServed >= 1，正常查表
+        entitlement2 = getLeaveEntitlementByTenure(yearsServed);
+
+        // 依據公式加總
+        // Total = (Ratio1 * Ent1) + (Ratio2 * Ent2)
+        const totalRaw = (ratio1 * entitlement1) + (ratio2 * entitlement2);
         
-        // 套用特殊進位邏輯
-        return customRound(totalDays);
+        // 套用特殊進位
+        return customRound(totalRaw);
     }
 
     function renderLeaveTab() {
@@ -359,16 +278,16 @@
             
         // 3. 計算餘額
         let remainLastYear = Math.max(0, leaveLastYear - usedLastYear);
-        // 餘額通常也建議套用相同的進位或捨去邏輯，這裡簡單四捨五入至小數2位
+        // 餘額保留小數
         remainLastYear = Math.round(remainLastYear * 100) / 100;
         
         const balance = (leaveThisYear + remainLastYear) - usedThisYear;
         
         // 4. 更新 UI
         document.getElementById('leave-current-year').textContent = currentYear;
-        document.getElementById('leave-current-total').textContent = leaveThisYear.toFixed(2).replace(/\.00$/, ''); // 去除 .00
-        document.getElementById('leave-last-remain').textContent = remainLastYear.toFixed(2).replace(/\.00$/, '');
-        document.getElementById('leave-balance').textContent = balance.toFixed(2).replace(/\.00$/, '');
+        document.getElementById('leave-current-total').textContent = leaveThisYear; // customRound 已處理小數位
+        document.getElementById('leave-last-remain').textContent = remainLastYear;
+        document.getElementById('leave-balance').textContent = Math.round(balance * 100) / 100;
         
         if (balance < 0) {
             document.getElementById('leave-balance').style.color = 'var(--danger-color)';
@@ -1270,198 +1189,6 @@
         localStorage.setItem(STORAGE_KEYS.LAST_BACKUP, delayTime.toString());
         document.getElementById('backup-reminder').style.display = 'none';
         document.getElementById('backup-modal').classList.remove('show');
-    }
-
-    function restoreState() {
-        const tempRecordJSON = localStorage.getItem(STORAGE_KEYS.TEMP_RECORD);
-        if (!tempRecordJSON) {
-            updatePunchUI(false);
-            return;
-        }
-        
-        const tempRecord = JSON.parse(tempRecordJSON);
-        const restoreMsgEl = document.getElementById('restore-message');
-
-        const restoreFormFields = () => {
-            document.getElementById('overtime-reason').value = tempRecord.reason || '';
-            document.querySelector(`input[name="overtimeType"][value="${tempRecord.type}"]`).checked = true;
-            forceFullCalcToggle.checked = !!tempRecord.forceFullCalculation;
-        };
-
-        if (tempRecord.start && !tempRecord.end) {
-            switchTab('punch');
-            switchMode('punch', false);
-            updatePunchUI(true);
-            restoreFormFields();
-            startTimer(new Date(tempRecord.start));
-            restoreMsgEl.textContent = '已為您還原上次的打卡上班狀態。';
-            restoreMsgEl.style.display = 'block';
-        } else if (tempRecord.start && tempRecord.end) {
-            switchTab('punch');
-            switchMode('manual', false);
-            updatePunchUI(false);
-            document.getElementById('start-time').value = formatDateTimeLocal(new Date(tempRecord.start));
-            document.getElementById('end-time').value = formatDateTimeLocal(new Date(tempRecord.end));
-            restoreFormFields();
-            
-            restoreMsgEl.textContent = '您有已打卡但未儲存的紀錄，已自動填入表單。請確認後按下新增。';
-            restoreMsgEl.style.display = 'block';
-        }
-    }
-
-    function handleUrlHash() {
-        const hash = window.location.hash;
-        if (hash === '#punch') switchTab('punch');
-        else if (hash === '#records') switchTab('records');
-        else if (hash === '#settings') switchTab('settings');
-        else if (hash === '#leave') switchTab('leave');
-        
-        if (hash) {
-            setTimeout(() => { history.replaceState(null, null, ' '); }, 1000);
-        }
-    }
-
-    // importData (保持不變)
-    function importData(jsonString) {
-        if (!jsonString) {
-            showError('請先提供要匯入的資料。');
-            return;
-        }
-        if (!confirm('警告：匯入將會覆蓋所有現存資料，確定要繼續嗎？')) return;
-        try {
-            const data = JSON.parse(jsonString);
-            if (!data.settings || !Array.isArray(data.records)) {
-                showError('匯入失敗：資料格式不正確。');
-                return;
-            }
-            if (!isValidNumber(data.settings.salary) || data.settings.salary < 0) {
-                showError('匯入失敗：薪資設定無效。');
-                return;
-            }
-            const validRecords = data.records.filter(rec => {
-                return rec.id && isValidDate(rec.start) && isValidDate(rec.end) && rec.type;
-            });
-            
-            localStorage.setItem(STORAGE_KEYS.SETTINGS, JSON.stringify(data.settings));
-            localStorage.setItem(STORAGE_KEYS.RECORDS, JSON.stringify(validRecords));
-            localStorage.setItem(STORAGE_KEYS.LAST_BACKUP, Date.now().toString());
-            updateLastModified();
-            
-            loadSettings();
-            loadRecords();
-            render();
-
-            alert(`資料匯入成功！共匯入 ${validRecords.length} 筆記錄。`);
-            document.getElementById('import-textarea').value = '';
-        } catch (error) {
-            console.error('匯入錯誤:', error);
-            showError('匯入失敗：無效的 JSON 格式。');
-        }
-    }
-
-    // --- 事件監聽器設定 ---
-    function setupEventListeners() {
-        document.getElementById('save-settings').addEventListener('click', saveSettings);
-        addRecordBtn.addEventListener('click', addRecord);
-        document.getElementById('clear-form').addEventListener('click', clearForm);
-        monthFilter.addEventListener('change', render);
-        
-        document.getElementById('mode-punch').addEventListener('click', () => switchMode('punch', true));
-        document.getElementById('mode-manual').addEventListener('click', () => switchMode('manual', true));
-        
-        punchStartBtn.addEventListener('click', startPunch);
-        punchEndBtn.addEventListener('click', endPunch);
-        
-        document.getElementById('export-image').addEventListener('click', exportResultsAsImage);
-        document.getElementById('export-csv').addEventListener('click', exportCSV);
-        
-        document.getElementById('close-welcome').addEventListener('click', closeWelcomeMessage);
-        
-        // 特休按鈕事件
-        document.getElementById('add-leave-record').addEventListener('click', addLeaveRecord);
-        document.getElementById('leave-btn-4h').addEventListener('click', () => document.getElementById('leave-hours').value = 4);
-        document.getElementById('leave-btn-8h').addEventListener('click', () => document.getElementById('leave-hours').value = 8);
-        document.getElementById('leave-date').valueAsDate = new Date(); // 預設今天
-        
-        tabButtons.forEach(btn => {
-            btn.addEventListener('click', () => { switchTab(btn.dataset.tab); });
-        });
-
-        // 快捷同步按鈕
-        quickSyncBtn.addEventListener('click', () => {
-            if (!gasAppUrl) {
-                switchTab('backup');
-            } else {
-                syncToCloud();
-            }
-        });
-
-        // 匯出/匯入/備份相關事件 (保持不變)
-        document.getElementById('export-text').addEventListener('click', () => {
-            const outputArea = document.getElementById('export-output');
-            const textarea = document.getElementById('export-textarea');
-            textarea.value = JSON.stringify({ settings, records }, null, 2);
-            outputArea.style.display = 'block';
-            localStorage.setItem(STORAGE_KEYS.LAST_BACKUP, Date.now().toString());
-        });
-        document.getElementById('copy-json').addEventListener('click', async () => {
-            const textarea = document.getElementById('export-textarea');
-            try {
-                await navigator.clipboard.writeText(textarea.value);
-                const successMsg = document.getElementById('copy-success');
-                successMsg.style.display = 'block';
-                setTimeout(() => { successMsg.style.display = 'none'; }, 2000);
-            } catch (err) {
-                textarea.select();
-                document.execCommand('copy');
-                alert('已複製到剪貼簿！');
-            }
-        });
-        document.getElementById('download-json').addEventListener('click', () => {
-            const textarea = document.getElementById('export-textarea');
-            const blob = new Blob([textarea.value], { type: 'application/json' });
-            const link = document.createElement('a');
-            link.href = URL.createObjectURL(blob);
-            const timestamp = new Date().toISOString().slice(0, 10);
-            const fileName = settings.userName ? `加班記錄備份-${settings.userName}-${timestamp}.json` : `加班記錄備份-${timestamp}.json`;
-            link.download = fileName;
-            link.click();
-        });
-        document.getElementById('import-text').addEventListener('click', () => {
-            const importText = document.getElementById('import-textarea').value;
-            importData(importText);
-        });
-        document.getElementById('import-file-btn').addEventListener('click', () => {
-            document.getElementById('import-file-input').click();
-        });
-        document.getElementById('import-file-input').addEventListener('change', (event) => {
-            const file = event.target.files[0];
-            if (!file) return;
-            if (file.type !== 'application/json') {
-                showError('錯誤：請選擇一個 .json 檔案。');
-                event.target.value = '';
-                return;
-            }
-            const reader = new FileReader();
-            reader.onload = (e) => { importData(e.target.result); };
-            reader.onerror = () => { showError('讀取檔案時發生錯誤。'); };
-            reader.readAsText(file);
-            event.target.value = '';
-        });
-        
-        document.getElementById('backup-reminder-action').addEventListener('click', performSyncOrBackup);
-        document.getElementById('backup-remind-later').addEventListener('click', remindLater);
-        document.getElementById('modal-backup-now').addEventListener('click', performSyncOrBackup);
-        document.getElementById('modal-remind-later').addEventListener('click', remindLater);
-        document.getElementById('backup-modal').addEventListener('click', (e) => {
-            if (e.target.id === 'backup-modal') remindLater();
-        });
-
-        // GAS Sync Event Listeners
-        saveGasUrlBtn.addEventListener('click', saveGasUrl);
-        resetGasUrlBtn.addEventListener('click', resetGasUrl);
-        syncUploadBtn.addEventListener('click', syncToCloud);
-        syncDownloadBtn.addEventListener('click', syncFromCloud);
     }
 
     // --- 應用程式初始化 ---
