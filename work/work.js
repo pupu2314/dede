@@ -1,7 +1,6 @@
 /**
- * 加班費計算機 v2.8.1 - JavaScript
- * - 修正 ReferenceError: setupEventListeners is not defined
- * - 包含完整曆年制特休計算與同步功能
+ * 加班費計算機 v2.7 - JavaScript
+ * - 新增特休計算功能 (曆年制)
  */
 
 (function() {
@@ -47,7 +46,7 @@
     const punchStartBtn = document.getElementById('punch-start');
     const punchEndBtn = document.getElementById('punch-end');
     const forceFullCalcToggle = document.getElementById('force-full-calc-toggle');
-    const onboardDateInput = document.getElementById('onboard-date');
+    const onboardDateInput = document.getElementById('onboard-date'); // 新增到職日輸入
     
     // GAS Sync DOM
     const gasUrlInput = document.getElementById('gas-url-input');
@@ -97,17 +96,13 @@
     };
 
     const showError = (message) => {
-        if (formError) {
-            formError.textContent = message;
-            formError.style.display = 'block';
-            setTimeout(() => hideError(), 5000);
-        } else {
-            alert(message);
-        }
+        formError.textContent = message;
+        formError.style.display = 'block';
+        setTimeout(() => hideError(), 5000);
     };
 
     const hideError = () => {
-        if (formError) formError.style.display = 'none';
+        formError.style.display = 'none';
     };
 
     const isValidNumber = (value) => {
@@ -137,7 +132,6 @@
     }
 
     function showToast(message, type = 'info') {
-        if (!toastEl) return;
         toastEl.textContent = message;
         toastEl.className = 'toast show ' + type;
         setTimeout(() => {
@@ -145,8 +139,7 @@
         }, 3000);
     }
 
-    // --- 特休計算邏輯 ---
-    
+    // --- 特休計算邏輯 (核心) ---
     function getLeaveEntitlementByTenure(years) {
         if (years < 0.5) return 0;
         if (years < 1) return 3;
@@ -154,93 +147,117 @@
         if (years < 3) return 10;
         if (years < 5) return 14;
         if (years < 10) return 15;
+        // 10年以上，每1年加給1日，加至30日為止
         let days = 15 + Math.floor(years - 10);
         return Math.min(days, 30);
     }
 
-    function getDurationInMonthsAndDays(startDate, endDate) {
-        let months = 0;
-        let tempDate = new Date(startDate);
-        
-        while (true) {
-            let nextMonth = new Date(tempDate);
-            nextMonth.setMonth(nextMonth.getMonth() + 1);
-            
-            let boundaryDate = new Date(endDate);
-            boundaryDate.setDate(boundaryDate.getDate() + 1);
-            
-            if (nextMonth <= boundaryDate) {
-                months++;
-                tempDate = nextMonth;
-            } else {
-                break;
-            }
-        }
-        
-        let boundaryDate = new Date(endDate);
-        boundaryDate.setDate(boundaryDate.getDate() + 1);
-        let diffTime = boundaryDate - tempDate;
-        let days = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-        
-        return { months, days };
-    }
-
-    // 特殊進位邏輯: 小數第2位若大於1則進位
-    function customRound(num) {
-        const fixedStr = num.toFixed(2);
-        const parts = fixedStr.split('.');
-        const integerPart = parseInt(parts[0]);
-        const decimalPartStr = parts[1]; // e.g. "42"
-        
-        const digit1 = parseInt(decimalPartStr[0]); // 4
-        const digit2 = parseInt(decimalPartStr[1]); // 2
-        
-        let result = integerPart + (digit1 / 10);
-        
-        if (digit2 > 1) {
-            result += 0.1;
-        }
-        
-        return Math.round(result * 10) / 10;
-    }
-
+    // 計算曆年制特休天數
     function calculateCalendarYearLeave(onboardDateStr, targetYear) {
         if (!onboardDateStr) return 0;
         const onboard = new Date(onboardDateStr);
         const yearStart = new Date(targetYear, 0, 1);
         const yearEnd = new Date(targetYear, 11, 31);
         
-        if (onboard.getFullYear() > targetYear) return 0;
+        // 如果今年還沒入職，天數為0
+        if (onboard > yearEnd) return 0;
 
+        // 週年日 (今年的週年日)
         let anniversary = new Date(onboard);
         anniversary.setFullYear(targetYear);
 
-        const yearsServed = targetYear - onboard.getFullYear();
-        const anniversaryMonth = onboard.getMonth();
-        const anniversaryDay = onboard.getDate();
-
-        const p1_months = anniversaryMonth;
-        const p1_days = anniversaryDay - 1;
+        // 計算兩個時段的年資 (Period 1: 1/1 ~ Anniversary-1, Period 2: Anniversary ~ 12/31)
+        // 1. Period 1 年資: targetYear - onboardYear - 1 (尚未滿週年)
+        // 2. Period 2 年資: targetYear - onboardYear (已滿週年)
         
-        const ratio1 = (p1_months + (p1_days / 30)) / 12;
-        const ratio2 = 1 - ratio1;
+        const tenurePrev = targetYear - onboard.getFullYear() - 1;
+        const tenureCurr = targetYear - onboard.getFullYear();
 
-        let entitlement1 = 0;
-        let entitlement2 = 0;
-
-        if (yearsServed === 1) {
-            entitlement1 = 3;
-        } else if (yearsServed > 1) {
-            entitlement1 = getLeaveEntitlementByTenure(yearsServed - 1);
+        // 取得法規天數
+        const daysPrev = getLeaveEntitlementByTenure(Math.max(0, tenurePrev + 0.5)); // +0.5 是為了判斷是否滿半年
+        // 修正: 勞基法是用滿幾年給幾天，所以用 tenureCurr 查表即可 (但需考慮滿半年)
+        // 邏輯修正:
+        // 在 Anniversary 之前，是適用「去年的年資」
+        // 在 Anniversary 之後，是適用「今年的年資」
+        
+        // 為了精確計算，使用天數比例
+        // 1/1 ~ 週年日前一日的天數
+        let daysInPeriod1 = 0;
+        let daysInPeriod2 = 0;
+        
+        if (anniversary > yearEnd) {
+            // 週年日在明年 (例如 12/31 到職)，整年都是 Period 1
+            daysInPeriod1 = 365; // 簡化
+        } else if (anniversary < yearStart) {
+            // 週年日在去年 (理論上不會發生，因為 anniversary 是設為 targetYear)
+            daysInPeriod2 = 365;
         } else {
-            entitlement1 = 0;
+            // 一般情況: 1/1 --- Anniversary --- 12/31
+            const msPerDay = 24 * 60 * 60 * 1000;
+            daysInPeriod1 = (anniversary - yearStart) / msPerDay; // 1/1 到週年日
+            daysInPeriod2 = (yearEnd - anniversary) / msPerDay + 1; // 週年日 到 12/31
         }
-
-        entitlement2 = getLeaveEntitlementByTenure(yearsServed);
-
-        const totalRaw = (ratio1 * entitlement1) + (ratio2 * entitlement2);
         
-        return customRound(totalRaw);
+        const totalDaysInYear = 365 + (targetYear % 4 === 0 ? 1 : 0); // 閏年簡化判斷
+
+        // 判斷該時段適用的年資級距
+        // Period 1 的年資是 (targetYear - 1) - onboardYear
+        // Period 2 的年資是 targetYear - onboardYear
+        // 但是要處理「滿半年」的特殊情況
+        
+        // 為了簡化且符合一般曆年制試算表：
+        // 比例1 = (該年度特休天數) * (在職天數 / 365)
+        
+        // 我們直接計算兩個區段應得天數並加總
+        // 區段1 (1/1 ~ 到職日前一日): 適用「上一年度年資」的給假標準
+        // 區段2 (到職日 ~ 12/31): 適用「當年度年資」的給假標準
+        
+        // 精確年資計算 (以 Period 1 結束點和 Period 2 結束點來看)
+        // 實際上曆年制公式通常是：
+        // (上一年資給假天數 * 上一年資在今年佔的天數 / 365) + (今年資給假天數 * 今年資在今年佔的天數 / 365)
+        
+        // 重新釐清年資:
+        // 假設 2022/7/1 到職. 計算 2023 年 (targetYear)
+        // 1/1 ~ 6/30: 年資 0.5年. 適用「滿半年」標準 (3天). 佔 181 天. -> 3 * (181/365)
+        // 7/1 ~ 12/31: 年資 1年. 適用「滿1年」標準 (7天). 佔 184 天. -> 7 * (184/365)
+        
+        // 計算 Period 1 的年資 (以 Anniversary 為基準點，未滿該週年)
+        const seniority1 = (new Date(targetYear, onboard.getMonth(), onboard.getDate()) - onboard) / (365 * 24 * 60 * 60 * 1000); 
+        // 計算 Period 2 的年資 (滿該週年)
+        const seniority2 = seniority1 + 1; // 其實不用這麼複雜，直接用整數年資查表即可
+        
+        // 修正後的邏輯:
+        // 年資整數 N = targetYear - onboardYear
+        // 1/1 ~ Anniversary: 屬於第 N 年 (未滿 N+1)，享有「滿 N 年」的權利
+        // Anniversary ~ 12/31: 屬於第 N+1 年，享有「滿 N+1 年」的權利
+        
+        // 需特別處理 < 1年的情況
+        // 範例: 2023/7/1 到職
+        // 2024/1/1 ~ 6/30: 滿 0.5 年 -> 3天
+        // 2024/7/1 ~ 12/31: 滿 1 年 -> 7天
+        
+        const yearsServedAtAnniversary = targetYear - onboard.getFullYear();
+        
+        const ruleDays1 = getLeaveEntitlementByTenure(Math.max(0, yearsServedAtAnniversary - 1 + 0.01)); // 上一個級距 (用+0.01避開0)
+        // 特例: 如果是滿半年(0.5)，上面的 yearsServedAtAnniversary 是 1 (跨年了)，但 1/1~6/30 是算 0.5~1 的區間
+        
+        // 更精確的做法:
+        // Period 1 的資格認定點: Anniversary 前一天. 年資 = AnniversaryDate - OnboardDate - 1 day
+        // Period 2 的資格認定點: 12/31. 年資 = Dec31 - OnboardDate
+        
+        const p1_date = new Date(anniversary); p1_date.setDate(p1_date.getDate() - 1);
+        const p1_years = (p1_date - onboard) / (365 * 24 * 60 * 60 * 1000);
+        
+        const p2_date = yearEnd;
+        const p2_years = (p2_date - onboard) / (365 * 24 * 60 * 60 * 1000);
+        
+        const entitlement1 = getLeaveEntitlementByTenure(p1_years);
+        const entitlement2 = getLeaveEntitlementByTenure(p2_years);
+        
+        // 依比例加總
+        let total = (entitlement1 * (daysInPeriod1 / totalDaysInYear)) + (entitlement2 * (daysInPeriod2 / totalDaysInYear));
+        
+        return Math.round(total * 100) / 100; // 取小數點後兩位
     }
 
     function renderLeaveTab() {
@@ -257,29 +274,38 @@
         const currentYear = new Date().getFullYear();
         const lastYear = currentYear - 1;
         
+        // 1. 計算應給天數
         const leaveThisYear = calculateCalendarYearLeave(onboardDate, currentYear);
         const leaveLastYear = calculateCalendarYearLeave(onboardDate, lastYear);
         
+        // 2. 計算已使用天數 (從 records 中篩選)
+        // 篩選今年的特休紀錄
         const usedThisYear = records
             .filter(r => r.type === 'special_leave' && new Date(r.start).getFullYear() === currentYear)
             .reduce((sum, r) => {
-                const hours = parseFloat(r.reason.match(/(\d+(\.\d+)?)h/)?.[1] || 8); 
-                return sum + (hours / 8); 
+                const hours = parseFloat(r.reason.match(/(\d+(\.\d+)?)h/)?.[1] || 8); // 從備註解析時數，預設8
+                return sum + (hours / 8); // 換算成天
             }, 0);
 
+        // 篩選去年的特休紀錄 (用於計算遞延剩餘)
         const usedLastYear = records
             .filter(r => r.type === 'special_leave' && new Date(r.start).getFullYear() === lastYear)
             .reduce((sum, r) => sum + (parseFloat(r.reason.match(/(\d+(\.\d+)?)h/)?.[1] || 8) / 8), 0);
             
+        // 3. 計算餘額
+        // 去年剩餘 = 去年應給 - 去年已休 (若 < 0 則為 0)
         let remainLastYear = Math.max(0, leaveLastYear - usedLastYear);
+        // 四捨五入到小數點2位
         remainLastYear = Math.round(remainLastYear * 100) / 100;
         
+        // 今年總餘額 = 今年應給 + 去年遞延 - 今年已休
         const balance = (leaveThisYear + remainLastYear) - usedThisYear;
         
+        // 4. 更新 UI
         document.getElementById('leave-current-year').textContent = currentYear;
-        document.getElementById('leave-current-total').textContent = leaveThisYear.toFixed(2).replace(/\.00$/, '');
-        document.getElementById('leave-last-remain').textContent = remainLastYear.toFixed(2).replace(/\.00$/, '');
-        document.getElementById('leave-balance').textContent = balance.toFixed(2).replace(/\.00$/, '');
+        document.getElementById('leave-current-total').textContent = leaveThisYear.toFixed(2);
+        document.getElementById('leave-last-remain').textContent = remainLastYear.toFixed(2);
+        document.getElementById('leave-balance').textContent = balance.toFixed(2);
         
         if (balance < 0) {
             document.getElementById('leave-balance').style.color = 'var(--danger-color)';
@@ -287,10 +313,12 @@
             document.getElementById('leave-balance').style.color = 'var(--success-color)';
         }
 
+        // 5. 渲染列表
         const tbody = document.getElementById('leave-history-body');
         tbody.innerHTML = '';
         const leaveRecords = records.filter(r => r.type === 'special_leave' && new Date(r.start).getFullYear() === currentYear);
         
+        // 排序
         leaveRecords.sort((a, b) => new Date(b.start) - new Date(a.start));
         
         if (leaveRecords.length === 0) {
@@ -300,6 +328,7 @@
                 const row = tbody.insertRow();
                 const dateStr = new Date(rec.start).toLocaleDateString();
                 const hours = rec.reason.match(/(\d+(\.\d+)?)h/)?.[1] || '8';
+                // 移除備註中的時數標記，只顯示純文字
                 const cleanReason = rec.reason.replace(/\(\d+(\.\d+)?h\)/, '').trim();
                 
                 row.innerHTML = `
@@ -326,10 +355,15 @@
             return;
         }
         
+        // 構造一個 record 物件
+        // 特休的格式： start = 日期T00:00, end = 日期T00:00 (不重要，主要是日期)
+        // type = 'special_leave'
+        // reason = '事由 (8h)' -> 把時數存在 reason 方便解析，或利用 reason 欄位
+        
         const fullReason = `${reasonVal} (${hoursVal}h)`;
         const newRecord = {
             id: `leave_${Date.now()}`,
-            start: `${dateVal}T09:00`,
+            start: `${dateVal}T09:00`, // 預設 9:00
             end: `${dateVal}T18:00`,
             type: 'special_leave',
             reason: fullReason,
@@ -338,14 +372,15 @@
         
         records.push(newRecord);
         saveRecords();
-        renderLeaveTab();
-        render();
+        renderLeaveTab(); // 重新計算並顯示
+        render(); // 更新主畫面 (雖然切換 Tab 才會看到)
         
+        // 清空表單
         document.getElementById('leave-reason').value = '';
         showToast('特休紀錄已新增');
     }
 
-    // --- 核心邏輯函式 ---
+    // --- 核心邏輯函式 (原有) ---
     function loadSettings() {
         try {
             const savedSettings = JSON.parse(localStorage.getItem(STORAGE_KEYS.SETTINGS));
@@ -353,7 +388,7 @@
                 userName: '',
                 salaryType: 'monthly',
                 salary: 0,
-                onboardDate: '',
+                onboardDate: '', // 新增
                 workStart: "09:00",
                 workEnd: "18:00",
                 breakStart: "12:00",
@@ -375,6 +410,7 @@
             document.getElementById('break-start').value = settings.breakStart;
             document.getElementById('break-end').value = settings.breakEnd;
             
+            // 載入到職日
             if (settings.onboardDate) {
                 onboardDateInput.value = settings.onboardDate;
             }
@@ -401,7 +437,7 @@
                 userName: escapeHtml(document.getElementById('user-name').value.trim()),
                 salaryType: document.querySelector('input[name="salaryType"]:checked').value,
                 salary: salary,
-                onboardDate: onboardDateInput.value,
+                onboardDate: onboardDateInput.value, // 儲存到職日
                 payday: parseInt(document.getElementById('payday').value) || 1,
                 workStart: document.getElementById('work-start').value,
                 workEnd: document.getElementById('work-end').value,
@@ -416,6 +452,7 @@
             
             alert('設定已儲存! 您現在可以開始記錄加班了。');
             
+            // 如果有設定到職日，嘗試重新渲染特休頁
             if (settings.onboardDate) {
                 renderLeaveTab();
             }
@@ -534,6 +571,7 @@
             records = records.filter(record => record.id !== id);
             saveRecords();
             render();
+            // 如果是在特休分頁刪除，也要更新特休分頁
             if (document.getElementById('tab-leave').classList.contains('active')) {
                 renderLeaveTab();
             }
@@ -543,6 +581,7 @@
     function editRecord(id) {
         const record = records.find(rec => rec.id === id);
         if (record) {
+            // 如果是特休紀錄，不支援在加班分頁編輯 (簡單起見，建議刪除重建立)
             if (record.type === 'special_leave') {
                 alert('特休紀錄請至「特休」分頁管理 (目前僅支援刪除後重新新增)');
                 switchTab('leave');
@@ -587,6 +626,8 @@
         
         const conflicts = records.filter(rec => {
             if (rec.id === newRecord.id) return false;
+            // 忽略特休紀錄的重疊檢查 (因為特休可能只請半天，但系統紀錄是全天區間，需更細緻處理)
+            // 這裡簡單處理：如果是加班紀錄，才檢查重疊
             if (rec.type === 'special_leave') return false; 
             
             const recStart = new Date(rec.start).getTime();
@@ -688,6 +729,7 @@
         document.getElementById('mode-punch').disabled = isPunchedIn;
     }
 
+    // 計算相關函式 (保持不變)
     function calculateNetOvertimeHours(record) {
         let recordStart = new Date(record.start).getTime();
         let recordEnd = new Date(record.end).getTime();
@@ -759,10 +801,11 @@
         return { start: periodStart, end: periodEnd, displayText: `${formatDate(periodStart)} ~ ${formatDate(periodEnd)}` };
     };
 
+    // --- 預設月份邏輯 ---
     function getDefaultMonthValue() {
         const today = new Date();
         const currentYear = today.getFullYear();
-        const currentMonth = today.getMonth();
+        const currentMonth = today.getMonth(); // 0-11
         const currentDay = today.getDate();
         const payday = settings.payday || 1;
 
@@ -778,21 +821,22 @@
         }
     }
 
+    // --- 檢查同步狀態 ---
     function checkSyncStatus() {
         const lastSync = localStorage.getItem(STORAGE_KEYS.LAST_SYNC) || 0;
         const lastMod = localStorage.getItem(STORAGE_KEYS.LAST_MODIFIED) || 0;
         
-        if (unsyncedAlert && gasAppUrl) {
-            if (parseInt(lastMod) > parseInt(lastSync)) {
-                unsyncedAlert.style.display = 'flex';
-            } else {
-                unsyncedAlert.style.display = 'none';
-            }
+        if (parseInt(lastMod) > parseInt(lastSync) && gasAppUrl) {
+            unsyncedAlert.style.display = 'flex';
+        } else {
+            unsyncedAlert.style.display = 'none';
         }
     }
 
+    // 渲染相關函式
     function render() {
         const filteredRecords = filterRecords(monthFilter.value);
+        // 過濾掉特休紀錄，以免混在加班列表中
         const overtimeRecords = filteredRecords.filter(r => r.type !== 'special_leave');
         const dailyGroups = groupRecordsByDay(overtimeRecords);
         renderTable(recordsBody, dailyGroups);
@@ -800,7 +844,8 @@
         updatePayPeriodHint();
         checkSyncStatus();
         
-        if (document.getElementById('tab-leave') && document.getElementById('tab-leave').classList.contains('active')) {
+        // 如果當前是特休分頁，也更新特休UI
+        if (document.getElementById('tab-leave').classList.contains('active')) {
             renderLeaveTab();
         }
     }
@@ -968,7 +1013,7 @@
     // --- Google Apps Script 同步邏輯 ---
     function loadGasUrl() {
         gasAppUrl = localStorage.getItem(STORAGE_KEYS.GAS_APP_URL) || '';
-        if (gasUrlInput) gasUrlInput.value = gasAppUrl;
+        gasUrlInput.value = gasAppUrl;
         updateGasUiState();
         checkSyncStatus();
     }
@@ -1001,8 +1046,6 @@
     }
 
     function updateGasUiState() {
-        if (!gasConfigContainer || !gasSyncActions) return;
-        
         if (gasAppUrl) {
             gasConfigContainer.style.display = 'none';
             gasSyncActions.style.display = 'block';
@@ -1013,18 +1056,17 @@
     }
 
     function updateSyncStatus(msg, type = 'info') {
-        if (syncStatusEl) {
-            syncStatusEl.style.display = 'block';
-            syncStatusEl.textContent = msg;
-            syncStatusEl.className = 'sync-status-msg ' + type;
-            if(type === 'success') syncStatusEl.style.color = 'var(--success-color)';
-            else if (type === 'error') syncStatusEl.style.color = 'var(--danger-color)';
-            else syncStatusEl.style.color = 'var(--text-color)';
-        }
+        syncStatusEl.style.display = 'block';
+        syncStatusEl.textContent = msg;
+        syncStatusEl.className = 'sync-status-msg ' + type;
+        if(type === 'success') syncStatusEl.style.color = 'var(--success-color)';
+        else if (type === 'error') syncStatusEl.style.color = 'var(--danger-color)';
+        else syncStatusEl.style.color = 'var(--text-color)';
         
         showToast(msg, type);
     }
 
+    // 上傳資料 (Overwrite)
     async function syncToCloud() {
         if (!gasAppUrl) {
             switchTab('backup');
@@ -1043,9 +1085,7 @@
             if (result.status === 'success') {
                 const now = Date.now().toString();
                 localStorage.setItem(STORAGE_KEYS.LAST_SYNC, now);
-                if (document.getElementById('backup-reminder')) {
-                    document.getElementById('backup-reminder').style.display = 'none';
-                }
+                document.getElementById('backup-reminder').style.display = 'none';
                 updateSyncStatus(`✅ 上傳成功！(時間: ${new Date().toLocaleTimeString()})`, 'success');
                 checkSyncStatus();
             } else {
@@ -1057,6 +1097,7 @@
         }
     }
 
+    // 下載資料 (Merge)
     async function syncFromCloud() {
         if (!gasAppUrl) return;
         if (!confirm('確定要從雲端下載資料嗎？\n這將會與您現有的本地資料合併。')) return;
@@ -1128,18 +1169,16 @@
         }
     }
 
-    // --- UI/UX 相關函式 ---
+    // --- UI/UX 相關函式 (續) ---
     function showWelcomeMessage() {
         const welcomeShown = localStorage.getItem(STORAGE_KEYS.WELCOME_SHOWN);
         const hasSettings = localStorage.getItem(STORAGE_KEYS.SETTINGS);
         if (!welcomeShown && !hasSettings) {
             const welcomeEl = document.getElementById('welcome-message');
-            if (welcomeEl) {
-                welcomeEl.style.display = 'block';
-                setTimeout(() => {
-                    welcomeEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                }, 300);
-            }
+            welcomeEl.style.display = 'block';
+            setTimeout(() => {
+                welcomeEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }, 300);
         }
     }
 
@@ -1168,30 +1207,26 @@
     function showBackupReminder(days) {
         const reminderEl = document.getElementById('backup-reminder');
         const reminderText = document.getElementById('backup-reminder-text');
-        if (reminderEl && reminderText) {
-            reminderText.textContent = `您已經有 ${days} 天沒有備份或同步資料了！為避免資料遺失，建議立即操作。`;
-            reminderEl.style.display = 'block';
-            if (days >= 3) {
-                const modal = document.getElementById('backup-modal');
-                if (modal) {
-                    document.getElementById('backup-days-count').textContent = days;
-                    modal.classList.add('show');
-                }
-            }
+        reminderText.textContent = `您已經有 ${days} 天沒有備份或同步資料了！為避免資料遺失，建議立即操作。`;
+        reminderEl.style.display = 'block';
+        if (days >= 3) {
+            const modal = document.getElementById('backup-modal');
+            document.getElementById('backup-days-count').textContent = days;
+            modal.classList.add('show');
         }
     }
 
     function performSyncOrBackup() {
-        if (document.getElementById('backup-reminder')) document.getElementById('backup-reminder').style.display = 'none';
-        if (document.getElementById('backup-modal')) document.getElementById('backup-modal').classList.remove('show');
+        document.getElementById('backup-reminder').style.display = 'none';
+        document.getElementById('backup-modal').classList.remove('show');
         switchTab('backup');
     }
 
     function remindLater() {
         const delayTime = Date.now() - ((BACKUP_REMINDER_DAYS - 0.5) * 24 * 60 * 60 * 1000);
         localStorage.setItem(STORAGE_KEYS.LAST_BACKUP, delayTime.toString());
-        if (document.getElementById('backup-reminder')) document.getElementById('backup-reminder').style.display = 'none';
-        if (document.getElementById('backup-modal')) document.getElementById('backup-modal').classList.remove('show');
+        document.getElementById('backup-reminder').style.display = 'none';
+        document.getElementById('backup-modal').classList.remove('show');
     }
 
     function restoreState() {
@@ -1243,6 +1278,7 @@
         }
     }
 
+    // importData (保持不變)
     function importData(jsonString) {
         if (!jsonString) {
             showError('請先提供要匯入的資料。');
@@ -1280,136 +1316,109 @@
         }
     }
 
-    // --- 事件監聽器設定 (修正：定義在 init 之前) ---
+    // --- 事件監聽器設定 ---
     function setupEventListeners() {
-        if (document.getElementById('save-settings')) {
-            document.getElementById('save-settings').addEventListener('click', saveSettings);
-        }
-        if (addRecordBtn) {
-            addRecordBtn.addEventListener('click', addRecord);
-        }
-        if (document.getElementById('clear-form')) {
-            document.getElementById('clear-form').addEventListener('click', clearForm);
-        }
-        if (monthFilter) {
-            monthFilter.addEventListener('change', render);
-        }
+        document.getElementById('save-settings').addEventListener('click', saveSettings);
+        addRecordBtn.addEventListener('click', addRecord);
+        document.getElementById('clear-form').addEventListener('click', clearForm);
+        monthFilter.addEventListener('change', render);
         
-        if (document.getElementById('mode-punch')) {
-            document.getElementById('mode-punch').addEventListener('click', () => switchMode('punch', true));
-        }
-        if (document.getElementById('mode-manual')) {
-            document.getElementById('mode-manual').addEventListener('click', () => switchMode('manual', true));
-        }
+        document.getElementById('mode-punch').addEventListener('click', () => switchMode('punch', true));
+        document.getElementById('mode-manual').addEventListener('click', () => switchMode('manual', true));
         
-        if (punchStartBtn) punchStartBtn.addEventListener('click', startPunch);
-        if (punchEndBtn) punchEndBtn.addEventListener('click', endPunch);
+        punchStartBtn.addEventListener('click', startPunch);
+        punchEndBtn.addEventListener('click', endPunch);
         
-        if (document.getElementById('export-image')) document.getElementById('export-image').addEventListener('click', exportResultsAsImage);
-        if (document.getElementById('export-csv')) document.getElementById('export-csv').addEventListener('click', exportCSV);
+        document.getElementById('export-image').addEventListener('click', exportResultsAsImage);
+        document.getElementById('export-csv').addEventListener('click', exportCSV);
         
-        if (document.getElementById('close-welcome')) document.getElementById('close-welcome').addEventListener('click', closeWelcomeMessage);
+        document.getElementById('close-welcome').addEventListener('click', closeWelcomeMessage);
         
         // 特休按鈕事件
-        if (document.getElementById('add-leave-record')) document.getElementById('add-leave-record').addEventListener('click', addLeaveRecord);
-        if (document.getElementById('leave-btn-4h')) document.getElementById('leave-btn-4h').addEventListener('click', () => document.getElementById('leave-hours').value = 4);
-        if (document.getElementById('leave-btn-8h')) document.getElementById('leave-btn-8h').addEventListener('click', () => document.getElementById('leave-hours').value = 8);
-        if (document.getElementById('leave-date')) document.getElementById('leave-date').valueAsDate = new Date(); 
+        document.getElementById('add-leave-record').addEventListener('click', addLeaveRecord);
+        document.getElementById('leave-btn-4h').addEventListener('click', () => document.getElementById('leave-hours').value = 4);
+        document.getElementById('leave-btn-8h').addEventListener('click', () => document.getElementById('leave-hours').value = 8);
+        document.getElementById('leave-date').valueAsDate = new Date(); // 預設今天
         
         tabButtons.forEach(btn => {
             btn.addEventListener('click', () => { switchTab(btn.dataset.tab); });
         });
 
-        if (quickSyncBtn) {
-            quickSyncBtn.addEventListener('click', () => {
-                if (!gasAppUrl) {
-                    switchTab('backup');
-                } else {
-                    syncToCloud();
-                }
-            });
-        }
+        // 快捷同步按鈕
+        quickSyncBtn.addEventListener('click', () => {
+            if (!gasAppUrl) {
+                switchTab('backup');
+            } else {
+                syncToCloud();
+            }
+        });
 
-        // 匯出/匯入/備份相關事件
-        if (document.getElementById('export-text')) {
-            document.getElementById('export-text').addEventListener('click', () => {
-                const outputArea = document.getElementById('export-output');
-                const textarea = document.getElementById('export-textarea');
-                textarea.value = JSON.stringify({ settings, records }, null, 2);
-                outputArea.style.display = 'block';
-                localStorage.setItem(STORAGE_KEYS.LAST_BACKUP, Date.now().toString());
-            });
-        }
-        if (document.getElementById('copy-json')) {
-            document.getElementById('copy-json').addEventListener('click', async () => {
-                const textarea = document.getElementById('export-textarea');
-                try {
-                    await navigator.clipboard.writeText(textarea.value);
-                    const successMsg = document.getElementById('copy-success');
-                    successMsg.style.display = 'block';
-                    setTimeout(() => { successMsg.style.display = 'none'; }, 2000);
-                } catch (err) {
-                    textarea.select();
-                    document.execCommand('copy');
-                    alert('已複製到剪貼簿！');
-                }
-            });
-        }
-        if (document.getElementById('download-json')) {
-            document.getElementById('download-json').addEventListener('click', () => {
-                const textarea = document.getElementById('export-textarea');
-                const blob = new Blob([textarea.value], { type: 'application/json' });
-                const link = document.createElement('a');
-                link.href = URL.createObjectURL(blob);
-                const timestamp = new Date().toISOString().slice(0, 10);
-                const fileName = settings.userName ? `加班記錄備份-${settings.userName}-${timestamp}.json` : `加班記錄備份-${timestamp}.json`;
-                link.download = fileName;
-                link.click();
-            });
-        }
-        if (document.getElementById('import-text')) {
-            document.getElementById('import-text').addEventListener('click', () => {
-                const importText = document.getElementById('import-textarea').value;
-                importData(importText);
-            });
-        }
-        if (document.getElementById('import-file-btn')) {
-            document.getElementById('import-file-btn').addEventListener('click', () => {
-                document.getElementById('import-file-input').click();
-            });
-        }
-        if (document.getElementById('import-file-input')) {
-            document.getElementById('import-file-input').addEventListener('change', (event) => {
-                const file = event.target.files[0];
-                if (!file) return;
-                if (file.type !== 'application/json') {
-                    showError('錯誤：請選擇一個 .json 檔案。');
-                    event.target.value = '';
-                    return;
-                }
-                const reader = new FileReader();
-                reader.onload = (e) => { importData(e.target.result); };
-                reader.onerror = () => { showError('讀取檔案時發生錯誤。'); };
-                reader.readAsText(file);
+        // 匯出/匯入/備份相關事件 (保持不變)
+        document.getElementById('export-text').addEventListener('click', () => {
+            const outputArea = document.getElementById('export-output');
+            const textarea = document.getElementById('export-textarea');
+            textarea.value = JSON.stringify({ settings, records }, null, 2);
+            outputArea.style.display = 'block';
+            localStorage.setItem(STORAGE_KEYS.LAST_BACKUP, Date.now().toString());
+        });
+        document.getElementById('copy-json').addEventListener('click', async () => {
+            const textarea = document.getElementById('export-textarea');
+            try {
+                await navigator.clipboard.writeText(textarea.value);
+                const successMsg = document.getElementById('copy-success');
+                successMsg.style.display = 'block';
+                setTimeout(() => { successMsg.style.display = 'none'; }, 2000);
+            } catch (err) {
+                textarea.select();
+                document.execCommand('copy');
+                alert('已複製到剪貼簿！');
+            }
+        });
+        document.getElementById('download-json').addEventListener('click', () => {
+            const textarea = document.getElementById('export-textarea');
+            const blob = new Blob([textarea.value], { type: 'application/json' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            const timestamp = new Date().toISOString().slice(0, 10);
+            const fileName = settings.userName ? `加班記錄備份-${settings.userName}-${timestamp}.json` : `加班記錄備份-${timestamp}.json`;
+            link.download = fileName;
+            link.click();
+        });
+        document.getElementById('import-text').addEventListener('click', () => {
+            const importText = document.getElementById('import-textarea').value;
+            importData(importText);
+        });
+        document.getElementById('import-file-btn').addEventListener('click', () => {
+            document.getElementById('import-file-input').click();
+        });
+        document.getElementById('import-file-input').addEventListener('change', (event) => {
+            const file = event.target.files[0];
+            if (!file) return;
+            if (file.type !== 'application/json') {
+                showError('錯誤：請選擇一個 .json 檔案。');
                 event.target.value = '';
-            });
-        }
+                return;
+            }
+            const reader = new FileReader();
+            reader.onload = (e) => { importData(e.target.result); };
+            reader.onerror = () => { showError('讀取檔案時發生錯誤。'); };
+            reader.readAsText(file);
+            event.target.value = '';
+        });
         
-        if (document.getElementById('backup-reminder-action')) document.getElementById('backup-reminder-action').addEventListener('click', performSyncOrBackup);
-        if (document.getElementById('backup-remind-later')) document.getElementById('backup-remind-later').addEventListener('click', remindLater);
-        if (document.getElementById('modal-backup-now')) document.getElementById('modal-backup-now').addEventListener('click', performSyncOrBackup);
-        if (document.getElementById('modal-remind-later')) document.getElementById('modal-remind-later').addEventListener('click', remindLater);
-        if (document.getElementById('backup-modal')) {
-            document.getElementById('backup-modal').addEventListener('click', (e) => {
-                if (e.target.id === 'backup-modal') remindLater();
-            });
-        }
+        document.getElementById('backup-reminder-action').addEventListener('click', performSyncOrBackup);
+        document.getElementById('backup-remind-later').addEventListener('click', remindLater);
+        document.getElementById('modal-backup-now').addEventListener('click', performSyncOrBackup);
+        document.getElementById('modal-remind-later').addEventListener('click', remindLater);
+        document.getElementById('backup-modal').addEventListener('click', (e) => {
+            if (e.target.id === 'backup-modal') remindLater();
+        });
 
         // GAS Sync Event Listeners
-        if (saveGasUrlBtn) saveGasUrlBtn.addEventListener('click', saveGasUrl);
-        if (resetGasUrlBtn) resetGasUrlBtn.addEventListener('click', resetGasUrl);
-        if (syncUploadBtn) syncUploadBtn.addEventListener('click', syncToCloud);
-        if (syncDownloadBtn) syncDownloadBtn.addEventListener('click', syncFromCloud);
+        saveGasUrlBtn.addEventListener('click', saveGasUrl);
+        resetGasUrlBtn.addEventListener('click', resetGasUrl);
+        syncUploadBtn.addEventListener('click', syncToCloud);
+        syncDownloadBtn.addEventListener('click', syncFromCloud);
     }
 
     // --- 應用程式初始化 ---
@@ -1418,6 +1427,7 @@
         loadRecords();
         loadGasUrl();
         
+        // 1. 設定預設月份 (使用新的邏輯)
         monthFilter.value = getDefaultMonthValue();
         
         render();
@@ -1425,6 +1435,7 @@
         restoreState();
         showWelcomeMessage();
         
+        // 2. 決定初始 Tab
         if (settings && settings.salary > 0 && settings.hourlyRate > 0) {
             switchTab('punch');
         } else {
@@ -1432,7 +1443,7 @@
         }
         
         setTimeout(() => checkBackupReminder(), 2000);
-        checkSyncStatus();
+        checkSyncStatus(); // 初始檢查同步狀態
         handleUrlHash();
     }
 
