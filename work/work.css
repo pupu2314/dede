@@ -133,6 +133,47 @@ h2 {
     to { opacity: 1; transform: translateY(0); }
 }
 
+/* Leave Stats */
+.leave-stats-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+}
+.leave-stat-box {
+    background: #f8f9fa;
+    padding: 1rem;
+    border-radius: 8px;
+    text-align: center;
+    border: 1px solid #dee2e6;
+}
+.leave-stat-box h4 {
+    margin: 0 0 0.5rem 0;
+    font-size: 0.9rem;
+    color: #666;
+}
+.leave-stat-box .stat-value {
+    font-size: 1.8rem;
+    font-weight: bold;
+    color: #333;
+}
+.leave-stat-box .stat-value small {
+    font-size: 0.9rem;
+    color: #888;
+}
+.leave-stat-box .stat-desc {
+    font-size: 0.8rem;
+    color: #999;
+    margin-top: 0.25rem;
+}
+.leave-stat-box.remaining {
+    background: #e9f5ff;
+    border-color: #b3d7ff;
+}
+.leave-stat-box .stat-value.highlight {
+    color: var(--primary-color);
+}
+
 summary {
 	font-size: 1.5rem;
 	font-weight: bold;
@@ -181,7 +222,7 @@ label {
 	margin-bottom: 0.5rem;
 	font-weight: bold;
 }
-input[type="number"], input[type="datetime-local"], input[type="text"], input[type="time"], textarea, input[type="month"] {
+input[type="number"], input[type="datetime-local"], input[type="text"], input[type="time"], textarea, input[type="month"], input[type="date"] {
 	width: 100%;
 	padding: 0.75rem;
 	border: 1px solid var(--border-color);
@@ -490,4 +531,9 @@ th {
 		display: block;
 		text-align: left;
 	}
+    /* Mobile Leave Stats */
+    .leave-stats-grid {
+        grid-template-columns: 1fr;
+        gap: 0.5rem;
+    }
 }
