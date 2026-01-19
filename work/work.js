@@ -161,101 +161,74 @@
         
         // 如果今年還沒入職，天數為0
         if (onboard > yearEnd) return 0;
-
+    
         // 週年日 (今年的週年日)
         let anniversary = new Date(onboard);
         anniversary.setFullYear(targetYear);
-
-        // 計算兩個時段的年資 (Period 1: 1/1 ~ Anniversary-1, Period 2: Anniversary ~ 12/31)
-        // 1. Period 1 年資: targetYear - onboardYear - 1 (尚未滿週年)
-        // 2. Period 2 年資: targetYear - onboardYear (已滿週年)
+    
+        // --- 計算區段比例 (改用 Month + Day/30 邏輯) ---
         
-        const tenurePrev = targetYear - onboard.getFullYear() - 1;
-        const tenureCurr = targetYear - onboard.getFullYear();
-
-        // 取得法規天數
-        const daysPrev = getLeaveEntitlementByTenure(Math.max(0, tenurePrev + 0.5)); // +0.5 是為了判斷是否滿半年
-        // 修正: 勞基法是用滿幾年給幾天，所以用 tenureCurr 查表即可 (但需考慮滿半年)
-        // 邏輯修正:
-        // 在 Anniversary 之前，是適用「去年的年資」
-        // 在 Anniversary 之後，是適用「今年的年資」
-        
-        // 為了精確計算，使用天數比例
-        // 1/1 ~ 週年日前一日的天數
-        let daysInPeriod1 = 0;
-        let daysInPeriod2 = 0;
+        // 定義計算月份比例的工具函式
+        function getMonthProportion(startDate, endDate) {
+            // 計算總相差天數
+            const msPerDay = 24 * 60 * 60 * 1000;
+            const totalDays = (endDate - startDate) / msPerDay + 1; // 含頭尾
+            
+            // 換算成 "月 + 日/30"
+            // 這裡採取簡化邏輯：直接用天數 / 30 來模擬您的公式 (日/30)
+            // 若要嚴格對齊 "6個月 + 0天"，通常是看月份差。
+            // 但為了通用性，將該年度的比例視為： (該區段天數 / 30) / 12 ? 
+            // 您的公式是： (6 + 0/30)/12。代表上半年剛好佔 0.5。
+            
+            // 實作您公式的邏輯：
+            // 1. 先算出 Anniversary 在一年中的落點月份
+            // Anniversary 是 7/1。 1/1~6/30 是 Period 1。
+            // Period 1 的月數 = (AnniversaryMonth - 1) + (AnniversaryDay - 1)/30
+            // 例如 7/1: (7-1) + (1-1)/30 = 6 個月
+            return totalDays; 
+        }
+    
+        // 依照您的公式邏輯，我們重新計算 "Period 1 的權重" (prop1)
+        let prop1 = 0;
         
         if (anniversary > yearEnd) {
-            // 週年日在明年 (例如 12/31 到職)，整年都是 Period 1
-            daysInPeriod1 = 365; // 簡化
-        } else if (anniversary < yearStart) {
-            // 週年日在去年 (理論上不會發生，因為 anniversary 是設為 targetYear)
-            daysInPeriod2 = 365;
+            prop1 = 1; // 整年都是舊年資
+        } else if (anniversary <= yearStart) {
+            prop1 = 0; // 整年都是新年資
         } else {
-            // 一般情況: 1/1 --- Anniversary --- 12/31
-            const msPerDay = 24 * 60 * 60 * 1000;
-            daysInPeriod1 = (anniversary - yearStart) / msPerDay; // 1/1 到週年日
-            daysInPeriod2 = (yearEnd - anniversary) / msPerDay + 1; // 週年日 到 12/31
+            // 核心修改：使用 (月 + 日/30) / 12 的公式
+            // 假設到職日是 M月 D日
+            const month = onboard.getMonth(); // 0-based (0=Jan, 6=July)
+            const day = onboard.getDate();
+            
+            // 公式： (經過的月數 + 經過的零頭天數/30) / 12
+            // 因為 Anniversary 是到職月日，所以 Period 1 (1/1 ~ Anniversary前一日) 的長度剛好就是到職日的月份數
+            // 例如 7月1日到職：
+            // 1月~6月 = 6個月。 7/1 當天算下個年度。
+            // 零頭天數 = day - 1。
+            
+            const fullMonths = month; // 7月是 index 6，剛好代表前6個月滿
+            const days = day - 1;     // 1號代表沒有多餘天數
+            
+            // 您的公式部分： (6 + 0/30) / 12
+            prop1 = (fullMonths + (days / 30)) / 12;
         }
-        
-        const totalDaysInYear = 365 + (targetYear % 4 === 0 ? 1 : 0); // 閏年簡化判斷
-
-        // 判斷該時段適用的年資級距
-        // Period 1 的年資是 (targetYear - 1) - onboardYear
-        // Period 2 的年資是 targetYear - onboardYear
-        // 但是要處理「滿半年」的特殊情況
-        
-        // 為了簡化且符合一般曆年制試算表：
-        // 比例1 = (該年度特休天數) * (在職天數 / 365)
-        
-        // 我們直接計算兩個區段應得天數並加總
-        // 區段1 (1/1 ~ 到職日前一日): 適用「上一年度年資」的給假標準
-        // 區段2 (到職日 ~ 12/31): 適用「當年度年資」的給假標準
-        
-        // 精確年資計算 (以 Period 1 結束點和 Period 2 結束點來看)
-        // 實際上曆年制公式通常是：
-        // (上一年資給假天數 * 上一年資在今年佔的天數 / 365) + (今年資給假天數 * 今年資在今年佔的天數 / 365)
-        
-        // 重新釐清年資:
-        // 假設 2022/7/1 到職. 計算 2023 年 (targetYear)
-        // 1/1 ~ 6/30: 年資 0.5年. 適用「滿半年」標準 (3天). 佔 181 天. -> 3 * (181/365)
-        // 7/1 ~ 12/31: 年資 1年. 適用「滿1年」標準 (7天). 佔 184 天. -> 7 * (184/365)
-        
-        // 計算 Period 1 的年資 (以 Anniversary 為基準點，未滿該週年)
-        const seniority1 = (new Date(targetYear, onboard.getMonth(), onboard.getDate()) - onboard) / (365 * 24 * 60 * 60 * 1000); 
-        // 計算 Period 2 的年資 (滿該週年)
-        const seniority2 = seniority1 + 1; // 其實不用這麼複雜，直接用整數年資查表即可
-        
-        // 修正後的邏輯:
-        // 年資整數 N = targetYear - onboardYear
-        // 1/1 ~ Anniversary: 屬於第 N 年 (未滿 N+1)，享有「滿 N 年」的權利
-        // Anniversary ~ 12/31: 屬於第 N+1 年，享有「滿 N+1 年」的權利
-        
-        // 需特別處理 < 1年的情況
-        // 範例: 2023/7/1 到職
-        // 2024/1/1 ~ 6/30: 滿 0.5 年 -> 3天
-        // 2024/7/1 ~ 12/31: 滿 1 年 -> 7天
-        
+    
+        const prop2 = 1 - prop1; // 剩下就是下個年度的比例
+    
+        // --- 取得天數權益 ---
+        // 注意：這裡依舊使用原本的年資計算邏輯來查表
+        // 若您的 18/19 天是優於勞基法的，請記得修改 getLeaveEntitlementByTenure 函式
         const yearsServedAtAnniversary = targetYear - onboard.getFullYear();
         
-        const ruleDays1 = getLeaveEntitlementByTenure(Math.max(0, yearsServedAtAnniversary - 1 + 0.01)); // 上一個級距 (用+0.01避開0)
-        // 特例: 如果是滿半年(0.5)，上面的 yearsServedAtAnniversary 是 1 (跨年了)，但 1/1~6/30 是算 0.5~1 的區間
+        // Period 1 (週年日前): 滿 (Years-1) 年的權益
+        const entitlement1 = getLeaveEntitlementByTenure(Math.max(0, yearsServedAtAnniversary - 1 + 0.01));
         
-        // 更精確的做法:
-        // Period 1 的資格認定點: Anniversary 前一天. 年資 = AnniversaryDate - OnboardDate - 1 day
-        // Period 2 的資格認定點: 12/31. 年資 = Dec31 - OnboardDate
-        
-        const p1_date = new Date(anniversary); p1_date.setDate(p1_date.getDate() - 1);
-        const p1_years = (p1_date - onboard) / (365 * 24 * 60 * 60 * 1000);
-        
-        const p2_date = yearEnd;
-        const p2_years = (p2_date - onboard) / (365 * 24 * 60 * 60 * 1000);
-        
-        const entitlement1 = getLeaveEntitlementByTenure(p1_years);
-        const entitlement2 = getLeaveEntitlementByTenure(p2_years);
-        
-        // 依比例加總
-        let total = (entitlement1 * (daysInPeriod1 / totalDaysInYear)) + (entitlement2 * (daysInPeriod2 / totalDaysInYear));
+        // Period 2 (週年日後): 滿 Years 年的權益
+        const entitlement2 = getLeaveEntitlementByTenure(yearsServedAtAnniversary);
+    
+        // 依您的公式加總
+        let total = (entitlement1 * prop1) + (entitlement2 * prop2);
         
         return Math.round(total * 100) / 100; // 取小數點後兩位
     }
