@@ -18,7 +18,7 @@
 </head>
 <body>
     <div class="container main-layout">
-        <h1 class="app-title">加班費計算機 <small>v2.8.2</small></h1>
+        <h1 class="app-title">加班費計算機 <small>v2.8.4</small></h1>
         
         <!-- 未同步提醒條 (預設隱藏) -->
         <div id="unsynced-alert" class="sync-alert-bar" style="display: none;">
@@ -27,160 +27,268 @@
         </div>
 
         <!-- 分頁導航列 -->
-        <div class="tabs">
-            <button class="tab-btn active" data-tab="punch">打卡</button>
-            <button class="tab-btn" data-tab="records">紀錄</button>
+        <nav class="tabs-nav">
             <button class="tab-btn" data-tab="settings">設定</button>
+            <button class="tab-btn active" data-tab="punch">加班</button>
+            <button class="tab-btn" data-tab="leave">特休</button> <!-- 新增特休分頁按鈕 -->
+            <button class="tab-btn" data-tab="records">紀錄</button>
+            <button class="tab-btn" data-tab="backup">備份</button>
+        </nav>
+
+        <div id="welcome-message" class="info-message" style="display: none; margin-bottom: 1rem;">
+            <h3>👋 歡迎使用加班費計算機！</h3>
+            <p><strong>使用前請注意：</strong></p>
+            <ul style="text-align: left; margin: 0.5rem 0;">
+                <li>📱 資料預設儲存在<strong>本地瀏覽器</strong>中。</li>
+                <li>☁️ <strong>免費雲端同步：</strong>支援 Google Apps Script (GAS) 同步！</li>
+                <li>🏖️ <strong>新功能：</strong>新增特休假計算與管理功能。</li>
+            </ul>
+            <p style="margin-top: 1rem;">請先至「設定」分頁完成基本資料，然後開始記錄！</p>
+            <button id="close-welcome" class="btn-secondary btn-small" style="margin-top: 0.5rem;">我知道了</button>
         </div>
-
-        <!-- Tab 1: 打卡輸入 -->
-        <div id="punch" class="tab-content active">
-            <div class="input-group">
-                <label for="work-date">日期</label>
-                <input type="date" id="work-date" required>
-            </div>
-            
-            <div class="row">
-                <div class="input-group col">
-                    <label for="start-time">上班時間</label>
-                    <input type="time" id="start-time" required>
-                </div>
-                <div class="input-group col">
-                    <label for="end-time">下班時間</label>
-                    <input type="time" id="end-time" required>
-                </div>
-            </div>
-
-            <div class="input-group">
-                <label for="rest-time">休息時數 (小時)</label>
-                <input type="number" id="rest-time" step="0.5" placeholder="例如: 1 或 0.5" value="1">
-            </div>
-
-            <button id="add-record" class="btn btn-primary btn-block">新增紀錄</button>
-        </div>
-
-        <!-- Tab 2: 紀錄列表 -->
-        <div id="records" class="tab-content">
-            <div class="filter-bar">
-                <label for="month-filter">選擇月份：</label>
-                <input type="month" id="month-filter">
-            </div>
-
-            <div class="summary-card">
-                <div class="summary-item">
-                    <span>總加班時數</span>
-                    <strong id="total-overtime-hours">0</strong> hr
-                </div>
-                <div class="summary-item">
-                    <span>預估加班費</span>
-                    <strong id="total-overtime-pay" style="color: var(--success-color);">0</strong> 元
-                </div>
-            </div>
-
-            <div class="table-container">
-                <table>
-                    <thead>
-                        <tr>
-                            <th>日期</th>
-                            <th>時間</th>
-                            <th>休</th>
-                            <th>工時</th>
-                            <th>金額</th>
-                            <th>操作</th>
-                        </tr>
-                    </thead>
-                    <tbody id="records-body">
-                        <!-- JS Rendered -->
-                    </tbody>
-                </table>
-            </div>
-        </div>
-
-        <!-- Tab 3: 設定 -->
-        <div id="settings" class="tab-content">
-            <div class="settings-section">
-                <h3>基本設定</h3>
-                <div class="input-group">
-                    <label for="salary">月薪 (元)</label>
-                    <input type="number" id="salary" placeholder="例如: 40000">
-                </div>
-                <div class="input-group">
-                    <label for="hourly-rate">換算時薪 (自動/手動)</label>
-                    <input type="number" id="hourly-rate" step="0.01" placeholder="系統自動計算">
-                    <small style="color: #666;">* 勞基法基準：月薪 / 240</small>
-                </div>
-                <div class="input-group">
-                    <button id="delete-all" class="btn btn-danger" style="margin-top: 1rem;">清空所有資料</button>
-                </div>
-            </div>
-
-            <!-- 特休試算區塊 -->
-            <div class="settings-section">
-                <h3>📅 特休試算</h3>
-                <div class="input-group">
-                    <label for="onboard-date">到職日期</label>
-                    <input type="date" id="onboard-date">
-                </div>
-                <button id="calc-leave-btn" class="btn btn-secondary" style="width: 100%; margin-top: 0.5rem;">計算特休天數</button>
-                
-                <div id="leave-result" class="leave-result-container" style="display: none;">
-                    <!-- JS Rendered Results -->
-                </div>
-            </div>
-
-            <!-- Google Sheets 同步區塊 (新版) -->
-            <div class="settings-section" id="gas-sync-section">
-                <h3>☁️ Google Sheets 同步</h3>
-                <p style="font-size: 0.9em; color: #666; margin-bottom: 10px;">
-                    請貼上您部署的 Google Apps Script 網址以啟用雲端同步。
-                </p>
-                
-                <div class="input-group">
-                    <input type="text" id="gas-app-url" placeholder="https://script.google.com/macros/s/..." style="font-size: 0.8em;">
-                    <div style="display: flex; gap: 5px; margin-top: 5px;">
-                        <button id="save-gas-url" class="btn-small btn-primary">儲存網址</button>
-                        <button id="reset-gas-url" class="btn-small btn-secondary">清除</button>
+        
+        <!-- 分頁 1: 設定 -->
+        <div id="tab-settings" class="tab-content">
+            <div class="card">
+                <h2>基本設定</h2>
+                <div>
+                    <div class="form-group">
+                        <label for="user-name">姓名 (選填)</label>
+                        <input type="text" id="user-name" placeholder="例如:王小明" aria-label="使用者姓名">
                     </div>
-                </div>
-
-                <div class="sync-actions" style="margin-top: 15px; border-top: 1px solid #eee; padding-top: 15px;">
-                    <div style="margin-bottom: 10px; font-weight: bold;">同步操作：</div>
-                    
-                    <button id="sync-smart-btn" class="btn btn-success btn-block" style="margin-bottom: 10px;">
-                        🔄 智慧同步 (雙向合併)
-                    </button>
-                    
-                    <div class="sync-buttons-group">
-                        <button id="sync-force-upload-btn" class="btn btn-warning" style="flex: 1;">
-                            ⬆️ 強制上傳 (覆蓋雲端)
-                        </button>
-                        <button id="sync-force-download-btn" class="btn btn-warning" style="flex: 1;">
-                            ⬇️ 強制下載 (覆蓋本機)
-                        </button>
+                    <div class="form-group" style="background: #eef7ff; padding: 10px; border-radius: 4px; border: 1px solid #cfe2ff;">
+                        <label for="onboard-date" style="color: #0056b3;">📅 到職日期 (計算特休用)</label>
+                        <input type="date" id="onboard-date" aria-label="到職日期">
+                        <small style="color: var(--secondary-color);">* 系統將依此日期自動採用「曆年制」計算特休天數</small>
                     </div>
-                    <small style="display: block; margin-top: 5px; color: #888; font-size: 0.8em;">
-                        * 智慧同步會保留兩邊所有的不重複紀錄。<br>
-                        * 強制操作會完全覆蓋另一端的資料，請謹慎使用。
-                    </small>
-                </div>
-            </div>
-
-            <div class="settings-section">
-                <h3>資料備份與還原 (JSON)</h3>
-                <div class="row">
-                    <div class="col">
-                        <button id="export-json" class="btn btn-secondary btn-block">複製備份代碼</button>
-                        <div id="copy-success" class="info-message" style="display: none; margin-top: 0.5rem; padding: 0.5rem;">
-                            ✅ 已複製到剪貼簿！
+                    <hr>
+                    <div class="form-group"><label>薪資類型</label><div class="radio-group"><label><input type="radio" name="salaryType" value="monthly" checked> 月薪</label><label><input type="radio" name="salaryType" value="hourly"> 時薪</label></div></div>
+                    <div class="form-group"><label for="salary">薪資金額 (NTD)</label><input type="number" id="salary" min="0" step="1" placeholder="例如:40000" aria-label="薪資金額"></div>
+                    <div class="form-group"><label for="hourly-rate">換算時薪 (自動)</label><input type="number" id="hourly-rate" readonly aria-label="換算後的時薪"></div>
+                    <div class="form-group">
+                        <label for="payday">發薪日期 (每月幾號)</label>
+                        <input type="number" id="payday" min="1" max="31" value="1" placeholder="例如:15" aria-label="發薪日期">
+                    </div>
+                    <hr>
+                    <div class="form-group">
+                        <label>正常工作/午休時間 (僅於「平日」加班時自動排除)</label>
+                        <div class="time-input-group">
+                            <label>上班</label><input type="time" id="work-start" value="09:00" aria-label="上班時間">
+                            <label>下班</label><input type="time" id="work-end" value="18:00" aria-label="下班時間">
+                            <label>午休</label><input type="time" id="break-start" value="12:00" aria-label="午休開始時間">
+                            <label>結束</label><input type="time" id="break-end" value="13:00" aria-label="午休結束時間">
                         </div>
                     </div>
+                    <button id="save-settings">儲存設定</button>
                 </div>
-                <div>
-                    <h3>本地匯入</h3>
-                    <textarea id="import-textarea" placeholder="在此貼上您備份的 JSON 文字" rows="5" aria-label="要匯入的資料"></textarea>
-                    <button id="import-text" style="margin-top: 0.5rem;">確認匯入</button>
-                    <button id="import-file-btn" class="btn btn-secondary">從檔案匯入</button>
-                    <input type="file" id="import-file-input" accept=".json" style="display: none;">
+            </div>
+        </div>
+
+        <!-- 分頁 2: 加班 (打卡/補登) -->
+        <div id="tab-punch" class="tab-content active">
+            <div class="card">
+                <h2>新增加班紀錄</h2>
+                <div class="mode-switcher">
+                    <button id="mode-punch" class="active" aria-pressed="true">即時打卡</button>
+                    <button id="mode-manual" aria-pressed="false">補登紀錄</button>
+                </div>
+                <div id="punch-mode-content">
+                    <div style="display: flex; gap: 1rem;">
+                        <button id="punch-start" style="flex: 1;" aria-label="開始加班打卡">開始加班</button>
+                        <button id="punch-end" style="flex: 1;" disabled aria-label="結束加班打卡">結束加班</button>
+                    </div>
+                    <div id="punch-status" class="info-message" style="display: none; margin-top: 1rem; text-align: center;">
+                        <div><strong>加班開始時間:</strong> <span id="punch-start-time-display"></span></div>
+                        <div><strong>目前已過時間:</strong> <span id="punch-elapsed-time-display">00:00:00</span></div>
+                    </div>
+                </div>
+                <div id="manual-mode-content" style="display: none;">
+                    <input type="hidden" id="edit-id">
+                    <div class="form-group"><label for="start-time">開始時間</label><input type="datetime-local" id="start-time" aria-label="加班開始時間"></div>
+                    <div class="form-group"><label for="end-time">結束時間</label><input type="datetime-local" id="end-time" aria-label="加班結束時間"></div>
+                </div>
+                <div class="form-group" style="margin-top: 1rem;"><label for="overtime-reason">加班事由 (選填)</label><input type="text" id="overtime-reason" placeholder="例如:專案A上線支援" aria-label="加班事由"></div>
+                <div class="form-group">
+                    <label>加班類型</label>
+                    <div class="radio-group"><label><input type="radio" name="overtimeType" value="weekday" checked> 平日</label><label><input type="radio" name="overtimeType" value="restday"> 休息日</label><label><input type="radio" name="overtimeType" value="holiday"> 國定假日</label></div>
+                </div>
+                 <div class="form-group checkbox-group" style="background: #f9f9f9; padding: 0.75rem; border-radius: 4px;">
+                    <label><input type="checkbox" id="force-full-calc-toggle"> <strong>強制計算完整時長</strong> (用於補休時加班等情境)</label>
+                </div>
+                <button id="add-record">新增/更新紀錄</button><button id="clear-form" class="btn-secondary">清除表單</button>
+                <div id="restore-message" class="info-message" style="display: none;"></div>
+                <div id="form-error" class="error-message" style="display: none;"></div>
+            </div>
+        </div>
+
+        <!-- 分頁 3: 特休 (新功能) -->
+        <div id="tab-leave" class="tab-content">
+            <div class="card" id="leave-summary-card">
+                <h2>特休假管理 (曆年制)</h2>
+                
+                <div id="leave-setup-hint" style="display: none; text-align: center; padding: 2rem;">
+                    <p>請先至「設定」分頁設定<strong>到職日期</strong>，以啟用特休計算功能。</p>
+                    <button class="btn-secondary" onclick="document.querySelector('[data-tab=\'settings\']').click()">前往設定</button>
+                </div>
+
+                <div id="leave-dashboard" style="display: none;">
+                    <!-- 年度概況卡片 -->
+                    <div class="leave-stats-grid">
+                        <div class="leave-stat-box current-year">
+                            <h4>今年度 (<span id="leave-current-year"></span>)</h4>
+                            <div class="stat-value"><span id="leave-current-total">0</span> <small>天</small></div>
+                            <div class="stat-desc">曆年制應給天數</div>
+                        </div>
+                        <div class="leave-stat-box last-year">
+                            <h4>去年度遞延</h4>
+                            <div class="stat-value"><span id="leave-last-remain">0</span> <small>天</small></div>
+                            <div class="stat-desc">去年未休完時數</div>
+                        </div>
+                        <div class="leave-stat-box remaining">
+                            <h4>目前剩餘</h4>
+                            <div class="stat-value highlight"><span id="leave-balance">0</span> <small>天</small></div>
+                            <div class="stat-desc">總額 - 已使用</div>
+                        </div>
+                    </div>
+
+                    <hr style="margin: 1.5rem 0;">
+
+                    <!-- 請假操作區 -->
+                    <h3>📋 登記請假</h3>
+                    <div class="grid-container single-column-grid" style="gap: 1rem;">
+                        <div class="form-group">
+                            <label>請假日期</label>
+                            <input type="date" id="leave-date">
+                        </div>
+                        <div class="form-group">
+                            <label>請假時數 (1天 = 8小時)</label>
+                            <div style="display: flex; gap: 0.5rem;">
+                                <input type="number" id="leave-hours" value="8" min="0.5" step="0.5" style="flex: 1;">
+                                <button class="btn-secondary" id="leave-btn-4h" style="flex: 0 0 auto;">半天(4h)</button>
+                                <button class="btn-secondary" id="leave-btn-8h" style="flex: 0 0 auto;">全天(8h)</button>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label>事由 (選填)</label>
+                            <input type="text" id="leave-reason" placeholder="例如: 處理私事">
+                        </div>
+                        <button id="add-leave-record">新增特休紀錄</button>
+                    </div>
+
+                    <!-- 使用紀錄列表 -->
+                    <h3 style="margin-top: 1.5rem;">📅 使用明細 (今年)</h3>
+                    <table id="leave-history-table">
+                        <thead>
+                            <tr>
+                                <th>日期</th>
+                                <th>時數</th>
+                                <th>事由</th>
+                                <th>操作</th>
+                            </tr>
+                        </thead>
+                        <tbody id="leave-history-body">
+                            <!-- JS 填充 -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- 分頁 4: 紀錄 -->
+        <div id="tab-records" class="tab-content">
+            <div id="capture-area" class="card">
+                <h2>加班紀錄與總覽</h2>
+                <div class="controls-container" style="display: flex; flex-wrap: wrap; gap: 1rem; align-items: flex-end;">
+                    <div class="form-group" style="flex: 1 1 200px;">
+                        <label for="month-filter">篩選發薪月份</label>
+                        <input type="month" id="month-filter" aria-label="選擇要篩選的月份">
+                        <small id="pay-period-hint" style="color: var(--secondary-color); display: block; margin-top: 0.25rem;"></small>
+                    </div>
+                    <button id="export-image" class="btn-secondary" style="flex: 1 1 150px;">匯出本月圖片</button>
+                    <button id="export-csv" class="btn-secondary" style="flex: 1 1 150px;">匯出 CSV</button>
+                </div>
+                <table role="table" aria-label="加班記錄列表"><thead><tr><th>日期</th><th>類型</th><th>總時長(H)</th><th>加班費($)</th><th>操作</th></tr></thead><tbody id="records-body"></tbody></table>
+                <div class="summary">
+                    <h3 id="summary-title">篩選月份總計</h3>
+                    <p>期間:<span id="summary-period"></span></p>
+                    <span id="total-overtime-pay" class="summary-value">0</span> 元
+                </div>
+            </div>
+        </div>
+        
+        <!-- 分頁 5: 備份 (資料管理) -->
+        <div id="tab-backup" class="tab-content">
+            <div class="card">
+                <h2>資料管理</h2>
+                
+                <div id="backup-reminder" class="warning-message" style="display: none; margin-bottom: 1rem;">
+                    <strong>⚠️ 備份提醒</strong><br>
+                    <span id="backup-reminder-text"></span>
+                    <div style="margin-top: 0.5rem;">
+                        <button id="backup-reminder-action" class="btn-secondary btn-small">立即同步/備份</button>
+                        <button id="backup-remind-later" class="btn-secondary btn-small">稍後提醒</button>
+                    </div>
+                </div>
+
+                <!-- 雲端同步區塊 (GAS Version) -->
+                <div id="cloud-sync-section" style="margin-bottom: 2rem; background: #f0f7ff; padding: 1rem; border-radius: 8px; border: 1px solid #cce5ff;">
+                    <h3 style="margin-top:0; color: #0056b3;">☁️ Google Sheets 雲端同步 (GAS版)</h3>
+                    
+                    <div id="gas-config-container">
+                        <p style="margin-bottom: 0.5rem; font-size: 0.95rem;">
+                            請在 Google 試算表中建立 Apps Script，並將發布後的 <strong>Web App URL</strong> 貼在下方。
+                            <br><small style="color:#666;">(無須登入，僅需網址即可同步)</small>
+                        </p>
+                        <div style="display: flex; gap: 0.5rem; margin-bottom: 1rem;">
+                            <input type="text" id="gas-url-input" placeholder="https://script.google.com/macros/s/..../exec" style="flex:1;">
+                            <button id="save-gas-url" class="btn-small">儲存網址</button>
+                        </div>
+                    </div>
+
+                    <div id="gas-sync-actions" style="display: none;">
+                        <div class="user-info" style="margin-bottom: 1rem; font-size: 0.9rem; display: flex; justify-content: space-between; align-items: center;">
+                            <span style="color: var(--success-color); font-weight: bold;">✅ 已連結 Google Sheets</span>
+                            <button id="reset-gas-url" class="btn-small btn-secondary">重設網址</button>
+                        </div>
+                        <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                            <button id="sync-upload-btn" class="btn-sync upload">
+                                ⬆️ 上傳覆蓋 (備份)
+                            </button>
+                            <button id="sync-download-btn" class="btn-sync download">
+                                ⬇️ 下載合併 (還原)
+                            </button>
+                        </div>
+                        <small style="display: block; margin-top: 0.5rem; color: #666;">
+                            * 上傳：會完全覆蓋試算表內容<br>
+                            * 下載：將試算表資料合併至本機 (ID 相同更新，不同新增)
+                        </small>
+                        <div id="sync-status" class="sync-status-msg" style="display: none;"></div>
+                    </div>
+                </div>
+
+                <div class="grid-container">
+                    <div>
+                        <h3>本地匯出</h3>
+                        <button id="export-text">匯出為文字(JSON)</button>
+                        <div id="export-output" style="display:none; margin-top: 1rem;">
+                            <label>請複製以下所有文字:</label>
+                            <textarea id="export-textarea" readonly rows="5" aria-label="匯出的資料"></textarea>
+                            <div style="margin-top: 0.5rem; display: flex; gap: 0.5rem;">
+                                <button id="copy-json" class="btn-secondary btn-small">📋 一鍵複製</button>
+                                <button id="download-json" class="btn-secondary btn-small">💾 下載檔案</button>
+                            </div>
+                            <div id="copy-success" class="info-message" style="display: none; margin-top: 0.5rem; padding: 0.5rem;">
+                                ✅ 已複製到剪貼簿！
+                            </div>
+                        </div>
+                    </div>
+                    <div>
+                        <h3>本地匯入</h3>
+                        <textarea id="import-textarea" placeholder="在此貼上您備份的 JSON 文字" rows="5" aria-label="要匯入的資料"></textarea>
+                        <button id="import-text" style="margin-top: 0.5rem;">確認匯入</button>
+                        <button id="import-file-btn" class="btn btn-secondary">從檔案匯入</button>
+                        <input type="file" id="import-file-input" accept=".json" style="display: none;">
+                    </div>
                 </div>
             </div>
         </div>
@@ -196,11 +304,11 @@
             <p>為了避免資料遺失,建議您立即同步到 Google Sheets 或匯出備份。</p>
             <div class="modal-buttons">
                 <button id="modal-backup-now" class="btn-secondary">前往同步/備份</button>
-                <button id="modal-remind-later" class="btn-primary">稍後再說</button>
+                <button id="modal-remind-later">稍後提醒</button>
             </div>
         </div>
     </div>
-    
-    <script src="work.js"></script>
+
+<script src="work.js"></script>
 </body>
 </html>
