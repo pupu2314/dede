@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>蝦皮訂單折價分攤計算機</title>
+    <style>
+        :root {
+            --shopee-orange: #ee4d2d;
+            --shopee-bg: #f5f5f5;
+        }
+        body { font-family: "Helvetica Neue", Helvetica, Arial, "PingFang TC", "Heiti TC", "Microsoft JhengHei", sans-serif; padding: 20px; background-color: var(--shopee-bg); color: #333; }
+        .container { max-width: 600px; margin: auto; background: white; padding: 25px; border-radius: 8px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); }
+        h2 { color: var(--shopee-orange); text-align: center; margin-bottom: 25px; border-bottom: 2px solid var(--shopee-orange); padding-bottom: 10px; }
+        
+        .section-title { font-weight: bold; margin-bottom: 10px; display: block; color: #555; }
+        .input-group { margin-bottom: 20px; background: #fafafa; padding: 15px; border-radius: 6px; }
+        .discount-inputs { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+        
+        label { display: block; margin-bottom: 5px; font-size: 14px; }
+        input { width: 100%; padding: 10px; box-sizing: border-box; border: 1px solid #ddd; border-radius: 4px; font-size: 14px; transition: border 0.3s; }
+        input:focus { border-color: var(--shopee-orange); outline: none; }
+        
+        .item-row { display: grid; grid-template-columns: 2fr 1.2fr 1fr 45px; gap: 8px; margin-bottom: 10px; align-items: center; }
+        .btn-delete { background: #ff4d4f; color: white; border: none; border-radius: 4px; padding: 8px 0; cursor: pointer; height: 38px; width: 100%; font-size: 13px; }
+        .btn-delete:hover { background: #ff7875; }
+        
+        .action-btns { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 15px; }
+        button { flex: 1; min-width: 80px; padding: 12px; border: none; border-radius: 4px; cursor: pointer; font-size: 16px; font-weight: bold; transition: opacity 0.3s; }
+        .btn-add { background-color: #555; color: white; }
+        .btn-calc { background-color: var(--shopee-orange); color: white; }
+        .btn-round { background-color: #36cfc9; color: white; }
+        .btn-clear { background-color: #ddd; color: #333; }
+        button:hover { opacity: 0.9; }
+
+        #results { margin-top: 25px; padding: 20px; background: #fff8f7; border: 1px solid #ffe8e4; border-radius: 8px; display: none; }
+        .result-summary { margin-bottom: 20px; padding-bottom: 15px; border-bottom: 1px dashed #ee4d2d; }
+        
+        table { width: 100%; border-collapse: collapse; background: white; margin-bottom: 20px; }
+        th, td { border: 1px solid #eee; padding: 12px 8px; text-align: center; font-size: 14px; }
+        th { background-color: #fcfcfc; color: #666; }
+        
+        .final-payment-box { background: #fff; padding: 15px; border-radius: 6px; border-left: 5px solid var(--shopee-orange); box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+        .error-msg { color: #ff4d4f; font-size: 14px; margin-top: 10px; display: none; }
+        .tip { font-size: 12px; color: #888; margin-top: 4px; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>蝦皮折扣分攤計算機</h2>
+    
+    <div class="input-group">
+        <span class="section-title">1. 折扣金額</span>
+        <div class="discount-inputs">
+            <div>
+                <label>蝦皮優惠券</label>
+                <input type="number" id="shopeeCoupon" placeholder="0" min="0" oninput="saveData()">
+            </div>
+            <div>
+                <label>賣場優惠券</label>
+                <input type="number" id="storeCoupon" placeholder="0" min="0" oninput="saveData()">
+            </div>
+        </div>
+    </div>
+
+    <div class="input-group">
+        <span class="section-title">2. 品項明細</span>
+        <div id="itemsContainer">
+            <!-- 動態生成品項 -->
+        </div>
+        <div class="action-btns">
+            <button class="btn-add" onclick="addItem()">+ 新增</button>
+            <button class="btn-calc" onclick="calculate(false)">開始計算</button>
+            <button class="btn-round" onclick="calculate(true)">智慧取整</button>
+            <button class="btn-clear" onclick="clearAll()">清除</button>
+        </div>
+        <p id="errorMsg" class="error-msg">請輸入有效品項(單價與數量大於 0)</p>
+    </div>
+
+    <div id="results">
+        <div class="result-summary">
+            <h3>計算結果</h3>
+            <p>原始總額：<span id="resOriginalTotal">$0</span></p>
+            <p>總折扣額：<span id="resTotalDiscount" style="color: green;">-$0</span></p>
+            <p>折扣後總額：<span id="resActualTotal" style="font-weight: bold;">$0</span></p>
+            <p id="ratioText" style="color: #888; font-size: 13px;"></p>
+        </div>
+
+        <table id="resultTable">
+            <thead>
+                <tr>
+                    <th>品項名稱</th>
+                    <th>原始單價</th>
+                    <th>分攤後單價</th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+
+        <div class="final-payment-box">
+            <span class="section-title">3. 結帳金額</span>
+            <label>蝦幣折抵</label>
+            <input type="number" id="shopeeCoins" placeholder="0" min="0" oninput="saveData(); updateFinalPayment()">
+            <div style="margin-top: 15px; font-size: 18px;">
+                實際支付現金：<span id="finalCash" style="color: var(--shopee-orange); font-weight: bold; font-size: 24px;">$0</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    let currentActualTotal = 0;
+
+    window.onload = function() {
+        const savedData = localStorage.getItem('shopee_calc_data');
+        if (savedData) {
+            const data = JSON.parse(savedData);
+            document.getElementById('shopeeCoupon').value = data.shopeeCoupon || '';
+            document.getElementById('storeCoupon').value = data.storeCoupon || '';
+            document.getElementById('shopeeCoins').value = data.shopeeCoins || '';
+            
+            if (data.items && data.items.length > 0) {
+                data.items.forEach(item => addItem(item.n, item.p, item.q));
+            } else {
+                addItem();
+            }
+        } else {
+            addItem();
+        }
+    };
+
+    function addItem(name = '', price = '', qty = '') {
+        const container = document.getElementById('itemsContainer');
+        const div = document.createElement('div');
+        div.className = 'item-row';
+        div.innerHTML = `
+            <input type="text" class="name" placeholder="名稱" value="${name}" oninput="saveData()">
+            <input type="number" class="price" placeholder="單價" value="${price}" min="0" oninput="saveData()">
+            <input type="number" class="qty" placeholder="數量" value="${qty}" min="1" oninput="saveData()">
+            <button class="btn-delete" onclick="removeItem(this)">刪</button>
+        `;
+        container.appendChild(div);
+        saveData();
+    }
+
+    function removeItem(btn) {
+        btn.parentElement.remove();
+        if (document.querySelectorAll('.item-row').length === 0) {
+            addItem();
+        }
+        saveData();
+    }
+
+    function saveData() {
+        const items = [];
+        const names = document.querySelectorAll('.name');
+        const prices = document.querySelectorAll('.price');
+        const qtys = document.querySelectorAll('.qty');
+
+        for (let i = 0; i < names.length; i++) {
+            items.push({
+                n: names[i].value,
+                p: prices[i].value,
+                q: qtys[i].value
+            });
+        }
+
+        const data = {
+            shopeeCoupon: document.getElementById('shopeeCoupon').value,
+            storeCoupon: document.getElementById('storeCoupon').value,
+            shopeeCoins: document.getElementById('shopeeCoins').value,
+            items: items
+        };
+        localStorage.setItem('shopee_calc_data', JSON.stringify(data));
+    }
+
+    function clearAll() {
+        localStorage.removeItem('shopee_calc_data');
+        document.getElementById('shopeeCoupon').value = '';
+        document.getElementById('storeCoupon').value = '';
+        document.getElementById('shopeeCoins').value = '';
+        document.getElementById('itemsContainer').innerHTML = '';
+        document.getElementById('results').style.display = 'none';
+        addItem();
+    }
+
+    function calculate(useSmartRounding) {
+        const names = document.getElementsByClassName('name');
+        const prices = document.getElementsByClassName('price');
+        const qtys = document.getElementsByClassName('qty');
+        
+        const shopeeCoupon = parseFloat(document.getElementById('shopeeCoupon').value) || 0;
+        const storeCoupon = parseFloat(document.getElementById('storeCoupon').value) || 0;
+        const totalDiscount = shopeeCoupon + storeCoupon;
+        
+        let originalTotal = 0;
+        let validItems = [];
+
+        for (let i = 0; i < prices.length; i++) {
+            let p = parseFloat(prices[i].value) || 0;
+            let q = parseFloat(qtys[i].value) || 0;
+            let n = names[i].value.trim() || `品項 ${i + 1}`;
+            
+            if (p > 0 && q > 0) {
+                originalTotal += p * q;
+                validItems.push({ n, p, q, totalPrice: p * q });
+            }
+        }
+
+        if (validItems.length === 0) {
+            document.getElementById('errorMsg').style.display = 'block';
+            return;
+        }
+        document.getElementById('errorMsg').style.display = 'none';
+
+        const actualTotal = Math.max(0, originalTotal - totalDiscount);
+        currentActualTotal = actualTotal;
+        const ratio = originalTotal > 0 ? actualTotal / originalTotal : 0;
+
+        document.getElementById('resOriginalTotal').innerText = `$${originalTotal.toLocaleString()}`;
+        document.getElementById('resTotalDiscount').innerText = `-$${totalDiscount.toLocaleString()}`;
+        document.getElementById('resActualTotal').innerText = `$${actualTotal.toLocaleString()}`;
+        document.getElementById('ratioText').innerText = `折扣後約為 ${(ratio * 10).toFixed(2)} 折${useSmartRounding ? ' (智慧取整已啟用)' : ''}`;
+        
+        const tbody = document.querySelector('#resultTable tbody');
+        tbody.innerHTML = '';
+        
+        let roundedPrices = [];
+        if (useSmartRounding) {
+            let currentSum = 0;
+            // 先計算前面的品項
+            for (let i = 0; i < validItems.length - 1; i++) {
+                let rp = Math.round(validItems[i].p * ratio);
+                roundedPrices.push(rp);
+                currentSum += rp * validItems[i].q;
+            }
+            // 最後一項負責吸收差額：(目標總額 - 目前總額) / 最後一項數量
+            let lastItem = validItems[validItems.length - 1];
+            let remainingAmount = actualTotal - currentSum;
+            let lastRp = lastItem.q > 0 ? (remainingAmount / lastItem.q) : 0;
+            // 如果數量大於1且無法整除，這裡採用的策略是直接算出的平均取整(可能帶小數以求精準)或強行取整
+            // 為求「單價」為整數，最後一項單價採 round，但若有極大誤差則不保證總價完全相等，除非允許最後一項單價有小數。
+            // 這裡採用：單價一律取整，若總價不符，最後一項單價會被調整。
+            let lastRpFinal = Math.round(lastRp);
+            roundedPrices.push(lastRpFinal);
+        }
+
+        validItems.forEach((item, index) => {
+            let displayPrice = useSmartRounding ? roundedPrices[index].toFixed(0) : (item.p * ratio).toFixed(2);
+            const row = `<tr>
+                <td>${item.n}</td>
+                <td>$${item.p.toLocaleString()}</td>
+                <td style="color: var(--shopee-orange); font-weight: bold;">$${displayPrice}</td>
+            </tr>`;
+            tbody.innerHTML += row;
+        });
+
+        document.getElementById('results').style.display = 'block';
+        updateFinalPayment();
+        document.getElementById('results').scrollIntoView({ behavior: 'smooth' });
+    }
+
+    function updateFinalPayment() {
+        const coins = parseFloat(document.getElementById('shopeeCoins').value) || 0;
+        const finalCash = Math.max(0, currentActualTotal - coins);
+        document.getElementById('finalCash').innerText = `$${Math.round(finalCash).toLocaleString()}`;
+    }
+</script>
+
+</body>
+</html>
+
