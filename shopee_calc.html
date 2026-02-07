@@ -8,41 +8,48 @@
         :root {
             --shopee-orange: #ee4d2d;
             --shopee-bg: #f5f5f5;
+            --success-green: #26af61;
         }
-        body { font-family: "Helvetica Neue", Helvetica, Arial, "PingFang TC", "Heiti TC", "Microsoft JhengHei", sans-serif; padding: 20px; background-color: var(--shopee-bg); color: #333; }
-        .container { max-width: 600px; margin: auto; background: white; padding: 25px; border-radius: 8px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); }
-        h2 { color: var(--shopee-orange); text-align: center; margin-bottom: 25px; border-bottom: 2px solid var(--shopee-orange); padding-bottom: 10px; }
+        body { font-family: "Helvetica Neue", Helvetica, Arial, "PingFang TC", "Heiti TC", "Microsoft JhengHei", sans-serif; padding: 15px; background-color: var(--shopee-bg); color: #333; line-height: 1.5; }
+        .container { max-width: 600px; margin: auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+        h2 { color: var(--shopee-orange); text-align: center; margin-bottom: 20px; border-bottom: 2px solid var(--shopee-orange); padding-bottom: 10px; }
         
-        .section-title { font-weight: bold; margin-bottom: 10px; display: block; color: #555; }
-        .input-group { margin-bottom: 20px; background: #fafafa; padding: 15px; border-radius: 6px; }
-        .discount-inputs { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+        .section-title { font-weight: bold; margin-bottom: 12px; display: flex; align-items: center; color: #444; }
+        .section-title::before { content: ""; display: inline-block; width: 4px; height: 1.2em; background: var(--shopee-orange); margin-right: 8px; border-radius: 2px; }
         
-        label { display: block; margin-bottom: 5px; font-size: 14px; }
-        input { width: 100%; padding: 10px; box-sizing: border-box; border: 1px solid #ddd; border-radius: 4px; font-size: 14px; transition: border 0.3s; }
-        input:focus { border-color: var(--shopee-orange); outline: none; }
+        .input-group { margin-bottom: 20px; background: #fafafa; padding: 15px; border-radius: 6px; border: 1px solid #eee; }
+        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+        
+        label { display: block; margin-bottom: 5px; font-size: 13px; color: #666; }
+        input { width: 100%; padding: 10px; box-sizing: border-box; border: 1px solid #ddd; border-radius: 4px; font-size: 14px; }
+        input:focus { border-color: var(--shopee-orange); outline: none; box-shadow: 0 0 0 2px rgba(238, 77, 45, 0.1); }
         
         .item-row { display: grid; grid-template-columns: 2fr 1.2fr 1fr 45px; gap: 8px; margin-bottom: 10px; align-items: center; }
-        .btn-delete { background: #ff4d4f; color: white; border: none; border-radius: 4px; padding: 8px 0; cursor: pointer; height: 38px; width: 100%; font-size: 13px; }
-        .btn-delete:hover { background: #ff7875; }
+        .btn-delete { background: #ffefed; color: var(--shopee-orange); border: 1px solid #ffcfc9; border-radius: 4px; padding: 8px 0; cursor: pointer; height: 38px; width: 100%; font-size: 13px; transition: all 0.2s; }
+        .btn-delete:hover { background: var(--shopee-orange); color: white; }
         
-        .action-btns { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 15px; }
-        button { flex: 1; min-width: 80px; padding: 12px; border: none; border-radius: 4px; cursor: pointer; font-size: 16px; font-weight: bold; transition: opacity 0.3s; }
-        .btn-add { background-color: #555; color: white; }
+        .action-btns { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 15px; }
+        button { flex: 1; min-width: 85px; padding: 12px 8px; border: none; border-radius: 4px; cursor: pointer; font-size: 14px; font-weight: bold; transition: opacity 0.2s; }
+        .btn-add { background-color: #f8f8f8; color: #555; border: 1px solid #ddd; }
         .btn-calc { background-color: var(--shopee-orange); color: white; }
         .btn-round { background-color: #36cfc9; color: white; }
-        .btn-clear { background-color: #ddd; color: #333; }
-        button:hover { opacity: 0.9; }
-
-        #results { margin-top: 25px; padding: 20px; background: #fff8f7; border: 1px solid #ffe8e4; border-radius: 8px; display: none; }
-        .result-summary { margin-bottom: 20px; padding-bottom: 15px; border-bottom: 1px dashed #ee4d2d; }
+        .btn-clear { background-color: #eee; color: #666; }
+        .btn-copy { background-color: var(--success-green); color: white; margin-top: 10px; width: 100%; flex: none; }
         
-        table { width: 100%; border-collapse: collapse; background: white; margin-bottom: 20px; }
-        th, td { border: 1px solid #eee; padding: 12px 8px; text-align: center; font-size: 14px; }
-        th { background-color: #fcfcfc; color: #666; }
+        #results { margin-top: 25px; padding: 15px; background: #fffcfb; border: 1px solid #ffe8e4; border-radius: 8px; display: none; }
+        .result-summary { margin-bottom: 15px; font-size: 14px; border-bottom: 1px dashed #ddd; padding-bottom: 10px; }
+        .result-summary p { margin: 5px 0; display: flex; justify-content: space-between; }
         
-        .final-payment-box { background: #fff; padding: 15px; border-radius: 6px; border-left: 5px solid var(--shopee-orange); box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
-        .error-msg { color: #ff4d4f; font-size: 14px; margin-top: 10px; display: none; }
-        .tip { font-size: 12px; color: #888; margin-top: 4px; }
+        .table-wrapper { overflow-x: auto; }
+        table { width: 100%; border-collapse: collapse; background: white; margin-bottom: 15px; min-width: 400px; }
+        th, td { border: 1px solid #eee; padding: 10px 5px; text-align: center; font-size: 13px; }
+        th { background-color: #fcfcfc; color: #777; font-weight: normal; }
+        
+        .final-payment-box { background: #fff; padding: 15px; border-radius: 6px; border: 1px solid #eee; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+        .payment-row { display: flex; justify-content: space-between; align-items: center; margin-top: 10px; }
+        .highlight { color: var(--shopee-orange); font-weight: bold; font-size: 20px; }
+        
+        .toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.7); color: white; padding: 8px 16px; border-radius: 20px; font-size: 14px; display: none; z-index: 100; }
     </style>
 </head>
 <body>
@@ -50,9 +57,10 @@
 <div class="container">
     <h2>蝦皮折扣分攤計算機</h2>
     
+    <!-- 1. 折扣與運費 -->
     <div class="input-group">
-        <span class="section-title">1. 折扣金額</span>
-        <div class="discount-inputs">
+        <span class="section-title">1. 折扣與運費</span>
+        <div class="grid-2">
             <div>
                 <label>蝦皮優惠券</label>
                 <input type="number" id="shopeeCoupon" placeholder="0" min="0" oninput="saveData()">
@@ -62,72 +70,81 @@
                 <input type="number" id="storeCoupon" placeholder="0" min="0" oninput="saveData()">
             </div>
         </div>
+        <div style="margin-top: 10px;">
+            <label>運費 (自付額)</label>
+            <input type="number" id="shippingFee" placeholder="0" min="0" oninput="saveData()">
+        </div>
     </div>
 
+    <!-- 2. 品項明細 -->
     <div class="input-group">
         <span class="section-title">2. 品項明細</span>
-        <div id="itemsContainer">
-            <!-- 動態生成品項 -->
-        </div>
+        <div id="itemsContainer"></div>
         <div class="action-btns">
             <button class="btn-add" onclick="addItem()">+ 新增</button>
-            <button class="btn-calc" onclick="calculate(false)">開始計算</button>
+            <button class="btn-calc" onclick="calculate(false)">計算</button>
             <button class="btn-round" onclick="calculate(true)">智慧取整</button>
             <button class="btn-clear" onclick="clearAll()">清除</button>
         </div>
-        <p id="errorMsg" class="error-msg">請輸入有效品項(單價與數量大於 0)</p>
     </div>
 
+    <!-- 3. 結果 -->
     <div id="results">
         <div class="result-summary">
-            <h3>計算結果</h3>
-            <p>原始總額：<span id="resOriginalTotal">$0</span></p>
-            <p>總折扣額：<span id="resTotalDiscount" style="color: green;">-$0</span></p>
-            <p>折扣後總額：<span id="resActualTotal" style="font-weight: bold;">$0</span></p>
-            <p id="ratioText" style="color: #888; font-size: 13px;"></p>
+            <p><span>商品原始總額：</span><span id="resOriginalTotal">$0</span></p>
+            <p><span>總折扣額：</span><span id="resTotalDiscount" style="color: red;">-$0</span></p>
+            <p><span>自付運費：</span><span id="resShipping">+$0</span></p>
+            <p style="font-size: 16px; font-weight: bold; margin-top: 8px; color: #333;">
+                <span>訂單應付總計：</span><span id="resActualTotal">$0</span>
+            </p>
         </div>
 
-        <table id="resultTable">
-            <thead>
-                <tr>
-                    <th>品項名稱</th>
-                    <th>原始單價</th>
-                    <th>分攤後單價</th>
-                </tr>
-            </thead>
-            <tbody></tbody>
-        </table>
+        <div class="table-wrapper">
+            <table id="resultTable">
+                <thead>
+                    <tr>
+                        <th>品項</th>
+                        <th>原單價</th>
+                        <th>數量</th>
+                        <th>分攤後單價</th>
+                        <th>小計</th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+        </div>
 
         <div class="final-payment-box">
-            <span class="section-title">3. 結帳金額</span>
             <label>蝦幣折抵</label>
             <input type="number" id="shopeeCoins" placeholder="0" min="0" oninput="saveData(); updateFinalPayment()">
-            <div style="margin-top: 15px; font-size: 18px;">
-                實際支付現金：<span id="finalCash" style="color: var(--shopee-orange); font-weight: bold; font-size: 24px;">$0</span>
+            <div class="payment-row">
+                <span>最後實付現金：</span>
+                <span id="finalCash" class="highlight">$0</span>
             </div>
         </div>
+
+        <button class="btn-copy" onclick="copyToClipboard()">複製結果文字 (LINE分享)</button>
     </div>
 </div>
 
+<div id="toast" class="toast">已複製到剪貼簿</div>
+
 <script>
     let currentActualTotal = 0;
+    let currentResults = [];
 
     window.onload = function() {
-        const savedData = localStorage.getItem('shopee_calc_data');
+        const savedData = localStorage.getItem('shopee_calc_v2');
         if (savedData) {
             const data = JSON.parse(savedData);
             document.getElementById('shopeeCoupon').value = data.shopeeCoupon || '';
             document.getElementById('storeCoupon').value = data.storeCoupon || '';
+            document.getElementById('shippingFee').value = data.shippingFee || '';
             document.getElementById('shopeeCoins').value = data.shopeeCoins || '';
-            
             if (data.items && data.items.length > 0) {
                 data.items.forEach(item => addItem(item.n, item.p, item.q));
-            } else {
-                addItem();
-            }
-        } else {
-            addItem();
-        }
+            } else { addItem(); }
+        } else { addItem(); }
     };
 
     function addItem(name = '', price = '', qty = '') {
@@ -135,9 +152,9 @@
         const div = document.createElement('div');
         div.className = 'item-row';
         div.innerHTML = `
-            <input type="text" class="name" placeholder="名稱" value="${name}" oninput="saveData()">
-            <input type="number" class="price" placeholder="單價" value="${price}" min="0" oninput="saveData()">
-            <input type="number" class="qty" placeholder="數量" value="${qty}" min="1" oninput="saveData()">
+            <input type="text" class="name" placeholder="品名" value="${name}" oninput="saveData()">
+            <input type="number" class="price" placeholder="單價" value="${price}" oninput="saveData()">
+            <input type="number" class="qty" placeholder="數量" value="${qty}" oninput="saveData()">
             <button class="btn-delete" onclick="removeItem(this)">刪</button>
         `;
         container.appendChild(div);
@@ -146,114 +163,103 @@
 
     function removeItem(btn) {
         btn.parentElement.remove();
-        if (document.querySelectorAll('.item-row').length === 0) {
-            addItem();
-        }
+        if (document.querySelectorAll('.item-row').length === 0) addItem();
         saveData();
     }
 
     function saveData() {
         const items = [];
-        const names = document.querySelectorAll('.name');
-        const prices = document.querySelectorAll('.price');
-        const qtys = document.querySelectorAll('.qty');
-
-        for (let i = 0; i < names.length; i++) {
+        const rows = document.querySelectorAll('.item-row');
+        rows.forEach(row => {
             items.push({
-                n: names[i].value,
-                p: prices[i].value,
-                q: qtys[i].value
+                n: row.querySelector('.name').value,
+                p: row.querySelector('.price').value,
+                q: row.querySelector('.qty').value
             });
-        }
-
+        });
         const data = {
             shopeeCoupon: document.getElementById('shopeeCoupon').value,
             storeCoupon: document.getElementById('storeCoupon').value,
+            shippingFee: document.getElementById('shippingFee').value,
             shopeeCoins: document.getElementById('shopeeCoins').value,
             items: items
         };
-        localStorage.setItem('shopee_calc_data', JSON.stringify(data));
+        localStorage.setItem('shopee_calc_v2', JSON.stringify(data));
     }
 
     function clearAll() {
-        localStorage.removeItem('shopee_calc_data');
-        document.getElementById('shopeeCoupon').value = '';
-        document.getElementById('storeCoupon').value = '';
-        document.getElementById('shopeeCoins').value = '';
-        document.getElementById('itemsContainer').innerHTML = '';
-        document.getElementById('results').style.display = 'none';
-        addItem();
+        if (!confirm("確定要清除所有資料嗎？")) return;
+        localStorage.removeItem('shopee_calc_v2');
+        location.reload();
     }
 
     function calculate(useSmartRounding) {
         const names = document.getElementsByClassName('name');
         const prices = document.getElementsByClassName('price');
         const qtys = document.getElementsByClassName('qty');
-        
         const shopeeCoupon = parseFloat(document.getElementById('shopeeCoupon').value) || 0;
         const storeCoupon = parseFloat(document.getElementById('storeCoupon').value) || 0;
-        const totalDiscount = shopeeCoupon + storeCoupon;
+        const shippingFee = parseFloat(document.getElementById('shippingFee').value) || 0;
         
-        let originalTotal = 0;
+        let itemOriginalTotal = 0;
         let validItems = [];
 
         for (let i = 0; i < prices.length; i++) {
             let p = parseFloat(prices[i].value) || 0;
             let q = parseFloat(qtys[i].value) || 0;
-            let n = names[i].value.trim() || `品項 ${i + 1}`;
-            
+            let n = names[i].value.trim() || `品項${i + 1}`;
             if (p > 0 && q > 0) {
-                originalTotal += p * q;
-                validItems.push({ n, p, q, totalPrice: p * q });
+                itemOriginalTotal += p * q;
+                validItems.push({ n, p, q });
             }
         }
 
-        if (validItems.length === 0) {
-            document.getElementById('errorMsg').style.display = 'block';
-            return;
-        }
-        document.getElementById('errorMsg').style.display = 'none';
+        if (validItems.length === 0) return;
 
-        const actualTotal = Math.max(0, originalTotal - totalDiscount);
-        currentActualTotal = actualTotal;
-        const ratio = originalTotal > 0 ? actualTotal / originalTotal : 0;
+        const totalDiscount = shopeeCoupon + storeCoupon;
+        // 應付總額 = 商品總額 - 折扣 + 運費
+        currentActualTotal = Math.max(0, itemOriginalTotal - totalDiscount + shippingFee);
+        
+        // 這裡的比例是針對「商品部分」的分攤係數，運費會被平均分攤進去
+        // 另一種邏輯是運費外加，但通常團購是「總支付額 / 總原始額」作為分攤比
+        const ratio = itemOriginalTotal > 0 ? (itemOriginalTotal - totalDiscount + shippingFee) / itemOriginalTotal : 0;
 
-        document.getElementById('resOriginalTotal').innerText = `$${originalTotal.toLocaleString()}`;
+        document.getElementById('resOriginalTotal').innerText = `$${itemOriginalTotal.toLocaleString()}`;
         document.getElementById('resTotalDiscount').innerText = `-$${totalDiscount.toLocaleString()}`;
-        document.getElementById('resActualTotal').innerText = `$${actualTotal.toLocaleString()}`;
-        document.getElementById('ratioText').innerText = `折扣後約為 ${(ratio * 10).toFixed(2)} 折${useSmartRounding ? ' (智慧取整已啟用)' : ''}`;
+        document.getElementById('resShipping').innerText = `+$${shippingFee.toLocaleString()}`;
+        document.getElementById('resActualTotal').innerText = `$${Math.round(currentActualTotal).toLocaleString()}`;
         
         const tbody = document.querySelector('#resultTable tbody');
         tbody.innerHTML = '';
-        
-        let roundedPrices = [];
-        if (useSmartRounding) {
-            let currentSum = 0;
-            // 先計算前面的品項
-            for (let i = 0; i < validItems.length - 1; i++) {
-                let rp = Math.round(validItems[i].p * ratio);
-                roundedPrices.push(rp);
-                currentSum += rp * validItems[i].q;
-            }
-            // 最後一項負責吸收差額：(目標總額 - 目前總額) / 最後一項數量
-            let lastItem = validItems[validItems.length - 1];
-            let remainingAmount = actualTotal - currentSum;
-            let lastRp = lastItem.q > 0 ? (remainingAmount / lastItem.q) : 0;
-            // 如果數量大於1且無法整除，這裡採用的策略是直接算出的平均取整(可能帶小數以求精準)或強行取整
-            // 為求「單價」為整數，最後一項單價採 round，但若有極大誤差則不保證總價完全相等，除非允許最後一項單價有小數。
-            // 這裡採用：單價一律取整，若總價不符，最後一項單價會被調整。
-            let lastRpFinal = Math.round(lastRp);
-            roundedPrices.push(lastRpFinal);
-        }
+        currentResults = [];
 
-        validItems.forEach((item, index) => {
-            let displayPrice = useSmartRounding ? roundedPrices[index].toFixed(0) : (item.p * ratio).toFixed(2);
-            const row = `<tr>
+        let currentSum = 0;
+        validItems.forEach((item, idx) => {
+            let finalUnitPrice;
+            if (useSmartRounding) {
+                if (idx === validItems.length - 1) {
+                    // 最後一項調整差額
+                    let remaining = currentActualTotal - currentSum;
+                    finalUnitPrice = item.q > 0 ? remaining / item.q : 0;
+                } else {
+                    finalUnitPrice = Math.round(item.p * ratio);
+                }
+            } else {
+                finalUnitPrice = item.p * ratio;
+            }
+            
+            let subtotal = finalUnitPrice * item.q;
+            currentSum += subtotal;
+
+            currentResults.push({ name: item.n, original: item.p, qty: item.q, unit: finalUnitPrice, subtotal: subtotal });
+
+            tbody.innerHTML += `<tr>
                 <td>${item.n}</td>
-                <td>$${item.p.toLocaleString()}</td>
-                <td style="color: var(--shopee-orange); font-weight: bold;">$${displayPrice}</td>
+                <td>$${item.p}</td>
+                <td>${item.q}</td>
+                <td style="color:var(--shopee-orange); font-weight:bold;">$${useSmartRounding ? Math.round(finalUnitPrice) : finalUnitPrice.toFixed(2)}</td>
+                <td>$${Math.round(subtotal).toLocaleString()}</td>
             </tr>`;
-            tbody.innerHTML += row;
         });
 
         document.getElementById('results').style.display = 'block';
@@ -265,6 +271,28 @@
         const coins = parseFloat(document.getElementById('shopeeCoins').value) || 0;
         const finalCash = Math.max(0, currentActualTotal - coins);
         document.getElementById('finalCash').innerText = `$${Math.round(finalCash).toLocaleString()}`;
+    }
+
+    function copyToClipboard() {
+        let text = "🛍️ 蝦皮訂單分攤明細\n---\n";
+        currentResults.forEach(item => {
+            text += `🔹 ${item.name}\n   數量: ${item.qty}\n   分攤單價: $${Math.round(item.unit)}\n   小計: $${Math.round(item.subtotal)}\n`;
+        });
+        text += `---\n💰 訂單總計: $${Math.round(currentActualTotal)}\n`;
+        const coins = parseFloat(document.getElementById('shopeeCoins').value) || 0;
+        if(coins > 0) text += `🪙 蝦幣折抵: -$${coins}\n`;
+        text += `💵 實付現金: $${document.getElementById('finalCash').innerText}`;
+
+        const el = document.createElement('textarea');
+        el.value = text;
+        document.body.appendChild(el);
+        el.select();
+        document.execCommand('copy');
+        document.body.removeChild(el);
+        
+        const toast = document.getElementById('toast');
+        toast.style.display = 'block';
+        setTimeout(() => toast.style.display = 'none', 2000);
     }
 </script>
 
