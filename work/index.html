@@ -18,7 +18,7 @@
 </head>
 <body>
     <div class="container main-layout">
-        <h1 class="app-title">加班費計算機 <small>v2.8.4</small></h1>
+        <h1 class="app-title">加班費計算機 <small>v2.8.5</small></h1>
         
         <!-- 未同步提醒條 (預設隱藏) -->
         <div id="unsynced-alert" class="sync-alert-bar" style="display: none;">
@@ -144,6 +144,12 @@
                             <div class="stat-value"><span id="leave-last-remain">0</span> <small>天</small></div>
                             <div class="stat-desc">去年未休完時數</div>
                         </div>
+                        <!-- 新增: 已使用統計 -->
+                        <div class="leave-stat-box used">
+                            <h4>已使用</h4>
+                            <div class="stat-value" style="color: #666;"><span id="leave-used-total">0</span> <small>天</small></div>
+                            <div class="stat-desc">今年度已請天數</div>
+                        </div>
                         <div class="leave-stat-box remaining">
                             <h4>目前剩餘</h4>
                             <div class="stat-value highlight"><span id="leave-balance">0</span> <small>天</small></div>
@@ -154,8 +160,9 @@
                     <hr style="margin: 1.5rem 0;">
 
                     <!-- 請假操作區 -->
-                    <h3>📋 登記請假</h3>
+                    <h3>📋 登記/編輯請假</h3>
                     <div class="grid-container single-column-grid" style="gap: 1rem;">
+                        <input type="hidden" id="leave-edit-id"> <!-- 隱藏的 ID 欄位 -->
                         <div class="form-group">
                             <label>請假日期</label>
                             <input type="date" id="leave-date">
@@ -172,7 +179,10 @@
                             <label>事由 (選填)</label>
                             <input type="text" id="leave-reason" placeholder="例如: 處理私事">
                         </div>
-                        <button id="add-leave-record">新增特休紀錄</button>
+                        <div style="display: flex; gap: 0.5rem;">
+                            <button id="add-leave-record" style="flex: 2;">新增特休紀錄</button>
+                            <button id="cancel-leave-edit" class="btn-secondary" style="flex: 1; display: none;">取消編輯</button>
+                        </div>
                     </div>
 
                     <!-- 使用紀錄列表 -->
