@@ -1,6 +1,9 @@
 /**
- * 加班費計算機 v2.8.4 - JavaScript
+ * 加班費計算機 v2.8.5 - JavaScript
  * - 新增特休計算功能 (曆年制)
+ * - 修復編輯功能
+ * - 新增特休已使用天數顯示
+ * - 新增特休紀錄編輯功能
  */
 
 (function() {
@@ -140,7 +143,7 @@
     }
 
     // --- 特休計算邏輯 (核心) ---
-function getLeaveEntitlementByTenure(years) {
+    function getLeaveEntitlementByTenure(years) {
         if (years < 0.5) return 0;
         if (years < 1) return 3;
         if (years < 2) return 7;
@@ -166,70 +169,35 @@ function getLeaveEntitlementByTenure(years) {
         anniversary.setFullYear(targetYear);
     
         // --- 計算區段比例 (改用 Month + Day/30 邏輯) ---
-        
-        // 定義計算月份比例的工具函式
         function getMonthProportion(startDate, endDate) {
-            // 計算總相差天數
             const msPerDay = 24 * 60 * 60 * 1000;
-            const totalDays = (endDate - startDate) / msPerDay + 1; // 含頭尾
-            
-            // 換算成 "月 + 日/30"
-            // 這裡採取簡化邏輯：直接用天數 / 30 來模擬您的公式 (日/30)
-            // 若要嚴格對齊 "6個月 + 0天"，通常是看月份差。
-            // 但為了通用性，將該年度的比例視為： (該區段天數 / 30) / 12 ? 
-            // 您的公式是： (6 + 0/30)/12。代表上半年剛好佔 0.5。
-            
-            // 實作您公式的邏輯：
-            // 1. 先算出 Anniversary 在一年中的落點月份
-            // Anniversary 是 7/1。 1/1~6/30 是 Period 1。
-            // Period 1 的月數 = (AnniversaryMonth - 1) + (AnniversaryDay - 1)/30
-            // 例如 7/1: (7-1) + (1-1)/30 = 6 個月
+            const totalDays = (endDate - startDate) / msPerDay + 1;
             return totalDays; 
         }
     
-        // 依照您的公式邏輯，我們重新計算 "Period 1 的權重" (prop1)
         let prop1 = 0;
         
         if (anniversary > yearEnd) {
-            prop1 = 1; // 整年都是舊年資
+            prop1 = 1;
         } else if (anniversary <= yearStart) {
-            prop1 = 0; // 整年都是新年資
+            prop1 = 0;
         } else {
-            // 核心修改：使用 (月 + 日/30) / 12 的公式
-            // 假設到職日是 M月 D日
-            const month = onboard.getMonth(); // 0-based (0=Jan, 6=July)
+            const month = onboard.getMonth();
             const day = onboard.getDate();
-            
-            // 公式： (經過的月數 + 經過的零頭天數/30) / 12
-            // 因為 Anniversary 是到職月日，所以 Period 1 (1/1 ~ Anniversary前一日) 的長度剛好就是到職日的月份數
-            // 例如 7月1日到職：
-            // 1月~6月 = 6個月。 7/1 當天算下個年度。
-            // 零頭天數 = day - 1。
-            
-            const fullMonths = month; // 7月是 index 6，剛好代表前6個月滿
-            const days = day - 1;     // 1號代表沒有多餘天數
-            
-            // 您的公式部分： (6 + 0/30) / 12
+            const fullMonths = month;
+            const days = day - 1;
             prop1 = (fullMonths + (days / 30)) / 12;
         }
     
-        const prop2 = 1 - prop1; // 剩下就是下個年度的比例
-    
-        // --- 取得天數權益 ---
-        // 注意：這裡依舊使用原本的年資計算邏輯來查表
-        // 若您的 18/19 天是優於勞基法的，請記得修改 getLeaveEntitlementByTenure 函式
+        const prop2 = 1 - prop1;
+        
         const yearsServedAtAnniversary = targetYear - onboard.getFullYear();
-        
-        // Period 1 (週年日前): 滿 (Years-1) 年的權益
         const entitlement1 = getLeaveEntitlementByTenure(Math.max(0, yearsServedAtAnniversary - 1 + 0.01));
-        
-        // Period 2 (週年日後): 滿 Years 年的權益
         const entitlement2 = getLeaveEntitlementByTenure(yearsServedAtAnniversary);
     
-        // 依您的公式加總
         let total = (entitlement1 * prop1) + (entitlement2 * prop2);
         
-        return Math.round(total * 100) / 100; // 取小數點後兩位
+        return Math.round(total * 100) / 100;
     }
 
     function renderLeaveTab() {
@@ -251,32 +219,28 @@ function getLeaveEntitlementByTenure(years) {
         const leaveLastYear = calculateCalendarYearLeave(onboardDate, lastYear);
         
         // 2. 計算已使用天數 (從 records 中篩選)
-        // 篩選今年的特休紀錄
         const usedThisYear = records
             .filter(r => r.type === 'special_leave' && new Date(r.start).getFullYear() === currentYear)
             .reduce((sum, r) => {
-                const hours = parseFloat(r.reason.match(/(\d+(\.\d+)?)h/)?.[1] || 8); // 從備註解析時數，預設8
-                return sum + (hours / 8); // 換算成天
+                const hours = parseFloat(r.reason.match(/(\d+(\.\d+)?)h/)?.[1] || 8);
+                return sum + (hours / 8);
             }, 0);
 
-        // 篩選去年的特休紀錄 (用於計算遞延剩餘)
         const usedLastYear = records
             .filter(r => r.type === 'special_leave' && new Date(r.start).getFullYear() === lastYear)
             .reduce((sum, r) => sum + (parseFloat(r.reason.match(/(\d+(\.\d+)?)h/)?.[1] || 8) / 8), 0);
             
         // 3. 計算餘額
-        // 去年剩餘 = 去年應給 - 去年已休 (若 < 0 則為 0)
         let remainLastYear = Math.max(0, leaveLastYear - usedLastYear);
-        // 四捨五入到小數點2位
         remainLastYear = Math.round(remainLastYear * 100) / 100;
         
-        // 今年總餘額 = 今年應給 + 去年遞延 - 今年已休
         const balance = (leaveThisYear + remainLastYear) - usedThisYear;
         
         // 4. 更新 UI
         document.getElementById('leave-current-year').textContent = currentYear;
         document.getElementById('leave-current-total').textContent = leaveThisYear.toFixed(2);
         document.getElementById('leave-last-remain').textContent = remainLastYear.toFixed(2);
+        document.getElementById('leave-used-total').textContent = usedThisYear.toFixed(2); // 新增：已使用天數
         document.getElementById('leave-balance').textContent = balance.toFixed(2);
         
         if (balance < 0) {
@@ -290,7 +254,6 @@ function getLeaveEntitlementByTenure(years) {
         tbody.innerHTML = '';
         const leaveRecords = records.filter(r => r.type === 'special_leave' && new Date(r.start).getFullYear() === currentYear);
         
-        // 排序
         leaveRecords.sort((a, b) => new Date(b.start) - new Date(a.start));
         
         if (leaveRecords.length === 0) {
@@ -300,14 +263,18 @@ function getLeaveEntitlementByTenure(years) {
                 const row = tbody.insertRow();
                 const dateStr = new Date(rec.start).toLocaleDateString();
                 const hours = rec.reason.match(/(\d+(\.\d+)?)h/)?.[1] || '8';
-                // 移除備註中的時數標記，只顯示純文字
                 const cleanReason = rec.reason.replace(/\(\d+(\.\d+)?h\)/, '').trim();
                 
                 row.innerHTML = `
                     <td>${dateStr}</td>
                     <td>${hours}h</td>
                     <td>${escapeHtml(cleanReason)}</td>
-                    <td><button class="btn-small btn-danger" onclick="app.deleteRecord('${rec.id}')">刪除</button></td>
+                    <td>
+                        <div style="display:flex; gap:0.25rem;">
+                            <button class="btn-small" onclick="app.editRecord('${rec.id}')">編輯</button>
+                            <button class="btn-small btn-danger" onclick="app.deleteRecord('${rec.id}')">刪除</button>
+                        </div>
+                    </td>
                 `;
             });
         }
@@ -317,6 +284,7 @@ function getLeaveEntitlementByTenure(years) {
         const dateVal = document.getElementById('leave-date').value;
         const hoursVal = document.getElementById('leave-hours').value;
         const reasonVal = document.getElementById('leave-reason').value;
+        const editId = document.getElementById('leave-edit-id').value; // 檢查是否有 ID
         
         if (!dateVal) {
             alert('請選擇日期');
@@ -327,29 +295,55 @@ function getLeaveEntitlementByTenure(years) {
             return;
         }
         
-        // 構造一個 record 物件
-        // 特休的格式： start = 日期T00:00, end = 日期T00:00 (不重要，主要是日期)
-        // type = 'special_leave'
-        // reason = '事由 (8h)' -> 把時數存在 reason 方便解析，或利用 reason 欄位
-        
         const fullReason = `${reasonVal} (${hoursVal}h)`;
         const newRecord = {
-            id: `leave_${Date.now()}`,
-            start: `${dateVal}T09:00`, // 預設 9:00
+            id: editId || `leave_${Date.now()}`, // 若是編輯則沿用 ID
+            start: `${dateVal}T09:00`,
             end: `${dateVal}T18:00`,
             type: 'special_leave',
             reason: fullReason,
             forceFullCalculation: false
         };
         
-        records.push(newRecord);
-        saveRecords();
-        renderLeaveTab(); // 重新計算並顯示
-        render(); // 更新主畫面 (雖然切換 Tab 才會看到)
+        if (editId) {
+            // 更新現有紀錄
+            const index = records.findIndex(r => r.id === editId);
+            if (index > -1) {
+                records[index] = newRecord;
+                showToast('特休紀錄已更新');
+            } else {
+                records.push(newRecord); // 防呆
+                showToast('特休紀錄已新增');
+            }
+        } else {
+            // 新增紀錄
+            records.push(newRecord);
+            showToast('特休紀錄已新增');
+        }
         
-        // 清空表單
+        saveRecords();
+        clearLeaveForm(); // 清除並重置表單狀態
+        renderLeaveTab();
+        render(); // 更新主畫面
+    }
+
+    function clearLeaveForm() {
+        document.getElementById('leave-date').valueAsDate = new Date();
+        document.getElementById('leave-hours').value = 8;
         document.getElementById('leave-reason').value = '';
-        showToast('特休紀錄已新增');
+        document.getElementById('leave-edit-id').value = '';
+        
+        // 重置按鈕狀態
+        const addBtn = document.getElementById('add-leave-record');
+        addBtn.textContent = '新增特休紀錄';
+        addBtn.classList.remove('btn-warning');
+        
+        document.getElementById('cancel-leave-edit').style.display = 'none';
+    }
+
+    function cancelLeaveEdit() {
+        clearLeaveForm();
+        showToast('已取消編輯');
     }
 
     // --- 核心邏輯函式 (原有) ---
@@ -360,7 +354,7 @@ function getLeaveEntitlementByTenure(years) {
                 userName: '',
                 salaryType: 'monthly',
                 salary: 0,
-                onboardDate: '', // 新增
+                onboardDate: '',
                 workStart: "09:00",
                 workEnd: "18:00",
                 breakStart: "12:00",
@@ -382,7 +376,6 @@ function getLeaveEntitlementByTenure(years) {
             document.getElementById('break-start').value = settings.breakStart;
             document.getElementById('break-end').value = settings.breakEnd;
             
-            // 載入到職日
             if (settings.onboardDate) {
                 onboardDateInput.value = settings.onboardDate;
             }
@@ -409,7 +402,7 @@ function getLeaveEntitlementByTenure(years) {
                 userName: escapeHtml(document.getElementById('user-name').value.trim()),
                 salaryType: document.querySelector('input[name="salaryType"]:checked').value,
                 salary: salary,
-                onboardDate: onboardDateInput.value, // 儲存到職日
+                onboardDate: onboardDateInput.value,
                 payday: parseInt(document.getElementById('payday').value) || 1,
                 workStart: document.getElementById('work-start').value,
                 workEnd: document.getElementById('work-end').value,
@@ -424,7 +417,6 @@ function getLeaveEntitlementByTenure(years) {
             
             alert('設定已儲存! 您現在可以開始記錄加班了。');
             
-            // 如果有設定到職日，嘗試重新渲染特休頁
             if (settings.onboardDate) {
                 renderLeaveTab();
             }
@@ -543,7 +535,6 @@ function getLeaveEntitlementByTenure(years) {
             records = records.filter(record => record.id !== id);
             saveRecords();
             render();
-            // 如果是在特休分頁刪除，也要更新特休分頁
             if (document.getElementById('tab-leave').classList.contains('active')) {
                 renderLeaveTab();
             }
@@ -553,17 +544,41 @@ function getLeaveEntitlementByTenure(years) {
     function editRecord(id) {
         const record = records.find(rec => rec.id === id);
         if (record) {
-            // 如果是特休紀錄，不支援在加班分頁編輯 (簡單起見，建議刪除重建立)
+            // --- 處理特休編輯 ---
             if (record.type === 'special_leave') {
-                alert('特休紀錄請至「特休」分頁管理 (目前僅支援刪除後重新新增)');
                 switchTab('leave');
+                
+                // 解析資料並填回表單
+                const datePart = record.start.split('T')[0];
+                const hoursMatch = record.reason.match(/(\d+(\.\d+)?)h/);
+                const hours = hoursMatch ? hoursMatch[1] : '8';
+                const reasonText = record.reason.replace(/\(\d+(\.\d+)?h\)/, '').trim();
+
+                document.getElementById('leave-date').value = datePart;
+                document.getElementById('leave-hours').value = hours;
+                document.getElementById('leave-reason').value = reasonText;
+                document.getElementById('leave-edit-id').value = record.id;
+                
+                // 變更按鈕狀態
+                const addBtn = document.getElementById('add-leave-record');
+                addBtn.textContent = '更新特休紀錄';
+                addBtn.classList.add('btn-warning'); // 視覺區隔
+                
+                document.getElementById('cancel-leave-edit').style.display = 'block';
+                
+                window.scrollTo(0, 0);
+                showToast('已載入特休紀錄供編輯');
                 return;
             }
 
+            // --- 處理加班編輯 ---
             switchTab('punch');
             switchMode('manual', false);
-            document.getElementById('start-time').value = record.start;
-            document.getElementById('end-time').value = record.end;
+            
+            // 修復：使用 helper 格式化時間，解決 datetime-local 無法顯示的問題
+            document.getElementById('start-time').value = formatDateTimeLocal(new Date(record.start));
+            document.getElementById('end-time').value = formatDateTimeLocal(new Date(record.end));
+            
             document.getElementById('overtime-reason').value = record.reason || '';
             document.querySelector(`input[name="overtimeType"][value="${record.type}"]`).checked = true;
             editIdInput.value = record.id;
@@ -598,8 +613,6 @@ function getLeaveEntitlementByTenure(years) {
         
         const conflicts = records.filter(rec => {
             if (rec.id === newRecord.id) return false;
-            // 忽略特休紀錄的重疊檢查 (因為特休可能只請半天，但系統紀錄是全天區間，需更細緻處理)
-            // 這裡簡單處理：如果是加班紀錄，才檢查重疊
             if (rec.type === 'special_leave') return false; 
             
             const recStart = new Date(rec.start).getTime();
@@ -1308,6 +1321,7 @@ function getLeaveEntitlementByTenure(years) {
         
         // 特休按鈕事件
         document.getElementById('add-leave-record').addEventListener('click', addLeaveRecord);
+        document.getElementById('cancel-leave-edit').addEventListener('click', cancelLeaveEdit); // 新增取消編輯
         document.getElementById('leave-btn-4h').addEventListener('click', () => document.getElementById('leave-hours').value = 4);
         document.getElementById('leave-btn-8h').addEventListener('click', () => document.getElementById('leave-hours').value = 8);
         document.getElementById('leave-date').valueAsDate = new Date(); // 預設今天
