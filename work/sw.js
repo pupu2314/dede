@@ -1,8 +1,8 @@
 /**
- * Service Worker for 加班費計算機 v2.8.5
+ * Service Worker for 加班費計算機 v2.8.5.1
  */
 
-const CACHE_NAME = 'overtime-calculator-v2.8.5';
+const CACHE_NAME = 'overtime-calculator-v2.8.5.1';
 const urlsToCache = [
   './',
   './index.html',
@@ -104,6 +104,7 @@ self.addEventListener('message', event => {
     );
   }
 });
+
 
 
 
