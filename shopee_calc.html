@@ -9,6 +9,7 @@
             --shopee-orange: #ee4d2d;
             --shopee-bg: #f5f5f5;
             --success-green: #26af61;
+            --error-red: #ff4d4f;
         }
         body { font-family: "Helvetica Neue", Helvetica, Arial, "PingFang TC", "Heiti TC", "Microsoft JhengHei", sans-serif; padding: 15px; background-color: var(--shopee-bg); color: #333; line-height: 1.5; }
         .container { max-width: 600px; margin: auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
@@ -21,11 +22,14 @@
         .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
         
         label { display: block; margin-bottom: 5px; font-size: 13px; color: #666; }
-        input { width: 100%; padding: 10px; box-sizing: border-box; border: 1px solid #ddd; border-radius: 4px; font-size: 14px; }
+        input { width: 100%; padding: 10px; box-sizing: border-box; border: 1px solid #ddd; border-radius: 4px; font-size: 14px; transition: all 0.2s; }
         input:focus { border-color: var(--shopee-orange); outline: none; box-shadow: 0 0 0 2px rgba(238, 77, 45, 0.1); }
         
-        .item-row { display: grid; grid-template-columns: 2fr 1.2fr 1fr 45px; gap: 8px; margin-bottom: 10px; align-items: center; }
-        .btn-delete { min-width: 25px; background: #ffefed; color: var(--shopee-orange); border: 1px solid #ffcfc9; border-radius: 4px; padding: 8px 0; cursor: pointer; height: 38px; width: 100%; font-size: 13px; transition: all 0.2s; }
+        /* 錯誤輸入樣式 */
+        input.input-error { border-color: var(--error-red); background-color: #fff1f0; }
+
+        .item-row { display: grid; grid-template-columns: 2fr 1.2fr 1fr auto; gap: 8px; margin-bottom: 10px; align-items: center; }
+        .btn-delete { background: #ffefed; color: var(--shopee-orange); border: 1px solid #ffcfc9; border-radius: 4px; padding: 8px 10px; cursor: pointer; height: 38px; min-width: 45px; font-size: 13px; transition: all 0.2s; }
         .btn-delete:hover { background: var(--shopee-orange); color: white; }
         
         .action-btns { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 15px; }
@@ -153,11 +157,18 @@
         div.className = 'item-row';
         div.innerHTML = `
             <input type="text" class="name" placeholder="品名" value="${name}" oninput="saveData()">
-            <input type="number" class="price" placeholder="單價" value="${price}" oninput="saveData()">
-            <input type="number" class="qty" placeholder="數量" value="${qty}" oninput="saveData()">
+            <input type="number" class="price" placeholder="單價" value="${price}" oninput="handleInput(this)">
+            <input type="number" class="qty" placeholder="數量" value="${qty}" oninput="handleInput(this)">
             <button class="btn-delete" onclick="removeItem(this)">刪</button>
         `;
         container.appendChild(div);
+        saveData();
+    }
+
+    function handleInput(el) {
+        if (el.value !== '' && parseFloat(el.value) > 0) {
+            el.classList.remove('input-error');
+        }
         saveData();
     }
 
@@ -194,9 +205,7 @@
     }
 
     function calculate(useSmartRounding) {
-        const names = document.getElementsByClassName('name');
-        const prices = document.getElementsByClassName('price');
-        const qtys = document.getElementsByClassName('qty');
+        const rows = document.querySelectorAll('.item-row');
         const shopeeCoupon = parseFloat(document.getElementById('shopeeCoupon').value) || 0;
         const storeCoupon = parseFloat(document.getElementById('storeCoupon').value) || 0;
         const shippingFee = parseFloat(document.getElementById('shippingFee').value) || 0;
@@ -204,25 +213,34 @@
         let itemOriginalTotal = 0;
         let validItems = [];
 
-        for (let i = 0; i < prices.length; i++) {
-            let p = parseFloat(prices[i].value) || 0;
-            let q = parseFloat(qtys[i].value) || 0;
-            let n = names[i].value.trim() || `品項${i + 1}`;
-            if (p > 0 && q > 0) {
+        rows.forEach((row, i) => {
+            const priceEl = row.querySelector('.price');
+            const qtyEl = row.querySelector('.qty');
+            const nameEl = row.querySelector('.name');
+            
+            let p = parseFloat(priceEl.value);
+            let q = parseFloat(qtyEl.value);
+            let n = nameEl.value.trim() || `品項${i + 1}`;
+
+            // 防呆判斷：若為空值或無效數字，標示紅底
+            let isInvalid = isNaN(p) || p <= 0 || isNaN(q) || q <= 0;
+            
+            if (isInvalid) {
+                if (isNaN(p) || p <= 0) priceEl.classList.add('input-error');
+                if (isNaN(q) || q <= 0) qtyEl.classList.add('input-error');
+            } else {
+                priceEl.classList.remove('input-error');
+                qtyEl.classList.remove('input-error');
                 itemOriginalTotal += p * q;
                 validItems.push({ n, p, q });
             }
-        }
+        });
 
         if (validItems.length === 0) return;
 
         const totalDiscount = shopeeCoupon + storeCoupon;
-        // 應付總額 = 商品總額 - 折扣 + 運費
         currentActualTotal = Math.max(0, itemOriginalTotal - totalDiscount + shippingFee);
-        
-        // 這裡的比例是針對「商品部分」的分攤係數，運費會被平均分攤進去
-        // 另一種邏輯是運費外加，但通常團購是「總支付額 / 總原始額」作為分攤比
-        const ratio = itemOriginalTotal > 0 ? (itemOriginalTotal - totalDiscount + shippingFee) / itemOriginalTotal : 0;
+        const ratio = itemOriginalTotal > 0 ? currentActualTotal / itemOriginalTotal : 0;
 
         document.getElementById('resOriginalTotal').innerText = `$${itemOriginalTotal.toLocaleString()}`;
         document.getElementById('resTotalDiscount').innerText = `-$${totalDiscount.toLocaleString()}`;
@@ -238,7 +256,6 @@
             let finalUnitPrice;
             if (useSmartRounding) {
                 if (idx === validItems.length - 1) {
-                    // 最後一項調整差額
                     let remaining = currentActualTotal - currentSum;
                     finalUnitPrice = item.q > 0 ? remaining / item.q : 0;
                 } else {
@@ -298,4 +315,3 @@
 
 </body>
 </html>
-
