@@ -1,318 +1,455 @@
-
 <!DOCTYPE html>
 <html lang="zh-TW">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>蝦皮訂單折價分攤計算機</title>
-    <style>
-        :root {
-            --shopee-orange: #ee4d2d;
-            --shopee-bg: #f5f5f5;
-            --success-green: #26af61;
-            --error-red: #ff4d4f;
-        }
-        body { font-family: "Helvetica Neue", Helvetica, Arial, "PingFang TC", "Heiti TC", "Microsoft JhengHei", sans-serif; padding: 15px; background-color: var(--shopee-bg); color: #333; line-height: 1.5; }
-        .container { max-width: 600px; margin: auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
-        h2 { color: var(--shopee-orange); text-align: center; margin-bottom: 20px; border-bottom: 2px solid var(--shopee-orange); padding-bottom: 10px; }
-        
-        .section-title { font-weight: bold; margin-bottom: 12px; display: flex; align-items: center; color: #444; }
-        .section-title::before { content: ""; display: inline-block; width: 4px; height: 1.2em; background: var(--shopee-orange); margin-right: 8px; border-radius: 2px; }
-        
-        .input-group { margin-bottom: 20px; background: #fafafa; padding: 15px; border-radius: 6px; border: 1px solid #eee; }
-        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-        
-        label { display: block; margin-bottom: 5px; font-size: 13px; color: #666; }
-        input { width: 100%; padding: 10px; box-sizing: border-box; border: 1px solid #ddd; border-radius: 4px; font-size: 14px; transition: all 0.2s; }
-        input:focus { border-color: var(--shopee-orange); outline: none; box-shadow: 0 0 0 2px rgba(238, 77, 45, 0.1); }
-        
-        /* 錯誤輸入樣式 */
-        input.input-error { border-color: var(--error-red); background-color: #fff1f0; }
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>蝦皮訂單折價分攤計算機 Pro</title>
 
-        .item-row { display: grid; grid-template-columns: 2fr 1.2fr 1fr auto; gap: 8px; margin-bottom: 10px; align-items: center; }
-        .btn-delete { background: #ffefed; color: var(--shopee-orange); border: 1px solid #ffcfc9; border-radius: 4px; padding: 8px 10px; cursor: pointer; height: 38px; min-width: 45px; font-size: 13px; transition: all 0.2s; }
-        .btn-delete:hover { background: var(--shopee-orange); color: white; }
-        
-        .action-btns { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 15px; }
-        button { flex: 1; min-width: 85px; padding: 12px 8px; border: none; border-radius: 4px; cursor: pointer; font-size: 14px; font-weight: bold; transition: opacity 0.2s; }
-        .btn-add { background-color: #f8f8f8; color: #555; border: 1px solid #ddd; }
-        .btn-calc { background-color: var(--shopee-orange); color: white; }
-        .btn-round { background-color: #36cfc9; color: white; }
-        .btn-clear { background-color: #eee; color: #666; }
-        .btn-copy { background-color: var(--success-green); color: white; margin-top: 10px; width: 100%; flex: none; }
-        
-        #results { margin-top: 25px; padding: 15px; background: #fffcfb; border: 1px solid #ffe8e4; border-radius: 8px; display: none; }
-        .result-summary { margin-bottom: 15px; font-size: 14px; border-bottom: 1px dashed #ddd; padding-bottom: 10px; }
-        .result-summary p { margin: 5px 0; display: flex; justify-content: space-between; }
-        
-        .table-wrapper { overflow-x: auto; }
-        table { width: 100%; border-collapse: collapse; background: white; margin-bottom: 15px; min-width: 400px; }
-        th, td { border: 1px solid #eee; padding: 10px 5px; text-align: center; font-size: 13px; }
-        th { background-color: #fcfcfc; color: #777; font-weight: normal; }
-        
-        .final-payment-box { background: #fff; padding: 15px; border-radius: 6px; border: 1px solid #eee; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
-        .payment-row { display: flex; justify-content: space-between; align-items: center; margin-top: 10px; }
-        .highlight { color: var(--shopee-orange); font-weight: bold; font-size: 20px; }
-        
-        .toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.7); color: white; padding: 8px 16px; border-radius: 20px; font-size: 14px; display: none; z-index: 100; }
-    </style>
+<style>
+:root{
+--orange:#ee4d2d;
+--bg:#f5f5f5;
+--green:#26af61;
+--red:#ff4d4f;
+}
+body{
+font-family:"Microsoft JhengHei",sans-serif;
+background:var(--bg);
+padding:15px;
+}
+.container{
+max-width:680px;
+margin:auto;
+background:white;
+padding:20px;
+border-radius:10px;
+box-shadow:0 5px 20px rgba(0,0,0,.1);
+}
+h2{
+text-align:center;
+color:var(--orange);
+border-bottom:2px solid var(--orange);
+padding-bottom:8px;
+}
+.section{
+margin-top:20px;
+}
+input,select{
+width:100%;
+padding:8px;
+border:1px solid #ddd;
+border-radius:5px;
+}
+input:focus{
+border-color:var(--orange);
+outline:none;
+}
+.input-error{
+border-color:var(--red)!important;
+background:#fff1f0;
+}
+.item-row{
+display:grid;
+grid-template-columns:2fr 1fr 1fr 1fr auto;
+gap:6px;
+margin-bottom:8px;
+align-items:center;
+}
+@media(max-width:520px){
+.item-row{
+grid-template-columns:1fr 1fr;
+}
+}
+button{
+padding:10px;
+border:none;
+border-radius:5px;
+cursor:pointer;
+font-weight:bold;
+}
+.btn-orange{background:var(--orange);color:white;}
+.btn-green{background:var(--green);color:white;}
+.btn-gray{background:#eee;}
+.result-box{
+margin-top:20px;
+background:#fff8f6;
+padding:15px;
+border-radius:8px;
+display:none;
+}
+.highlight{
+color:var(--orange);
+font-size:20px;
+font-weight:bold;
+}
+table{
+width:100%;
+border-collapse:collapse;
+margin-top:10px;
+}
+th,td{
+border:1px solid #eee;
+padding:6px;
+text-align:center;
+}
+.toast{
+position:fixed;
+bottom:20px;
+left:50%;
+transform:translateX(-50%);
+background:black;
+color:white;
+padding:6px 15px;
+border-radius:20px;
+display:none;
+}
+</style>
 </head>
 <body>
 
 <div class="container">
-    <h2>蝦皮折扣分攤計算機</h2>
-    
-    <!-- 1. 折扣與運費 -->
-    <div class="input-group">
-        <span class="section-title">1. 折扣與運費</span>
-        <div class="grid-2">
-            <div>
-                <label>蝦皮優惠券</label>
-                <input type="number" id="shopeeCoupon" placeholder="0" min="0" oninput="saveData()">
-            </div>
-            <div>
-                <label>賣場優惠券</label>
-                <input type="number" id="storeCoupon" placeholder="0" min="0" oninput="saveData()">
-            </div>
-        </div>
-        <div style="margin-top: 10px;">
-            <label>運費 (自付額)</label>
-            <input type="number" id="shippingFee" placeholder="0" min="0" oninput="saveData()">
-        </div>
-    </div>
+<h2>蝦皮折扣分攤計算機 Pro</h2>
 
-    <!-- 2. 品項明細 -->
-    <div class="input-group">
-        <span class="section-title">2. 品項明細</span>
-        <div id="itemsContainer"></div>
-        <div class="action-btns">
-            <button class="btn-add" onclick="addItem()">+ 新增</button>
-            <button class="btn-calc" onclick="calculate(false)">計算</button>
-            <button class="btn-round" onclick="calculate(true)">智慧取整</button>
-            <button class="btn-clear" onclick="clearAll()">清除</button>
-        </div>
-    </div>
+<div class="section">
+<h4>折扣與運費</h4>
+<input type="number" id="shopeeCoupon" placeholder="蝦皮優惠券">
+<input type="number" id="storeCoupon" placeholder="賣場優惠券" style="margin-top:6px;">
+<input type="number" id="shippingFee" placeholder="運費自付額" style="margin-top:6px;">
 
-    <!-- 3. 結果 -->
-    <div id="results">
-        <div class="result-summary">
-            <p><span>商品原始總額：</span><span id="resOriginalTotal">$0</span></p>
-            <p><span>總折扣額：</span><span id="resTotalDiscount" style="color: red;">-$0</span></p>
-            <p><span>自付運費：</span><span id="resShipping">+$0</span></p>
-            <p style="font-size: 16px; font-weight: bold; margin-top: 8px; color: #333;">
-                <span>訂單應付總計：</span><span id="resActualTotal">$0</span>
-            </p>
-        </div>
-
-        <div class="table-wrapper">
-            <table id="resultTable">
-                <thead>
-                    <tr>
-                        <th>品項</th>
-                        <th>原單價</th>
-                        <th>數量</th>
-                        <th>分攤後單價</th>
-                        <th>小計</th>
-                    </tr>
-                </thead>
-                <tbody></tbody>
-            </table>
-        </div>
-
-        <div class="final-payment-box">
-            <label>蝦幣折抵</label>
-            <input type="number" id="shopeeCoins" placeholder="0" min="0" oninput="saveData(); updateFinalPayment()">
-            <div class="payment-row">
-                <span>最後實付現金：</span>
-                <span id="finalCash" class="highlight">$0</span>
-            </div>
-        </div>
-
-        <button class="btn-copy" onclick="copyToClipboard()">複製結果文字 (LINE分享)</button>
-    </div>
+<select id="shippingMode" style="margin-top:6px;">
+<option value="ratio">運費按金額比例分攤</option>
+<option value="average">運費平均分攤</option>
+<option value="self">運費不分攤(下單者負擔)</option>
+</select>
 </div>
 
-<div id="toast" class="toast">已複製到剪貼簿</div>
+<div class="section">
+<h4>品項明細</h4>
+<div id="items"></div>
+<button class="btn-gray" onclick="addItem()">+ 新增品項</button>
+</div>
+
+<div class="section">
+<button class="btn-orange" onclick="calculate()">重新計算</button>
+<button class="btn-green" onclick="exportCSV()">匯出CSV</button>
+</div>
+
+<div class="result-box" id="resultBox">
+<h4>計算結果</h4>
+<div id="summary"></div>
+<table>
+<thead>
+<tr>
+<th>品項</th>
+<th>數量</th>
+<th>最終單價</th>
+<th>小計</th>
+</tr>
+</thead>
+<tbody id="resultTable"></tbody>
+</table>
+
+<div style="margin-top:10px;">
+<input type="number" id="coins" placeholder="蝦幣折抵">
+<div>最後實付：<span class="highlight" id="finalCash">$0</span></div>
+
+</div>
+<button class="btn-green" onclick="copyText()">複製分享文字</button>
+
+<button class="btn-red" onclick="clearAll()">清除紀錄</button>
+</div>
+</div>
+
+<div class="toast" id="toast">已複製</div>
 
 <script>
-    let currentActualTotal = 0;
-    let currentResults = [];
+const STORAGE_KEY="shopee_calc_pro_v3";
+let currentTotal=0;
+let finalItems=[];
 
-    window.onload = function() {
-        const savedData = localStorage.getItem('shopee_calc_v2');
-        if (savedData) {
-            const data = JSON.parse(savedData);
-            document.getElementById('shopeeCoupon').value = data.shopeeCoupon || '';
-            document.getElementById('storeCoupon').value = data.storeCoupon || '';
-            document.getElementById('shippingFee').value = data.shippingFee || '';
-            document.getElementById('shopeeCoins').value = data.shopeeCoins || '';
-            if (data.items && data.items.length > 0) {
-                data.items.forEach(item => addItem(item.n, item.p, item.q));
-            } else { addItem(); }
-        } else { addItem(); }
-    };
+/* debounce 自動計算 */
+let timer;
+document.addEventListener("input",()=>{
+clearTimeout(timer);
+timer=setTimeout(calculate,300);
+saveData();
+});
 
-    function addItem(name = '', price = '', qty = '') {
-        const container = document.getElementById('itemsContainer');
-        const div = document.createElement('div');
-        div.className = 'item-row';
-        div.innerHTML = `
-            <input type="text" class="name" placeholder="品名" value="${name}" oninput="saveData()">
-            <input type="number" class="price" placeholder="單價" value="${price}" oninput="handleInput(this)">
-            <input type="number" class="qty" placeholder="數量" value="${qty}" oninput="handleInput(this)">
-            <button class="btn-delete" onclick="removeItem(this)">刪</button>
-        `;
-        container.appendChild(div);
-        saveData();
-    }
+/* 新增品項 */
+function addItem(data={}){
+const div=document.createElement("div");
+div.className="item-row";
+div.innerHTML=`
+<input type="text" placeholder="品名" class="name" value="${data.name||''}">
+<input type="number" placeholder="單價" class="price" value="${data.price||''}">
+<input type="number" placeholder="數量" class="qty" value="${data.qty||''}">
+<label><input type="checkbox" class="participate" ${data.participate!==false?'checked':''}>折扣</label>
+<button onclick="this.parentElement.remove();calculate()">刪</button>
+`;
+document.getElementById("items").appendChild(div);
+}
 
-    function handleInput(el) {
-        if (el.value !== '' && parseFloat(el.value) > 0) {
-            el.classList.remove('input-error');
-        }
-        saveData();
-    }
+/* 核心零誤差演算法 */
+function calculate(){
 
-    function removeItem(btn) {
-        btn.parentElement.remove();
-        if (document.querySelectorAll('.item-row').length === 0) addItem();
-        saveData();
-    }
+const rows=document.querySelectorAll(".item-row");
+let items=[];
+let originalTotal=0;
 
-    function saveData() {
-        const items = [];
-        const rows = document.querySelectorAll('.item-row');
-        rows.forEach(row => {
-            items.push({
-                n: row.querySelector('.name').value,
-                p: row.querySelector('.price').value,
-                q: row.querySelector('.qty').value
-            });
-        });
-        const data = {
-            shopeeCoupon: document.getElementById('shopeeCoupon').value,
-            storeCoupon: document.getElementById('storeCoupon').value,
-            shippingFee: document.getElementById('shippingFee').value,
-            shopeeCoins: document.getElementById('shopeeCoins').value,
-            items: items
-        };
-        localStorage.setItem('shopee_calc_v2', JSON.stringify(data));
-    }
+/* 讀取資料 */
+rows.forEach((r,i)=>{
+const p=parseFloat(r.querySelector(".price").value);
+const q=parseInt(r.querySelector(".qty").value);
+const name=r.querySelector(".name").value||"品項"+(i+1);
+const participate=r.querySelector(".participate").checked;
 
-    function clearAll() {
-        if (!confirm("確定要清除所有資料嗎？")) return;
-        localStorage.removeItem('shopee_calc_v2');
-        location.reload();
-    }
+if(p>0&&q>0){
+items.push({name,p,q,participate});
+originalTotal+=p*q;
+}
+});
 
-    function calculate(useSmartRounding) {
-        const rows = document.querySelectorAll('.item-row');
-        const shopeeCoupon = parseFloat(document.getElementById('shopeeCoupon').value) || 0;
-        const storeCoupon = parseFloat(document.getElementById('storeCoupon').value) || 0;
-        const shippingFee = parseFloat(document.getElementById('shippingFee').value) || 0;
-        
-        let itemOriginalTotal = 0;
-        let validItems = [];
+if(originalTotal<=0)return;
 
-        rows.forEach((row, i) => {
-            const priceEl = row.querySelector('.price');
-            const qtyEl = row.querySelector('.qty');
-            const nameEl = row.querySelector('.name');
-            
-            let p = parseFloat(priceEl.value);
-            let q = parseFloat(qtyEl.value);
-            let n = nameEl.value.trim() || `品項${i + 1}`;
+const shopee=parseFloat(shopeeCoupon.value)||0;
+const store=parseFloat(storeCoupon.value)||0;
+const shipping=parseFloat(shippingFee.value)||0;
 
-            // 防呆判斷：若為空值或無效數字，標示紅底
-            let isInvalid = isNaN(p) || p <= 0 || isNaN(q) || q <= 0;
-            
-            if (isInvalid) {
-                if (isNaN(p) || p <= 0) priceEl.classList.add('input-error');
-                if (isNaN(q) || q <= 0) qtyEl.classList.add('input-error');
-            } else {
-                priceEl.classList.remove('input-error');
-                qtyEl.classList.remove('input-error');
-                itemOriginalTotal += p * q;
-                validItems.push({ n, p, q });
-            }
-        });
+if(shopee+store>originalTotal){
+alert("折扣不可超過商品總額");
+return;
+}
 
-        if (validItems.length === 0) return;
+/* ===== 單位展開 ===== */
 
-        const totalDiscount = shopeeCoupon + storeCoupon;
-        currentActualTotal = Math.max(0, itemOriginalTotal - totalDiscount + shippingFee);
-        const ratio = itemOriginalTotal > 0 ? currentActualTotal / itemOriginalTotal : 0;
+let unitList=[];
+items.forEach(item=>{
+for(let i=0;i<item.q;i++){
+unitList.push({
+name:item.name,
+price:item.p,
+participate:item.participate
+});
+}
+});
 
-        document.getElementById('resOriginalTotal').innerText = `$${itemOriginalTotal.toLocaleString()}`;
-        document.getElementById('resTotalDiscount').innerText = `-$${totalDiscount.toLocaleString()}`;
-        document.getElementById('resShipping').innerText = `+$${shippingFee.toLocaleString()}`;
-        document.getElementById('resActualTotal').innerText = `$${Math.round(currentActualTotal).toLocaleString()}`;
-        
-        const tbody = document.querySelector('#resultTable tbody');
-        tbody.innerHTML = '';
-        currentResults = [];
+/* ===== 折扣基礎 ===== */
 
-        let currentSum = 0;
-        validItems.forEach((item, idx) => {
-            let finalUnitPrice;
-            if (useSmartRounding) {
-                if (idx === validItems.length - 1) {
-                    let remaining = currentActualTotal - currentSum;
-                    finalUnitPrice = item.q > 0 ? remaining / item.q : 0;
-                } else {
-                    finalUnitPrice = Math.round(item.p * ratio);
-                }
-            } else {
-                finalUnitPrice = item.p * ratio;
-            }
-            
-            let subtotal = finalUnitPrice * item.q;
-            currentSum += subtotal;
+let discountBase=unitList
+.filter(u=>u.participate)
+.reduce((a,b)=>a+b.price,0);
 
-            currentResults.push({ name: item.n, original: item.p, qty: item.q, unit: finalUnitPrice, subtotal: subtotal });
+/* ===== 計算理論價格 ===== */
 
-            tbody.innerHTML += `<tr>
-                <td>${item.n}</td>
-                <td>$${item.p}</td>
-                <td>${item.q}</td>
-                <td style="color:var(--shopee-orange); font-weight:bold;">$${useSmartRounding ? Math.round(finalUnitPrice) : finalUnitPrice.toFixed(2)}</td>
-                <td>$${Math.round(subtotal).toLocaleString()}</td>
-            </tr>`;
-        });
+let theoreticalUnits=unitList.map(unit=>{
 
-        document.getElementById('results').style.display = 'block';
-        updateFinalPayment();
-        document.getElementById('results').scrollIntoView({ behavior: 'smooth' });
-    }
+let discountShare=unit.participate
+? (unit.price/discountBase)*(shopee+store)
+:0;
 
-    function updateFinalPayment() {
-        const coins = parseFloat(document.getElementById('shopeeCoins').value) || 0;
-        const finalCash = Math.max(0, currentActualTotal - coins);
-        document.getElementById('finalCash').innerText = `$${Math.round(finalCash).toLocaleString()}`;
-    }
+let shippingShare=0;
 
-    function copyToClipboard() {
-        let text = "🛍️ 蝦皮訂單分攤明細\n---\n";
-        currentResults.forEach(item => {
-            text += `🔹 ${item.name}\n   數量: ${item.qty}\n   分攤單價: $${Math.round(item.unit)}\n   小計: $${Math.round(item.subtotal)}\n`;
-        });
-        text += `---\n💰 訂單總計: $${Math.round(currentActualTotal)}\n`;
-        const coins = parseFloat(document.getElementById('shopeeCoins').value) || 0;
-        if(coins > 0) text += `🪙 蝦幣折抵: -$${coins}\n`;
-        text += `💵 實付現金: $${document.getElementById('finalCash').innerText}`;
+if(shippingMode.value==="ratio"){
+shippingShare=shipping*(unit.price/originalTotal);
+}
+else if(shippingMode.value==="average"){
+shippingShare=shipping/unitList.length;
+}
 
-        const el = document.createElement('textarea');
-        el.value = text;
-        document.body.appendChild(el);
-        el.select();
-        document.execCommand('copy');
-        document.body.removeChild(el);
-        
-        const toast = document.getElementById('toast');
-        toast.style.display = 'block';
-        setTimeout(() => toast.style.display = 'none', 2000);
-    }
+return unit.price-discountShare+shippingShare;
+});
+
+/* ===== floor + 記錄小數 ===== */
+
+let unitObjects=theoreticalUnits.map((val,index)=>{
+return{
+index:index,
+name:unitList[index].name,
+price:unitList[index].price,
+floor:Math.floor(val),
+fraction:val-Math.floor(val)
+};
+});
+
+let floorSum=unitObjects.reduce((a,b)=>a+b.floor,0);
+let theoreticalSum=theoreticalUnits.reduce((a,b)=>a+b,0);
+let diff=Math.round(theoreticalSum-floorSum);
+
+/* ===== 最大餘數法 + 同單價優先 ===== */
+
+unitObjects.sort((a,b)=>{
+if(b.fraction!==a.fraction){
+return b.fraction-a.fraction;
+}
+return b.price-a.price; // 同小數 → 高單價優先
+});
+
+for(let i=0;i<diff;i++){
+unitObjects[i].floor++;
+}
+
+/* ===== 還原原順序 ===== */
+
+unitObjects.sort((a,b)=>a.index-b.index);
+
+let roundedUnits=unitObjects.map(u=>u.floor);
+
+/* ===== 聚合同品項 ===== */
+
+let resultMap={};
+
+roundedUnits.forEach((val,index)=>{
+let name=unitList[index].name;
+if(!resultMap[name]){
+resultMap[name]={qty:0,subtotal:0};
+}
+resultMap[name].qty++;
+resultMap[name].subtotal+=val;
+});
+
+finalItems=[];
+for(let name in resultMap){
+let obj=resultMap[name];
+finalItems.push({
+name:name,
+qty:obj.qty,
+unit:Math.round(obj.subtotal/obj.qty),
+subtotal:obj.subtotal
+});
+}
+
+currentTotal=roundedUnits.reduce((a,b)=>a+b,0);
+
+renderResult(originalTotal,shopee+store,shipping);
+}
+
+/* 渲染 */
+function renderResult(original,discount,shipping){
+const box=document.getElementById("resultBox");
+box.style.display="block";
+
+summary.innerHTML=
+`商品總額：$${original}<br>
+總折扣：-$${discount}<br>
+運費：+$${shipping}<br>
+訂單總計：<b>$${currentTotal}</b>`;
+
+const tbody=document.getElementById("resultTable");
+tbody.innerHTML="";
+finalItems.forEach(i=>{
+const tr=document.createElement("tr");
+tr.innerHTML=
+`<td>${i.name}</td>
+<td>${i.qty}</td>
+<td>$${i.unit}</td>
+<td>$${i.subtotal}</td>`;
+tbody.appendChild(tr);
+});
+
+updateFinal();
+}
+
+function updateFinal(){
+const c=parseFloat(coins.value)||0;
+if(c>currentTotal){
+coins.classList.add("input-error");
+}else{
+coins.classList.remove("input-error");
+}
+finalCash.innerText="$"+Math.max(0,currentTotal-c);
+}
+
+coins.addEventListener("input",updateFinal);
+
+/* copy */
+function copyText(){
+let text="蝦皮分攤明細\n";
+finalItems.forEach(i=>{
+text+=`${i.name} x${i.qty} = $${i.subtotal}\n`;
+});
+text+=`總計 $${currentTotal}`;
+navigator.clipboard.writeText(text);
+toast.style.display="block";
+setTimeout(()=>toast.style.display="none",2000);
+}
+
+/* CSV */
+function exportCSV(){
+let csv="品項,數量,單價,小計\n";
+finalItems.forEach(i=>{
+csv+=`${i.name},${i.qty},${i.unit},${i.subtotal}\n`;
+});
+const blob=new Blob([csv]);
+const a=document.createElement("a");
+a.href=URL.createObjectURL(blob);
+a.download="shopee_calc.csv";
+a.click();
+}
+
+/* 儲存 */
+function saveData(){
+
+const rows=document.querySelectorAll(".item-row");
+
+let items=[];
+rows.forEach(r=>{
+items.push({
+name:r.querySelector(".name").value,
+price:r.querySelector(".price").value,
+qty:r.querySelector(".qty").value,
+participate:r.querySelector(".participate").checked
+});
+});
+
+const data={
+version:4,
+shopeeCoupon:shopeeCoupon.value,
+storeCoupon:storeCoupon.value,
+shippingFee:shippingFee.value,
+shippingMode:shippingMode.value,
+coins:coins.value,
+items:items
+};
+
+localStorage.setItem(STORAGE_KEY,JSON.stringify(data));
+}
+function loadData(){
+
+const raw=localStorage.getItem(STORAGE_KEY);
+if(!raw) {
+addItem(); 
+return;
+}
+
+const data=JSON.parse(raw);
+
+shopeeCoupon.value=data.shopeeCoupon||"";
+storeCoupon.value=data.storeCoupon||"";
+shippingFee.value=data.shippingFee||"";
+shippingMode.value=data.shippingMode||"ratio";
+coins.value=data.coins||"";
+
+document.getElementById("items").innerHTML="";
+
+if(data.items && data.items.length>0){
+data.items.forEach(item=>{
+addItem(item);
+});
+}else{
+addItem();
+}
+
+calculate();
+}
+window.onload=loadData;
+
+function clearAll(){
+if(confirm("確定清除所有暫存資料？")){
+localStorage.removeItem(STORAGE_KEY);
+location.reload();
+}
+}
+
 </script>
-
 </body>
 </html>
