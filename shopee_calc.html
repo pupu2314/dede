@@ -6,74 +6,21 @@
 <title>蝦皮折扣分攤計算機</title>
 
 <style>
-body{
-font-family:"Microsoft JhengHei",sans-serif;
-background:#f5f5f5;
-margin:0;
-}
-.container{
-max-width:720px;
-margin:auto;
-padding:20px;
-}
-.card{
-background:#fff;
-padding:20px;
-border-radius:12px;
-box-shadow:0 4px 12px rgba(0,0,0,.08);
-}
-h2{
-text-align:center;
-color:#ee4d2d;
-}
-input,select{
-width:100%;
-padding:10px;
-margin-top:6px;
-border:1px solid #ddd;
-border-radius:6px;
-box-sizing:border-box;
-}
-.item-card{
-border:1px solid #eee;
-padding:12px;
-border-radius:8px;
-margin-bottom:10px;
-}
-.item-grid{
-display:grid;
-grid-template-columns:1fr 1fr;
-gap:8px;
-}
-button{
-padding:10px 12px;
-border:none;
-border-radius:6px;
-cursor:pointer;
-font-weight:bold;
-margin-top:6px;
-}
-.btn-orange{background:#ee4d2d;color:#fff;}
-.btn-green{background:#26af61;color:#fff;}
-.btn-gray{background:#eee;}
-.result-box{
-margin-top:20px;
-background:#fff8f6;
-padding:15px;
-border-radius:8px;
-display:none;
-}
-.highlight{color:#ee4d2d;font-size:20px;font-weight:bold;}
-table{
-width:100%;
-border-collapse:collapse;
-margin-top:10px;
-}
-th,td{
-border:1px solid #eee;
-padding:6px;
-text-align:center;
-}
+body{font-family:"Microsoft JhengHei";background:#f5f5f5;margin:0}
+.container{max-width:720px;margin:auto;padding:20px}
+.card{background:#fff;padding:20px;border-radius:12px;box-shadow:0 4px 12px rgba(0,0,0,.08)}
+h2{text-align:center;color:#ee4d2d}
+input,select{width:100%;padding:10px;margin-top:6px;border:1px solid #ddd;border-radius:6px;box-sizing:border-box}
+.item-card{border:1px solid #eee;padding:12px;border-radius:8px;margin-bottom:10px}
+.item-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+button{padding:8px 12px;border:none;border-radius:6px;cursor:pointer;font-weight:bold;margin-top:6px}
+.btn-orange{background:#ee4d2d;color:#fff}
+.btn-green{background:#26af61;color:#fff}
+.btn-gray{background:#eee}
+.result-box{margin-top:20px;background:#fff8f6;padding:15px;border-radius:8px;display:none}
+.highlight{color:#ee4d2d;font-size:20px;font-weight:bold}
+table{width:100%;border-collapse:collapse;margin-top:10px}
+th,td{border:1px solid #eee;padding:6px;text-align:center}
 </style>
 </head>
 <body>
@@ -97,8 +44,9 @@ text-align:center;
 <div id="items"></div>
 <button class="btn-gray" onclick="addItem()">+ 新增品項</button>
 
-<br><br>
+<br>
 <button class="btn-orange" onclick="calculate()">重新計算</button>
+<button class="btn-gray" onclick="clearMemory()">清除記憶</button>
 
 <div class="result-box" id="resultBox">
 <h4>計算結果</h4>
@@ -128,165 +76,116 @@ text-align:center;
 let finalItems=[];
 let currentTotal=0;
 
-function addItem(data={}){
+function addItem(){
 const div=document.createElement("div");
 div.className="item-card";
 div.innerHTML=`
-<input type="text" class="name" placeholder="品名" value="${data.name||''}">
+<input type="text" class="name" placeholder="品名">
 <div class="item-grid">
-<input type="number" class="price" placeholder="單價" value="${data.price||''}">
-<input type="number" class="qty" placeholder="數量" value="${data.qty||''}">
+<input type="number" class="price" placeholder="單價">
+<input type="number" class="qty" placeholder="數量">
 </div>
-<label>
-<input type="checkbox" class="participate" ${data.participate!==false?'checked':''}>
-參與折扣
-</label>
+<label><input type="checkbox" class="participate" checked>參與折扣</label>
 <button onclick="this.parentElement.remove()">刪除</button>
 `;
-document.getElementById("items").appendChild(div);
+items.appendChild(div);
 }
 
 function calculate(){
 
 const rows=document.querySelectorAll(".item-card");
-let items=[];
+let itemsData=[];
 let originalTotal=0;
 
 rows.forEach((r,i)=>{
-const p=parseFloat(r.querySelector(".price").value);
-const q=parseInt(r.querySelector(".qty").value);
-const name=r.querySelector(".name").value||"品項"+(i+1);
-const participate=r.querySelector(".participate").checked;
+let p=parseFloat(r.querySelector(".price").value);
+let q=parseInt(r.querySelector(".qty").value);
+let name=r.querySelector(".name").value||"品項"+(i+1);
+let participate=r.querySelector(".participate").checked;
 
 if(p>0&&q>0){
-items.push({
-rowIndex:i,
-name,
-price:p,
-qty:q,
-participate
-});
+itemsData.push({index:i,name,price:p,qty:q,participate});
 originalTotal+=p*q;
 }
 });
 
 if(originalTotal<=0)return;
 
-const shopee=parseFloat(shopeeCoupon.value)||0;
-const store=parseFloat(storeCoupon.value)||0;
-const shipping=parseFloat(shippingFee.value)||0;
+let discount=(parseFloat(shopeeCoupon.value)||0)+(parseFloat(storeCoupon.value)||0);
+let shipping=parseFloat(shippingFee.value)||0;
 
-if(shopee+store>originalTotal){
-alert("折扣不可超過商品總額");
+if(discount>originalTotal){
+alert("折扣不可超過總額");
 return;
 }
 
 /* 單位展開 */
 let units=[];
-
-items.forEach(item=>{
+itemsData.forEach(item=>{
 for(let i=0;i<item.qty;i++){
-units.push({
-rowIndex:item.rowIndex,
-name:item.name,
-price:item.price,
-participate:item.participate
-});
+units.push({row:item.index,price:item.price,participate:item.participate});
 }
 });
 
-/* 折扣基準 */
-let discountBase=units
-.filter(u=>u.participate)
-.reduce((a,b)=>a+b.price,0);
+/* 折扣比例 */
+let base=units.filter(u=>u.participate).reduce((a,b)=>a+b.price,0);
 
-/* 理論單位價格 */
-let theoreticalUnits=units.map(unit=>{
-
-let discountShare=unit.participate && discountBase>0
-? (unit.price/discountBase)*(shopee+store)
-:0;
-
-let shippingShare=0;
-
-if(shippingMode.value==="ratio"){
-shippingShare=shipping*(unit.price/originalTotal);
-}
-else if(shippingMode.value==="average"){
-shippingShare=shipping/units.length;
-}
-
-return unit.price-discountShare+shippingShare;
+let theoretical=units.map(u=>{
+let d=u.participate&&base>0?(u.price/base)*discount:0;
+return u.price-d;
 });
 
-/* floor + 尾數補償 */
-let unitObjects=theoreticalUnits.map((v,i)=>({
-index:i,
-rowIndex:units[i].rowIndex,
-price:units[i].price,
-floor:Math.floor(v),
-fraction:v-Math.floor(v)
-}));
+/* floor */
+let floors=theoretical.map(v=>Math.floor(v));
+let diff=Math.round(theoretical.reduce((a,b)=>a+b,0)-floors.reduce((a,b)=>a+b,0));
 
-let floorSum=unitObjects.reduce((a,b)=>a+b.floor,0);
-let theoreticalSum=theoreticalUnits.reduce((a,b)=>a+b,0);
-let diff=Math.round(theoreticalSum-floorSum);
+/* 尾數分配給數量較少的列 */
+let rowQty={};
+itemsData.forEach(i=>rowQty[i.index]=i.qty);
 
-/* 最高單價優先 */
-unitObjects.sort((a,b)=>{
-if(b.price!==a.price) return b.price-a.price;
-return b.fraction-a.fraction;
-});
+let indices=[...Array(units.length).keys()];
+indices.sort((a,b)=>rowQty[units[a].row]-rowQty[units[b].row]);
 
 for(let i=0;i<diff;i++){
-unitObjects[i].floor++;
+floors[indices[i]]++;
 }
 
-unitObjects.sort((a,b)=>a.index-b.index);
-
-/* 聚合回原列（不合併同名） */
+/* 聚合 */
 let rowMap={};
-
-unitObjects.forEach(u=>{
-if(!rowMap[u.rowIndex]){
-rowMap[u.rowIndex]={subtotal:0,qty:0};
-}
-rowMap[u.rowIndex].subtotal+=u.floor;
-rowMap[u.rowIndex].qty++;
+floors.forEach((v,i)=>{
+let row=units[i].row;
+if(!rowMap[row])rowMap[row]=0;
+rowMap[row]+=v;
 });
 
-/* 組裝結果 */
 finalItems=[];
-items.forEach(item=>{
-let row=rowMap[item.rowIndex];
-let unit=Math.floor(row.subtotal/row.qty);
+itemsData.forEach(item=>{
+let subtotal=rowMap[item.index];
+let unit=subtotal/item.qty;
 finalItems.push({
 name:item.name,
 qty:item.qty,
 unit:unit,
-subtotal:row.subtotal
+subtotal:subtotal
 });
 });
 
-currentTotal=Object.values(rowMap)
-.reduce((a,b)=>a+b.subtotal,0);
+currentTotal=Object.values(rowMap).reduce((a,b)=>a+b,0);
 
-renderResult(originalTotal,shopee+store,shipping);
+render(originalTotal,discount);
 }
 
-function renderResult(original,discount,shipping){
+function render(original,discount){
 resultBox.style.display="block";
 summary.innerHTML=
 `商品總額：$${original}<br>
 總折扣：-$${discount}<br>
-運費：+$${shipping}<br>
 訂單總計：<b>$${currentTotal}</b>`;
 
 resultTable.innerHTML="";
 finalItems.forEach(i=>{
-const tr=document.createElement("tr");
-tr.innerHTML=
-`<td>${i.name}</td>
+let tr=document.createElement("tr");
+tr.innerHTML=`<td>${i.name}</td>
 <td>${i.qty}</td>
 <td>$${i.unit}</td>
 <td>$${i.subtotal}</td>`;
@@ -297,8 +196,13 @@ updateFinal();
 }
 
 function updateFinal(){
-const c=parseFloat(coins.value)||0;
-finalCash.innerText="$"+Math.max(0,currentTotal-c);
+let c=parseFloat(coins.value)||0;
+finalCash.innerText="$"+(currentTotal-c);
+}
+
+function clearMemory(){
+localStorage.clear();
+location.reload();
 }
 
 coins.addEventListener("input",updateFinal);
