@@ -197,7 +197,7 @@ resultTable.appendChild(tr);
 });
 
 /* 更新蝦幣 */
-window.currentTotal=finalTotal;
+currentTotal = finalTotal;
 updateFinal();
 }
 function render(original,discount){
@@ -221,8 +221,8 @@ updateFinal();
 }
 
 function updateFinal(){
-let c=parseFloat(coins.value)||0;
-finalCash.innerText="$"+(currentTotal-c);
+const c = parseFloat(coins.value) || 0;
+finalCash.innerText = "$" + Math.max(0, currentTotal - c);
 }
 
 function clearMemory(){
