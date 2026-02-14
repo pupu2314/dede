@@ -74,20 +74,70 @@ th,td{border:1px solid #eee;padding:6px;text-align:center}
 <script>
 
 let finalItems=[];
-let currentTotal=0;
+let currentTotal = 0;
 
-function addItem(){
+function saveToStorage(){
+
+const rows=document.querySelectorAll(".item-card");
+
+let data={
+shopee:shopeeCoupon.value,
+store:storeCoupon.value,
+shipping:shippingFee.value,
+coins:coins.value,
+items:[]
+};
+
+rows.forEach(r=>{
+data.items.push({
+name:r.querySelector(".name").value,
+price:r.querySelector(".price").value,
+qty:r.querySelector(".qty").value,
+participate:r.querySelector(".participate")?.checked ?? true
+});
+});
+
+localStorage.setItem("shopeeCalcData",JSON.stringify(data));
+}
+
+function loadFromStorage(){
+
+let data=localStorage.getItem("shopeeCalcData");
+if(!data)return;
+
+data=JSON.parse(data);
+
+shopeeCoupon.value=data.shopee||"";
+storeCoupon.value=data.store||"";
+shippingFee.value=data.shipping||"";
+coins.value=data.coins||"";
+
+items.innerHTML="";
+
+data.items.forEach(item=>{
+addItem(item);
+});
+
+calculate();
+  }
+  
+function addItem(data={}){
+
 const div=document.createElement("div");
 div.className="item-card";
 div.innerHTML=`
-<input type="text" class="name" placeholder="品名">
+<input type="text" class="name" placeholder="品名" value="${data.name||''}">
 <div class="item-grid">
-<input type="number" class="price" placeholder="單價">
-<input type="number" class="qty" placeholder="數量">
+<input type="number" class="price" placeholder="單價" value="${data.price||''}">
+<input type="number" class="qty" placeholder="數量" value="${data.qty||''}">
 </div>
-<label><input type="checkbox" class="participate" checked>參與折扣</label>
-<button onclick="this.parentElement.remove()">刪除</button>
+<label>
+<input type="checkbox" class="participate" ${data.participate!==false?'checked':''}>
+參與折扣
+</label>
+<button onclick="this.parentElement.remove(); saveToStorage();">刪除</button>
 `;
+
 items.appendChild(div);
 }
 
@@ -218,6 +268,7 @@ resultTable.appendChild(tr);
 });
 
 updateFinal();
+  saveToStorage();
 }
 
 function updateFinal(){
@@ -234,6 +285,15 @@ coins.addEventListener("input",updateFinal);
 
 addItem();
 
+window.addEventListener("load",()=>{
+loadFromStorage();
+});
+
+  function clearMemory(){
+localStorage.removeItem("shopeeCalcData");
+location.reload();
+}
+  
 </script>
 
 </body>
