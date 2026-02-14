@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-<title>折扣分攤計算機 (分享版)</title>
+<title>折扣分攤計算機 (分享優化版)</title>
 
 <style>
 /* 基礎設定 */
@@ -367,23 +367,15 @@ function calculate() {
 
     let diff = targetDistributeTotal - currentCalculatedTotal;
 
-    // --- 計算階段 2: 智慧消除價差 (新功能) ---
-    // 如果剩餘差額可以被某個商品的數量整除，就加給該商品
+    // --- 計算階段 2: 智慧消除價差 ---
     if (diff > 0) {
-        // 先排序：優先嘗試加給「總金額較高」的商品，影響視覺較小
         let sortedItems = [...itemsData].sort((a, b) => b.totalRaw - a.totalRaw);
-        
         for (let item of sortedItems) {
-            // 如果 價差 除以 數量 餘數為 0
             if (diff % item.qty === 0) {
                 let addPerUnit = diff / item.qty;
-                
-                // 找到原陣列中的該項目進行修改
                 let targetItem = itemsData.find(i => i.id === item.id);
                 targetItem.finalUnit += addPerUnit;
                 targetItem.finalTotal += diff;
-                
-                // 價差已解決
                 diff = 0;
                 break; 
             }
@@ -451,12 +443,15 @@ function updateFinalCash(grandTotal) {
     }
 }
 
-// 複製文字功能
+// 複製文字功能 (已根據需求調整格式)
 function copyResultText() {
     if (!currentResultData) return;
     const d = currentResultData;
     
     let text = `【分攤計算結果】\n`;
+    text += `商品原額：$${d.goodsTotal}\n`;
+    text += `總折扣：-$${d.totalDisc}\n`;
+    text += `運費：$${d.shipping} (${d.isShippingSeparate ? '獨立列項' : '已均攤'})\n`;
     text += `----------------\n`;
     
     d.items.forEach(item => {
@@ -471,12 +466,13 @@ function copyResultText() {
         text += `⚠️ 價差/餘數 = $${d.diff}\n`;
     }
 
+    // 若運費是獨立列項，下方再列一次，或者只在上方顯示皆可。
+    // 為了對帳方便，這裡選擇若為獨立運費，在明細中也列出較為清楚。
     if (d.isShippingSeparate && d.shipping > 0) {
         text += `🚚 運費 = $${d.shipping}\n`;
     }
 
     text += `----------------\n`;
-    // text += `原總額：$${d.goodsTotal}｜折扣：-$${d.totalDisc}\n`;
     
     if (d.coins > 0) {
         text += `💰 蝦幣折抵：-$${d.coins}\n`;
@@ -488,7 +484,6 @@ function copyResultText() {
     if (navigator.clipboard && window.isSecureContext) {
         navigator.clipboard.writeText(text).then(() => alert("已複製到剪貼簿！"));
     } else {
-        // Fallback for older browsers
         const textArea = document.createElement("textarea");
         textArea.value = text;
         document.body.appendChild(textArea);
@@ -499,7 +494,7 @@ function copyResultText() {
     }
 }
 
-// 儲存與讀取 (共用邏輯)
+// 儲存與讀取
 function saveToStorage() {
     const rows = els.itemsContainer.querySelectorAll(".item-card");
     let data = {
@@ -514,11 +509,11 @@ function saveToStorage() {
             qty: r.querySelector(".item-qty").value
         });
     });
-    localStorage.setItem("shopeeCalcData_v4", JSON.stringify(data));
+    localStorage.setItem("shopeeCalcData_v5", JSON.stringify(data));
 }
 
 function loadFromStorage() {
-    let json = localStorage.getItem("shopeeCalcData_v4") || localStorage.getItem("shopeeCalcData_v3");
+    let json = localStorage.getItem("shopeeCalcData_v5") || localStorage.getItem("shopeeCalcData_v4") || localStorage.getItem("shopeeCalcData_v3");
     if (!json) { addNewItem(); return; }
     try {
         let data = JSON.parse(json);
@@ -536,7 +531,7 @@ function loadFromStorage() {
 
 function clearAll() {
     if(confirm('確定清除？')) {
-        localStorage.removeItem("shopeeCalcData_v4");
+        localStorage.removeItem("shopeeCalcData_v5");
         location.reload();
     }
 }
@@ -546,3 +541,4 @@ window.addEventListener("load", loadFromStorage);
 
 </body>
 </html>
+
