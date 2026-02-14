@@ -327,8 +327,8 @@ currentTotal=Object.values(rowMap)
 .reduce((a,b)=>a+b.subtotal,0);
 
 renderResult(originalTotal,shopee+store,shipping);
-  }
-
+}
+  
 function updateFinal(){
 const c=parseFloat(coins.value)||0;
 if(c>currentTotal){
