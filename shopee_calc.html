@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-<title>折扣分攤計算機 (嚴格模式)</title>
+<title>折扣分攤計算機 (分享版)</title>
 
 <style>
 /* 基礎設定 */
@@ -123,12 +123,16 @@ button{
     cursor:pointer;
     flex: 1;
     transition: opacity 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 button:active { opacity: 0.8; }
 
 .btn-primary{background:#ee4d2d;color:#fff}
 .btn-secondary{background:#e0e0e0; color: #333;}
 .btn-danger{background:#ff4d4f;color:#fff}
+.btn-copy{background:#28a745; color:#fff; width: 100%; margin-top: 15px;}
 
 /* 結果區塊 */
 .result-box{
@@ -186,29 +190,17 @@ tr:last-child td { border-bottom: none; }
     display: none;
 }
 
-/* Shipping specific style */
-.shipping-row {
-    background-color: #e6f7ff;
-    color: #0050b3;
-    font-weight: bold;
-}
-
-/* Diff specific style */
-.diff-row {
-    background-color: #fffbe6;
-    color: #faad14;
-    font-weight: bold;
-}
+.shipping-row { background-color: #e6f7ff; color: #0050b3; font-weight: bold; }
+.diff-row { background-color: #fffbe6; color: #faad14; font-weight: bold; }
 </style>
 </head>
 <body>
 
 <div class="container">
     <div class="card">
+        <h2>折扣分攤計算機</h2>
 
-        <h2>折扣分攤計算機 (嚴格模式)</h2>
-
-        <!-- 折扣與運費設定 -->
+        <!-- 設定 -->
         <div class="section-title">費用設定</div>
         <div class="grid-2">
             <input type="number" id="shopeeCoupon" placeholder="蝦皮優惠券 (-)" min="0">
@@ -224,20 +216,19 @@ tr:last-child td { border-bottom: none; }
         </div>
         <div id="topError" class="error-msg"></div>
 
-        <!-- 商品明細 -->
+        <!-- 商品 -->
         <div class="section-title">
             商品明細
             <small id="itemCount" style="font-weight:normal; color:#888">(0項)</small>
         </div>
         <div id="itemsContainer"></div>
 
-        <!-- 按鈕區 -->
         <div class="actions">
             <button class="btn-secondary" onclick="addNewItem()">+ 新增品項</button>
             <button class="btn-danger" onclick="clearAll()">清除重置</button>
         </div>
 
-        <!-- 計算結果 -->
+        <!-- 結果 -->
         <div class="result-box" id="resultBox">
             <div id="summary" class="summary-text"></div>
 
@@ -246,12 +237,16 @@ tr:last-child td { border-bottom: none; }
                     <tr>
                         <th width="35%">品項</th>
                         <th width="15%">數量</th>
-                        <th width="25%">折後單價</th>
+                        <th width="25%">單價</th>
                         <th width="25%">小計</th>
                     </tr>
                 </thead>
                 <tbody id="resultTable"></tbody>
             </table>
+            
+            <button class="btn-copy" onclick="copyResultText()">
+                📋 複製文字供分享
+            </button>
 
             <div style="margin-top:16px; border-top: 1px dashed #ee4d2d; padding-top: 16px;">
                 <input type="number" id="coins" placeholder="輸入蝦幣折抵 (-)" style="margin-bottom: 8px;">
@@ -266,7 +261,7 @@ tr:last-child td { border-bottom: none; }
 </div>
 
 <script>
-// 使用更安全的變數宣告
+// DOM 元素
 const els = {
     shopeeCoupon: document.getElementById('shopeeCoupon'),
     storeCoupon: document.getElementById('storeCoupon'),
@@ -283,19 +278,17 @@ const els = {
 };
 
 let debounceTimer = null;
+let currentResultData = null; // 用於儲存複製所需的資料
 
-// 防抖動計算 (避免輸入時頻繁觸發)
+// 防抖動計算
 function triggerCalculate() {
     clearTimeout(debounceTimer);
     debounceTimer = setTimeout(calculate, 300);
 }
 
-// 監聽所有輸入欄位
+// 監聽
 [els.shopeeCoupon, els.storeCoupon, els.shippingFee, els.shippingMethod, els.coins].forEach(el => {
-    el.addEventListener('input', () => {
-        saveToStorage();
-        triggerCalculate();
-    });
+    el.addEventListener('input', () => { saveToStorage(); triggerCalculate(); });
 });
 
 // 新增品項
@@ -310,64 +303,45 @@ function addNewItem(data = {}) {
         </div>
         <button class="btn-delete">刪除</button>
     `;
-
-    // 綁定刪除按鈕
     div.querySelector('.btn-delete').addEventListener('click', () => {
-        div.remove();
-        saveToStorage();
-        triggerCalculate();
-        updateCount();
+        div.remove(); saveToStorage(); triggerCalculate(); updateCount();
     });
-
-    // 綁定輸入監聽
     div.querySelectorAll('input').forEach(input => {
-        input.addEventListener('input', () => {
-            saveToStorage();
-            triggerCalculate();
-        });
+        input.addEventListener('input', () => { saveToStorage(); triggerCalculate(); });
     });
-
     els.itemsContainer.appendChild(div);
     updateCount();
 }
 
 function updateCount() {
-    const count = els.itemsContainer.querySelectorAll('.item-card').length;
-    els.itemCount.innerText = `(${count}項)`;
+    els.itemCount.innerText = `(${els.itemsContainer.querySelectorAll('.item-card').length}項)`;
 }
 
-// 核心計算邏輯
+// 核心計算
 function calculate() {
     const rows = els.itemsContainer.querySelectorAll(".item-card");
     let itemsData = [];
-    let goodsTotal = 0; // 純商品總額
+    let goodsTotal = 0;
 
-    // 1. 收集數據
     rows.forEach((r, i) => {
         let name = r.querySelector(".item-name").value || `品項 ${i + 1}`;
         let price = parseFloat(r.querySelector(".item-price").value) || 0;
         let qty = parseInt(r.querySelector(".item-qty").value) || 0;
 
         if (price > 0 && qty > 0) {
-            // 注意：這裡不合併相同品項，滿足「視為2筆資料」的需求
             itemsData.push({ id: i, name, price, qty, totalRaw: price * qty });
             goodsTotal += price * qty;
         }
     });
 
-    if (goodsTotal <= 0) {
-        els.resultBox.style.display = "none";
-        return;
-    }
+    if (goodsTotal <= 0) { els.resultBox.style.display = "none"; return; }
 
-    // 2. 取得折扣與運費
     const shopeeDisc = parseFloat(els.shopeeCoupon.value) || 0;
     const storeDisc = parseFloat(els.storeCoupon.value) || 0;
     const totalDisc = shopeeDisc + storeDisc;
     const shipping = parseFloat(els.shippingFee.value) || 0;
     const isShippingSeparate = els.shippingMethod.value === 'separate';
 
-    // 檢查折扣合理性
     if (totalDisc > goodsTotal) {
         els.topError.style.display = 'block';
         els.topError.innerText = '錯誤：折扣金額大於商品總額';
@@ -377,37 +351,45 @@ function calculate() {
         els.topError.style.display = 'none';
     }
 
-    // 3. 計算分攤目標金額
     let targetDistributeTotal = goodsTotal - totalDisc;
-    if (!isShippingSeparate) {
-        targetDistributeTotal += shipping;
-    }
+    if (!isShippingSeparate) targetDistributeTotal += shipping;
 
-    // 4. 計算分攤 (嚴格模式：無條件捨去，餘數列為價差)
-    let currentCalculatedTotal = 0;
-    
-    // 計算全域折扣比率
-    // 這裡我們用 Target / Original 作為乘數，這會處理所有的折扣分攤
+    // --- 計算階段 1: 無條件捨去 ---
     let ratio = targetDistributeTotal / goodsTotal;
+    let currentCalculatedTotal = 0;
 
     itemsData.forEach(item => {
-        // 規則 1: 折扣後單價為整數 (使用 Floor)
-        // 規則 3: 相同價格折扣後仍然相同 (因為使用固定 Ratio，數學上結果必相同)
-        let unit = Math.floor(item.price * ratio);
-        
-        // 防呆：避免出現負數單價 (雖然 Ratio 正常情況下不會是負的)
-        if(unit < 0) unit = 0;
-
-        item.finalUnit = unit;
-        item.finalTotal = unit * item.qty;
-        
+        item.finalUnit = Math.floor(item.price * ratio);
+        if(item.finalUnit < 0) item.finalUnit = 0;
+        item.finalTotal = item.finalUnit * item.qty;
         currentCalculatedTotal += item.finalTotal;
     });
 
-    // 規則 2 & 4: 總計需相符，否則顯示價差
     let diff = targetDistributeTotal - currentCalculatedTotal;
 
-    // 5. 渲染結果 (傳入 diff)
+    // --- 計算階段 2: 智慧消除價差 (新功能) ---
+    // 如果剩餘差額可以被某個商品的數量整除，就加給該商品
+    if (diff > 0) {
+        // 先排序：優先嘗試加給「總金額較高」的商品，影響視覺較小
+        let sortedItems = [...itemsData].sort((a, b) => b.totalRaw - a.totalRaw);
+        
+        for (let item of sortedItems) {
+            // 如果 價差 除以 數量 餘數為 0
+            if (diff % item.qty === 0) {
+                let addPerUnit = diff / item.qty;
+                
+                // 找到原陣列中的該項目進行修改
+                let targetItem = itemsData.find(i => i.id === item.id);
+                targetItem.finalUnit += addPerUnit;
+                targetItem.finalTotal += diff;
+                
+                // 價差已解決
+                diff = 0;
+                break; 
+            }
+        }
+    }
+
     renderResult(itemsData, goodsTotal, totalDisc, shipping, isShippingSeparate, targetDistributeTotal, diff);
     saveToStorage();
 }
@@ -416,66 +398,44 @@ function renderResult(items, goodsTotal, totalDisc, shipping, isShippingSeparate
     els.resultBox.style.display = "block";
     els.resultTable.innerHTML = "";
 
-    // 摘要資訊
-    let shippingText = isShippingSeparate ? "運費(獨立列項)" : "運費(已均攤)";
-    let summaryHTML = `
-        商品原總額：$${goodsTotal}<br>
+    // 儲存資料供複製使用
+    currentResultData = {
+        items, goodsTotal, totalDisc, shipping, isShippingSeparate, distributedTotal, diff
+    };
+
+    let shippingText = isShippingSeparate ? "運費(獨立)" : "運費(含)";
+    els.summary.innerHTML = `
+        商品原額：$${goodsTotal}<br>
         總折扣：-$${totalDisc}<br>
         ${shippingText}：+$${shipping}<br>
-        <div style="margin-top:4px; font-weight:bold; color:#333">
-            分攤後總計：$${isShippingSeparate ? distributedTotal + shipping : distributedTotal}
-        </div>
+        <div style="margin-top:4px; font-weight:bold;">分攤後總計：$${isShippingSeparate ? distributedTotal + shipping : distributedTotal}</div>
     `;
-    els.summary.innerHTML = summaryHTML;
 
-    // 產生商品表格列
+    // 渲染商品
     items.forEach(item => {
         let tr = document.createElement("tr");
-        tr.innerHTML = `
-            <td>${item.name}</td>
-            <td>${item.qty}</td>
-            <td>$${item.finalUnit}</td>
-            <td>$${item.finalTotal}</td>
-        `;
+        tr.innerHTML = `<td>${item.name}</td><td>${item.qty}</td><td>$${item.finalUnit}</td><td>$${item.finalTotal}</td>`;
         els.resultTable.appendChild(tr);
     });
 
-    // 規則 4: 若有餘數，顯示「價差」列
-    // 注意：價差可能來自於捨去後的小數點總和
-    let grandTotal = distributedTotal; // 當前的計算總額基礎
-
+    // 渲染價差
+    let grandTotal = distributedTotal;
     if (diff > 0) {
         let tr = document.createElement("tr");
-        tr.className = "diff-row"; // 黃色背景標示
-        tr.innerHTML = `
-            <td>價差 (補餘數)</td>
-            <td>1</td>
-            <td>$${diff}</td>
-            <td>$${diff}</td>
-        `;
+        tr.className = "diff-row";
+        tr.innerHTML = `<td>價差(補)</td><td>1</td><td>$${diff}</td><td>$${diff}</td>`;
         els.resultTable.appendChild(tr);
-        // 加上價差後，grandTotal 應該等於 distributedTotal (即 Target)
-        // 但為了後續運費邏輯，我們先不動 grandTotal 變數，因為 diff 已經包含在 Target 裡了
     }
 
-    // 運費獨立列項
+    // 渲染運費(獨立)
     if (isShippingSeparate && shipping > 0) {
         let tr = document.createElement("tr");
-        tr.className = "shipping-row"; // 藍色背景標示
-        tr.innerHTML = `
-            <td>運費</td>
-            <td>1</td>
-            <td>$${shipping}</td>
-            <td>$${shipping}</td>
-        `;
+        tr.className = "shipping-row";
+        tr.innerHTML = `<td>運費</td><td>1</td><td>$${shipping}</td><td>$${shipping}</td>`;
         els.resultTable.appendChild(tr);
-        
-        // 最終總金額 = 分攤總額 (含價差) + 獨立運費
-        grandTotal += shipping; 
+        grandTotal += shipping;
     }
 
-    // 更新最終現金 (扣除蝦幣)
-    // 這裡 grandTotal 已經包含了 distributedTotal (商品分攤+價差) + 獨立運費
     updateFinalCash(grandTotal);
 }
 
@@ -483,20 +443,70 @@ function updateFinalCash(grandTotal) {
     let coinsVal = parseFloat(els.coins.value) || 0;
     let final = Math.max(0, grandTotal - coinsVal);
     els.finalCash.innerText = "$" + final;
+    
+    // 更新複製資料中的最終金額
+    if(currentResultData) {
+        currentResultData.finalCash = final;
+        currentResultData.coins = coinsVal;
+    }
 }
 
-// 儲存與讀取 (邏輯不變，僅針對新欄位 key 進行維護)
+// 複製文字功能
+function copyResultText() {
+    if (!currentResultData) return;
+    const d = currentResultData;
+    
+    let text = `【分攤計算結果】\n`;
+    text += `----------------\n`;
+    
+    d.items.forEach(item => {
+        text += `${item.name} x${item.qty} = $${item.finalTotal}`;
+        if (item.qty > 1) {
+            text += ` ($${item.finalUnit}/個)`;
+        }
+        text += `\n`;
+    });
+
+    if (d.diff > 0) {
+        text += `⚠️ 價差/餘數 = $${d.diff}\n`;
+    }
+
+    if (d.isShippingSeparate && d.shipping > 0) {
+        text += `🚚 運費 = $${d.shipping}\n`;
+    }
+
+    text += `----------------\n`;
+    // text += `原總額：$${d.goodsTotal}｜折扣：-$${d.totalDisc}\n`;
+    
+    if (d.coins > 0) {
+        text += `💰 蝦幣折抵：-$${d.coins}\n`;
+    }
+    
+    text += `最後實付：$${d.finalCash}\n`;
+    
+    // 執行複製
+    if (navigator.clipboard && window.isSecureContext) {
+        navigator.clipboard.writeText(text).then(() => alert("已複製到剪貼簿！"));
+    } else {
+        // Fallback for older browsers
+        const textArea = document.createElement("textarea");
+        textArea.value = text;
+        document.body.appendChild(textArea);
+        textArea.select();
+        document.execCommand("copy");
+        document.body.removeChild(textArea);
+        alert("已複製到剪貼簿！");
+    }
+}
+
+// 儲存與讀取 (共用邏輯)
 function saveToStorage() {
     const rows = els.itemsContainer.querySelectorAll(".item-card");
     let data = {
-        shopee: els.shopeeCoupon.value,
-        store: els.storeCoupon.value,
-        shipping: els.shippingFee.value,
-        method: els.shippingMethod.value,
-        coins: els.coins.value,
-        items: []
+        shopee: els.shopeeCoupon.value, store: els.storeCoupon.value,
+        shipping: els.shippingFee.value, method: els.shippingMethod.value,
+        coins: els.coins.value, items: []
     };
-
     rows.forEach(r => {
         data.items.push({
             name: r.querySelector(".item-name").value,
@@ -504,57 +514,35 @@ function saveToStorage() {
             qty: r.querySelector(".item-qty").value
         });
     });
-
-    localStorage.setItem("shopeeCalcData_v3", JSON.stringify(data));
+    localStorage.setItem("shopeeCalcData_v4", JSON.stringify(data));
 }
 
 function loadFromStorage() {
-    // 嘗試讀取 v3, 沒資料讀 v2, 再沒資料讀 v1
-    let json = localStorage.getItem("shopeeCalcData_v3");
-    if (!json) json = localStorage.getItem("shopeeCalcData_v2");
-    if (!json) json = localStorage.getItem("discountCalcData");
-    
-    if (!json) {
-        addNewItem(); 
-        return;
-    }
-
+    let json = localStorage.getItem("shopeeCalcData_v4") || localStorage.getItem("shopeeCalcData_v3");
+    if (!json) { addNewItem(); return; }
     try {
         let data = JSON.parse(json);
         els.shopeeCoupon.value = data.shopee || "";
         els.storeCoupon.value = data.store || "";
-        els.shippingFee.value = data.shipping || ""; 
+        els.shippingFee.value = data.shipping || "";
         els.shippingMethod.value = data.method || "separate";
         els.coins.value = data.coins || "";
-
         els.itemsContainer.innerHTML = "";
-        if (data.items && data.items.length > 0) {
-            data.items.forEach(i => addNewItem(i));
-        } else {
-            addNewItem();
-        }
-        
+        if (data.items && data.items.length) data.items.forEach(i => addNewItem(i));
+        else addNewItem();
         setTimeout(calculate, 100);
-    } catch (e) {
-        console.error("讀取失敗", e);
-        addNewItem();
-    }
+    } catch (e) { addNewItem(); }
 }
 
 function clearAll() {
-    if(confirm('確定要清除所有資料嗎？')) {
-        localStorage.removeItem("shopeeCalcData_v3");
-        localStorage.removeItem("shopeeCalcData_v2");
-        localStorage.removeItem("discountCalcData");
+    if(confirm('確定清除？')) {
+        localStorage.removeItem("shopeeCalcData_v4");
         location.reload();
     }
 }
 
-// 初始化
 window.addEventListener("load", loadFromStorage);
-
 </script>
 
 </body>
 </html>
-
