@@ -200,6 +200,7 @@ const rows=document.querySelectorAll(".item-card");
 let items=[];
 let originalTotal=0;
 
+/* 保留每一列獨立 index */
 rows.forEach((r,i)=>{
 const p=parseFloat(r.querySelector(".price").value);
 const q=parseInt(r.querySelector(".qty").value);
@@ -207,7 +208,13 @@ const name=r.querySelector(".name").value||"品項"+(i+1);
 const participate=r.querySelector(".participate").checked;
 
 if(p>0&&q>0){
-items.push({name,p,q,participate});
+items.push({
+index:i,
+name,
+price:p,
+qty:q,
+participate
+});
 originalTotal+=p*q;
 }
 });
@@ -223,39 +230,49 @@ alert("折扣不可超過商品總額");
 return;
 }
 
-/* ===== 單位展開（確保最終金額正確）===== */
+/* ===== 單位展開 ===== */
+
 let units=[];
+
 items.forEach(item=>{
-for(let i=0;i<item.q;i++){
+for(let i=0;i<item.qty;i++){
 units.push({
+itemIndex:item.index,
 name:item.name,
-price:item.p,
+price:item.price,
 participate:item.participate
 });
 }
 });
 
-let discountBase=units.filter(u=>u.participate)
+/* 折扣基準 */
+let discountBase=units
+.filter(u=>u.participate)
 .reduce((a,b)=>a+b.price,0);
 
+/* 理論值 */
 let theoreticalUnits=units.map(unit=>{
+
 let discountShare=unit.participate
 ? (unit.price/discountBase)*(shopee+store)
 :0;
 
 let shippingShare=0;
+
 if(shippingMode.value==="ratio"){
 shippingShare=shipping*(unit.price/originalTotal);
-}else if(shippingMode.value==="average"){
+}
+else if(shippingMode.value==="average"){
 shippingShare=shipping/units.length;
 }
 
 return unit.price-discountShare+shippingShare;
 });
 
-/* ===== floor + 餘數排序 ===== */
+/* floor */
 let unitObjects=theoreticalUnits.map((v,i)=>({
 index:i,
+itemIndex:units[i].itemIndex,
 price:units[i].price,
 floor:Math.floor(v),
 fraction:v-Math.floor(v)
@@ -265,11 +282,9 @@ let floorSum=unitObjects.reduce((a,b)=>a+b.floor,0);
 let theoreticalSum=theoreticalUnits.reduce((a,b)=>a+b,0);
 let diff=Math.round(theoreticalSum-floorSum);
 
-/* ===== 最高單價優先承擔尾數 ===== */
+/* 尾數由最高單價優先承擔 */
 unitObjects.sort((a,b)=>{
-if(b.price!==a.price){
-return b.price-a.price;
-}
+if(b.price!==a.price) return b.price-a.price;
 return b.fraction-a.fraction;
 });
 
@@ -278,56 +293,41 @@ unitObjects[i].floor++;
 }
 
 unitObjects.sort((a,b)=>a.index-b.index);
-let roundedUnits=unitObjects.map(u=>u.floor);
 
-/* ===== 聚合回品項 ===== */
-let resultMap={};
-roundedUnits.forEach((val,index)=>{
-let name=units[index].name;
-if(!resultMap[name]){
-resultMap[name]={qty:0,subtotal:0};
+/* ===== 聚合回原列（不合併同名）===== */
+
+let rowMap={};
+
+unitObjects.forEach(u=>{
+if(!rowMap[u.itemIndex]){
+rowMap[u.itemIndex]={
+subtotal:0,
+qty:0
+};
 }
-resultMap[name].qty++;
-resultMap[name].subtotal+=val;
+rowMap[u.itemIndex].subtotal+=u.floor;
+rowMap[u.itemIndex].qty++;
 });
 
+/* 組裝結果 */
 finalItems=[];
-for(let name in resultMap){
-let obj=resultMap[name];
-let unit=Math.round(obj.subtotal/obj.qty);
+
+items.forEach(item=>{
+let row=rowMap[item.index];
+let unit=Math.floor(row.subtotal/row.qty); // 不再 round
 finalItems.push({
-name:name,
-qty:obj.qty,
+name:item.name,
+qty:item.qty,
 unit:unit,
-subtotal:unit*obj.qty
+subtotal:row.subtotal
 });
-}
+});
 
-currentTotal=finalItems.reduce((a,b)=>a+b.subtotal,0);
+currentTotal=Object.values(rowMap)
+.reduce((a,b)=>a+b.subtotal,0);
+
 renderResult(originalTotal,shopee+store,shipping);
-}
-
-/* 顯示 */
-function renderResult(original,discount,shipping){
-resultBox.style.display="block";
-summary.innerHTML=
-`商品總額：$${original}<br>
-總折扣：-$${discount}<br>
-運費：+$${shipping}<br>
-訂單總計：<b>$${currentTotal}</b>`;
-
-resultTable.innerHTML="";
-finalItems.forEach(i=>{
-const tr=document.createElement("tr");
-tr.innerHTML=`<td>${i.name}</td>
-<td>${i.qty}</td>
-<td>$${i.unit}</td>
-<td>$${i.subtotal}</td>`;
-resultTable.appendChild(tr);
-});
-
-updateFinal();
-}
+  }
 
 function updateFinal(){
 const c=parseFloat(coins.value)||0;
