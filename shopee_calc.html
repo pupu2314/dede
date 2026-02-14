@@ -94,87 +94,112 @@ items.appendChild(div);
 function calculate(){
 
 const rows=document.querySelectorAll(".item-card");
-let itemsData=[];
+let items=[];
 let originalTotal=0;
 
+/* 讀取資料（每列獨立） */
 rows.forEach((r,i)=>{
-let p=parseFloat(r.querySelector(".price").value);
-let q=parseInt(r.querySelector(".qty").value);
-let name=r.querySelector(".name").value||"品項"+(i+1);
-let participate=r.querySelector(".participate").checked;
+const p=parseFloat(r.querySelector(".price").value);
+const q=parseInt(r.querySelector(".qty").value);
+const name=r.querySelector(".name").value||"品項"+(i+1);
+const participate=r.querySelector(".participate")?.checked ?? true;
 
-if(p>0&&q>0){
-itemsData.push({index:i,name,price:p,qty:q,participate});
+if(p>0 && q>0){
+items.push({
+index:i,
+name,
+price:p,
+qty:q,
+participate
+});
 originalTotal+=p*q;
 }
 });
 
 if(originalTotal<=0)return;
 
-let discount=(parseFloat(shopeeCoupon.value)||0)+(parseFloat(storeCoupon.value)||0);
-let shipping=parseFloat(shippingFee.value)||0;
+const shopee=parseFloat(shopeeCoupon.value)||0;
+const store=parseFloat(storeCoupon.value)||0;
+const discount=shopee+store;
 
 if(discount>originalTotal){
-alert("折扣不可超過總額");
+alert("折扣不可超過商品總額");
 return;
 }
 
-/* 單位展開 */
-let units=[];
-itemsData.forEach(item=>{
-for(let i=0;i<item.qty;i++){
-units.push({row:item.index,price:item.price,participate:item.participate});
+const targetTotal=originalTotal-discount;
+
+/* ===== 理論比例 ===== */
+const ratio=targetTotal/originalTotal;
+
+/* 計算理論單價 */
+items.forEach(item=>{
+item.theoretical=item.price*ratio;
+item.unit=Math.floor(item.theoretical); // 先整數化
+});
+
+/* 計算目前總額 */
+let currentTotal=items.reduce((sum,item)=>
+sum+(item.unit*item.qty),0);
+
+let diff=targetTotal-currentTotal;
+
+/* ===== 差額分配（qty 小優先）===== */
+if(diff>0){
+
+/* 依 qty 由小到大排序 */
+let sorted=[...items].sort((a,b)=>a.qty-b.qty);
+
+for(let item of sorted){
+
+while(diff>=item.qty){
+item.unit+=1;
+diff-=item.qty;
 }
-});
 
-/* 折扣比例 */
-let base=units.filter(u=>u.participate).reduce((a,b)=>a+b.price,0);
-
-let theoretical=units.map(u=>{
-let d=u.participate&&base>0?(u.price/base)*discount:0;
-return u.price-d;
-});
-
-/* floor */
-let floors=theoretical.map(v=>Math.floor(v));
-let diff=Math.round(theoretical.reduce((a,b)=>a+b,0)-floors.reduce((a,b)=>a+b,0));
-
-/* 尾數分配給數量較少的列 */
-let rowQty={};
-itemsData.forEach(i=>rowQty[i.index]=i.qty);
-
-let indices=[...Array(units.length).keys()];
-indices.sort((a,b)=>rowQty[units[a].row]-rowQty[units[b].row]);
-
-for(let i=0;i<diff;i++){
-floors[indices[i]]++;
+if(diff===0)break;
+}
 }
 
-/* 聚合 */
-let rowMap={};
-floors.forEach((v,i)=>{
-let row=units[i].row;
-if(!rowMap[row])rowMap[row]=0;
-rowMap[row]+=v;
-});
+/* ===== 若仍有餘數 → 價差項目 ===== */
+let finalItems=[...items];
 
-finalItems=[];
-itemsData.forEach(item=>{
-let subtotal=rowMap[item.index];
-let unit=subtotal/item.qty;
+if(diff!==0){
 finalItems.push({
-name:item.name,
-qty:item.qty,
-unit:unit,
-subtotal:subtotal
+name:"價差",
+qty:1,
+unit:diff,
+price:0
 });
-});
-
-currentTotal=Object.values(rowMap).reduce((a,b)=>a+b,0);
-
-render(originalTotal,discount);
+diff=0;
 }
 
+/* ===== 顯示 ===== */
+let finalTotal=finalItems.reduce((sum,item)=>
+sum+(item.unit*item.qty),0);
+
+resultBox.style.display="block";
+summary.innerHTML=
+`商品總額：$${originalTotal}<br>
+總折扣：-$${discount}<br>
+訂單總計：<b>$${finalTotal}</b>`;
+
+resultTable.innerHTML="";
+
+finalItems.forEach(item=>{
+let tr=document.createElement("tr");
+tr.innerHTML=`
+<td>${item.name}</td>
+<td>${item.qty}</td>
+<td>$${item.unit}</td>
+<td>$${item.unit*item.qty}</td>`;
+resultTable.appendChild(tr);
+});
+
+/* 更新蝦幣 */
+window.currentTotal=finalTotal;
+updateFinal();
+}
 function render(original,discount){
 resultBox.style.display="block";
 summary.innerHTML=
