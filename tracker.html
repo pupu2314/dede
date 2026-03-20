@@ -55,6 +55,7 @@
       const [records, setRecords] = useState([]);
       const [apiUrl, setApiUrl] = useState('');
       const [syncStatus, setSyncStatus] = useState('idle');
+      const [syncMessage, setSyncMessage] = useState(''); // 新增：同步進度訊息
       const [customDate, setCustomDate] = useState('');
       const [isLoading, setIsLoading] = useState(true);
 
@@ -85,6 +86,54 @@
           fetchDataFromCloud();
         }
       }, [apiUrl]);
+
+      // 強制同步 (雙向：先拉取遠端，合併後再強制推上去)
+      const forceSync = async () => {
+        if (!apiUrl) return alert('請先設定 API 網址');
+        setSyncStatus('syncing');
+        setSyncMessage('正在下載遠端資料...');
+        try {
+          // 1. 下載
+          const response = await fetch(apiUrl);
+          const data = await response.json();
+          let mergedRecords = [...records];
+          
+          if (Array.isArray(data)) {
+            const localIds = new Set(records.map(r => r.id));
+            data.forEach(cloudRecord => {
+              if (!localIds.has(cloudRecord.id)) {
+                mergedRecords.push(cloudRecord);
+              }
+            });
+          }
+          // 確保最新到最舊排序
+          mergedRecords.sort((a, b) => b.timestamp - a.timestamp);
+          setRecords(mergedRecords);
+          localStorage.setItem('tracker_records', JSON.stringify(mergedRecords));
+
+          // 2. 上傳
+          setSyncMessage('正在上傳合併後的資料...');
+          const uploadResponse = await fetch(apiUrl, {
+            method: 'POST',
+            body: JSON.stringify(mergedRecords),
+            headers: { 'Content-Type': 'text/plain;charset=utf-8' }, 
+          });
+          const result = await uploadResponse.json();
+          
+          if (result.status === 'success') {
+            setSyncStatus('success');
+            setSyncMessage('強制同步完成！');
+            setTimeout(() => { setSyncStatus('idle'); setSyncMessage(''); }, 3000);
+          } else {
+            throw new Error('API 回傳失敗');
+          }
+        } catch (error) {
+          console.error('Sync error:', error);
+          setSyncStatus('error');
+          setSyncMessage('同步失敗，請重試');
+          setTimeout(() => { setSyncStatus('idle'); setSyncMessage(''); }, 5000);
+        }
+      };
 
       // 同步資料到 Google Sheets
       const syncToCloud = async (currentRecords) => {
@@ -230,6 +279,7 @@
         });
 
         if (successCount > 0) {
+          // 確保：匯入數據後自動將數據依照時間近到遠 (新到舊) 排序
           const updatedRecords = [...records, ...newRecords].sort((a, b) => b.timestamp - a.timestamp);
           setRecords(updatedRecords);
           localStorage.setItem('tracker_records', JSON.stringify(updatedRecords));
@@ -254,6 +304,7 @@
         
         const daysPassedThisYear = Math.floor((now - startOfYear) / (1000 * 60 * 60 * 24)) + 1;
         
+        // 確保依照時間從近到遠 (新到舊) 排序
         const sortedDesc = [...records].sort((a, b) => b.timestamp - a.timestamp);
         const sortedAsc = [...records].sort((a, b) => a.timestamp - b.timestamp);
         
@@ -262,16 +313,23 @@
         let thisMonthCount = 0;
         let lastMonthCount = 0;
         let maxGapMs = 0;
+        
+        // 年份分組統計
+        const yearlyCounts = {};
 
         sortedAsc.forEach((r, i) => {
           const date = new Date(r.timestamp);
-          if (date.getFullYear() === currentYear) thisYearCount++;
-          if (date.getFullYear() === currentYear - 1) lastYearCount++;
-          if (date.getFullYear() === currentYear && date.getMonth() === currentMonth) thisMonthCount++;
+          const year = date.getFullYear();
+          
+          yearlyCounts[year] = (yearlyCounts[year] || 0) + 1;
+
+          if (year === currentYear) thisYearCount++;
+          if (year === currentYear - 1) lastYearCount++;
+          if (year === currentYear && date.getMonth() === currentMonth) thisMonthCount++;
           
           const lastMonthDate = new Date(now);
           lastMonthDate.setMonth(now.getMonth() - 1);
-          if (date.getFullYear() === lastMonthDate.getFullYear() && date.getMonth() === lastMonthDate.getMonth()) {
+          if (year === lastMonthDate.getFullYear() && date.getMonth() === lastMonthDate.getMonth()) {
             lastMonthCount++;
           }
 
@@ -280,6 +338,11 @@
             if (gap > maxGapMs) maxGapMs = gap;
           }
         });
+
+        // 將年份統計轉為陣列並由近到遠排序
+        const yearlyStats = Object.keys(yearlyCounts)
+          .map(y => ({ year: y, count: yearlyCounts[y] }))
+          .sort((a, b) => b.year - a.year);
 
         const timeSinceLast = sortedDesc.length > 0 ? now.getTime() - sortedDesc[0].timestamp : null;
         
@@ -309,6 +372,7 @@
           lastYearCount,
           thisMonthCount,
           lastMonthCount,
+          yearlyStats, // 新增年份統計陣列
           currentStreakDays: currentStreakDays.toFixed(1),
           maxGapDays: (maxGapMs / (1000 * 60 * 60 * 24)).toFixed(1),
           avgIntervalDays: avgIntervalDays.toFixed(1),
@@ -450,6 +514,21 @@
               </div>
             </div>
 
+            {/* 新增：各年份數據分析 */}
+            <h3 className="text-sm font-bold text-slate-700 mb-3 border-b pb-2">各年份歷史統計</h3>
+            <div className="space-y-3 mb-6">
+              {stats.yearlyStats.length > 0 ? (
+                stats.yearlyStats.map(item => (
+                  <div key={item.year} className="flex justify-between items-center p-3 bg-slate-50 rounded-xl">
+                    <span className="text-slate-700 font-medium">{item.year} 年</span>
+                    <span className="text-indigo-600 font-bold">{item.count} <span className="text-sm font-normal text-slate-400">次</span></span>
+                  </div>
+                ))
+              ) : (
+                <p className="text-slate-400 text-sm text-center py-2">尚無紀錄</p>
+              )}
+            </div>
+
             <h3 className="text-sm font-bold text-slate-700 mb-3 border-b pb-2">近期趨勢比較</h3>
             <div className="space-y-4">
               <div>
@@ -512,9 +591,21 @@
             <div className="flex items-center justify-between p-4 bg-slate-50 rounded-xl mb-8">
               <span className="text-sm font-medium text-slate-600">目前同步狀態</span>
               {syncStatus === 'idle' && <span className="text-slate-400 text-sm flex items-center"><CheckCircle className="w-4 h-4 mr-1"/>已就緒</span>}
-              {syncStatus === 'syncing' && <span className="text-indigo-500 text-sm flex items-center animate-pulse"><RefreshCw className="w-4 h-4 mr-1 animate-spin"/>同步中...</span>}
-              {syncStatus === 'success' && <span className="text-emerald-500 text-sm flex items-center"><CheckCircle className="w-4 h-4 mr-1"/>同步成功</span>}
-              {syncStatus === 'error' && <span className="text-red-500 text-sm flex items-center"><AlertCircle className="w-4 h-4 mr-1"/>同步失敗</span>}
+              {syncStatus === 'syncing' && <span className="text-indigo-500 text-sm flex items-center animate-pulse"><RefreshCw className="w-4 h-4 mr-1 animate-spin"/>{syncMessage || '同步中...'}</span>}
+              {syncStatus === 'success' && <span className="text-emerald-500 text-sm flex items-center"><CheckCircle className="w-4 h-4 mr-1"/>{syncMessage || '同步成功'}</span>}
+              {syncStatus === 'error' && <span className="text-red-500 text-sm flex items-center"><AlertCircle className="w-4 h-4 mr-1"/>{syncMessage || '同步失敗'}</span>}
+            </div>
+            
+            {/* 新增：強制同步按鈕 */}
+            <div className="mb-8">
+              <button 
+                onClick={forceSync}
+                className="w-full bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 py-3 rounded-xl font-medium transition-colors flex justify-center items-center gap-2"
+              >
+                <RefreshCw className={`w-5 h-5 ${syncStatus === 'syncing' ? 'animate-spin' : ''}`} />
+                手動強制完整同步
+              </button>
+              <p className="text-xs text-slate-400 mt-2 text-center">如果發現雲端與本機數據不同步，可點擊此按鈕進行雙向合併與校對。</p>
             </div>
             
             <div className="bg-indigo-50 p-5 rounded-2xl border border-indigo-100">
@@ -631,13 +722,18 @@ function doGet(e) {
               <h1 className="text-xl font-black text-slate-800 tracking-tight">個人紀錄小幫手</h1>
               <p className="text-xs text-slate-400 font-medium mt-0.5">專注於你的個人成長與節律</p>
             </div>
-            {syncStatus === 'syncing' ? (
-              <RefreshCw className="w-5 h-5 text-indigo-400 animate-spin" />
-            ) : syncStatus === 'success' ? (
-              <CheckCircle className="w-5 h-5 text-emerald-400" />
-            ) : (
-              <div className="w-2 h-2 rounded-full bg-slate-200"></div>
-            )}
+            <div className="flex items-center gap-2">
+              {syncMessage && syncStatus === 'syncing' && (
+                <span className="text-xs text-indigo-500 font-medium animate-pulse">{syncMessage}</span>
+              )}
+              {syncStatus === 'syncing' ? (
+                <RefreshCw className="w-5 h-5 text-indigo-400 animate-spin" />
+              ) : syncStatus === 'success' ? (
+                <CheckCircle className="w-5 h-5 text-emerald-400" />
+              ) : (
+                <div className="w-2 h-2 rounded-full bg-slate-200"></div>
+              )}
+            </div>
           </header>
 
           <main className="p-4 overflow-y-auto h-[calc(100vh-80px)]">
