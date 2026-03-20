@@ -47,7 +47,7 @@
     const BarChart3 = (p) => <SvgIcon {...p}><path d="M3 3v18h18"/><rect x="7" y="14" width="4" height="5" rx="1"/><rect x="15" y="7" width="4" height="12" rx="1"/></SvgIcon>;
     const Home = (p) => <SvgIcon {...p}><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></SvgIcon>;
     const Save = (p) => <SvgIcon {...p}><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></SvgIcon>;
-
+    const Upload = (p) => <SvgIcon {...p}><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></SvgIcon>;
 
     // --- 主程式開始 ---
     function App() {
@@ -57,6 +57,11 @@
       const [syncStatus, setSyncStatus] = useState('idle');
       const [customDate, setCustomDate] = useState('');
       const [isLoading, setIsLoading] = useState(true);
+
+      // 新增：批次匯入用的狀態
+      const [importYear, setImportYear] = useState(new Date().getFullYear().toString());
+      const [importData, setImportData] = useState('');
+      const [importMessage, setImportMessage] = useState('');
 
       // 初始化載入
       useEffect(() => {
@@ -139,7 +144,7 @@
         }
       };
 
-      // 新增紀錄
+      // 新增單筆紀錄
       const addRecord = (timeMs) => {
         const ONE_HOUR = 60 * 60 * 1000;
         const hasRecent = records.some(r => Math.abs(r.timestamp - timeMs) < ONE_HOUR);
@@ -173,6 +178,71 @@
         localStorage.setItem('tracker_api_url', apiUrl);
         alert('設定已儲存！將開始嘗試連線。');
         fetchDataFromCloud();
+      };
+
+      // 批次匯入舊資料
+      const handleImport = () => {
+        if (!importData.trim()) {
+          setImportMessage('請輸入要匯入的資料');
+          return;
+        }
+        
+        const year = parseInt(importYear, 10);
+        if (isNaN(year) || year < 1900 || year > 2100) {
+          setImportMessage('請輸入有效的年份');
+          return;
+        }
+
+        const lines = importData.split('\n');
+        const newRecords = [];
+        let successCount = 0;
+        let failCount = 0;
+
+        // 匹配 MM/DD HH:mm 或 M/D H:m 格式
+        const regex = /(\d{1,2})\/(\d{1,2})\s+(\d{1,2}):(\d{1,2})/;
+
+        lines.forEach(line => {
+          const trimmedLine = line.trim();
+          if (!trimmedLine) return; // 忽略空白行
+
+          const match = trimmedLine.match(regex);
+          if (match) {
+            const month = parseInt(match[1], 10);
+            const day = parseInt(match[2], 10);
+            const hour = parseInt(match[3], 10);
+            const minute = parseInt(match[4], 10);
+
+            // 建立 Date 物件 (注意 JavaScript 的 month 是從 0 開始的)
+            const date = new Date(year, month - 1, day, hour, minute);
+
+            if (!isNaN(date.getTime())) {
+              newRecords.push({
+                id: crypto.randomUUID(),
+                timestamp: date.getTime()
+              });
+              successCount++;
+            } else {
+              failCount++;
+            }
+          } else {
+             failCount++;
+          }
+        });
+
+        if (successCount > 0) {
+          const updatedRecords = [...records, ...newRecords].sort((a, b) => b.timestamp - a.timestamp);
+          setRecords(updatedRecords);
+          localStorage.setItem('tracker_records', JSON.stringify(updatedRecords));
+          syncToCloud(updatedRecords);
+          setImportData('');
+          
+          const resultMsg = `成功匯入 ${successCount} 筆資料！${failCount > 0 ? `(有 ${failCount} 筆格式不符忽略)` : ''}`;
+          setImportMessage(resultMsg);
+          // 5秒後清除訊息
+          setTimeout(() => setImportMessage(''), 5000);
+        } else {
+          setImportMessage(`匯入失敗，請確認每行格式是否為 MM/DD HH:mm (失敗 ${failCount} 筆)`);
+        }
       };
 
       // 統計數據計算邏輯
@@ -413,6 +483,8 @@
 
       const renderSettings = () => (
         <div className="space-y-6 animate-[fadeIn_0.5s_ease-out] pb-20">
+          
+          {/* 雲端同步設定區塊 */}
           <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100">
             <h2 className="text-xl font-bold text-slate-800 mb-2 flex items-center">
               <Settings className="w-6 h-6 mr-2 text-slate-700" />
@@ -444,7 +516,7 @@
               {syncStatus === 'success' && <span className="text-emerald-500 text-sm flex items-center"><CheckCircle className="w-4 h-4 mr-1"/>同步成功</span>}
               {syncStatus === 'error' && <span className="text-red-500 text-sm flex items-center"><AlertCircle className="w-4 h-4 mr-1"/>同步失敗</span>}
             </div>
-
+            
             <div className="bg-indigo-50 p-5 rounded-2xl border border-indigo-100">
               <h3 className="text-indigo-800 font-bold mb-3">🛠️ 如何建立你的專屬資料庫？</h3>
               <ol className="list-decimal list-inside space-y-3 text-sm text-indigo-900/80 leading-relaxed">
@@ -497,6 +569,54 @@ function doGet(e) {
               </ol>
             </div>
           </div>
+
+          {/* 匯入舊資料區塊 */}
+          <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100 mt-6">
+            <h2 className="text-xl font-bold text-slate-800 mb-2 flex items-center">
+              <Upload className="w-6 h-6 mr-2 text-slate-700" />
+              批次匯入舊紀錄
+            </h2>
+            <p className="text-slate-500 text-sm mb-5 leading-relaxed">
+              將過往的紀錄貼入此處進行整批匯入。格式支援：<code className="bg-slate-100 px-1 py-0.5 rounded text-indigo-600 font-mono">03/19 19:06</code>
+            </p>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-semibold text-slate-700 mb-1">指定年份</label>
+                <input
+                  type="number"
+                  value={importYear}
+                  onChange={(e) => setImportYear(e.target.value)}
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-slate-700 outline-none focus:border-indigo-500"
+                  placeholder="例如: 2023"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-semibold text-slate-700 mb-1">多筆資料 (每行一筆)</label>
+                <textarea
+                  value={importData}
+                  onChange={(e) => setImportData(e.target.value)}
+                  placeholder="03/19 19:06&#10;04/20 12:00&#10;05/01 08:30"
+                  className="w-full h-32 bg-slate-50 border border-slate-200 rounded-xl p-4 text-slate-700 outline-none focus:border-indigo-500 transition-all resize-y font-mono text-sm leading-relaxed"
+                ></textarea>
+              </div>
+              <button
+                onClick={handleImport}
+                className="w-full bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 py-3 rounded-xl font-medium transition-colors flex justify-center items-center gap-2"
+              >
+                <Upload className="w-4 h-4" />
+                執行匯入
+              </button>
+              
+              {/* 匯入結果訊息提示 */}
+              {importMessage && (
+                <div className={`p-3 rounded-lg text-sm text-center font-medium ${importMessage.includes('成功') ? 'bg-emerald-50 text-emerald-700 border border-emerald-100' : 'bg-red-50 text-red-700 border border-red-100'}`}>
+                  {importMessage}
+                </div>
+              )}
+            </div>
+          </div>
+          
         </div>
       );
 
