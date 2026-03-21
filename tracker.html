@@ -273,16 +273,38 @@
       }, [records]);
 
       const copyGasCode = () => {
-        const code = `function doGet(e) {
-  var prop = PropertiesService.getScriptProperties();
-  var data = prop.getProperty('tracker_data') || '[]';
-  return ContentService.createTextOutput(data).setMimeType(ContentService.MimeType.JSON);
+        const code = `function doPost(e) {
+  var sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
+  try {
+    var data = JSON.parse(e.postData.contents);
+    sheet.clear();
+    sheet.appendRow(["ID", "Timestamp", "DateString"]);
+    for (var i = 0; i < data.length; i++) {
+      sheet.appendRow([
+        data[i].id, 
+        data[i].timestamp, 
+        new Date(data[i].timestamp).toLocaleString('zh-TW')
+      ]);
+    }
+    return ContentService.createTextOutput(JSON.stringify({"status": "success"}))
+      .setMimeType(ContentService.MimeType.JSON);
+  } catch(err) {
+    return ContentService.createTextOutput(JSON.stringify({"error": err.toString()}))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
 }
 
-function doPost(e) {
-  var prop = PropertiesService.getScriptProperties();
-  prop.setProperty('tracker_data', e.postData.contents);
-  return ContentService.createTextOutput('{"status":"success"}').setMimeType(ContentService.MimeType.JSON);
+function doGet(e) {
+  var sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
+  var data = sheet.getDataRange().getValues();
+  var records = [];
+  for (var i = 1; i < data.length; i++) {
+    if (data[i][0] && data[i][1]) {
+      records.push({ id: data[i][0], timestamp: data[i][1] });
+    }
+  }
+  return ContentService.createTextOutput(JSON.stringify(records))
+    .setMimeType(ContentService.MimeType.JSON);
 }`;
         // 使用 textarea 兼容更多設備的複製功能
         const textarea = document.createElement('textarea');
@@ -471,37 +493,58 @@ function doPost(e) {
               
               {showTutorial && (
                 <div className="bg-indigo-50 p-4 rounded-2xl border border-indigo-100 text-sm text-indigo-900 space-y-3 mb-4 animate-[fadeIn_0.3s_ease-out]">
-                  <p className="font-bold">請按照以下步驟建立您專屬且免費的資料庫：</p>
+                  <p className="font-bold">請按照以下步驟建立與 Google 試算表連動的資料庫：</p>
                   <ol className="list-decimal pl-5 space-y-2">
-                    <li>前往 <a href="https://script.google.com/" target="_blank" className="text-blue-600 underline font-medium">Google Apps Script</a> 並登入。</li>
-                    <li>點擊左上角的「<strong>新專案</strong>」。</li>
+                    <li>建立一個全新的 <a href="https://sheets.google.com/" target="_blank" className="text-blue-600 underline font-medium">Google 試算表</a>，並為它命名。</li>
+                    <li>點擊試算表頂部選單的「<strong>擴充功能</strong>」>「<strong>Apps Script</strong>」。</li>
                     <li>將編輯器中原本的程式碼全部刪除，替換為下方提供的程式碼。</li>
                     <li>點擊右上角的「<strong>部署</strong>」>「<strong>新增部署作業</strong>」。</li>
                     <li>點擊齒輪圖示，選取類型為「<strong>網頁應用程式</strong>」。</li>
                     <li>在「存取權」欄位，選擇「<strong>所有人</strong>」，然後點擊「部署」。</li>
+                    <li><span className="text-red-500 font-bold">重要：</span>第一次部署會要求「授權存取」，請登入您的帳號，並在安全警告畫面點選「進階」>「前往...」以允許權限。</li>
                     <li>複製系統產生的「<strong>網頁應用程式網址</strong>」，貼到下方的輸入框中即可！</li>
                   </ol>
                   
                   <div className="mt-4 relative group">
-                    <p className="font-bold mb-2">需要貼上的程式碼：</p>
-                    <div className="bg-slate-800 rounded-xl p-3 text-emerald-400 font-mono text-xs overflow-x-auto">
-                      <pre><code>{`function doGet(e) {
-  var prop = PropertiesService.getScriptProperties();
-  var data = prop.getProperty('tracker_data') || '[]';
-  return ContentService.createTextOutput(data)
-    .setMimeType(ContentService.MimeType.JSON);
+                    <p className="font-bold mb-2">需要貼上的試算表 API 程式碼：</p>
+                    <div className="bg-slate-800 rounded-xl p-3 text-emerald-400 font-mono text-xs overflow-x-auto h-64 overflow-y-auto">
+                      <pre><code>{`function doPost(e) {
+  var sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
+  try {
+    var data = JSON.parse(e.postData.contents);
+    sheet.clear();
+    sheet.appendRow(["ID", "Timestamp", "DateString"]);
+    for (var i = 0; i < data.length; i++) {
+      sheet.appendRow([
+        data[i].id, 
+        data[i].timestamp, 
+        new Date(data[i].timestamp).toLocaleString('zh-TW')
+      ]);
+    }
+    return ContentService.createTextOutput(JSON.stringify({"status": "success"}))
+      .setMimeType(ContentService.MimeType.JSON);
+  } catch(err) {
+    return ContentService.createTextOutput(JSON.stringify({"error": err.toString()}))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
 }
 
-function doPost(e) {
-  var prop = PropertiesService.getScriptProperties();
-  prop.setProperty('tracker_data', e.postData.contents);
-  return ContentService.createTextOutput('{"status":"success"}')
+function doGet(e) {
+  var sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
+  var data = sheet.getDataRange().getValues();
+  var records = [];
+  for (var i = 1; i < data.length; i++) {
+    if (data[i][0] && data[i][1]) {
+      records.push({ id: data[i][0], timestamp: data[i][1] });
+    }
+  }
+  return ContentService.createTextOutput(JSON.stringify(records))
     .setMimeType(ContentService.MimeType.JSON);
 }`}</code></pre>
                     </div>
                     <button 
                       onClick={copyGasCode}
-                      className="absolute top-9 right-2 bg-slate-700 hover:bg-slate-600 text-white p-2 rounded-lg flex items-center gap-1 transition-all"
+                      className="absolute top-9 right-4 bg-slate-700 hover:bg-slate-600 text-white p-2 rounded-lg flex items-center gap-1 transition-all shadow-md"
                     >
                       {copied ? <Check className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4" />}
                       <span className="text-xs">{copied ? '已複製' : '複製'}</span>
