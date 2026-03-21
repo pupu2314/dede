@@ -1,12 +1,6 @@
-/* motolog.js
-   v15.9.0 Changes:
-   1. 介面優化：在儀表板「下次保養」下方，新增顯示「保養後已騎乘里程」。
-   2. 邏輯確認：確保充電紀錄的最新狀態是取用「充電後 (batteryEnd)」的電量。
-*/
+console.log('motolog.js (v15.9.1): loaded');
 
-console.log('motolog.js (v15.9.0): loaded');
-
-const APP_VERSION = 'v15.9.0';
+const APP_VERSION = 'v15.9.1';
 const SETTINGS_KEY = 'motorcycleSettings';
 const BACKUP_KEY = 'lastBackupDate';
 const DIRTY_KEY = 'hasUnsyncedChanges';
@@ -1267,4 +1261,74 @@ function restoreFromGoogleSheets() {
         console.error(err);
         showToast('❌ 網路錯誤或 API 未支援還原', 'error');
     });
+}
+
+// --- 自動偵測更新邏輯 (新增於 motolog.js 末端) ---
+if ('serviceWorker' in navigator) {
+    // 監聽來自 sw.js 的控制權變動
+    let refreshing = false;
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+        if (refreshing) return;
+        refreshing = true;
+        // 當 Service Worker 更新並接管頁面時，不強制刷新，讓使用者手動點擊
+    });
+
+    // 頁面載入後檢查更新
+    window.addEventListener('load', function() {
+        navigator.serviceWorker.register('sw.js').then(reg => {
+            // 定期檢查伺服器是否有新版 sw.js (預設每小時檢查一次，或重開 App 時檢查)
+            reg.update();
+
+            reg.addEventListener('updatefound', () => {
+                const newWorker = reg.installing;
+                newWorker.addEventListener('statechange', () => {
+                    // 當新版本安裝完成 (installed) 且目前已有舊版在執行時
+                    if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                        showUpdateNotify();
+                    }
+                });
+            });
+        });
+    });
+}
+
+// 顯示更新提示 UI
+function showUpdateNotify() {
+    // 檢查是否已存在提示，避免重複產生
+    if (document.getElementById('pwa-update-banner')) return;
+
+    const notifyDiv = document.createElement('div');
+    notifyDiv.id = 'pwa-update-banner';
+    // 這裡的樣式建議配合您原本的 CSS 變數 (如 --primary)
+    notifyDiv.style.cssText = `
+        position: fixed;
+        bottom: 20px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: var(--primary, #2563eb);
+        color: white;
+        padding: 12px 20px;
+        border-radius: 12px;
+        box-shadow: 0 8px 20px rgba(0,0,0,0.3);
+        z-index: 9999;
+        display: flex;
+        align-items: center;
+        gap: 15px;
+        font-weight: bold;
+        width: 90%;
+        max-width: 400px;
+        justify-content: space-between;
+        animation: slideUp 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    `;
+    
+    notifyDiv.innerHTML = `
+        <span style="font-size: 14px;">🚀 發現新版本 (v${APP_VERSION.split('v')[1]})</span>
+        <button id="pwa-reload-btn" style="background: white; color: var(--primary, #2563eb); border: none; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-weight: bold; white-space: nowrap;">立即更新</button>
+    `;
+    
+    document.body.appendChild(notifyDiv);
+    
+    document.getElementById('pwa-reload-btn').onclick = function() {
+        window.location.reload();
+    };
 }
