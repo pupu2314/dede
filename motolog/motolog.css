@@ -608,3 +608,7 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--p
     .modal { align-items: flex-end; }
     .modal-content { width: 100%; border-radius: 20px 20px 0 0; max-height: 85vh; }
 }
+@keyframes slideUp {
+    from { bottom: -100px; opacity: 0; }
+    to { bottom: 20px; opacity: 1; }
+}
