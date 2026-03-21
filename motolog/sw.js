@@ -1,4 +1,4 @@
-const CACHE_NAME = 'motolog-v15.9.1'; // 每次更新都要改這個版號
+const CACHE_NAME = 'motolog-v15.9.2'; // 每次更新都要改這個版號
 const ASSETS_TO_CACHE = [
   './',
   './index.html',
