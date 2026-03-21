@@ -1,6 +1,6 @@
-console.log('motolog.js (v15.9.1): loaded');
+console.log('motolog.js (v15.9.2): loaded');
 
-const APP_VERSION = 'v15.9.1';
+const APP_VERSION = 'v15.9.2';
 const SETTINGS_KEY = 'motorcycleSettings';
 const BACKUP_KEY = 'lastBackupDate';
 const DIRTY_KEY = 'hasUnsyncedChanges';
