@@ -1,201 +1,277 @@
-// smart-sync.js
-// 功能：智慧同步、離線排隊、PWA 更新偵測 (穩定版)
+/**
+ * smart-sync.js (Refactored v2.0)
+ * 功能：智慧背景同步、離線排隊、PWA 更新監控
+ * 採用非侵入式攔截與狀態機設計
+ */
 
-const SYNC_KEYS = ['chargeLog', 'maintenanceLog', 'expenseLog', 'statusLog'];
-let syncTimeout = null;
-let isSyncing = false; // 鎖定狀態，避免重複同步
-let retryCount = 0;
-const MAX_RETRIES = 2;
+const SmartSync = {
+    // --- 配置設定 ---
+    config: {
+        syncKeys: ['chargeLog', 'maintenanceLog', 'expenseLog', 'statusLog'],
+        settingsKey: 'motorcycleSettings',
+        dirtyKey: 'hasUnsyncedChanges',
+        backupDateKey: 'lastBackupDate',
+        autoSyncDelay: 8000,
+        retryDelay: 30000,
+        maxRetries: 2
+    },
 
-// ==========================================
-// 1. 攔截 localStorage 自動觸發同步
-// ==========================================
-const originalSetItem = localStorage.setItem;
-localStorage.setItem = function(key, value) {
-    originalSetItem.apply(this, arguments);
-    
-    // 檢查是否為需要同步的資料 Key
-    if (SYNC_KEYS.includes(key)) {
-        originalSetItem.call(this, 'hasUnsyncedChanges', 'true');
-        updateSyncStatusUI('🟡 待同步');
-        // 增加延遲時間到 8 秒，給予使用者完成輸入的空間
-        scheduleAutoSync(8000); 
-    }
-};
+    // --- 內部狀態 ---
+    state: {
+        isSyncing: false,
+        retryCount: 0,
+        syncTimeout: null,
+        status: 'IDLE' // IDLE, PENDING, SYNCING, ERROR, OFFLINE
+    },
 
-// ==========================================
-// 2. 自動同步核心邏輯
-// ==========================================
-function scheduleAutoSync(delay = 5000) {
-    if (syncTimeout) clearTimeout(syncTimeout);
-    syncTimeout = setTimeout(() => {
-        executeAutoSync();
-    }, delay);
-}
-
-async function executeAutoSync(isManual = false) {
-    // 1. 基本檢查
-    if (!navigator.onLine) {
-        updateSyncStatusUI('🔴 離線 (待恢復)');
-        if (isManual) alert('目前無網路連線，資料已儲存。');
-        return;
-    }
-
-    if (isSyncing) return; // 如果正在同步中，直接跳過
-
-    // 2. 確定是否有資料需要同步
-    const hasChanges = localStorage.getItem('hasUnsyncedChanges') === 'true';
-    if (!isManual && !hasChanges) {
-        updateSyncStatusUI('🟢 已同步');
-        return;
-    }
-
-    // 3. 取得設定
-    let settings = { gasUrl: '' };
-    try {
-        settings = JSON.parse(localStorage.getItem('motorcycleSettings') || '{}');
-    } catch(e) {}
-
-    if (!settings.gasUrl) {
-        if (isManual) alert('請先設定 Google Sheets 網址');
-        return;
-    }
-
-    // 4. 開始同步流程
-    isSyncing = true;
-    updateSyncStatusUI(isManual ? '🔄 強制同步中...' : '🔄 自動同步中...');
-
-    const payload = {
-        action: 'backup',
-        ChargeLog: JSON.parse(localStorage.getItem('chargeLog') || '[]'),
-        MaintenanceLog: JSON.parse(localStorage.getItem('maintenanceLog') || '[]'),
-        ExpenseLog: JSON.parse(localStorage.getItem('expenseLog') || '[]'),
-        StatusLog: JSON.parse(localStorage.getItem('statusLog') || '[]')
-    };
-
-    try {
-        // 自動同步不使用 AbortController 強制切斷，改用原生 fetch
-        const res = await fetch(settings.gasUrl, {
-            method: 'POST',
-            mode: 'cors',
-            body: JSON.stringify(payload)
-        });
+    /**
+     * 初始化核心功能
+     */
+    init() {
+        this.initInterceptor();
+        this.initNetworkListeners();
+        this.initPWAUpdate();
         
-        const data = await res.json();
-        
-        if (data.status === 'success') {
-            localStorage.removeItem('hasUnsyncedChanges');
-            const now = new Date().toISOString().slice(0,10);
-            originalSetItem.call(localStorage, 'lastBackupDate', now);
-            updateSyncStatusUI('🟢 已同步');
-            retryCount = 0;
-            if (isManual) alert('✅ 備份成功！');
-        } else {
-            throw new Error(data.message || 'Server Error');
-        }
-    } catch (err) {
-        console.warn('Sync failed:', err);
-        
-        if (isManual) {
-            updateSyncStatusUI('🔴 同步失敗');
-            alert('❌ 同步失敗，請確認 GAS 網址是否正確或網路是否穩定。');
-        } else {
-            // 自動同步失敗時的處理
-            if (retryCount < MAX_RETRIES) {
-                retryCount++;
-                updateSyncStatusUI(`🟡 等待重試 (${retryCount})`);
-                scheduleAutoSync(30000); // 30秒後重試，避開 GAS 繁忙期
+        // 初次載入檢查是否有未完成任務
+        window.addEventListener('DOMContentLoaded', () => {
+            this.createUI();
+            if (localStorage.getItem(this.config.dirtyKey) === 'true') {
+                this.setPending();
             } else {
-                updateSyncStatusUI('🔴 同步暫緩 (下次操作再試)');
-                retryCount = 0;
+                this.updateUI('🟢 已同步');
+            }
+        });
+    },
+
+    /**
+     * 1. 攔截器：監控資料變動
+     */
+    initInterceptor() {
+        const self = this;
+        const originalSetItem = localStorage.setItem;
+
+        localStorage.setItem = function(key, value) {
+            originalSetItem.apply(this, arguments);
+            
+            if (self.config.syncKeys.includes(key)) {
+                originalSetItem.call(this, self.config.dirtyKey, 'true');
+                self.setPending();
+            }
+        };
+    },
+
+    /**
+     * 2. 網路監控
+     */
+    initNetworkListeners() {
+        window.addEventListener('online', () => {
+            if (localStorage.getItem(this.config.dirtyKey) === 'true') {
+                this.scheduleSync(3000);
+            } else {
+                this.updateUI('🟢 已同步');
+            }
+        });
+
+        window.addEventListener('offline', () => {
+            this.state.status = 'OFFLINE';
+            this.updateUI('🔴 離線 (待恢復)');
+        });
+    },
+
+    /**
+     * 3. 同步排程管理
+     */
+    setPending() {
+        this.state.status = 'PENDING';
+        this.updateUI('🟡 待同步');
+        this.scheduleSync(this.config.autoSyncDelay);
+    },
+
+    scheduleSync(delay) {
+        if (this.state.syncTimeout) clearTimeout(this.state.syncTimeout);
+        this.state.syncTimeout = setTimeout(() => {
+            this.execute();
+        }, delay);
+    },
+
+    /**
+     * 4. 執行同步核心
+     * @param {boolean} isManual 是否為手動觸發
+     */
+    async execute(isManual = false) {
+        if (!navigator.onLine) {
+            if (isManual) alert('目前無網路連線，資料已安全儲存。');
+            return;
+        }
+
+        if (this.state.isSyncing) return;
+
+        const hasChanges = localStorage.getItem(this.config.dirtyKey) === 'true';
+        if (!isManual && !hasChanges) {
+            this.updateUI('🟢 已同步');
+            return;
+        }
+
+        const gasUrl = this.getGasUrl();
+        if (!gasUrl) {
+            if (isManual) alert('請先進入設定配置 Google Sheets 網址');
+            return;
+        }
+
+        this.state.isSyncing = true;
+        this.state.status = 'SYNCING';
+        this.updateUI(isManual ? '🔄 強制同步中...' : '🔄 自動同步中...');
+
+        const payload = {
+            action: 'backup',
+            ChargeLog: this.getLocalJSON('chargeLog'),
+            MaintenanceLog: this.getLocalJSON('maintenanceLog'),
+            ExpenseLog: this.getLocalJSON('expenseLog'),
+            StatusLog: this.getLocalJSON('statusLog')
+        };
+
+        try {
+            const response = await fetch(gasUrl, {
+                method: 'POST',
+                mode: 'cors',
+                body: JSON.stringify(payload)
+            });
+
+            const result = await response.json();
+
+            if (result.status === 'success') {
+                this.handleSuccess(isManual);
+            } else {
+                throw new Error(result.message || '伺服器端錯誤');
+            }
+        } catch (error) {
+            this.handleError(error, isManual);
+        } finally {
+            this.state.isSyncing = false;
+        }
+    },
+
+    handleSuccess(isManual) {
+        localStorage.removeItem(this.config.dirtyKey);
+        const now = new Date().toISOString().slice(0, 10);
+        localStorage.setItem(this.config.backupDateKey, now);
+        
+        this.state.status = 'IDLE';
+        this.state.retryCount = 0;
+        this.updateUI('🟢 已同步');
+        
+        if (isManual) alert('✅ 備份成功！');
+    },
+
+    handleError(error, isManual) {
+        console.error('[SmartSync] Error:', error);
+        this.state.status = 'ERROR';
+
+        if (isManual) {
+            this.updateUI('🔴 同步失敗');
+            alert(`❌ 同步失敗\n原因：${error.message}\n請確認網路與 GAS 設定。`);
+        } else {
+            if (this.state.retryCount < this.config.maxRetries) {
+                this.state.retryCount++;
+                this.updateUI(`🟡 等待重試 (${this.state.retryCount})`);
+                this.scheduleSync(this.config.retryDelay);
+            } else {
+                this.updateUI('🔴 同步暫緩');
+                this.state.retryCount = 0;
             }
         }
-    } finally {
-        isSyncing = false;
-    }
-}
+    },
 
-// ==========================================
-// 3. 狀態監聽與 UI
-// ==========================================
-window.addEventListener('online', () => {
-    if (localStorage.getItem('hasUnsyncedChanges') === 'true') {
-        scheduleAutoSync(3000);
-    } else {
-        updateSyncStatusUI('🟢 已同步');
-    }
-});
+    /**
+     * 工具方法
+     */
+    getGasUrl() {
+        try {
+            const settings = JSON.parse(localStorage.getItem(this.config.settingsKey) || '{}');
+            return settings.gasUrl || null;
+        } catch (e) {
+            return null;
+        }
+    },
 
-window.addEventListener('offline', () => updateSyncStatusUI('🔴 離線'));
+    getLocalJSON(key) {
+        try {
+            return JSON.parse(localStorage.getItem(key) || '[]');
+        } catch (e) {
+            return [];
+        }
+    },
 
-function initSyncUI() {
-    if (document.getElementById('smart-sync-status')) return;
-    const bar = document.createElement('div');
-    bar.id = 'smart-sync-status';
-    bar.style.cssText = `
-        position: fixed; top: env(safe-area-inset-top, 15px); right: 15px; 
-        background: rgba(15, 23, 42, 0.9); color: white; padding: 5px 12px; 
-        border-radius: 20px; font-size: 11px; z-index: 10001; 
-        backdrop-filter: blur(5px); box-shadow: 0 4px 10px rgba(0,0,0,0.2);
-        pointer-events: none; transition: opacity 0.5s;
-    `;
-    document.body.appendChild(bar);
-    
-    // 初始化判斷
-    if (localStorage.getItem('hasUnsyncedChanges') === 'true') {
-        updateSyncStatusUI('🟡 待同步');
-        scheduleAutoSync(5000);
-    } else {
-        updateSyncStatusUI('🟢 已同步');
-    }
-}
+    /**
+     * UI 渲染邏輯
+     */
+    createUI() {
+        if (document.getElementById('smart-sync-status')) return;
+        const bar = document.createElement('div');
+        bar.id = 'smart-sync-status';
+        bar.style.cssText = `
+            position: fixed; top: env(safe-area-inset-top, 15px); right: 15px; 
+            background: rgba(15, 23, 42, 0.9); color: white; padding: 5px 12px; 
+            border-radius: 20px; font-size: 11px; z-index: 10001; 
+            backdrop-filter: blur(5px); box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+            pointer-events: none; transition: opacity 0.5s;
+        `;
+        document.body.appendChild(bar);
+    },
 
-function updateSyncStatusUI(text) {
-    const bar = document.getElementById('smart-sync-status');
-    if (!bar) return;
-    bar.style.display = 'block';
-    bar.style.opacity = '1';
-    bar.innerText = text;
-    // 已同步狀態下，3秒後變透明
-    if (text.includes('🟢')) {
-        setTimeout(() => { if(bar.innerText.includes('🟢')) bar.style.opacity = '0.3'; }, 3000);
-    }
-}
+    updateUI(text) {
+        const bar = document.getElementById('smart-sync-status');
+        if (!bar) return;
+        bar.style.display = 'block';
+        bar.style.opacity = '1';
+        bar.innerText = text;
 
-// ==========================================
-// 4. PWA 更新偵測
-// ==========================================
-function initPWAUpdate() {
-    if ('serviceWorker' in navigator) {
+        if (text.includes('🟢')) {
+            setTimeout(() => {
+                if (bar.innerText.includes('🟢')) bar.style.opacity = '0.3';
+            }, 3000);
+        }
+    },
+
+    /**
+     * PWA 更新偵測
+     */
+    initPWAUpdate() {
+        if (!('serviceWorker' in navigator)) return;
+
         navigator.serviceWorker.register('sw.js').then(reg => {
             reg.update();
             reg.addEventListener('updatefound', () => {
                 const newWorker = reg.installing;
                 newWorker.addEventListener('statechange', () => {
                     if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                        showUpdateBanner();
+                        this.showUpdateBanner();
                     }
                 });
             });
         });
+    },
+
+    showUpdateBanner() {
+        if (document.getElementById('pwa-update-banner')) return;
+        const div = document.createElement('div');
+        div.id = 'pwa-update-banner';
+        div.style.cssText = `
+            position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
+            background: #2563eb; color: white; padding: 12px 20px; border-radius: 12px;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.3); z-index: 10000; display: flex;
+            align-items: center; gap: 15px; width: 90%; max-width: 400px; justify-content: space-between;
+        `;
+        div.innerHTML = `
+            <span style="font-weight:bold">🚀 發現新版本！</span>
+            <button onclick="window.location.reload()" style="background:white; color:#2563eb; border:none; padding:6px 12px; border-radius:6px; cursor:pointer; font-weight:bold;">更新</button>
+        `;
+        document.body.appendChild(div);
     }
-}
+};
 
-function showUpdateBanner() {
-    if (document.getElementById('pwa-update-banner')) return;
-    const div = document.createElement('div');
-    div.id = 'pwa-update-banner';
-    div.style.cssText = `
-        position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
-        background: #2563eb; color: white; padding: 12px 20px; border-radius: 12px;
-        box-shadow: 0 8px 20px rgba(0,0,0,0.3); z-index: 10000; display: flex;
-        align-items: center; gap: 15px; width: 90%; max-width: 400px; justify-content: space-between;
-    `;
-    div.innerHTML = `<span>🚀 發現新版本！</span><button onclick="window.location.reload()" style="background: white; color: #2563eb; border: none; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-weight: bold;">更新</button>`;
-    document.body.appendChild(div);
-}
+// 啟動單例
+SmartSync.init();
 
-window.addEventListener('DOMContentLoaded', () => {
-    initSyncUI();
-    initPWAUpdate();
-});
+// 對外暴露手動觸發接口 (供 index.html 備份按鈕使用)
+window.executeManualSync = () => SmartSync.execute(true);
