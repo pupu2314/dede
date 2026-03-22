@@ -33,7 +33,7 @@ function scheduleAutoSync() {
 
 // isManual: 如果是點擊「同步到 Google Sheets」按鈕，傳入 true 強制執行
 async function executeAutoSync(isManual = false) {
-    // 檢查網路
+    // 檢查網路狀態
     if (!navigator.onLine) {
         updateSyncStatusUI('🔴 離線 (恢復連線後同步)');
         if (isManual) alert('目前無網路連線，資料已安全儲存於手機，將於恢復連線後自動同步。');
@@ -60,6 +60,10 @@ async function executeAutoSync(isManual = false) {
 
     updateSyncStatusUI('🔄 同步中...');
 
+    // 設定超時控制 (10秒)
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000);
+
     // 準備上傳的資料
     const payload = {
         action: 'backup',
@@ -72,8 +76,11 @@ async function executeAutoSync(isManual = false) {
     try {
         const res = await fetch(settings.gasUrl, {
             method: 'POST',
-            body: JSON.stringify(payload)
+            body: JSON.stringify(payload),
+            signal: controller.signal
         });
+        
+        clearTimeout(timeoutId);
         const data = await res.json();
         
         if (data.status === 'success') {
@@ -87,9 +94,16 @@ async function executeAutoSync(isManual = false) {
             if (isManual) alert('❌ 備份失敗: ' + (data.message || '未知錯誤'));
         }
     } catch (err) {
+        clearTimeout(timeoutId);
         console.error('Auto sync failed:', err);
-        updateSyncStatusUI('🔴 連線超時 (稍後重試)');
-        if (isManual) alert('❌ 網路連線異常，請稍後再試。');
+        
+        if (err.name === 'AbortError') {
+            updateSyncStatusUI('🔴 連線超時 (伺服器無回應)');
+            if (isManual) alert('❌ 同步逾時：伺服器回應太慢，請檢查 GAS 部署是否正常。');
+        } else {
+            updateSyncStatusUI('🔴 連線異常 (稍後重試)');
+            if (isManual) alert('❌ 網路連線異常，請檢查您的網路環境。');
+        }
     }
 }
 
