@@ -1,10 +1,9 @@
-const CACHE_NAME = 'motolog-v16.0.0'; // 記得更新版號
+const CACHE_NAME = 'motolog-v16.0'; // 記得更新版號
 const ASSETS_TO_CACHE = [
   './',
   './index.html',
   './motolog.css',
   './motolog.js',
-  './smart-sync.js',
   './manifest.json',
   './icon-192.png',
   './icon-512.png'
