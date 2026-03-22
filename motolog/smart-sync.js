@@ -1,5 +1,5 @@
 /**
- * smart-sync.js (Refactored v2.0)
+ * smart-sync.js (Refactored v2.0) 
  * 功能：智慧背景同步、離線排隊、PWA 更新監控
  * 採用非侵入式攔截與狀態機設計
  */
