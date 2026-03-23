@@ -153,42 +153,40 @@
         </div>
     </div>
 </div>
-
-
 <script>
-        const app = Vue.createApp({
-            // 1. data 必須改寫為 function return 的形式
-            data() {
-                return {
-                    data: { categories: [], combos: [] },
-                    originalData: null,
-                    originalItemsMap: new Map(),
-                    originalCombosMap: new Map(),
-                    isDirty: false,
-                    initialLoadComplete: false,
-                    detailedEditEnabled: false,
-                    isModalVisible: false,
-                    modalTitle: '',
-                    currentItem: null,
-                    currentPromotion: {},
-                    originalPromotionState: '',
-                    editingPromoIndex: -1,
-                    modalError: '',
-                    promoCalculationText: '',
-                    isStrongDiscount: false,
-                    isComboModalVisible: false,
-                    currentCombo: { name: '', itemIds: [], promotions: [] },
-                    originalComboState: '',
-                    editingComboIndex: -1,
-                    isChangesModalVisible: false,
-                    changesList: [],
-                    isEditingComboPromo: false
-                };
-            },
-            computed: {
-                allItems: function() {
-                    return (this.data.categories || []).flatMap(cat => cat.items || []);
-                },
+    const app = Vue.createApp({
+        data() {
+            return {
+                data: { categories: [], combos: [] },
+                originalData: null,
+                originalItemsMap: new Map(),
+                originalCombosMap: new Map(),
+                isDirty: false,
+                initialLoadComplete: false,
+                detailedEditEnabled: false,
+                isModalVisible: false,
+                modalTitle: '',
+                currentItem: null,
+                currentPromotion: {},
+                originalPromotionState: '',
+                editingPromoIndex: -1,
+                modalError: '',
+                promoCalculationText: '',
+                isStrongDiscount: false,
+                isComboModalVisible: false,
+                currentCombo: { name: '', itemIds: [], promotions: [] },
+                originalComboState: '',
+                editingComboIndex: -1,
+                isChangesModalVisible: false,
+                changesList: [],
+                isEditingComboPromo: false
+            };
+        },
+        computed: {
+            allItems: function() {
+                return (this.data.categories || []).flatMap(cat => cat.items || []);
+            }
+        },
         watch: {
             data: {
                 handler: function() {
@@ -209,27 +207,27 @@
             },
             isItemUnsaved: function(item) {
                 const originalItemJSON = this.originalItemsMap.get(item.id);
-                if (!originalItemJSON) return true; // New item
+                if (!originalItemJSON) return true; 
                 return JSON.stringify(item) !== originalItemJSON;
             },
             isComboUnsaved: function(combo) {
                  const originalComboJSON = this.originalCombosMap.get(combo.name);
-                if (!originalComboJSON) return true; // New combo
+                if (!originalComboJSON) return true; 
                 return JSON.stringify(combo) !== originalComboJSON;
             },
             isPromoUnsaved: function(parent, promo) {
                 let originalParent;
-                if (parent.itemIds) { // It's a combo
+                if (parent.itemIds) { 
                     const originalComboJSON = this.originalCombosMap.get(parent.name);
                     if (!originalComboJSON) return true;
                     originalParent = JSON.parse(originalComboJSON);
-                } else { // It's an item
+                } else { 
                     const originalItemJSON = this.originalItemsMap.get(parent.id);
                     if (!originalItemJSON) return true;
                     originalParent = JSON.parse(originalItemJSON);
                 }
                 const originalPromo = (originalParent.promotions || []).find(p => p.label === promo.label);
-                if (!originalPromo) return true; // New promo
+                if (!originalPromo) return true; 
                 return JSON.stringify(promo) !== JSON.stringify(originalPromo);
             },
             handleDirtyState: function() {
@@ -259,11 +257,12 @@
                 if (!this.currentCombo.name.trim()) { alert('組合名稱不可為空'); return; }
                 if (this.currentCombo.itemIds.length < 2) { alert('組合至少需包含 2 個服務項目'); return; }
 
+                // Vue 3 修復：移除 this.$set，直接修改陣列
                 if (this.editingComboIndex === -1) {
-                    if (!this.data.combos) this.$set(this.data, 'combos', []);
+                    if (!this.data.combos) this.data.combos = []; 
                     this.data.combos.push(this.currentCombo);
                 } else {
-                    this.$set(this.data.combos, this.editingComboIndex, this.currentCombo);
+                    this.data.combos[this.editingComboIndex] = this.currentCombo;
                 }
                 this.isComboModalVisible = false;
             },
@@ -285,7 +284,7 @@
                 this.generateChangesList();
                 if (this.changesList.length === 0) {
                     this.showToast('沒有偵測到任何變更。');
-                    this.isDirty = false; // Reset dirty state if no changes found
+                    this.isDirty = false; 
                     return;
                 }
                 this.isChangesModalVisible = true;
@@ -368,7 +367,6 @@
                  navigator.clipboard.writeText(jsonString).then(() => {
                     this.showToast('JSON 已複製到剪貼簿，請傳送給管理者更新伺服器資料才會生效。');
                     if(this.isChangesModalVisible) this.isChangesModalVisible = false;
-                    // According to user, do NOT update originalData after copying
                 }, () => {
                     alert('複製失敗!');
                 });
@@ -474,8 +472,9 @@
                 if (p.price >= originalPrice) { this.modalError = `錯誤: 優惠價 (${p.price}) 需低於原價 (${originalPrice})。`; return; }
                 if (p.start > p.end) { this.modalError = '錯誤: 結束日期不可早於開始日期。'; return; }
 
+                // Vue 3 修復：移除 this.$set，直接指派陣列
                 if (!this.currentItem.promotions) {
-                    this.$set(this.currentItem, 'promotions', []);
+                    this.currentItem.promotions = [];
                 }
                 
                 if (this.editingPromoIndex === -1) {
@@ -484,8 +483,10 @@
                     this.currentItem.promotions.splice(this.editingPromoIndex, 1, p);
                 }
                 this.isModalVisible = false;
+
+                // Vue 3 修復：移除 this.$set，直接修改陣列
                 if(this.isEditingComboPromo) {
-                    this.$set(this.data.combos, this.editingComboIndex, this.currentCombo);
+                    this.data.combos[this.editingComboIndex] = this.currentCombo;
                 }
             },
              calculateDiscount: function() {
@@ -538,8 +539,7 @@
         }
     });
 
-app.mount('#app');
+    app.mount('#app');
 </script>
-
 </body>
 </html>
