@@ -16,7 +16,7 @@
         ========================================= */
         body { 
             background-color: #f4f6f9; 
-            padding-bottom: 120px; /* 留給底部浮動列的空間 */
+            padding-bottom: 160px; /* 留給底部浮動列足夠的空間 (考慮手機版折行) */
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
         }
         .editor-container { 
@@ -48,7 +48,7 @@
         }
 
         /* =========================================
-           列表與卡片樣式
+           列表與卡片樣式 (加入 Flex-wrap 支援手機版)
         ========================================= */
         .item-card { 
             border: 1px solid #e2e8f0; 
@@ -58,22 +58,27 @@
             transition: box-shadow 0.2s; 
         }
         .item-card:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
-        .item-header { display: flex; justify-content: space-between; align-items: center; }
-        .item-info { flex-grow: 1; }
-        .item-name { font-weight: bold; font-size: 1.1em; color: #212529; }
+        
+        /* 標題列：允許在手機版寬度不足時換行 */
+        .item-header { display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 10px; }
+        .item-info { flex: 1 1 200px; } /* 允許縮放，基準寬度 200px */
+        .item-name { font-weight: bold; font-size: 1.1em; color: #212529; display: inline-block;}
         .item-price { color: #d9534f; font-weight: bold; font-size: 1.1em; margin-right: 15px; }
-        .item-actions { display: flex; align-items: center; gap: 8px; }
+        .item-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
 
-        .tag { font-size: 0.75em; padding: 3px 8px; border-radius: 12px; margin-left: 8px; font-weight: bold; }
+        .tag { font-size: 0.75em; padding: 3px 8px; border-radius: 12px; margin-left: 8px; font-weight: bold; display: inline-block; vertical-align: middle;}
         .tag.dirty { background: #dc3545; color: white; }
 
         .promo-list { background: #f8f9fa; border: 1px dashed #cbd5e1; padding: 10px; border-radius: 6px; margin-top: 12px; }
-        .promo-item { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid #e2e8f0; }
+        
+        /* 優惠項目列：允許在手機版寬度不足時換行 */
+        .promo-item { display: flex; justify-content: space-between; align-items: flex-start; padding: 12px 0; border-bottom: 1px solid #e2e8f0; flex-wrap: wrap; gap: 10px; }
         .promo-item:last-child { border-bottom: none; }
-        .promo-info { font-size: 0.9em; color: #495057; }
+        .promo-info { flex: 1 1 200px; font-size: 0.9em; color: #495057; line-height: 1.5; }
+        .promo-actions { display: flex; gap: 6px; flex-wrap: wrap; }
         
         /* =========================================
-           彈出視窗 (Modal) - 置中與遮罩
+           彈出視窗 (Modal)
         ========================================= */
         .modal-overlay {
             position: fixed; 
@@ -99,17 +104,17 @@
         .modal-header { font-size: 1.3em; font-weight: bold; margin-bottom: 20px; color: #0056b3; border-bottom: 2px solid #f1f5f9; padding-bottom: 10px; }
         
         .form-group { margin-bottom: 15px; }
-        .form-group label { display: block; margin-bottom: 5px; font-weight: bold; color: #495057; }
+        .form-group label { display: block; margin-bottom: 5px; font-weight: bold; color: #495057; font-size: 0.95em; }
         .form-control { width: 100%; padding: 10px; border: 1px solid #ced4da; border-radius: 6px; box-sizing: border-box; font-size: 1em; }
         .form-control:focus { outline: none; border-color: #80bdff; box-shadow: 0 0 0 3px rgba(0,123,255,0.25); }
         
-        .checkbox-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px; margin-top: 10px; }
+        .checkbox-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 12px; margin-top: 10px; }
         .checkbox-item { display: flex; align-items: center; gap: 8px; font-size: 0.95em; cursor: pointer; }
         
-        .modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 25px; padding-top: 15px; border-top: 1px solid #f1f5f9; }
+        .modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 25px; padding-top: 15px; border-top: 1px solid #f1f5f9; flex-wrap: wrap; }
         
         /* =========================================
-           底部浮動操作列
+           底部浮動操作列 (支援手機版多行)
         ========================================= */
         .sticky-footer {
             position: fixed; 
@@ -119,9 +124,15 @@
             padding: 15px; 
             display: flex; 
             justify-content: center; 
-            gap: 15px;
+            flex-wrap: wrap; /* 寬度不夠自動換行 */
+            gap: 10px;
             box-shadow: 0 -4px 15px rgba(0,0,0,0.08); 
             z-index: 1000;
+        }
+        .sticky-footer .btn {
+            flex: 1 1 auto; /* 自動填滿剩餘空間 */
+            text-align: center;
+            white-space: nowrap;
         }
 
         /* 輔助文字顏色 */
@@ -129,6 +140,13 @@
         .text-success { color: #28a745; font-weight: bold; }
         .calc-text { color: #28a745; font-size: 0.9em; margin-top: 5px; font-weight: bold; }
         .calc-text.strong-discount { color: #dc3545; }
+        
+        /* 手機版微調 */
+        @media (max-width: 600px) {
+            .editor-container { padding: 15px; margin: 10px auto; }
+            .modal-content { padding: 20px 15px; }
+            .btn-sm { font-size: 0.85em; padding: 6px 10px; }
+        }
     </style>
 </head>
 <body>
@@ -136,7 +154,7 @@
 <div id="app" v-cloak>
     <div class="editor-container">
         <h1>後台服務資料編輯器</h1>
-        <p class="subtitle">Vue 3 升級版・編輯完成後請點擊下方「匯出 JSON」更新資料</p>
+        <p class="subtitle">自動適應手機排版・支援一鍵延續優惠至下個月</p>
         
         <div v-if="!initialLoadComplete" style="text-align: center; padding: 50px; color: #666;">
             載入中...
@@ -164,11 +182,14 @@
                     <div class="promo-list" v-if="item.promotions && item.promotions.length > 0">
                         <div v-for="(promo, pIndex) in item.promotions" :key="pIndex" class="promo-item">
                             <div class="promo-info">
-                                <b>{{ promo.label }}</b>：優惠價 ${{ promo.price }} 
-                                <span style="color: #888; font-size: 0.9em;">({{ promo.start }} ~ {{ promo.end }})</span>
+                                <b style="color:#0056b3;">{{ promo.label }}</b>：優惠價 <b>${{ promo.price }}</b><br>
+                                <span style="color: #6c757d; font-size: 0.9em; display: inline-block; margin-top: 4px;">
+                                    📅 {{ promo.start }} ~ {{ promo.end }}
+                                </span>
                                 <span class="tag dirty" v-if="isPromoUnsaved(item, promo)">修改過</span>
                             </div>
-                            <div>
+                            <div class="promo-actions">
+                                <button class="btn btn-sm btn-success" @click="extendPromotion(item, pIndex)" title="複製相同設定並套用至下個月">⏭️ 延續</button>
                                 <button class="btn btn-sm btn-secondary" @click="openModal(item, pIndex, false)">編輯</button>
                                 <button class="btn btn-sm btn-danger" @click="removePromotion(item, pIndex)">刪除</button>
                             </div>
@@ -190,9 +211,9 @@
                             </div>
                         </div>
                         <div class="item-actions">
-                            <button class="btn btn-sm btn-secondary" @click="openComboModal(comboIndex)">修改組合內容</button>
+                            <button class="btn btn-sm btn-secondary" @click="openComboModal(comboIndex)">修改內容</button>
                             <button class="btn btn-sm btn-primary" @click="openModal(combo, -1, true)">+ 新增優惠</button>
-                            <button class="btn btn-sm btn-danger" @click="deleteCombo(comboIndex)">刪除組合</button>
+                            <button class="btn btn-sm btn-danger" @click="deleteCombo(comboIndex)">刪除</button>
                         </div>
                     </div>
                     
@@ -200,11 +221,14 @@
                     <div class="promo-list" v-if="combo.promotions && combo.promotions.length > 0">
                         <div v-for="(promo, pIndex) in combo.promotions" :key="pIndex" class="promo-item">
                             <div class="promo-info">
-                                <b>{{ promo.label }}</b>：優惠價 ${{ promo.price }} 
-                                <span style="color: #888; font-size: 0.9em;">({{ promo.start }} ~ {{ promo.end }})</span>
+                                <b style="color:#0056b3;">{{ promo.label }}</b>：優惠價 <b>${{ promo.price }}</b><br>
+                                <span style="color: #6c757d; font-size: 0.9em; display: inline-block; margin-top: 4px;">
+                                    📅 {{ promo.start }} ~ {{ promo.end }}
+                                </span>
                                 <span class="tag dirty" v-if="isPromoUnsaved(combo, promo)">修改過</span>
                             </div>
-                            <div>
+                            <div class="promo-actions">
+                                <button class="btn btn-sm btn-success" @click="extendPromotion(combo, pIndex)" title="複製相同設定並套用至下個月">⏭️ 延續</button>
                                 <button class="btn btn-sm btn-secondary" @click="openModal(combo, pIndex, true)">編輯</button>
                                 <button class="btn btn-sm btn-danger" @click="removePromotion(combo, pIndex)">刪除</button>
                             </div>
@@ -220,10 +244,10 @@
     
     <!-- ================= 底部浮動操作列 ================= -->
     <div class="sticky-footer" v-if="initialLoadComplete">
-        <button class="btn btn-secondary" @click="discardAndReload" v-if="isDirty">🔄 放棄未儲存變更</button>
-        <button class="btn btn-success" @click="openComboModal(-1)">➕ 新增全新組合</button>
+        <button class="btn btn-secondary" @click="discardAndReload" v-if="isDirty">🔄 放棄變更</button>
+        <button class="btn btn-success" @click="openComboModal(-1)">➕ 新增組合</button>
         <button class="btn btn-primary" @click="openChangesModal" :disabled="!isDirty">
-            📤 檢視並匯出 JSON <span v-if="isDirty" class="tag dirty" style="margin-left: 5px;">有修改</span>
+            📤 檢視與匯出 JSON <span v-if="isDirty" class="tag dirty" style="margin-left: 5px;">有修改</span>
         </button>
     </div>
 
@@ -252,7 +276,7 @@
                 <input type="date" class="form-control" v-model="currentPromotion.end">
             </div>
             
-            <div style="margin-bottom: 15px; display: flex; gap: 10px;">
+            <div style="margin-bottom: 15px; display: flex; flex-wrap: wrap; gap: 10px;">
                 <button class="btn btn-sm btn-secondary" @click="setThisMonth">自動填入本月</button>
                 <button class="btn btn-sm btn-secondary" @click="setNextMonth">自動填入下月</button>
             </div>
@@ -296,9 +320,9 @@
     <div class="modal-overlay" v-if="isChangesModalVisible" @click.self="isChangesModalVisible = false">
         <div class="modal-content wide">
             <div class="modal-header">變更確認與匯出</div>
-            <p style="color: #666; margin-bottom: 15px;">以下是您本次修改的內容。請確認無誤後，點擊「複製 JSON」並將代碼交由管理員更新至伺服器。</p>
+            <p style="color: #666; margin-bottom: 15px; font-size: 0.95em;">以下是您本次修改的內容。確認無誤後，請點擊「複製 JSON」並交由管理員更新至伺服器。</p>
             
-            <ul style="line-height: 1.8; margin-bottom: 20px; background: #f8f9fa; padding: 15px 30px; border-radius: 8px; max-height: 40vh; overflow-y: auto;">
+            <ul style="line-height: 1.8; margin-bottom: 20px; background: #f8f9fa; padding: 15px 30px; border-radius: 8px; max-height: 40vh; overflow-y: auto; font-size: 0.9em;">
                 <li v-for="(change, idx) in changesList" :key="idx" v-html="change"></li>
             </ul>
             
@@ -466,14 +490,14 @@
                     if (!originalPromo) {
                         let detail = `為 '<b>${parentName}</b>' 新增優惠 '<b>${currentPromo.label}</b>' (價格: ${currentPromo.price}, 期間: ${currentPromo.start} ~ ${currentPromo.end})`;
                         if (originalParentPrice > 0 && (currentPromo.price / originalParentPrice) < 0.8) {
-                            detail += ` <span style="color:red; font-weight:bold;">【注意】此促銷低於八折優惠！</span>`;
+                            detail += ` <span style="color:red; font-weight:bold;">【注意】低於八折！</span>`;
                         }
                         return detail;
                     }
                     let promoChanges = [];
                     if (currentPromo.price !== originalPromo.price) promoChanges.push(`價格: ${originalPromo.price} -> <b>${currentPromo.price}</b>`);
-                    if (currentPromo.start !== originalPromo.start) promoChanges.push(`開始日期: ${originalPromo.start} -> <b>${currentPromo.start}</b>`);
-                    if (currentPromo.end !== originalPromo.end) promoChanges.push(`結束日期: ${originalPromo.end} -> <b>${currentPromo.end}</b>`);
+                    if (currentPromo.start !== originalPromo.start) promoChanges.push(`開始: ${originalPromo.start} -> <b>${currentPromo.start}</b>`);
+                    if (currentPromo.end !== originalPromo.end) promoChanges.push(`結束: ${originalPromo.end} -> <b>${currentPromo.end}</b>`);
                     if (promoChanges.length > 0) return `修改了 '<b>${parentName}</b>' 的優惠 '<b>${currentPromo.label}</b>' (${promoChanges.join(', ')})`;
                     return null;
                 };
@@ -590,6 +614,43 @@
                 this.currentItem = null;
                 this.promoCalculationText = '';
             },
+            
+            // --- 全新：延續優惠至下個月 ---
+            extendPromotion: function(parent, promoIndex) {
+                const oldPromo = parent.promotions[promoIndex];
+                
+                // 計算下個月的日期
+                let oldStartDate = new Date(oldPromo.start);
+                if (isNaN(oldStartDate.getTime())) oldStartDate = new Date(); // 防呆
+                
+                // 下個月的第一天與最後一天
+                let nextStart = new Date(oldStartDate.getFullYear(), oldStartDate.getMonth() + 1, 1);
+                let nextEnd = new Date(oldStartDate.getFullYear(), oldStartDate.getMonth() + 2, 0);
+
+                // 智慧標籤替換：嘗試找出「X月」，自動加 1 (例如：3月優惠 -> 4月優惠)
+                let newLabel = oldPromo.label;
+                let monthMatch = newLabel.match(/(\d+)月/);
+                if (monthMatch) {
+                    let oldMonth = parseInt(monthMatch[1]);
+                    let newMonth = oldMonth === 12 ? 1 : oldMonth + 1; // 如果是12月就回到1月
+                    newLabel = newLabel.replace(/\d+月/, `${newMonth}月`);
+                } else {
+                    newLabel += ' (延續)';
+                }
+
+                // 建立新優惠物件
+                const newPromo = {
+                    label: newLabel,
+                    price: oldPromo.price,
+                    start: this.formatDate(nextStart),
+                    end: this.formatDate(nextEnd)
+                };
+                
+                // 寫入並提示
+                parent.promotions.push(newPromo);
+                this.showToast(`✅ 已成功產生「${newLabel}」！`);
+            },
+
             setThisMonth: function() {
                 const now = new Date();
                 const year = now.getFullYear();
@@ -679,7 +740,7 @@
              showToast: function(message) {
                 var toast = document.createElement('div');
                 toast.textContent = message;
-                toast.style.cssText = 'position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%); background-color: rgba(0,0,0,0.8); color: #fff; padding: 12px 24px; border-radius: 30px; z-index: 3000; box-shadow: 0 4px 12px rgba(0,0,0,0.2); font-weight: bold; font-size: 15px;';
+                toast.style.cssText = 'position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%); background-color: rgba(0,0,0,0.8); color: #fff; padding: 12px 24px; border-radius: 30px; z-index: 3000; box-shadow: 0 4px 12px rgba(0,0,0,0.2); font-weight: bold; font-size: 15px; text-align: center; width: max-content; max-width: 90vw;';
                 document.body.appendChild(toast);
                 setTimeout(function() { 
                     toast.style.opacity = '0';
