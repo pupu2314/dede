@@ -4,11 +4,14 @@
 let serviceData = null;
 let allServices = new Map();
 let selectedItems = new Set();
-let currentIdentity = 'general'; // 新增：追蹤客戶身分狀態
+let currentIdentity = 'general'; // 追蹤客戶身分狀態
 const DOM = {};
 
+// 新增：本機資料快取 Key
+const DATA_CACHE_KEY = 'dede_services_data_cache';
+
 // ==========================================
-// 1. 初始化與資料載入
+// 1. 初始化與資料載入 (本機優先 + 背景更新策略)
 // ==========================================
 document.addEventListener('DOMContentLoaded', async () => {
     initDOMVariables();
@@ -36,7 +39,7 @@ function initDOMVariables() {
     DOM.serviceList = document.getElementById('service-list');
     DOM.searchInput = document.getElementById('search-input');
     DOM.loadingIndicator = document.getElementById('loading-indicator');
-    DOM.summarySection = document.getElementById('summary-details'); // 修改：對應 index.html 的正確 ID，確保懸浮視窗樣式能套用
+    DOM.summarySection = document.getElementById('summary-details'); 
     
     // 總計區塊
     DOM.originalTotal = document.getElementById('floating-original-total');
@@ -57,25 +60,67 @@ function initDOMVariables() {
 }
 
 async function loadServiceData() {
-    try {
-        // 修改：移除時間戳並改用 no-cache，避免跨域或本機快取強制阻擋造成「載入失敗」
-        const response = await fetch('services.json', { cache: 'no-cache' });
-        if (!response.ok) throw new Error(`伺服器回應錯誤: ${response.status}`);
-        return await response.json();
-    } catch (networkError) {
-        console.warn('網路請求 services.json 失敗:', networkError.message, '嘗試從快取讀取...');
+    let cachedData = null;
+
+    // 1. 本機優先：嘗試從 localStorage 讀取快取
+    const localDataString = localStorage.getItem(DATA_CACHE_KEY);
+    if (localDataString) {
         try {
-            // 修改：不寫死快取版本號，動態尋找可用的快取資料，大幅提高穩定度
-            const cacheKeys = await caches.keys();
-            for (const key of cacheKeys) {
-                const cache = await caches.open(key);
-                const cachedResponse = await cache.match('services.json');
-                if (cachedResponse) return await cachedResponse.json();
+            cachedData = JSON.parse(localDataString);
+            console.log('✅ 已從本機快取秒速載入資料');
+        } catch (e) {
+            console.warn('本機快取解析失敗', e);
+        }
+    }
+
+    // 2. 定義背景更新檢查函式
+    const checkUpdateInBackground = async () => {
+        try {
+            // 加上時間戳強制略過任何中繼快取，直接向伺服器請求最新檔案
+            const response = await fetch(`services.json?t=${new Date().getTime()}`, { cache: 'no-store' });
+            if (response.ok) {
+                const latestData = await response.json();
+                const latestDataString = JSON.stringify(latestData);
+
+                // 如果資料有異動 (與本機不同)
+                if (localDataString !== latestDataString) {
+                    // 延遲一下避免跟初始化的 UI 渲染衝突
+                    setTimeout(() => {
+                        const userAgreed = confirm('📢 系統通知\n\n發現新的服務項目或價格已更新！\n是否立即載入最新版本？\n\n(若選擇取消，您將繼續使用當前版本直到下次開啟)');
+                        if (userAgreed) {
+                            // 儲存新資料並重整頁面
+                            localStorage.setItem(DATA_CACHE_KEY, latestDataString);
+                            window.location.reload(); 
+                        }
+                    }, 800);
+                } else {
+                    console.log('🔄 背景檢查完畢：目前已是最新版本');
+                }
             }
-            throw new Error('所有快取中皆找不到 services.json');
-        } catch (cacheError) {
-            console.error('讀取快取失敗:', cacheError);
-            return null;
+        } catch (error) {
+            console.log('背景檢查更新失敗 (可能處於離線狀態):', error);
+        }
+    };
+
+    // 3. 根據有無快取決定下一步動作
+    if (cachedData) {
+        // 有本機快取 -> 立即回傳渲染畫面，並在背景啟動檢查 (延遲1秒讓主畫面優先畫完)
+        setTimeout(checkUpdateInBackground, 1000);
+        return cachedData;
+    } else {
+        // 沒有本機快取 (初次使用或清除過資料) -> 強制等待網路請求
+        try {
+            console.log('初次使用，正在從網路下載資料...');
+            const response = await fetch(`services.json?t=${new Date().getTime()}`, { cache: 'no-store' });
+            if (!response.ok) throw new Error(`伺服器回應錯誤: ${response.status}`);
+            const data = await response.json();
+            
+            // 存入本機快取供下次秒開使用
+            localStorage.setItem(DATA_CACHE_KEY, JSON.stringify(data));
+            return data;
+        } catch (networkError) {
+            console.error('初次載入資料失敗:', networkError);
+            throw networkError;
         }
     }
 }
@@ -89,8 +134,8 @@ function initializePage() {
         });
     });
 
-    setupFloatingSummary();   // 新增：設定懸浮視窗樣式
-    renderIdentitySelector(); // 新增：渲染客戶身分選項
+    setupFloatingSummary();   
+    renderIdentitySelector(); 
     renderServiceList();
     bindEvents();
     
@@ -99,7 +144,7 @@ function initializePage() {
     updateTotals();
 }
 
-// 新增：設定下方總計區塊為懸浮視窗
+// 設定下方總計區塊為懸浮視窗
 function setupFloatingSummary() {
     if (DOM.summarySection) {
         Object.assign(DOM.summarySection.style, {
@@ -115,15 +160,14 @@ function setupFloatingSummary() {
             boxSizing: 'border-box',
             borderTopLeftRadius: '20px',
             borderTopRightRadius: '20px',
-            maxHeight: '35vh', // 修改：縮小懸浮窗高度至 35vh，避免影響上方操作
+            maxHeight: '35vh',
             overflowY: 'auto'
         });
-        // 在 body 底部預留空間，避免網頁最下方內容被懸浮窗擋住
-        document.body.style.paddingBottom = '40vh'; // 修改：配合高度縮小
+        document.body.style.paddingBottom = '40vh'; 
     }
 }
 
-// 新增：渲染客戶身分選項（壽星、學生折扣）
+// 渲染客戶身分選項
 function renderIdentitySelector() {
     if (!DOM.serviceList) return;
     const container = document.createElement('fieldset');
@@ -141,7 +185,7 @@ function renderIdentitySelector() {
     container.querySelectorAll('input[name="identity"]').forEach(radio => {
         radio.addEventListener('change', (e) => {
             currentIdentity = e.target.value;
-            updateTotals(); // 切換身分時重新計算總價
+            updateTotals(); 
         });
     });
     DOM.serviceList.parentNode.insertBefore(container, DOM.serviceList);
@@ -154,28 +198,25 @@ function renderServiceList(filterText = '') {
     if (!DOM.serviceList) return;
     DOM.serviceList.innerHTML = '';
     
-    // 修改：將輸入文字用逗號(全半形皆可)分割，以支援多個搜尋關鍵字
+    // 多關鍵字搜尋 (逗號分隔)
     const terms = filterText.toLowerCase().split(/[,，]/).map(t => t.trim()).filter(t => t.length > 0);
 
     serviceData.categories.forEach(category => {
-        // 過濾該分類下的項目
         const filteredItems = category.items.filter(item => {
             if (terms.length === 0) return true;
-            // 若「任一」關鍵字符合名稱或標籤，即保留該項目
             return terms.some(term => 
                 item.name.toLowerCase().includes(term) || 
                 (item.tags && item.tags.some(tag => tag.toLowerCase().includes(term)))
             );
         });
 
-        if (filteredItems.length === 0) return; // 如果這個分類沒有符合的項目，就不渲染分類
+        if (filteredItems.length === 0) return; 
 
         const fieldset = document.createElement('fieldset');
         const legend = document.createElement('legend');
         legend.textContent = category.name;
         fieldset.appendChild(legend);
 
-        // 加入全選/取消全選按鈕區塊
         const actionDiv = document.createElement('div');
         actionDiv.style.marginBottom = '10px';
         actionDiv.style.display = 'flex';
@@ -204,7 +245,6 @@ function renderServiceList(filterText = '') {
         actionDiv.appendChild(deselectAllBtn);
         fieldset.appendChild(actionDiv);
 
-        // 渲染項目
         filteredItems.forEach(item => {
             const div = document.createElement('div');
             div.className = 'service-item';
@@ -231,7 +271,6 @@ function renderServiceList(filterText = '') {
             const priceSpan = document.createElement('span');
             priceSpan.className = 'item-price-detail';
             
-            // 檢查是否有生效的促銷
             const activePromo = getActivePromotion(item.promotions);
             if (activePromo) {
                 priceSpan.innerHTML = `<span style="text-decoration: line-through; color: #999; margin-right: 5px;">$${item.price}</span> <span style="color: var(--danger-color);">$${activePromo.price}</span> <span class="discount-note">${activePromo.label}</span>`;
@@ -263,7 +302,6 @@ function bindEvents() {
     if (DOM.shareLinkBtn) DOM.shareLinkBtn.addEventListener('click', generateShareableLink);
     if (DOM.screenshotBtn) DOM.screenshotBtn.addEventListener('click', exportAsPNG);
     
-    // 監聽來自 Service Worker 的訊息
     if ('serviceWorker' in navigator) {
         navigator.serviceWorker.addEventListener('message', event => {
             if (event.data && event.data.type === 'SW_STATUS') {
@@ -282,7 +320,7 @@ function getActivePromotion(promotions) {
     for (const promo of promotions) {
         const start = new Date(promo.start);
         const end = new Date(promo.end);
-        end.setHours(23, 59, 59, 999); // 確保包含結束日期的整天
+        end.setHours(23, 59, 59, 999); 
         if (now >= start && now <= end) {
             return promo;
         }
@@ -297,25 +335,21 @@ function updateTotals() {
     let finalTotal = 0;
     let detailsHtml = '';
     
-    // 複製一份選中的項目，用來處理組合套餐的貪婪扣除
     let remainingItems = new Set(selectedItems);
 
-    // 1. 檢查組合優惠 (有符合的就套用)
     if (serviceData.combos && Array.isArray(serviceData.combos)) {
         serviceData.combos.forEach(combo => {
-            // 檢查組合包的促銷日期
             const activeComboPromo = getActivePromotion([combo]); 
             const hasValidDate = (!combo.start && !combo.end) || activeComboPromo !== null;
 
             if (hasValidDate) {
-                // 檢查是否選中了該組合要求的所有項目
                 const isMatch = combo.items.every(id => remainingItems.has(id));
                 if (isMatch) {
                     let comboOriginalPrice = 0;
                     combo.items.forEach(id => {
                         const item = allServices.get(id);
                         if(item) comboOriginalPrice += item.price;
-                        remainingItems.delete(id); // 從剩餘單品清單中移除
+                        remainingItems.delete(id); 
                     });
                     
                     originalTotal += comboOriginalPrice;
@@ -332,7 +366,6 @@ function updateTotals() {
         });
     }
 
-    // 2. 計算剩餘單品的價格 (包含單品促銷)
     remainingItems.forEach(id => {
         const item = allServices.get(id);
         if (!item) return;
@@ -357,7 +390,6 @@ function updateTotals() {
         `;
     });
 
-    // 新增：插入客戶身分折扣邏輯
     if (currentIdentity !== 'general' && selectedItems.size > 0) {
         let identityDiscountPrice = originalTotal;
         let identityLabel = '';
@@ -370,7 +402,6 @@ function updateTotals() {
             identityLabel = '🎓 學生 (原價 8 折)';
         }
 
-        // 比較「原價打折」與「現有促銷/組合總價」，取最便宜的價格給客人
         if (identityDiscountPrice < finalTotal) {
             finalTotal = identityDiscountPrice;
             detailsHtml += `
@@ -386,14 +417,12 @@ function updateTotals() {
         }
     }
 
-    // 3. 更新 UI
     if (selectedItems.size === 0) {
         detailsHtml = '<li><span class="item-name" style="color: var(--text-muted);">尚未選擇任何服務</span></li>';
     }
 
     DOM.selectedItemsList.innerHTML = detailsHtml;
     
-    // 修改：加入所有標籤的防呆檢查 (if)，避免網頁缺少標籤時導致系統當機報錯
     if (DOM.discountedTotal) DOM.discountedTotal.textContent = finalTotal.toLocaleString();
     if (DOM.originalTotal) DOM.originalTotal.textContent = originalTotal.toLocaleString();
 
@@ -407,7 +436,6 @@ function updateTotals() {
         if (DOM.savingsContainer) DOM.savingsContainer.style.display = 'none';
     }
 
-    // 簡單點數計算邏輯：每消費 100 元獲得 1 點
     const points = Math.floor(finalTotal / 100);
     if (points > 0 && DOM.pointsContainer) {
         DOM.pointsContainer.style.display = 'block';
@@ -460,9 +488,9 @@ function clearSelections() {
         updateTotals();
         showNotice('🗑️ 已清除所有選項');
         
-        // 移除網址中的分享參數
         const url = new URL(window.location);
         url.searchParams.delete('items');
+        url.searchParams.delete('identity');
         window.history.replaceState({}, '', url);
     }
 }
@@ -473,12 +501,11 @@ function generateShareableLink() {
         return;
     }
     const ids = Array.from(selectedItems).join(',');
-    const encoded = btoa(ids); // 使用 Base64 編碼隱藏明文 ID
+    const encoded = btoa(ids); 
     const url = new URL(window.location);
     url.searchParams.set('items', encoded);
-    url.searchParams.set('identity', currentIdentity); // 新增：將客戶身分一起加進網址
+    url.searchParams.set('identity', currentIdentity); 
 
-    // 嘗試複製到剪貼簿
     if (navigator.clipboard && window.isSecureContext) {
         navigator.clipboard.writeText(url.toString()).then(() => {
             showNotice('🔗 分享連結已複製到剪貼簿！');
@@ -505,9 +532,8 @@ function copyFallback(text) {
 function loadFromUrl() {
     const urlParams = new URLSearchParams(window.location.search);
     const encodedItems = urlParams.get('items');
-    const identity = urlParams.get('identity'); // 新增：讀取客戶身分
+    const identity = urlParams.get('identity'); 
 
-    // 新增：恢復客戶身分設定與畫面選取
     if (identity && ['general', 'birthday', 'student'].includes(identity)) {
         currentIdentity = identity;
         const radio = document.querySelector(`input[name="identity"][value="${identity}"]`);
@@ -529,7 +555,6 @@ function loadFromUrl() {
 }
 
 function exportAsPNG() {
-    // 新增：未選擇項目防呆阻擋機制
     if (selectedItems.size === 0) {
         showNotice('⚠️ 尚未選擇任何服務，無法截圖');
         return;
@@ -550,9 +575,8 @@ function exportAsPNG() {
     btn.textContent = '處理中...';
     btn.disabled = true;
 
-    // 使用 html2canvas 產生圖片
     html2canvas(captureArea, {
-        scale: 2, // 提高解析度使文字更清晰
+        scale: 2, 
         backgroundColor: '#f4f4f9',
         useCORS: true
     }).then(canvas => {
@@ -574,7 +598,6 @@ function exportAsPNG() {
 // 5. UI 通知系統
 // ==========================================
 function showNotice(msg) {
-    // 優先使用 index.html 與 dede.css 中定義的 toast-notification
     let toast = document.getElementById('toast-notification');
     
     if (toast) {
@@ -582,7 +605,6 @@ function showNotice(msg) {
         toast.style.opacity = '1';
         toast.style.transform = 'translate(-50%, -20px)';
         
-        // 重置動畫計時器
         if(toast.timeoutId) clearTimeout(toast.timeoutId);
         
         toast.timeoutId = setTimeout(() => {
@@ -592,7 +614,6 @@ function showNotice(msg) {
         return;
     }
 
-    // Fallback: 如果沒有 toast，則動態建立一個 sw-notice
     let noticeDiv = document.getElementById('sw-notice');
     if (noticeDiv) noticeDiv.remove();
 
