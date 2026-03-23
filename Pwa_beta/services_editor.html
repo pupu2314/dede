@@ -4,262 +4,317 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>服務資料編輯器</title>
+    <!-- 引入共用的按鈕與基礎樣式 -->
     <link rel="stylesheet" href="dede.css">
-    <script src="https://unpkg.com/vue@3"></script>
-
-</head>
-<body>
-<style>
+    
+    <style>
+        /* 隱藏 Vue 尚未載入時的原始模板 */
+        [v-cloak] { display: none; }
+        
         /* =========================================
            編輯器專屬基礎佈局
         ========================================= */
-        :root { --toast-height: 50px; }
-        body { padding-bottom: 120px; background-color: #f8f9fa; }
-        .container { max-width: 1000px; background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); margin-top: 20px; }
-        h1, h2 { text-align: center; color: #0056b3; }
-        h3 { font-size: 1.2em; font-weight: bold; color: #333; margin-top: 1.5rem; margin-bottom: 1rem; border-bottom: 2px solid #e9ecef; padding-bottom: 0.5rem; }
-        
-        /* =========================================
-           列表與標籤樣式
-        ========================================= */
-        .item-row { display: flex; align-items: center; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid #eee; }
-        .item-info { flex-grow: 1; }
-        .item-actions { white-space: nowrap; margin-left: 15px; }
-        .price { font-weight: bold; color: #d9534f; }
-        
-        .tag { display: inline-block; background-color: #ffc107; color: #000; padding: 3px 8px; border-radius: 12px; font-size: 0.8em; margin-left: 8px; font-weight: bold; }
-        .tag.combo { background-color: #17a2b8; color: #fff; }
-        .tag.dirty { background-color: #dc3545; color: #fff; }
-        
-        .promo-list { margin-top: 8px; font-size: 0.9em; color: #555; }
-        .promo-item { background: #f8f9fa; border: 1px dashed #ccc; padding: 8px 12px; margin-bottom: 5px; border-radius: 6px; display: flex; justify-content: space-between; align-items: center; }
+        body { 
+            background-color: #f4f6f9; 
+            padding-bottom: 120px; /* 留給底部浮動列的空間 */
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        }
+        .editor-container { 
+            max-width: 900px; 
+            margin: 20px auto; 
+            background: #fff; 
+            padding: 30px; 
+            border-radius: 12px; 
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05); 
+        }
+        h1 { text-align: center; color: #0056b3; margin-bottom: 5px; }
+        .subtitle { text-align: center; color: #6c757d; font-size: 0.9em; margin-bottom: 30px; }
+        .section-title { 
+            font-size: 1.4em; 
+            border-bottom: 2px solid #007bff; 
+            padding-bottom: 8px; 
+            margin-top: 40px; 
+            margin-bottom: 20px;
+            color: #333; 
+        }
+        .category-title { 
+            font-size: 1.2em; 
+            background: #e9ecef; 
+            padding: 10px 15px; 
+            border-radius: 6px; 
+            margin-top: 20px; 
+            font-weight: bold;
+            color: #495057;
+        }
 
         /* =========================================
-           彈出視窗 (Modal) 核心樣式 - 修復重點！
+           列表與卡片樣式
         ========================================= */
-        .modal {
-            display: flex; /* 使用 flex 置中 */
+        .item-card { 
+            border: 1px solid #e2e8f0; 
+            padding: 15px; 
+            border-radius: 8px; 
+            margin-top: 10px; 
+            transition: box-shadow 0.2s; 
+        }
+        .item-card:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
+        .item-header { display: flex; justify-content: space-between; align-items: center; }
+        .item-info { flex-grow: 1; }
+        .item-name { font-weight: bold; font-size: 1.1em; color: #212529; }
+        .item-price { color: #d9534f; font-weight: bold; font-size: 1.1em; margin-right: 15px; }
+        .item-actions { display: flex; align-items: center; gap: 8px; }
+
+        .tag { font-size: 0.75em; padding: 3px 8px; border-radius: 12px; margin-left: 8px; font-weight: bold; }
+        .tag.dirty { background: #dc3545; color: white; }
+
+        .promo-list { background: #f8f9fa; border: 1px dashed #cbd5e1; padding: 10px; border-radius: 6px; margin-top: 12px; }
+        .promo-item { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid #e2e8f0; }
+        .promo-item:last-child { border-bottom: none; }
+        .promo-info { font-size: 0.9em; color: #495057; }
+        
+        /* =========================================
+           彈出視窗 (Modal) - 置中與遮罩
+        ========================================= */
+        .modal-overlay {
+            position: fixed; 
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0, 0, 0, 0.6); 
+            backdrop-filter: blur(3px);
+            display: flex; 
+            justify-content: center; 
             align-items: center;
-            justify-content: center;
-            position: fixed;
-            z-index: 1050;
-            left: 0;
-            top: 0;
-            width: 100%;
-            height: 100%;
-            background-color: rgba(0,0,0,0.6); /* 半透明黑底 */
-            backdrop-filter: blur(2px); /* 背景微模糊 */
+            z-index: 2000;
         }
         .modal-content {
-            background-color: #fff;
-            padding: 25px;
-            width: 90%;
+            background: #fff; 
+            padding: 25px 30px; 
+            border-radius: 12px; 
+            width: 90%; 
             max-width: 500px;
-            border-radius: 10px;
-            box-shadow: 0 5px 20px rgba(0,0,0,0.3);
-            position: relative;
-            max-height: 90vh;
-            overflow-y: auto; /* 內容過長時可滾動 */
+            max-height: 85vh; 
+            overflow-y: auto; 
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
         }
-        /* 變更清單的 Modal 稍微寬一點 */
         .modal-content.wide { max-width: 700px; }
-
-        .close {
-            color: #aaa;
-            position: absolute;
-            top: 15px;
-            right: 20px;
-            font-size: 28px;
-            font-weight: bold;
-            cursor: pointer;
-            transition: color 0.2s;
-        }
-        .close:hover { color: #333; }
-
-        /* =========================================
-           彈出視窗內的表單元素
-        ========================================= */
-        .form-group { margin-bottom: 15px; text-align: left; }
+        .modal-header { font-size: 1.3em; font-weight: bold; margin-bottom: 20px; color: #0056b3; border-bottom: 2px solid #f1f5f9; padding-bottom: 10px; }
+        
+        .form-group { margin-bottom: 15px; }
         .form-group label { display: block; margin-bottom: 5px; font-weight: bold; color: #495057; }
-        .form-group input[type="text"], 
-        .form-group input[type="number"], 
-        .form-group input[type="date"],
-        .form-group select { 
-            width: 100%; 
-            padding: 10px; 
-            border: 1px solid #ced4da; 
-            border-radius: 6px; 
-            box-sizing: border-box; 
-            font-size: 1rem;
-        }
-        .form-group input:focus { outline: none; border-color: #80bdff; box-shadow: 0 0 0 0.2rem rgba(0,123,255,.25); }
-        .modal-footer { margin-top: 25px; text-align: right; border-top: 1px solid #eee; padding-top: 15px; }
-        .error-msg { color: #dc3545; font-size: 0.9em; margin-top: 10px; font-weight: bold; }
-        .calc-text { color: #28a745; font-size: 0.9em; margin-top: 5px; font-weight: bold; }
-        .calc-text.strong-discount { color: #dc3545; }
-
+        .form-control { width: 100%; padding: 10px; border: 1px solid #ced4da; border-radius: 6px; box-sizing: border-box; font-size: 1em; }
+        .form-control:focus { outline: none; border-color: #80bdff; box-shadow: 0 0 0 3px rgba(0,123,255,0.25); }
+        
+        .checkbox-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px; margin-top: 10px; }
+        .checkbox-item { display: flex; align-items: center; gap: 8px; font-size: 0.95em; cursor: pointer; }
+        
+        .modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 25px; padding-top: 15px; border-top: 1px solid #f1f5f9; }
+        
         /* =========================================
            底部浮動操作列
         ========================================= */
         .sticky-footer {
-            position: fixed;
-            bottom: 0;
-            left: 0;
-            width: 100%;
-            background-color: #fff;
-            border-top: 1px solid #ddd;
-            padding: 15px;
-            box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
-            z-index: 100;
-            display: flex;
-            justify-content: center;
+            position: fixed; 
+            bottom: 0; left: 0; width: 100%;
+            background: rgba(255, 255, 255, 0.95); 
+            backdrop-filter: blur(5px);
+            padding: 15px; 
+            display: flex; 
+            justify-content: center; 
             gap: 15px;
+            box-shadow: 0 -4px 15px rgba(0,0,0,0.08); 
+            z-index: 1000;
         }
+
+        /* 輔助文字顏色 */
+        .text-danger { color: #dc3545; font-weight: bold; }
+        .text-success { color: #28a745; font-weight: bold; }
+        .calc-text { color: #28a745; font-size: 0.9em; margin-top: 5px; font-weight: bold; }
+        .calc-text.strong-discount { color: #dc3545; }
     </style>
-<div id="app" class="container">
-    <h1>服務資料編輯器</h1>
+</head>
+<body>
 
-    <div class="detailed-edit-toggle">
-        <label><input type="checkbox" v-model="detailedEditEnabled"> <strong>啟用服務項目詳細編輯 (ID、名稱、價格)</strong></label>
-    </div>
+<div id="app" v-cloak>
+    <div class="editor-container">
+        <h1>後台服務資料編輯器</h1>
+        <p class="subtitle">Vue 3 升級版・編輯完成後請點擊下方「匯出 JSON」更新資料</p>
+        
+        <div v-if="!initialLoadComplete" style="text-align: center; padding: 50px; color: #666;">
+            載入中...
+        </div>
 
-    <!-- 服務項目編輯區塊 -->
-    <div v-for="(category, ci) in data.categories" :key="'cat-table-'+ci">
-        <h3>{{ category.name }}</h3>
-        <table class="table-view">
-            <thead>
-                <tr>
-                    <th v-if="detailedEditEnabled">ID</th>
-                    <th>項目名稱</th>
-                    <th style="width: 15%;">原價</th>
-                    <th>優惠活動</th>
-                    <th style="width: 15%;">操作</th>
-                </tr>
-            </thead>
-            <tbody>
-                <tr v-for="(item, ii) in category.items" :key="item.id">
-                    <td v-if="detailedEditEnabled"><input type="text" v-model="item.id" class="detailed-edit-input"></td>
-                    <td>
-                        <input v-if="detailedEditEnabled" type="text" v-model="item.name" class="detailed-edit-input">
-                        <span v-else>{{ item.name }}</span>
-                        <span v-if="isItemUnsaved(item)" class="unsaved-badge">未儲存</span>
-                    </td>
-                    <td style="text-align: right;"><input v-if="detailedEditEnabled" type="number" v-model.number="item.price" class="detailed-edit-input"><span v-else>{{ item.price.toLocaleString() }}</span></td>
-                    <td>
-                        <div v-if="!item.promotions || item.promotions.length === 0" style="color: #6c757d;">無</div>
-                        <div v-for="(promo, pi) in item.promotions" class="promo-item" :key="'promo-'+ii+'-'+pi">
-                           <div>
-                               <strong>{{ promo.label }}</strong>: ${{ promo.price.toLocaleString() }}
-                               <span v-if="isPromoUnsaved(item, promo)" class="unsaved-badge">未儲存</span>
-                               <br><small>{{ promo.start }} ~ {{ promo.end }}</small>
-                           </div>
-                           <div class="actions-group"><button @click="openModal(item, pi)" class="btn btn-secondary btn-sm">編輯</button><button @click="removePromotion(item, pi)" class="btn btn-danger btn-sm">刪除</button></div>
+        <div v-if="initialLoadComplete && data">
+            <!-- ================= 單一服務項目管理 ================= -->
+            <h2 class="section-title">服務項目管理</h2>
+            <div v-for="(category, cIndex) in data.categories" :key="cIndex">
+                <div class="category-title">{{ category.name }}</div>
+                
+                <div v-for="(item, iIndex) in category.items" :key="item.id" class="item-card">
+                    <div class="item-header">
+                        <div class="item-info">
+                            <span class="item-name">{{ item.name }}</span>
+                            <span class="tag dirty" v-if="isItemUnsaved(item)">已修改</span>
                         </div>
-                    </td>
-                    <td><button @click="openModal(item, -1)" class="btn btn-sm">新增優惠</button><button v-if="detailedEditEnabled" @click="deleteItem(category, ii)" class="btn btn-danger btn-sm">刪除項目</button></td>
-                </tr>
-            </tbody>
-        </table>
-        <div class="original-view">
-            <div v-for="(item, ii) in category.items" class="item" :key="'item-orig-'+ii">
-                 <div class="item-header" v-if="!detailedEditEnabled">
-                    {{ item.name }} (原價: {{ item.price }})
-                    <span v-if="isItemUnsaved(item)" class="unsaved-badge">未儲存</span>
-                </div>
-                <div v-else>
-                    <div class="detailed-edit-group"><label>ID</label><input type="text" v-model="item.id" class="detailed-edit-input"></div>
-                    <div class="detailed-edit-group"><label>名稱</label><input type="text" v-model="item.name" class="detailed-edit-input"></div>
-                    <div class="detailed-edit-group"><label>價格</label><input type="number" v-model.number="item.price" class="detailed-edit-input"></div>
-                     <span v-if="isItemUnsaved(item)" class="unsaved-badge">未儲存</span>
-                </div>
-
-                <div v-for="(promo, pi) in item.promotions" class="promo-item" :key="'promo-orig-'+ii+'-'+pi">
-                     <div>
-                         <strong>{{ promo.label }}</strong>: ${{ promo.price }}
-                         <span v-if="isPromoUnsaved(item, promo)" class="unsaved-badge">未儲存</span>
-                         <br><small>{{ promo.start }} ~ {{ promo.end }}</small>
-                     </div>
-                     <div class="actions-group"><button @click="openModal(item, pi)" class="btn btn-secondary btn-sm">編輯</button><button @click="removePromotion(item, pi)" class="btn btn-danger btn-sm">刪除</button></div>
-                </div>
-                <button @click="openModal(item, -1)" class="btn btn-sm">新增優惠</button>
-                <button v-if="detailedEditEnabled" @click="deleteItem(category, ii)" class="btn btn-danger btn-sm">刪除項目</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- 組合優惠編輯區塊 -->
-    <h2>組合優惠編輯</h2>
-    <div v-if="!data.combos || data.combos.length === 0" style="color: #6c757d; text-align: center; padding: 20px;">目前沒有組合優惠</div>
-    <div v-for="(combo, cbi) in data.combos" :key="'combo-'+cbi" class="combo-item-display">
-        <div>
-            <strong>{{ combo.name }}</strong>
-            <span v-if="isComboUnsaved(combo)" class="unsaved-badge">未儲存</span>
-            <br><small>({{ combo.itemIds.length }}個項目, 原價: {{ calculateComboOriginalPrice(combo).toLocaleString() }})</small>
-        </div>
-        <div class="actions-group"><button @click="openComboModal(cbi)" class="btn btn-secondary btn-sm">編輯</button><button @click="deleteCombo(cbi)" class="btn btn-danger btn-sm">刪除</button></div>
-    </div>
-    <button @click="openComboModal(-1)" class="btn">新增組合優惠</button>
-    
-
-    <!-- 單項/組合 優惠編輯 Modal -->
-    <div v-if="isModalVisible" class="modal-overlay" :class="{ 'top-level': isEditingComboPromo }">
-         <div class="modal-content">
-            <div class="modal-header"><h4>{{ modalTitle }}</h4><button @click="closeModal" style="background:none; border:none; font-size: 1.5rem; cursor:pointer;">&times;</button></div>
-            <div class="modal-body">
-                <p><strong>項目:</strong> {{ currentItem.name }} (原價: {{ (currentItem.price || calculateComboOriginalPrice(currentItem)).toLocaleString() }})</p>
-                <div class="form-group"><label>活動標籤</label><input type="text" v-model="currentPromotion.label" placeholder="例如：新優惠"></div>
-                <div class="form-group"><label>優惠價</label><input type="number" v-model.number="currentPromotion.price" @input="calculateDiscount"><div v-if="promoCalculationText" :class="['promo-calculation', { 'strong-discount': isStrongDiscount }]">{{ promoCalculationText }}</div></div>
-                <div class="form-group"><label>開始/結束日期</label><div style="display: flex; gap: 10px;"><input type="date" v-model="currentPromotion.start" style="flex: 1;"><input type="date" v-model="currentPromotion.end" style="flex: 1;"></div><div style="display: flex; gap: 10px; margin-top: 10px;"><button @click="setThisMonth" class="btn btn-sm btn-secondary">設為本月</button><button @click="setNextMonth" class="btn btn-sm btn-secondary">設為次月</button></div></div>
-                <p v-if="modalError" class="modal-error">{{ modalError }}</p>
-            </div>
-            <div class="modal-footer"><button @click="closeModal" class="btn btn-secondary">取消</button><button @click="savePromotion" class="btn">儲存</button></div>
-        </div>
-    </div>
-    <!-- 組合優惠主體編輯 Modal -->
-    <div v-if="isComboModalVisible" class="modal-overlay">
-        <div class="modal-content">
-            <div class="modal-header"><h4>編輯組合優惠</h4><button @click="closeComboModal" style="background:none; border:none; font-size: 1.5rem; cursor:pointer;">&times;</button></div>
-            <div class="modal-body">
-                <div class="form-group">
-                    <label>組合名稱</label>
-                    <input type="text" v-model="currentCombo.name">
-                    <small v-if="suggestedComboName" style="display: block; margin-top: 5px; color: #6c757d;">建議名稱: {{ suggestedComboName }}</small>
-                </div>
-                <div class="form-group"><label>包含的服務項目 (原價合計: {{ calculateComboOriginalPrice(currentCombo).toLocaleString() }})</label><select multiple v-model="currentCombo.itemIds"><option v-for="item in allItems" :value="item.id">{{ item.name }}</option></select></div>
-                <hr>
-                <label style="font-weight: bold;">組合專屬優惠</label>
-                <div v-if="!currentCombo.promotions || currentCombo.promotions.length === 0" style="color: #6c757d; margin-top: 10px;">無</div>
-                <div v-for="(promo, pi) in currentCombo.promotions" class="promo-item" :key="'combo-promo-'+pi">
-                    <div>
-                        <strong>{{ promo.label }}</strong>: ${{ promo.price.toLocaleString() }}
-                        <span v-if="isPromoUnsaved(currentCombo, promo)" class="unsaved-badge">未儲存</span>
-                        <br><small>{{ promo.start }} ~ {{ promo.end }}</small>
+                        <div class="item-actions">
+                            <span class="item-price">${{ item.price }}</span>
+                            <button class="btn btn-sm btn-primary" @click="openModal(item, -1, false)">+ 新增優惠</button>
+                        </div>
                     </div>
-                    <div class="actions-group"><button @click="openModal(currentCombo, pi, true)" class="btn btn-secondary btn-sm">編輯</button><button @click="removePromotion(currentCombo, pi)" class="btn btn-danger btn-sm">刪除</button></div>
+                    
+                    <!-- 項目優惠清單 -->
+                    <div class="promo-list" v-if="item.promotions && item.promotions.length > 0">
+                        <div v-for="(promo, pIndex) in item.promotions" :key="pIndex" class="promo-item">
+                            <div class="promo-info">
+                                <b>{{ promo.label }}</b>：優惠價 ${{ promo.price }} 
+                                <span style="color: #888; font-size: 0.9em;">({{ promo.start }} ~ {{ promo.end }})</span>
+                                <span class="tag dirty" v-if="isPromoUnsaved(item, promo)">修改過</span>
+                            </div>
+                            <div>
+                                <button class="btn btn-sm btn-secondary" @click="openModal(item, pIndex, false)">編輯</button>
+                                <button class="btn btn-sm btn-danger" @click="removePromotion(item, pIndex)">刪除</button>
+                            </div>
+                        </div>
+                    </div>
                 </div>
-                 <button @click="openModal(currentCombo, -1, true)" class="btn btn-sm" style="margin-top:10px;">新增組合優惠</button>
             </div>
-            <div class="modal-footer"><button @click="closeComboModal" class="btn btn-secondary">關閉</button><button @click="saveCombo" class="btn">儲存組合</button></div>
+            
+            <!-- ================= 組合優惠管理 ================= -->
+            <h2 class="section-title">組合優惠管理</h2>
+            <div v-if="data.combos && data.combos.length > 0">
+                <div v-for="(combo, comboIndex) in data.combos" :key="combo.name" class="item-card">
+                    <div class="item-header">
+                        <div class="item-info">
+                            <span class="item-name">📦 {{ combo.name }}</span>
+                            <span class="tag dirty" v-if="isComboUnsaved(combo)">已修改</span>
+                            <div style="font-size: 0.85em; color: #666; margin-top: 5px;">
+                                包含: {{ combo.itemIds.length }} 項服務 (原價約 ${{ calculateComboOriginalPrice(combo) }})
+                            </div>
+                        </div>
+                        <div class="item-actions">
+                            <button class="btn btn-sm btn-secondary" @click="openComboModal(comboIndex)">修改組合內容</button>
+                            <button class="btn btn-sm btn-primary" @click="openModal(combo, -1, true)">+ 新增優惠</button>
+                            <button class="btn btn-sm btn-danger" @click="deleteCombo(comboIndex)">刪除組合</button>
+                        </div>
+                    </div>
+                    
+                    <!-- 組合優惠清單 -->
+                    <div class="promo-list" v-if="combo.promotions && combo.promotions.length > 0">
+                        <div v-for="(promo, pIndex) in combo.promotions" :key="pIndex" class="promo-item">
+                            <div class="promo-info">
+                                <b>{{ promo.label }}</b>：優惠價 ${{ promo.price }} 
+                                <span style="color: #888; font-size: 0.9em;">({{ promo.start }} ~ {{ promo.end }})</span>
+                                <span class="tag dirty" v-if="isPromoUnsaved(combo, promo)">修改過</span>
+                            </div>
+                            <div>
+                                <button class="btn btn-sm btn-secondary" @click="openModal(combo, pIndex, true)">編輯</button>
+                                <button class="btn btn-sm btn-danger" @click="removePromotion(combo, pIndex)">刪除</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div v-else style="text-align: center; color: #888; padding: 20px; background: #f8f9fa; border-radius: 8px;">
+                尚未建立任何組合優惠，點擊下方「新增組合」開始設定。
+            </div>
         </div>
     </div>
-    <!-- 變更確認 Modal -->
-     <div v-if="isChangesModalVisible" class="modal-overlay top-level">
+    
+    <!-- ================= 底部浮動操作列 ================= -->
+    <div class="sticky-footer" v-if="initialLoadComplete">
+        <button class="btn btn-secondary" @click="discardAndReload" v-if="isDirty">🔄 放棄未儲存變更</button>
+        <button class="btn btn-success" @click="openComboModal(-1)">➕ 新增全新組合</button>
+        <button class="btn btn-primary" @click="openChangesModal" :disabled="!isDirty">
+            📤 檢視並匯出 JSON <span v-if="isDirty" class="tag dirty" style="margin-left: 5px;">有修改</span>
+        </button>
+    </div>
+
+    <!-- ================= 優惠編輯彈出視窗 (Modal) ================= -->
+    <div class="modal-overlay" v-if="isModalVisible" @click.self="closeModal">
         <div class="modal-content">
-            <div class="modal-header"><h4>變更確認</h4><button @click="isChangesModalVisible=false" style="background:none; border:none; font-size: 1.5rem; cursor:pointer;">&times;</button></div>
-            <div class="modal-body"><p>請確認以下變更項目：</p><ul id="changes-list"><li v-for="change in changesList" v-html="change"></li></ul></div>
-            <div class="modal-footer"><button @click="isChangesModalVisible=false" class="btn btn-secondary">關閉視窗</button><button @click="copyJson()" class="btn">複製JSON</button></div>
+            <div class="modal-header">{{ modalTitle }}</div>
+            
+            <div class="form-group">
+                <label>活動標籤 (例如: 3月優惠、母親節專案)</label>
+                <input type="text" class="form-control" v-model="currentPromotion.label" placeholder="輸入活動名稱">
+            </div>
+            <div class="form-group">
+                <label>優惠價格</label>
+                <input type="number" class="form-control" v-model.number="currentPromotion.price" @input="calculateDiscount" placeholder="輸入折扣後的金額">
+                <div v-if="promoCalculationText" class="calc-text" :class="{'strong-discount': isStrongDiscount}">
+                    {{ promoCalculationText }}
+                </div>
+            </div>
+            <div class="form-group">
+                <label>開始日期</label>
+                <input type="date" class="form-control" v-model="currentPromotion.start">
+            </div>
+            <div class="form-group">
+                <label>結束日期</label>
+                <input type="date" class="form-control" v-model="currentPromotion.end">
+            </div>
+            
+            <div style="margin-bottom: 15px; display: flex; gap: 10px;">
+                <button class="btn btn-sm btn-secondary" @click="setThisMonth">自動填入本月</button>
+                <button class="btn btn-sm btn-secondary" @click="setNextMonth">自動填入下月</button>
+            </div>
+            
+            <div v-if="modalError" class="text-danger" style="margin-bottom: 10px;">{{ modalError }}</div>
+            
+            <div class="modal-actions">
+                <button class="btn btn-secondary" @click="closeModal">取消</button>
+                <button class="btn btn-primary" @click="savePromotion">儲存優惠</button>
+            </div>
         </div>
     </div>
 
-
-    <!-- 底部操作按鈕 -->
-    <div class="bottom-actions">
-        <div class="container">
-            <button @click="discardAndReload" class="btn btn-secondary btn-block">放棄暫存並重載</button>
-            <button @click="openChangesModal" :disabled="!isDirty" class="btn btn-block">產生JSON</button>
+    <!-- ================= 組合編輯彈出視窗 (Modal) ================= -->
+    <div class="modal-overlay" v-if="isComboModalVisible" @click.self="closeComboModal">
+        <div class="modal-content wide">
+            <div class="modal-header">{{ editingComboIndex === -1 ? '建立新組合' : '編輯組合內容' }}</div>
+            
+            <div class="form-group">
+                <label>組合名稱</label>
+                <input type="text" class="form-control" v-model="currentCombo.name" placeholder="例如: 私密處全除 + 腋下毛 組合優惠">
+            </div>
+            <div class="form-group">
+                <label>請勾選包含的服務項目 (最少需選 2 項)</label>
+                <div class="checkbox-grid">
+                    <label class="checkbox-item" v-for="item in allItems" :key="item.id">
+                        <input type="checkbox" :value="item.id" v-model="currentCombo.itemIds">
+                        {{ item.name }} (${{ item.price }})
+                    </label>
+                </div>
+            </div>
+            
+            <div class="modal-actions">
+                <button class="btn btn-secondary" @click="closeComboModal">取消</button>
+                <button class="btn btn-primary" @click="saveCombo">儲存組合</button>
+            </div>
         </div>
     </div>
+
+    <!-- ================= 變更確認與匯出彈出視窗 (Modal) ================= -->
+    <div class="modal-overlay" v-if="isChangesModalVisible" @click.self="isChangesModalVisible = false">
+        <div class="modal-content wide">
+            <div class="modal-header">變更確認與匯出</div>
+            <p style="color: #666; margin-bottom: 15px;">以下是您本次修改的內容。請確認無誤後，點擊「複製 JSON」並將代碼交由管理員更新至伺服器。</p>
+            
+            <ul style="line-height: 1.8; margin-bottom: 20px; background: #f8f9fa; padding: 15px 30px; border-radius: 8px; max-height: 40vh; overflow-y: auto;">
+                <li v-for="(change, idx) in changesList" :key="idx" v-html="change"></li>
+            </ul>
+            
+            <div class="modal-actions">
+                <button class="btn btn-secondary" @click="isChangesModalVisible = false">關閉返回</button>
+                <button class="btn btn-success" @click="copyJson">📋 複製 JSON 代碼</button>
+            </div>
+        </div>
+    </div>
+    
 </div>
+
+<!-- 引入 Vue 3 -->
+<script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+
+<!-- Vue 3 邏輯腳本 -->
 <script>
     const app = Vue.createApp({
         data() {
@@ -270,7 +325,8 @@
                 originalCombosMap: new Map(),
                 isDirty: false,
                 initialLoadComplete: false,
-                detailedEditEnabled: false,
+                
+                // 優惠 Modal 狀態
                 isModalVisible: false,
                 modalTitle: '',
                 currentItem: null,
@@ -280,13 +336,17 @@
                 modalError: '',
                 promoCalculationText: '',
                 isStrongDiscount: false,
+                isEditingComboPromo: false,
+                
+                // 組合 Modal 狀態
                 isComboModalVisible: false,
                 currentCombo: { name: '', itemIds: [], promotions: [] },
                 originalComboState: '',
                 editingComboIndex: -1,
+                
+                // 變更匯出 Modal 狀態
                 isChangesModalVisible: false,
-                changesList: [],
-                isEditingComboPromo: false
+                changesList: []
             };
         },
         computed: {
@@ -364,7 +424,6 @@
                 if (!this.currentCombo.name.trim()) { alert('組合名稱不可為空'); return; }
                 if (this.currentCombo.itemIds.length < 2) { alert('組合至少需包含 2 個服務項目'); return; }
 
-                // Vue 3 修復：移除 this.$set，直接修改陣列
                 if (this.editingComboIndex === -1) {
                     if (!this.data.combos) this.data.combos = []; 
                     this.data.combos.push(this.currentCombo);
@@ -374,7 +433,7 @@
                 this.isComboModalVisible = false;
             },
             deleteCombo: function(index) {
-                if (confirm('確定要刪除「' + this.data.combos[index].name + '」這個組合嗎？')) {
+                if (confirm(`確定要刪除「${this.data.combos[index].name}」這個組合嗎？`)) {
                     this.data.combos.splice(index, 1);
                 }
             },
@@ -437,6 +496,7 @@
                         });
                     }
                 });
+                
                 originalItemsMap.forEach((originalItem, id) => {
                     if (!currentItemsMap.has(id)) changes.push(`刪除項目：<b>${originalItem.name}</b>`);
                 });
@@ -460,6 +520,7 @@
                         });
                     }
                 });
+                
                 originalCombosMap.forEach((originalCombo, name) => {
                     if (!currentCombosMap.has(name)) changes.push(`刪除組合：<b>${originalCombo.name}</b>`);
                 });
@@ -472,10 +533,10 @@
                 (outputData.combos || []).forEach(combo => { if (combo.promotions && combo.promotions.length === 0) delete combo.promotions; });
                 var jsonString = JSON.stringify(outputData, null, 2);
                  navigator.clipboard.writeText(jsonString).then(() => {
-                    this.showToast('JSON 已複製到剪貼簿，請傳送給管理者更新伺服器資料才會生效。');
+                    this.showToast('✅ JSON 已成功複製到剪貼簿！請傳送給管理者。');
                     if(this.isChangesModalVisible) this.isChangesModalVisible = false;
                 }, () => {
-                    alert('複製失敗!');
+                    alert('複製失敗，您的瀏覽器可能不支援剪貼簿功能。');
                 });
             },
             loadDataFromServer: async function() {
@@ -493,7 +554,7 @@
                 }
             },
             discardAndReload: function() {
-                 if (this.isDirty && !confirm('您確定要放棄所有未儲存的變更嗎？')) {
+                 if (this.isDirty && !confirm('您確定要放棄所有未儲存的變更嗎？這會重新載入伺服器上的舊資料。')) {
                     return;
                 }
                 localStorage.removeItem('autosavedData');
@@ -502,16 +563,17 @@
                 });
             },
 
+            // --- 優惠編輯方法 ---
             openModal: function(itemOrCombo, promoIndex, isCombo = false) {
                 this.isEditingComboPromo = isCombo;
                 this.currentItem = itemOrCombo;
                 this.editingPromoIndex = promoIndex;
                 this.modalError = '';
                 if (promoIndex === -1) {
-                    this.modalTitle = isCombo ? '新增組合優惠' : '新增優惠';
+                    this.modalTitle = isCombo ? `新增組合優惠 (${itemOrCombo.name})` : `新增項目優惠 (${itemOrCombo.name})`;
                     this.currentPromotion = { label: '新優惠', price: null, start: '', end: '' };
                 } else {
-                    this.modalTitle = isCombo ? '編輯組合優惠' : '編輯優惠';
+                    this.modalTitle = isCombo ? '編輯組合優惠' : '編輯項目優惠';
                     this.currentPromotion = JSON.parse(JSON.stringify(itemOrCombo.promotions[promoIndex]));
                 }
                 this.originalPromotionState = JSON.stringify(this.currentPromotion);
@@ -579,7 +641,6 @@
                 if (p.price >= originalPrice) { this.modalError = `錯誤: 優惠價 (${p.price}) 需低於原價 (${originalPrice})。`; return; }
                 if (p.start > p.end) { this.modalError = '錯誤: 結束日期不可早於開始日期。'; return; }
 
-                // Vue 3 修復：移除 this.$set，直接指派陣列
                 if (!this.currentItem.promotions) {
                     this.currentItem.promotions = [];
                 }
@@ -591,7 +652,6 @@
                 }
                 this.isModalVisible = false;
 
-                // Vue 3 修復：移除 this.$set，直接修改陣列
                 if(this.isEditingComboPromo) {
                     this.data.combos[this.editingComboIndex] = this.currentCombo;
                 }
@@ -616,17 +676,16 @@
                     parent.promotions.splice(index, 1);
                 }
             },
-            deleteItem: function(category, itemIndex) {
-                if (confirm('您確定要永久刪除這個服務項目嗎？此操作無法復原。')) {
-                    category.items.splice(itemIndex, 1);
-                }
-            },
              showToast: function(message) {
                 var toast = document.createElement('div');
                 toast.textContent = message;
-                toast.style.cssText = 'position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%); background-color: #333; color: #fff; padding: 10px 20px; border-radius: 5px; z-index: 1010;';
+                toast.style.cssText = 'position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%); background-color: rgba(0,0,0,0.8); color: #fff; padding: 12px 24px; border-radius: 30px; z-index: 3000; box-shadow: 0 4px 12px rgba(0,0,0,0.2); font-weight: bold; font-size: 15px;';
                 document.body.appendChild(toast);
-                setTimeout(function() { document.body.removeChild(toast); }, 3000);
+                setTimeout(function() { 
+                    toast.style.opacity = '0';
+                    toast.style.transition = 'opacity 0.5s';
+                    setTimeout(() => document.body.removeChild(toast), 500);
+                }, 3000);
             },
              formatDate: function(date) {
                 const y = date.getFullYear();
@@ -640,7 +699,7 @@
             this.loadDataFromServer().then(() => { 
                 if (savedData) {
                     this.data = JSON.parse(savedData);
-                    this.showToast('已載入上次未儲存的編輯內容。');
+                    this.showToast('ℹ️ 已自動載入您上次未儲存的編輯內容。');
                 }
             });
         }
