@@ -4,6 +4,7 @@
 let serviceData = null;
 let allServices = new Map();
 let selectedItems = new Set();
+let currentIdentity = 'general'; // 新增：追蹤客戶身分狀態
 const DOM = {};
 
 // ==========================================
@@ -35,6 +36,7 @@ function initDOMVariables() {
     DOM.serviceList = document.getElementById('service-list');
     DOM.searchInput = document.getElementById('search-input');
     DOM.loadingIndicator = document.getElementById('loading-indicator');
+    DOM.summarySection = document.getElementById('summary-section'); // 新增：總計區塊容器
     
     // 總計區塊
     DOM.originalTotal = document.getElementById('floating-original-total');
@@ -56,18 +58,21 @@ function initDOMVariables() {
 
 async function loadServiceData() {
     try {
-        // 加入時間戳避免瀏覽器在首次載入時咬死舊快取
-        const response = await fetch(`services.json?t=${new Date().getTime()}`, { cache: 'no-store' });
+        // 修改：移除時間戳並改用 no-cache，避免跨域或本機快取強制阻擋造成「載入失敗」
+        const response = await fetch('services.json', { cache: 'no-cache' });
         if (!response.ok) throw new Error(`伺服器回應錯誤: ${response.status}`);
         return await response.json();
     } catch (networkError) {
         console.warn('網路請求 services.json 失敗:', networkError.message, '嘗試從快取讀取...');
         try {
-            // 對應 service-worker.js 中的 CACHE_NAME
-            const cache = await caches.open('price-calculator-v27.0');
-            const cachedResponse = await cache.match('services.json');
-            if (cachedResponse) return await cachedResponse.json();
-            throw new Error('快取中也找不到 services.json');
+            // 修改：不寫死快取版本號，動態尋找可用的快取資料，大幅提高穩定度
+            const cacheKeys = await caches.keys();
+            for (const key of cacheKeys) {
+                const cache = await caches.open(key);
+                const cachedResponse = await cache.match('services.json');
+                if (cachedResponse) return await cachedResponse.json();
+            }
+            throw new Error('所有快取中皆找不到 services.json');
         } catch (cacheError) {
             console.error('讀取快取失敗:', cacheError);
             return null;
@@ -84,12 +89,62 @@ function initializePage() {
         });
     });
 
+    setupFloatingSummary();   // 新增：設定懸浮視窗樣式
+    renderIdentitySelector(); // 新增：渲染客戶身分選項
     renderServiceList();
     bindEvents();
     
     // 檢查網址是否有分享參數
     loadFromUrl();
     updateTotals();
+}
+
+// 新增：設定下方總計區塊為懸浮視窗
+function setupFloatingSummary() {
+    if (DOM.summarySection) {
+        Object.assign(DOM.summarySection.style, {
+            position: 'fixed',
+            bottom: '0',
+            left: '0',
+            width: '100%',
+            backgroundColor: '#ffffff',
+            boxShadow: '0 -4px 15px rgba(0,0,0,0.15)',
+            zIndex: '1000',
+            padding: '15px 20px',
+            margin: '0',
+            boxSizing: 'border-box',
+            borderTopLeftRadius: '20px',
+            borderTopRightRadius: '20px',
+            maxHeight: '45vh',
+            overflowY: 'auto'
+        });
+        // 在 body 底部預留空間，避免網頁最下方內容被懸浮窗擋住
+        document.body.style.paddingBottom = '50vh';
+    }
+}
+
+// 新增：渲染客戶身分選項（壽星、學生折扣）
+function renderIdentitySelector() {
+    if (!DOM.serviceList) return;
+    const container = document.createElement('fieldset');
+    container.style.marginBottom = '20px';
+    container.style.borderColor = '#007bff';
+    container.style.backgroundColor = '#f8f9fa';
+    container.innerHTML = `
+        <legend style="color: #007bff; font-weight: bold;">👤 客戶身分 (折扣選擇)</legend>
+        <div style="display: flex; gap: 15px; flex-wrap: wrap;">
+            <label><input type="radio" name="identity" value="general" checked> 一般客戶</label>
+            <label><input type="radio" name="identity" value="birthday"> 當月壽星 (原價 5 折)</label>
+            <label><input type="radio" name="identity" value="student"> 學生 (原價 8 折)</label>
+        </div>
+    `;
+    container.querySelectorAll('input[name="identity"]').forEach(radio => {
+        radio.addEventListener('change', (e) => {
+            currentIdentity = e.target.value;
+            updateTotals(); // 切換身分時重新計算總價
+        });
+    });
+    DOM.serviceList.parentNode.insertBefore(container, DOM.serviceList);
 }
 
 // ==========================================
@@ -99,14 +154,19 @@ function renderServiceList(filterText = '') {
     if (!DOM.serviceList) return;
     DOM.serviceList.innerHTML = '';
     
-    const lowerFilter = filterText.toLowerCase();
+    // 修改：將輸入文字用逗號(全半形皆可)分割，以支援多個搜尋關鍵字
+    const terms = filterText.toLowerCase().split(/[,，]/).map(t => t.trim()).filter(t => t.length > 0);
 
     serviceData.categories.forEach(category => {
         // 過濾該分類下的項目
-        const filteredItems = category.items.filter(item => 
-            item.name.toLowerCase().includes(lowerFilter) || 
-            (item.tags && item.tags.some(tag => tag.toLowerCase().includes(lowerFilter)))
-        );
+        const filteredItems = category.items.filter(item => {
+            if (terms.length === 0) return true;
+            // 若「任一」關鍵字符合名稱或標籤，即保留該項目
+            return terms.some(term => 
+                item.name.toLowerCase().includes(term) || 
+                (item.tags && item.tags.some(tag => tag.toLowerCase().includes(term)))
+            );
+        });
 
         if (filteredItems.length === 0) return; // 如果這個分類沒有符合的項目，就不渲染分類
 
@@ -297,6 +357,35 @@ function updateTotals() {
         `;
     });
 
+    // 新增：插入客戶身分折扣邏輯
+    if (currentIdentity !== 'general' && selectedItems.size > 0) {
+        let identityDiscountPrice = originalTotal;
+        let identityLabel = '';
+        
+        if (currentIdentity === 'birthday') {
+            identityDiscountPrice = originalTotal * 0.5;
+            identityLabel = '🎉 當月壽星 (原價 5 折)';
+        } else if (currentIdentity === 'student') {
+            identityDiscountPrice = originalTotal * 0.8;
+            identityLabel = '🎓 學生 (原價 8 折)';
+        }
+
+        // 比較「原價打折」與「現有促銷/組合總價」，取最便宜的價格給客人
+        if (identityDiscountPrice < finalTotal) {
+            finalTotal = identityDiscountPrice;
+            detailsHtml += `
+                <li style="margin-top: 10px; padding-top: 10px; border-top: 1px dashed #ccc;">
+                    <span class="item-name" style="color: #dc3545; font-weight: bold;">✨ 已套用最佳優惠</span>
+                    <span class="item-price-detail" style="color: #dc3545; font-weight: bold;">${identityLabel}</span>
+                </li>`;
+        } else {
+            detailsHtml += `
+                <li style="margin-top: 10px; padding-top: 10px; border-top: 1px dashed #ccc;">
+                    <span class="item-name" style="color: #6c757d; font-size: 0.9em;">ℹ️ 單品/組合促銷已低於身分折扣，為您保留最划算方案</span>
+                </li>`;
+        }
+    }
+
     // 3. 更新 UI
     if (selectedItems.size === 0) {
         detailsHtml = '<li><span class="item-name" style="color: var(--text-muted);">尚未選擇任何服務</span></li>';
@@ -428,6 +517,12 @@ function loadFromUrl() {
 }
 
 function exportAsPNG() {
+    // 新增：未選擇項目防呆阻擋機制
+    if (selectedItems.size === 0) {
+        showNotice('⚠️ 尚未選擇任何服務，無法截圖');
+        return;
+    }
+
     const captureArea = document.getElementById('capture-area');
     if (!captureArea) {
         showNotice('找不到可截圖的區域');
