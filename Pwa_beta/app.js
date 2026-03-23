@@ -339,6 +339,9 @@ function updateTotals() {
 
     if (serviceData.combos && Array.isArray(serviceData.combos)) {
         serviceData.combos.forEach(combo => {
+            // 新增：防呆檢查，確保 combo.items 存在且為陣列，避免 services.json 漏寫時導致畫面當機
+            if (!combo.items || !Array.isArray(combo.items)) return;
+
             const activeComboPromo = getActivePromotion([combo]); 
             const hasValidDate = (!combo.start && !combo.end) || activeComboPromo !== null;
 
