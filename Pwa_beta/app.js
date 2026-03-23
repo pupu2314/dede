@@ -36,7 +36,7 @@ function initDOMVariables() {
     DOM.serviceList = document.getElementById('service-list');
     DOM.searchInput = document.getElementById('search-input');
     DOM.loadingIndicator = document.getElementById('loading-indicator');
-    DOM.summarySection = document.getElementById('summary-section'); // 新增：總計區塊容器
+    DOM.summarySection = document.getElementById('summary-details'); // 修改：對應 index.html 的正確 ID，確保懸浮視窗樣式能套用
     
     // 總計區塊
     DOM.originalTotal = document.getElementById('floating-original-total');
@@ -115,11 +115,11 @@ function setupFloatingSummary() {
             boxSizing: 'border-box',
             borderTopLeftRadius: '20px',
             borderTopRightRadius: '20px',
-            maxHeight: '45vh',
+            maxHeight: '35vh', // 修改：縮小懸浮窗高度至 35vh，避免影響上方操作
             overflowY: 'auto'
         });
         // 在 body 底部預留空間，避免網頁最下方內容被懸浮窗擋住
-        document.body.style.paddingBottom = '50vh';
+        document.body.style.paddingBottom = '40vh'; // 修改：配合高度縮小
     }
 }
 
@@ -392,24 +392,26 @@ function updateTotals() {
     }
 
     DOM.selectedItemsList.innerHTML = detailsHtml;
-    DOM.discountedTotal.textContent = finalTotal.toLocaleString();
-    DOM.originalTotal.textContent = originalTotal.toLocaleString();
+    
+    // 修改：加入所有標籤的防呆檢查 (if)，避免網頁缺少標籤時導致系統當機報錯
+    if (DOM.discountedTotal) DOM.discountedTotal.textContent = finalTotal.toLocaleString();
+    if (DOM.originalTotal) DOM.originalTotal.textContent = originalTotal.toLocaleString();
 
     const savings = originalTotal - finalTotal;
     if (savings > 0) {
-        DOM.originalTotalP.style.display = 'block';
-        DOM.savingsContainer.style.display = 'block';
-        DOM.savings.textContent = savings.toLocaleString();
+        if (DOM.originalTotalP) DOM.originalTotalP.style.display = 'block';
+        if (DOM.savingsContainer) DOM.savingsContainer.style.display = 'block';
+        if (DOM.savings) DOM.savings.textContent = savings.toLocaleString();
     } else {
-        DOM.originalTotalP.style.display = 'none';
-        DOM.savingsContainer.style.display = 'none';
+        if (DOM.originalTotalP) DOM.originalTotalP.style.display = 'none';
+        if (DOM.savingsContainer) DOM.savingsContainer.style.display = 'none';
     }
 
     // 簡單點數計算邏輯：每消費 100 元獲得 1 點
     const points = Math.floor(finalTotal / 100);
     if (points > 0 && DOM.pointsContainer) {
         DOM.pointsContainer.style.display = 'block';
-        DOM.points.textContent = points.toLocaleString();
+        if (DOM.points) DOM.points.textContent = points.toLocaleString();
     } else if (DOM.pointsContainer) {
         DOM.pointsContainer.style.display = 'none';
     }
@@ -474,6 +476,7 @@ function generateShareableLink() {
     const encoded = btoa(ids); // 使用 Base64 編碼隱藏明文 ID
     const url = new URL(window.location);
     url.searchParams.set('items', encoded);
+    url.searchParams.set('identity', currentIdentity); // 新增：將客戶身分一起加進網址
 
     // 嘗試複製到剪貼簿
     if (navigator.clipboard && window.isSecureContext) {
@@ -502,6 +505,15 @@ function copyFallback(text) {
 function loadFromUrl() {
     const urlParams = new URLSearchParams(window.location.search);
     const encodedItems = urlParams.get('items');
+    const identity = urlParams.get('identity'); // 新增：讀取客戶身分
+
+    // 新增：恢復客戶身分設定與畫面選取
+    if (identity && ['general', 'birthday', 'student'].includes(identity)) {
+        currentIdentity = identity;
+        const radio = document.querySelector(`input[name="identity"][value="${identity}"]`);
+        if (radio) radio.checked = true;
+    }
+
     if (encodedItems) {
         try {
             const decoded = atob(encodedItems);
