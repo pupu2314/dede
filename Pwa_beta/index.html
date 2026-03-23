@@ -1,13 +1,26 @@
-<!-- ... existing code ... -->
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- PWA Basic Meta -->
+    <meta name="theme-color" content="#007bff">
+    <link rel="manifest" href="manifest.json">
+    <title>德德美體美容中心</title>
+    <link rel="stylesheet" href="dede.css">
+</head>
 <body>
 
+<!-- 吐司通知容器 -->
 <div id="toast-notification" class="toast-notification" role="alert" aria-live="assertive"></div>
 
-<main class="container">
+<!-- 應用程式主要內容 -->
+<main class="container" id="capture-area">
     <header>
         <h2>德德美體美容中心 <small id="price-version"></small></h2>
     </header>
 
+    <!-- 快速操作區 -->
     <fieldset aria-labelledby="quick-actions">
         <legend id="quick-actions">快速操作</legend>
         <div class="header-actions">
@@ -19,18 +32,69 @@
         </div>
     </fieldset>
 
-    <div class="search-container" style="margin-bottom: 20px;">
+    <!-- 搜尋區塊 -->
+    <div class="search-container">
         <label for="search-input" class="sr-only">搜尋服務項目</label>
-        <input type="search" id="search-input" placeholder="🔍 搜尋服務名稱..." style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 16px;">
+        <input type="search" id="search-input" placeholder="🔍 搜尋服務名稱...">
     </div>
 
-    <!-- 加入載入中提示，當資料載入後由 app.js 隱藏或替換 -->
-    <div id="loading-indicator" style="text-align: center; padding: 40px; color: #6c757d;">
+    <!-- 載入中提示 (當資料載入完成後會由 JS 隱藏) -->
+    <div id="loading-indicator" style="text-align: center; padding: 40px; color: var(--text-muted, #6c757d);">
         <p>⏳ 正在載入服務項目資料...</p>
     </div>
 
-    <!-- 假設這是用來渲染服務列表的容器 -->
+    <!-- 服務項目列表渲染容器 -->
     <div id="service-list"></div>
 
+    <!-- 總計與明細區域 -->
+    <div id="summary-section" style="margin-top: 30px;">
+        <!-- 結算總計 -->
+        <div class="final-totals">
+            <div id="discount-container" style="display: none;">
+                <span class="discount-note"></span>
+            </div>
+            <div id="savings-container" style="display: none;">
+                <p class="savings-note">共節省：<span id="floating-savings">0</span> 元</p>
+            </div>
+            <!-- 原價 (如有折扣時顯示) -->
+            <p id="original-total-p" style="display: none;">原價：<span id="floating-original-total">0</span> 元</p>
+            <!-- 最終總金額 -->
+            <p id="discounted-total-p">總金額：<span id="floating-discounted-total">0</span> 元</p>
+            
+            <div id="points-container" style="display: none; color: var(--primary-color, #007bff); font-weight: bold; margin-top: 8px;">
+              <span>🎁 獲得點數：</span>
+              <span id="floating-points">0</span>
+              <span> 點</span>
+            </div>
+        </div>
+
+        <!-- 消費明細列表 -->
+        <div id="summary-details" aria-hidden="true" style="margin-top: 20px;">
+            <div class="details-content">
+                <div class="details-header">
+                    <h3>消費明細</h3>
+                </div>
+                <div id="floating-selected-items-list">
+                    <ul></ul>
+                </div>
+            </div>
+        </div>
+    </div>
 </main>
-<!-- ... existing code ... -->
+
+<!-- 引用 html2canvas 函式庫以支援截圖功能 -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<!-- 引入主要的應用程式邏輯 -->
+<script src="app.js"></script>
+<script>
+    // PWA: 註冊 Service Worker
+    if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+            navigator.serviceWorker.register('./service-worker.js', { scope: './' })
+                .then(reg => console.log('Service Worker registered', reg))
+                .catch(err => console.error('Service Worker registration failed', err));
+        });
+    }
+</script>
+</body>
+</html>
