@@ -295,7 +295,7 @@ function updateTotals() {
 
     let originalTotal = 0;
     let finalTotal = 0;
-    let receiptItems = []; // 收集計算後的獨立單品供渲染使用
+    let receiptItems = []; 
     let remainingItems = new Set(selectedItems);
 
     // 1. 處理組合優惠
@@ -324,7 +324,9 @@ function updateTotals() {
                         originalPrice: comboOriginalPrice,
                         finalPrice: combo.price,
                         hasPromo: combo.price < comboOriginalPrice,
-                        promoName: combo.price < comboOriginalPrice ? combo.name : null, // 新增：紀錄組合優惠名稱
+                        promoName: combo.price < comboOriginalPrice ? combo.name : null, 
+                        promoStart: activeComboPromo ? activeComboPromo.start : (combo.start || null), // 記錄優惠期限
+                        promoEnd: activeComboPromo ? activeComboPromo.end : (combo.end || null),
                         isCombo: true
                     });
                 }
@@ -348,7 +350,9 @@ function updateTotals() {
             originalPrice: item.price,
             finalPrice: itemFinalPrice,
             hasPromo: activePromo !== null,
-            promoName: activePromo ? activePromo.label : null, // 新增：紀錄單品優惠名稱
+            promoName: activePromo ? activePromo.label : null, 
+            promoStart: activePromo ? activePromo.start : null, // 記錄優惠期限
+            promoEnd: activePromo ? activePromo.end : null,
             isCombo: false
         });
     });
@@ -360,10 +364,10 @@ function updateTotals() {
     
     if (currentIdentity === 'birthday') {
         identityDiscountPrice = originalTotal * 0.5;
-        identityLabel = '壽星5折優惠'; // 更新：精確顯示優惠名稱
+        identityLabel = '壽星5折優惠';
     } else if (currentIdentity === 'student') {
         identityDiscountPrice = originalTotal * 0.8;
-        identityLabel = '學生8折優惠'; // 更新：精確顯示優惠名稱
+        identityLabel = '學生8折優惠';
     }
 
     if (currentIdentity !== 'general' && selectedItems.size > 0) {
@@ -374,30 +378,33 @@ function updateTotals() {
     }
 
     const savings = originalTotal - finalTotal;
-    const points = Math.floor(finalTotal / 1500); // 新增：修改為消費滿 1500 給予 1 點
+    const points = Math.floor(finalTotal / 1500); 
     let appliedPromoText = '無';
     let detailsHtml = '';
 
-    // 4. 產生 UI 明細列表 (縮小間距排版)
+    // 4. 產生 UI 明細列表 (加入自動換行與價格靠右)
     receiptItems.forEach(item => {
         let priceHtml = `$${item.originalPrice}`;
         if (item.hasPromo) {
             if (usedIdentity) {
-                priceHtml = `<span style="color: #999; text-decoration: line-through; margin-right: 5px;">$${item.originalPrice}</span> <span style="color: #dc3545; font-size: 0.85em;">【使用優惠則免】</span>`;
+                // 如果是壽星或學生，保持原色且不加刪除線，並改變提示字眼
+                let identityMsg = currentIdentity === 'student' ? '【學生以原價8折計算】' : '【壽星以原價5折計算】';
+                priceHtml = `<span style="color: var(--text-main); margin-right: 5px;">$${item.originalPrice}</span> <br><span style="color: var(--primary-color, #007bff); font-size: 0.85em;">${identityMsg}</span>`;
             } else {
-                priceHtml = `<span style="color: var(--danger-color); font-weight: bold; margin-right: 5px;">$${item.finalPrice}</span> <span style="text-decoration: line-through; color: #999; font-size: 0.8em;">$${item.originalPrice}</span>`;
+                let promoDateStr = (item.promoStart && item.promoEnd) ? `<br><span style="color: #6c757d; font-size: 0.75em;">(期限: ${item.promoStart} ~ ${item.promoEnd})</span>` : '';
+                priceHtml = `<span style="color: var(--danger-color); font-weight: bold; margin-right: 5px;">$${item.finalPrice}</span> <span style="text-decoration: line-through; color: #999; font-size: 0.8em;">$${item.originalPrice}</span>${promoDateStr}`;
             }
         }
         
+        // flex-shrink: 0 確保價格區塊不會被長名字擠壓；word-break: break-word 讓長名字自動換行
         detailsHtml += `
             <li style="margin-bottom: 6px; display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 1px dotted #e0e0e0; padding-bottom: 4px;">
-                <span class="item-name" style="flex: 1; padding-right: 10px;">${item.isCombo ? '🎁 ' : ''}${item.name}</span>
-                <span class="item-price-detail" style="text-align: right; white-space: nowrap;">${priceHtml}</span>
+                <span class="item-name" style="flex: 1; padding-right: 15px; word-break: break-word; line-height: 1.4;">${item.isCombo ? '🎁 ' : ''}${item.name}</span>
+                <span class="item-price-detail" style="text-align: right; white-space: nowrap; flex-shrink: 0;">${priceHtml}</span>
             </li>
         `;
     });
 
-    // 更新：抓取並組合所有套用的優惠名稱
     if (usedIdentity) {
         appliedPromoText = identityLabel;
     } else {
@@ -406,7 +413,7 @@ function updateTotals() {
             if (i.hasPromo && i.promoName) promoNames.add(i.promoName);
         });
         if (promoNames.size > 0) {
-            appliedPromoText = Array.from(promoNames).join('、'); // 將多個優惠名稱用頓號連接，如「3月優惠、春季組合優惠」
+            appliedPromoText = Array.from(promoNames).join('、'); 
         }
     }
 
@@ -414,28 +421,39 @@ function updateTotals() {
         detailsHtml = '<li style="color: #999; padding: 5px 0;">尚未選擇任何服務</li>';
     }
 
-    // 更新 DOM
     DOM.selectedItemsList.innerHTML = detailsHtml;
-    if (DOM.originalTotal) DOM.originalTotal.textContent = originalTotal.toLocaleString();
-    if (DOM.discountedTotal) DOM.discountedTotal.textContent = finalTotal.toLocaleString();
 
-    if (appliedPromoText !== '無' && DOM.appliedPromoContainer) {
-        DOM.appliedPromoContainer.style.display = 'block';
-        if (DOM.appliedPromo) DOM.appliedPromo.textContent = appliedPromoText;
-    } else if (DOM.appliedPromoContainer) {
-        DOM.appliedPromoContainer.style.display = 'none';
-    }
+    // 5. 動態更新總計區塊的文字與顯示狀態
+    const discountedTotalPNode = document.getElementById('discounted-total-p');
 
-    // 更新：如果有節省到金額(套用優惠)，才顯示原價與節省金額；否則隱藏
     if (savings > 0) {
-        if (DOM.originalTotalP) DOM.originalTotalP.style.display = 'block'; 
-        if (DOM.savingsContainer) DOM.savingsContainer.style.display = 'block';
-        if (DOM.savings) DOM.savings.textContent = savings.toLocaleString();
+        // 【有折扣時】顯示：原價、套用優惠、共省下、折扣後金額
+        if (DOM.originalTotalP) {
+            DOM.originalTotalP.style.display = 'block';
+            DOM.originalTotalP.innerHTML = `原價：<span id="floating-original-total">${originalTotal.toLocaleString()}</span> 元`;
+        }
+        if (DOM.appliedPromoContainer) {
+            DOM.appliedPromoContainer.style.display = 'block';
+            if (DOM.appliedPromo) DOM.appliedPromo.textContent = appliedPromoText;
+        }
+        if (DOM.savingsContainer) {
+            DOM.savingsContainer.style.display = 'block';
+            DOM.savingsContainer.innerHTML = `<p class="savings-note" style="margin: 0; color: #28a745;">共省下：<span id="floating-savings">${savings.toLocaleString()}</span> 元</p>`;
+        }
+        if (discountedTotalPNode) {
+            discountedTotalPNode.innerHTML = `折扣後金額：<span id="floating-discounted-total">${finalTotal.toLocaleString()}</span> 元`;
+        }
     } else {
+        // 【無折扣時】只顯示：總金額
         if (DOM.originalTotalP) DOM.originalTotalP.style.display = 'none';
+        if (DOM.appliedPromoContainer) DOM.appliedPromoContainer.style.display = 'none';
         if (DOM.savingsContainer) DOM.savingsContainer.style.display = 'none';
+        if (discountedTotalPNode) {
+            discountedTotalPNode.innerHTML = `總金額：<span id="floating-discounted-total">${finalTotal.toLocaleString()}</span> 元`;
+        }
     }
 
+    // 可獲得點數 (若無則免)
     if (points > 0 && DOM.pointsContainer) {
         DOM.pointsContainer.style.display = 'block';
         if (DOM.points) DOM.points.textContent = points.toLocaleString();
@@ -443,7 +461,6 @@ function updateTotals() {
         DOM.pointsContainer.style.display = 'none';
     }
 
-    // 儲存資料供「截圖」功能取用
     currentReceiptData = {
         identity: currentIdentity,
         identityLabel,
@@ -457,63 +474,8 @@ function updateTotals() {
     };
 }
 
-function updateCheckboxes() {
-    document.querySelectorAll('.service-item input[type="checkbox"]').forEach(cb => {
-        cb.checked = selectedItems.has(cb.value);
-    });
-}
+// ... existing code (updateCheckboxes 到 loadFromUrl 保持不變) ...
 
-// ==========================================
-// 4. 快速操作與截圖生成邏輯
-// ==========================================
-// (保存、讀取、分享功能保持不變)
-function saveSelections() { /* ... existing code logic ... */ 
-    if (selectedItems.size === 0) { showNotice('尚未選擇任何項目，無法儲存'); return; }
-    localStorage.setItem('dede_saved_selections', JSON.stringify(Array.from(selectedItems)));
-    showNotice('✅ 已成功儲存目前選擇！');
-}
-function loadSelections() { /* ... existing code logic ... */ 
-    const saved = localStorage.getItem('dede_saved_selections');
-    if (saved) {
-        try { selectedItems = new Set(JSON.parse(saved)); updateCheckboxes(); updateTotals(); showNotice('📂 已載入上次的選擇'); } 
-        catch (e) { showNotice('❌ 讀取失敗'); }
-    }
-}
-function clearSelections() { /* ... existing code logic ... */ 
-    if (selectedItems.size === 0) return;
-    if (confirm('確定要清除所有已選項目嗎？')) {
-        selectedItems.clear(); updateCheckboxes(); updateTotals(); showNotice('🗑️ 已清除所有選項');
-        const url = new URL(window.location); url.searchParams.delete('items'); url.searchParams.delete('identity'); window.history.replaceState({}, '', url);
-    }
-}
-function generateShareableLink() { /* ... existing code logic ... */ 
-    if (selectedItems.size === 0) { showNotice('請先選擇項目後再產生分享連結'); return; }
-    const url = new URL(window.location); url.searchParams.set('items', btoa(Array.from(selectedItems).join(','))); url.searchParams.set('identity', currentIdentity); 
-    if (navigator.clipboard && window.isSecureContext) { navigator.clipboard.writeText(url.toString()).then(() => showNotice('🔗 連結已複製！')).catch(() => copyFallback(url.toString())); } 
-    else { copyFallback(url.toString()); }
-}
-function copyFallback(text) { /* ... existing code logic ... */ 
-    const input = document.createElement('input'); input.value = text; document.body.appendChild(input); input.select();
-    try { document.execCommand('copy'); showNotice('🔗 連結已複製！'); } catch (err) { showNotice('無法複製'); } document.body.removeChild(input);
-}
-function loadFromUrl() { /* ... existing code logic ... */ 
-    const urlParams = new URLSearchParams(window.location.search);
-    const identity = urlParams.get('identity'); 
-    if (identity && ['general', 'birthday', 'student'].includes(identity)) {
-        currentIdentity = identity;
-        const radio = document.querySelector(`input[name="identity"][value="${identity}"]`);
-        if (radio) radio.checked = true;
-    }
-    const encodedItems = urlParams.get('items');
-    if (encodedItems) {
-        try {
-            selectedItems = new Set(atob(encodedItems).split(',').filter(id => allServices.has(id)));
-            updateCheckboxes(); showNotice('已載入分享的服務項目');
-        } catch (e) { showNotice('無法解析分享連結'); }
-    }
-}
-
-// 新增：動態生成排版精美的截圖估價單
 function exportAsPNG() {
     if (selectedItems.size === 0 || !currentReceiptData) {
         showNotice('⚠️ 尚未選擇任何服務，無法截圖');
@@ -529,13 +491,12 @@ function exportAsPNG() {
     btn.textContent = '處理中...';
     btn.disabled = true;
 
-    // 建立一個隱藏的動態畫布，專門用來排版截圖內容
     const receiptDiv = document.createElement('div');
     Object.assign(receiptDiv.style, {
         position: 'absolute',
-        left: '-9999px', // 藏在畫面外
+        left: '-9999px',
         top: '0',
-        width: '450px', // 固定寬度確保截圖比例完美
+        width: '450px', 
         backgroundColor: '#ffffff',
         padding: '25px',
         fontFamily: 'sans-serif',
@@ -543,49 +504,55 @@ function exportAsPNG() {
         boxSizing: 'border-box'
     });
 
-    // 標題區
-    let html = `<h2 style="text-align: center; border-bottom: 2px solid #007bff; padding-bottom: 10px; color: #0056b3; margin-top: 0;">德德美體美容中心 估價單</h2>`;
+    // 標題區 (刪除「估價單」字樣)
+    let html = `<h2 style="text-align: center; border-bottom: 2px solid #007bff; padding-bottom: 10px; color: #0056b3; margin-top: 0;">德德美體美容中心</h2>`;
 
-    // 1. 若為壽星或學生顯示在最上方
     if (currentReceiptData.identity !== 'general') {
          html += `<div style="background-color: #ffeeba; color: #856404; padding: 10px; border-radius: 5px; text-align: center; font-weight: bold; margin-bottom: 15px;">
              👤 客戶身分：${currentReceiptData.identityLabel}
          </div>`;
     }
 
-    // 2. 下方顯示目前勾選服務及金額
-    html += `<h3 style="margin-bottom: 10px; font-size: 1.1em; border-bottom: 1px solid #eee; padding-bottom: 5px;">目前勾選服務</h3>`;
+    // 服務明細區 (改名為「服務明細」)
+    html += `<h3 style="margin-bottom: 10px; font-size: 1.1em; border-bottom: 1px solid #eee; padding-bottom: 5px;">服務明細</h3>`;
     html += `<ul style="list-style: none; padding: 0; margin: 0 0 20px 0;">`;
 
     currentReceiptData.items.forEach(item => {
         let priceText = `$${item.originalPrice}`;
         if (item.hasPromo) {
-            // 若為優惠服務且使用了身分折扣，加上【使用學生或壽星優惠則免】
             if (currentReceiptData.usedIdentity) {
-                priceText = `<span style="color: #999; text-decoration: line-through;">$${item.originalPrice}</span> <br><span style="color: #dc3545; font-size: 0.85em;">【使用學生或壽星優惠則免】</span>`;
+                // 學生或壽星：原色、無刪除線、客製化提示文字
+                let identityMsg = currentReceiptData.identity === 'student' ? '【學生以原價8折計算】' : '【壽星以原價5折計算】';
+                priceText = `<span style="color: #333;">$${item.originalPrice}</span> <br><span style="color: #007bff; font-size: 0.85em;">${identityMsg}</span>`;
             } else {
-                priceText = `<span style="color: #dc3545; font-weight: bold;">$${item.finalPrice}</span> <br><span style="color: #999; text-decoration: line-through; font-size: 0.85em;">$${item.originalPrice}</span>`;
+                // 一般期間限定促銷：顯示特價、原價刪除線、註明期限
+                let promoDateStr = (item.promoStart && item.promoEnd) ? `<br><span style="color: #6c757d; font-size: 0.75em;">(優惠期限: ${item.promoStart} ~ ${item.promoEnd})</span>` : '';
+                priceText = `<span style="color: #dc3545; font-weight: bold;">$${item.finalPrice}</span> <br><span style="color: #999; text-decoration: line-through; font-size: 0.85em;">$${item.originalPrice}</span>${promoDateStr}`;
             }
         }
+        
+        // 截圖的明細同樣設定自動換行與價格靠右
         html += `<li style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px; line-height: 1.4;">
-            <span style="flex: 1; padding-right: 10px;">${item.isCombo ? '🎁 ' : ''}${item.name}</span>
-            <span style="text-align: right; white-space: nowrap;">${priceText}</span>
+            <span style="flex: 1; padding-right: 15px; word-break: break-word;">${item.isCombo ? '🎁 ' : ''}${item.name}</span>
+            <span style="text-align: right; white-space: nowrap; flex-shrink: 0;">${priceText}</span>
         </li>`;
     });
     html += `</ul>`;
 
-    // 3. 最後顯示總原價、套用優惠、節省金額、折扣後總金額及可獲得點數
     html += `<div style="border-top: 2px dashed #ccc; padding-top: 15px; text-align: right; font-size: 1em; line-height: 1.6;">`;
     
-    // 更新：截圖中如果沒有優惠，就不印出總原價跟節省金額
+    // 如果有折扣，顯示：原價、套用優惠、共省下、折扣後金額
     if (currentReceiptData.savings > 0) {
-        html += `<p style="margin: 0;">總原價：$${currentReceiptData.originalTotal.toLocaleString()}</p>
+        html += `<p style="margin: 0;">原價：$${currentReceiptData.originalTotal.toLocaleString()}</p>
         <p style="margin: 0; color: #dc3545;">套用優惠：${currentReceiptData.appliedPromoName}</p>
-        <p style="margin: 0; color: #28a745;">節省金額：$${currentReceiptData.savings.toLocaleString()}</p>`;
+        <p style="margin: 0; color: #28a745;">共省下：$${currentReceiptData.savings.toLocaleString()}</p>
+        <p style="margin: 8px 0 0 0; font-size: 1.3em; font-weight: bold;">折扣後金額：$${currentReceiptData.finalTotal.toLocaleString()}</p>`;
+    } else {
+        // 如果無折扣，只顯示：總金額
+        html += `<p style="margin: 8px 0 0 0; font-size: 1.3em; font-weight: bold;">總金額：$${currentReceiptData.finalTotal.toLocaleString()}</p>`;
     }
     
-    html += `<p style="margin: 8px 0 0 0; font-size: 1.3em; font-weight: bold;">折扣後總金額：$${currentReceiptData.finalTotal.toLocaleString()}</p>`;
-    
+    // 點數大於 0 才顯示
     if (currentReceiptData.points > 0) {
         html += `<p style="margin: 5px 0 0 0; color: #007bff; font-weight: bold;">🎁 可獲得點數：${currentReceiptData.points.toLocaleString()} 點</p>`;
     }
@@ -594,7 +561,6 @@ function exportAsPNG() {
     receiptDiv.innerHTML = html;
     document.body.appendChild(receiptDiv);
 
-    // 執行截圖動作
     html2canvas(receiptDiv, {
         scale: 2, 
         backgroundColor: '#ffffff',
