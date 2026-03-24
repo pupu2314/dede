@@ -349,8 +349,7 @@
                 originalCombosMap: new Map(),
                 isDirty: false,
                 initialLoadComplete: false,
-                
-                // 優惠 Modal 狀態
+                detailedEditEnabled: false,
                 isModalVisible: false,
                 modalTitle: '',
                 currentItem: null,
@@ -360,17 +359,13 @@
                 modalError: '',
                 promoCalculationText: '',
                 isStrongDiscount: false,
-                isEditingComboPromo: false,
-                
-                // 組合 Modal 狀態
                 isComboModalVisible: false,
                 currentCombo: { name: '', itemIds: [], promotions: [] },
                 originalComboState: '',
                 editingComboIndex: -1,
-                
-                // 變更匯出 Modal 狀態
                 isChangesModalVisible: false,
-                changesList: []
+                changesList: [],
+                isEditingComboPromo: false
             };
         },
         computed: {
@@ -395,31 +390,6 @@
                 this.originalCombosMap.clear();
                 (this.originalData.categories || []).flatMap(c => c.items).forEach(i => this.originalItemsMap.set(i.id, JSON.stringify(i)));
                 (this.originalData.combos || []).forEach(c => this.originalCombosMap.set(c.name, JSON.stringify(c)));
-            },
-            isItemUnsaved: function(item) {
-                const originalItemJSON = this.originalItemsMap.get(item.id);
-                if (!originalItemJSON) return true; 
-                return JSON.stringify(item) !== originalItemJSON;
-            },
-            isComboUnsaved: function(combo) {
-                 const originalComboJSON = this.originalCombosMap.get(combo.name);
-                if (!originalComboJSON) return true; 
-                return JSON.stringify(combo) !== originalComboJSON;
-            },
-            isPromoUnsaved: function(parent, promo) {
-                let originalParent;
-                if (parent.itemIds) { 
-                    const originalComboJSON = this.originalCombosMap.get(parent.name);
-                    if (!originalComboJSON) return true;
-                    originalParent = JSON.parse(originalComboJSON);
-                } else { 
-                    const originalItemJSON = this.originalItemsMap.get(parent.id);
-                    if (!originalItemJSON) return true;
-                    originalParent = JSON.parse(originalItemJSON);
-                }
-                const originalPromo = (originalParent.promotions || []).find(p => p.label === promo.label);
-                if (!originalPromo) return true; 
-                return JSON.stringify(promo) !== JSON.stringify(originalPromo);
             },
             handleDirtyState: function() {
                 if(!this.originalData) return;
@@ -457,7 +427,7 @@
                 this.isComboModalVisible = false;
             },
             deleteCombo: function(index) {
-                if (confirm(`確定要刪除「${this.data.combos[index].name}」這個組合嗎？`)) {
+                if (confirm('確定要刪除「' + this.data.combos[index].name + '」這個組合嗎？')) {
                     this.data.combos.splice(index, 1);
                 }
             },
@@ -469,7 +439,7 @@
                 }, 0);
             },
             
-            // --- 全新變更提交流程 ---
+            // --- 全新變更提交流程 (支援更名偵測) ---
             openChangesModal: function() {
                 this.generateChangesList();
                 if (this.changesList.length === 0) {
@@ -480,28 +450,11 @@
                 this.isChangesModalVisible = true;
             },
             generateChangesList: function() {
-                 let changes = [];
+                let changes = [];
                 const originalItemsMap = new Map((this.originalData.categories || []).flatMap(c => c.items).map(i => [i.id, i]));
                 const currentItemsMap = new Map((this.data.categories || []).flatMap(c => c.items).map(i => [i.id, i]));
-                const originalCombosMap = new Map((this.originalData.combos || []).map(c => [c.name, c]));
-                const currentCombosMap = new Map((this.data.combos || []).map(c => [c.name, c]));
-
-                const getPromoChangeString = (currentPromo, originalPromo, parentName, originalParentPrice) => {
-                    if (!originalPromo) {
-                        let detail = `為 '<b>${parentName}</b>' 新增優惠 '<b>${currentPromo.label}</b>' (價格: ${currentPromo.price}, 期間: ${currentPromo.start} ~ ${currentPromo.end})`;
-                        if (originalParentPrice > 0 && (currentPromo.price / originalParentPrice) < 0.8) {
-                            detail += ` <span style="color:red; font-weight:bold;">【注意】低於八折！</span>`;
-                        }
-                        return detail;
-                    }
-                    let promoChanges = [];
-                    if (currentPromo.price !== originalPromo.price) promoChanges.push(`價格: ${originalPromo.price} -> <b>${currentPromo.price}</b>`);
-                    if (currentPromo.start !== originalPromo.start) promoChanges.push(`開始: ${originalPromo.start} -> <b>${currentPromo.start}</b>`);
-                    if (currentPromo.end !== originalPromo.end) promoChanges.push(`結束: ${originalPromo.end} -> <b>${currentPromo.end}</b>`);
-                    if (promoChanges.length > 0) return `修改了 '<b>${parentName}</b>' 的優惠 '<b>${currentPromo.label}</b>' (${promoChanges.join(', ')})`;
-                    return null;
-                };
-
+                
+                // 處理服務項目變更
                 currentItemsMap.forEach((currentItem, id) => {
                     const originalItem = originalItemsMap.get(id);
                     if (!originalItem) {
@@ -510,43 +463,63 @@
                         if (currentItem.name !== originalItem.name) changes.push(`項目 '<b>${originalItem.name}</b>' 更名為 '<b>${currentItem.name}</b>'`);
                         if (currentItem.price !== originalItem.price) changes.push(`項目 '<b>${currentItem.name}</b>' 價格由 <b>${originalItem.price}</b> 改為 <b>${currentItem.price}</b>`);
                         
+                        // 處理優惠變更
                         const originalPromosMap = new Map((originalItem.promotions || []).map(p => [p.label, p]));
                         (currentItem.promotions || []).forEach(p => {
-                            const changeStr = getPromoChangeString(p, originalPromosMap.get(p.label), currentItem.name, originalItem.price);
-                            if (changeStr) changes.push(changeStr);
-                        });
-                        originalPromosMap.forEach((p, label) => {
-                           if (!(currentItem.promotions || []).find(cp => cp.label === label)) changes.push(`刪除了 '<b>${currentItem.name}</b>' 的優惠 '<b>${label}</b>'`);
+                            const origP = originalPromosMap.get(p.label);
+                            if (!origP) {
+                                changes.push(`為 '<b>${currentItem.name}</b>' 新增優惠 '<b>${p.label}</b>'`);
+                            } else if (JSON.stringify(p) !== JSON.stringify(origP)) {
+                                changes.push(`修改了 '<b>${currentItem.name}</b>' 的優惠 '<b>${p.label}</b>'`);
+                            }
                         });
                     }
-                });
-                
-                originalItemsMap.forEach((originalItem, id) => {
-                    if (!currentItemsMap.has(id)) changes.push(`刪除項目：<b>${originalItem.name}</b>`);
                 });
 
-                currentCombosMap.forEach((currentCombo, name) => {
-                    const originalCombo = originalCombosMap.get(name);
-                    if (!originalCombo) {
-                        changes.push(`新增組合：<b>${name}</b>`);
+                // 處理組合變更 (特殊處理：名稱對應)
+                const originalCombos = this.originalData.combos || [];
+                const currentCombos = this.data.combos || [];
+
+                // 1. 偵測刪除與修改 (基於原始資料掃描)
+                originalCombos.forEach((orig, idx) => {
+                    // 嘗試在相同位置找到組合 (通常編輯順序不變)
+                    const currAtIdx = currentCombos[idx];
+                    const foundByName = currentCombos.find(c => c.name === orig.name);
+
+                    if (!foundByName) {
+                        // 舊名字不見了，檢查是否是更名 (檢查同索引項目的內容是否雷同)
+                        if (currAtIdx && JSON.stringify(currAtIdx.itemIds) === JSON.stringify(orig.itemIds)) {
+                            changes.push(`修改組合名稱：<b>${orig.name}</b> → <b>${currAtIdx.name}</b>`);
+                        } else {
+                            changes.push(`刪除組合：<b>${orig.name}</b>`);
+                        }
                     } else {
-                        const originalIds = [...originalCombo.itemIds].sort().join(',');
-                        const currentIds = [...currentCombo.itemIds].sort().join(',');
-                        if(originalIds !== currentIds) changes.push(`修改了組合 '<b>${name}</b>' 的包含項目`);
-                        
-                        const originalPromosMap = new Map((originalCombo.promotions || []).map(p => [p.label, p]));
-                        (currentCombo.promotions || []).forEach(p => {
-                            const changeStr = getPromoChangeString(p, originalPromosMap.get(p.label), currentCombo.name, this.calculateComboOriginalPrice(originalCombo));
-                            if (changeStr) changes.push(changeStr);
-                        });
-                        originalPromosMap.forEach((p, label) => {
-                           if (!(currentCombo.promotions || []).find(cp => cp.label === label)) changes.push(`刪除了組合 '<b>${name}</b>' 的優惠 '<b>${label}</b>'`);
+                        // 名字還在，檢查內容是否有變
+                        if (JSON.stringify(foundByName.itemIds) !== JSON.stringify(orig.itemIds)) {
+                            changes.push(`修改了組合 '<b>${orig.name}</b>' 的包含項目`);
+                        }
+                        // 檢查組合優惠
+                        const origPromosMap = new Map((orig.promotions || []).map(p => [p.label, p]));
+                        (foundByName.promotions || []).forEach(p => {
+                            const op = origPromosMap.get(p.label);
+                            if(!op) changes.push(`為組合 '<b>${orig.name}</b>' 新增優惠 '<b>${p.label}</b>'`);
+                            else if(JSON.stringify(p) !== JSON.stringify(op)) changes.push(`修改了組合 '<b>${orig.name}</b>' 的優惠 '<b>${p.label}</b>'`);
                         });
                     }
                 });
-                
-                originalCombosMap.forEach((originalCombo, name) => {
-                    if (!currentCombosMap.has(name)) changes.push(`刪除組合：<b>${originalCombo.name}</b>`);
+
+                // 2. 偵測新增 (目前的組合不在原始清單中)
+                currentCombos.forEach((curr, idx) => {
+                    const foundInOrig = originalCombos.find(o => o.name === curr.name);
+                    const origAtIdx = originalCombos[idx];
+                    
+                    // 如果名字沒出現過，且同位置的項目不是更名過來的，就是全新新增
+                    if (!foundInOrig) {
+                        const isRename = origAtIdx && JSON.stringify(origAtIdx.itemIds) === JSON.stringify(curr.itemIds);
+                        if (!isRename) {
+                            changes.push(`新增組合：<b>${curr.name}</b>`);
+                        }
+                    }
                 });
 
                 this.changesList = changes;
@@ -557,10 +530,10 @@
                 (outputData.combos || []).forEach(combo => { if (combo.promotions && combo.promotions.length === 0) delete combo.promotions; });
                 var jsonString = JSON.stringify(outputData, null, 2);
                  navigator.clipboard.writeText(jsonString).then(() => {
-                    this.showToast('✅ JSON 已成功複製到剪貼簿！請傳送給管理者。');
-                    if(this.isChangesModalVisible) this.isChangesModalVisible = false;
+                    this.showToast('JSON 已複製到剪貼簿。');
+                    this.isChangesModalVisible = false;
                 }, () => {
-                    alert('複製失敗，您的瀏覽器可能不支援剪貼簿功能。');
+                    alert('複製失敗!');
                 });
             },
             loadDataFromServer: async function() {
@@ -578,7 +551,7 @@
                 }
             },
             discardAndReload: function() {
-                 if (this.isDirty && !confirm('您確定要放棄所有未儲存的變更嗎？這會重新載入伺服器上的舊資料。')) {
+                 if (this.isDirty && !confirm('您確定要放棄所有未儲存的變更嗎？')) {
                     return;
                 }
                 localStorage.removeItem('autosavedData');
@@ -586,18 +559,16 @@
                      this.showToast('已從伺服器重新載入資料。');
                 });
             },
-
-            // --- 優惠編輯方法 ---
             openModal: function(itemOrCombo, promoIndex, isCombo = false) {
                 this.isEditingComboPromo = isCombo;
                 this.currentItem = itemOrCombo;
                 this.editingPromoIndex = promoIndex;
                 this.modalError = '';
                 if (promoIndex === -1) {
-                    this.modalTitle = isCombo ? `新增組合優惠 (${itemOrCombo.name})` : `新增項目優惠 (${itemOrCombo.name})`;
+                    this.modalTitle = isCombo ? '新增組合優惠' : '新增優惠';
                     this.currentPromotion = { label: '新優惠', price: null, start: '', end: '' };
                 } else {
-                    this.modalTitle = isCombo ? '編輯組合優惠' : '編輯項目優惠';
+                    this.modalTitle = isCombo ? '編輯組合優惠' : '編輯優惠';
                     this.currentPromotion = JSON.parse(JSON.stringify(itemOrCombo.promotions[promoIndex]));
                 }
                 this.originalPromotionState = JSON.stringify(this.currentPromotion);
@@ -614,108 +585,38 @@
                 this.currentItem = null;
                 this.promoCalculationText = '';
             },
-            
-            // --- 全新：延續優惠至下個月 ---
-            extendPromotion: function(parent, promoIndex) {
-                const oldPromo = parent.promotions[promoIndex];
-                
-                // 計算下個月的日期
-                let oldStartDate = new Date(oldPromo.start);
-                if (isNaN(oldStartDate.getTime())) oldStartDate = new Date(); // 防呆
-                
-                // 下個月的第一天與最後一天
-                let nextStart = new Date(oldStartDate.getFullYear(), oldStartDate.getMonth() + 1, 1);
-                let nextEnd = new Date(oldStartDate.getFullYear(), oldStartDate.getMonth() + 2, 0);
-
-                // 智慧標籤替換：嘗試找出「X月」，自動加 1 (例如：3月優惠 -> 4月優惠)
-                let newLabel = oldPromo.label;
-                let monthMatch = newLabel.match(/(\d+)月/);
-                if (monthMatch) {
-                    let oldMonth = parseInt(monthMatch[1]);
-                    let newMonth = oldMonth === 12 ? 1 : oldMonth + 1; // 如果是12月就回到1月
-                    newLabel = newLabel.replace(/\d+月/, `${newMonth}月`);
-                } else {
-                    newLabel += ' (延續)';
-                }
-
-                // 建立新優惠物件
-                const newPromo = {
-                    label: newLabel,
-                    price: oldPromo.price,
-                    start: this.formatDate(nextStart),
-                    end: this.formatDate(nextEnd)
-                };
-                
-                // 寫入並提示
-                parent.promotions.push(newPromo);
-                this.showToast(`✅ 已成功產生「${newLabel}」！`);
-            },
-
             setThisMonth: function() {
                 const now = new Date();
-                const year = now.getFullYear();
                 const month = now.getMonth();
-                const firstDay = new Date(year, month, 1);
-                const lastDay = new Date(year, month + 1, 0);
+                const firstDay = new Date(now.getFullYear(), month, 1);
+                const lastDay = new Date(now.getFullYear(), month + 1, 0);
                 this.currentPromotion.start = this.formatDate(firstDay);
                 this.currentPromotion.end = this.formatDate(lastDay);
-                if (this.currentPromotion.label === '新優惠') {
-                    this.currentPromotion.label = `${month + 1}月優惠`;
-                }
+                if (this.currentPromotion.label === '新優惠') this.currentPromotion.label = `${month + 1}月優惠`;
             },
             setNextMonth: function() {
                 const now = new Date();
-                const year = now.getFullYear();
-                const month = now.getMonth();
-                const firstDay = new Date(year, month + 1, 1);
-                const lastDay = new Date(year, month + 2, 0);
+                const firstDay = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+                const lastDay = new Date(now.getFullYear(), now.getMonth() + 2, 0);
                 this.currentPromotion.start = this.formatDate(firstDay);
                 this.currentPromotion.end = this.formatDate(lastDay);
-                if (this.currentPromotion.label === '新優惠') {
-                    this.currentPromotion.label = `${firstDay.getMonth() + 1}月優惠`;
-                }
+                if (this.currentPromotion.label === '新優惠') this.currentPromotion.label = `${firstDay.getMonth() + 1}月優惠`;
             },
             savePromotion: function() {
                 this.modalError = '';
                 var p = this.currentPromotion;
                 var originalPrice = this.currentItem.price || this.calculateComboOriginalPrice(this.currentItem);
 
-                if (!p.start || !p.end) { this.modalError = '錯誤: 開始與結束日期不可為空。'; return; }
+                if (!p.start || !p.end) { this.modalError = '錯誤: 日期不可為空。'; return; }
+                if (!p.label || p.label.trim() === '') { this.modalError = '錯誤: 標籤不可為空。'; return; }
+                if (typeof p.price !== 'number' || p.price <= 0) { this.modalError = '錯誤: 價格需大於 0。'; return; }
+                if (p.price >= originalPrice) { this.modalError = `錯誤: 需低於原價 (${originalPrice})。`; return; }
 
-                if (this.currentItem.promotions && this.currentItem.promotions.length > 0) {
-                    const newStart = new Date(p.start);
-                    const newEnd = new Date(p.end);
-                    for (let i = 0; i < this.currentItem.promotions.length; i++) {
-                        if (i === this.editingPromoIndex) continue;
-                        const existingPromo = this.currentItem.promotions[i];
-                        const existingStart = new Date(existingPromo.start);
-                        const existingEnd = new Date(existingPromo.end);
-                        if (newStart <= existingEnd && newEnd >= existingStart) {
-                            this.modalError = `錯誤: 優惠期間與現有的 '${existingPromo.label}' 優惠重疊。`;
-                            return;
-                        }
-                    }
-                }
-
-                if (!p.label || p.label.trim() === '') { this.modalError = '錯誤: 活動標籤不可為空。'; return; }
-                if (typeof p.price !== 'number' || p.price <= 0) { this.modalError = '錯誤: 優惠價需為大於 0 的數字。'; return; }
-                if (p.price >= originalPrice) { this.modalError = `錯誤: 優惠價 (${p.price}) 需低於原價 (${originalPrice})。`; return; }
-                if (p.start > p.end) { this.modalError = '錯誤: 結束日期不可早於開始日期。'; return; }
-
-                if (!this.currentItem.promotions) {
-                    this.currentItem.promotions = [];
-                }
+                if (!this.currentItem.promotions) this.currentItem.promotions = [];
+                if (this.editingPromoIndex === -1) this.currentItem.promotions.push(p);
+                else this.currentItem.promotions.splice(this.editingPromoIndex, 1, p);
                 
-                if (this.editingPromoIndex === -1) {
-                    this.currentItem.promotions.push(p);
-                } else {
-                    this.currentItem.promotions.splice(this.editingPromoIndex, 1, p);
-                }
                 this.isModalVisible = false;
-
-                if(this.isEditingComboPromo) {
-                    this.data.combos[this.editingComboIndex] = this.currentCombo;
-                }
             },
              calculateDiscount: function() {
                 const promoPrice = this.currentPromotion.price;
@@ -728,25 +629,19 @@
                 const discountRatio = (promoPrice / originalPrice) * 10;
                 this.promoCalculationText = `省 ${savings.toLocaleString()} 元 (約 ${discountRatio.toFixed(1)} 折)`;
                 this.isStrongDiscount = discountRatio < 8.0;
-                 if (this.isStrongDiscount) {
-                    this.promoCalculationText += ' - 低於八折優惠！';
-                }
             },
              removePromotion: function(parent, index) {
-                if (confirm('確定要刪除這個優惠嗎？')) {
-                    parent.promotions.splice(index, 1);
-                }
+                if (confirm('確定要刪除優惠嗎？')) parent.promotions.splice(index, 1);
+            },
+            deleteItem: function(category, itemIndex) {
+                if (confirm('確定要永久刪除服務項目嗎？')) category.items.splice(itemIndex, 1);
             },
              showToast: function(message) {
                 var toast = document.createElement('div');
                 toast.textContent = message;
-                toast.style.cssText = 'position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%); background-color: rgba(0,0,0,0.8); color: #fff; padding: 12px 24px; border-radius: 30px; z-index: 3000; box-shadow: 0 4px 12px rgba(0,0,0,0.2); font-weight: bold; font-size: 15px; text-align: center; width: max-content; max-width: 90vw;';
+                toast.style.cssText = 'position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%); background-color: #333; color: #fff; padding: 10px 20px; border-radius: 5px; z-index: 1010;';
                 document.body.appendChild(toast);
-                setTimeout(function() { 
-                    toast.style.opacity = '0';
-                    toast.style.transition = 'opacity 0.5s';
-                    setTimeout(() => document.body.removeChild(toast), 500);
-                }, 3000);
+                setTimeout(function() { if(toast.parentNode) document.body.removeChild(toast); }, 3000);
             },
              formatDate: function(date) {
                 const y = date.getFullYear();
@@ -760,7 +655,7 @@
             this.loadDataFromServer().then(() => { 
                 if (savedData) {
                     this.data = JSON.parse(savedData);
-                    this.showToast('ℹ️ 已自動載入您上次未儲存的編輯內容。');
+                    this.showToast('已載入上次未儲存的內容。');
                 }
             });
         }
@@ -768,5 +663,6 @@
 
     app.mount('#app');
 </script>
+
 </body>
 </html>
