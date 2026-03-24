@@ -388,6 +388,7 @@
             updateOriginalDataMaps: function() {
                 this.originalItemsMap.clear();
                 this.originalCombosMap.clear();
+                if(!this.originalData) return;
                 (this.originalData.categories || []).flatMap(c => c.items).forEach(i => this.originalItemsMap.set(i.id, JSON.stringify(i)));
                 (this.originalData.combos || []).forEach(c => this.originalCombosMap.set(c.name, JSON.stringify(c)));
             },
@@ -395,7 +396,7 @@
                 if(!this.originalData) return;
                 this.isDirty = JSON.stringify(this.data) !== JSON.stringify(this.originalData);
             },
-            // --- 介面輔助方法 (修復 isItemUnsaved 錯誤) ---
+            // --- 介面輔助方法 (修復 isItemUnsaved, isPromoUnsaved 錯誤) ---
             isItemUnsaved: function(item) {
                 const original = this.originalItemsMap.get(item.id);
                 return original !== JSON.stringify(item);
@@ -404,6 +405,25 @@
                 const original = this.originalCombosMap.get(combo.name);
                 return original !== JSON.stringify(combo);
             },
+            isPromoUnsaved: function(itemOrCombo, promo) {
+                let originalStr;
+                // 判斷是單一項目 (有 id) 還是組合 (用 name)
+                if (itemOrCombo.id) {
+                    originalStr = this.originalItemsMap.get(itemOrCombo.id);
+                } else {
+                    originalStr = this.originalCombosMap.get(itemOrCombo.name);
+                }
+                
+                if (!originalStr) return true; // 若父項目是新增的，優惠自然也是未儲存
+                
+                const originalParent = JSON.parse(originalStr);
+                const originalPromos = originalParent.promotions || [];
+                const promoStr = JSON.stringify(promo);
+                
+                // 檢查原始陣列中是否存在一模一樣的優惠
+                return !originalPromos.some(p => JSON.stringify(p) === promoStr);
+            },
+            
             // --- 組合優惠方法 ---
             openComboModal: function(index) {
                 this.editingComboIndex = index;
@@ -470,7 +490,7 @@
                         changes.push(`新增項目：<b>${currentItem.name}</b>`);
                     } else {
                         if (currentItem.name !== originalItem.name) changes.push(`項目 '<b>${originalItem.name}</b>' 更名為 '<b>${currentItem.name}</b>'`);
-                        if (currentItem.price !== originalItem.price) changes.push(`項目 '<b>${originalItem.price}</b>' 價格由 <b>${originalItem.price}</b> 改為 <b>${currentItem.price}</b>`);
+                        if (currentItem.price !== originalItem.price) changes.push(`項目 '<b>${originalItem.name}</b>' 價格由 <b>${originalItem.price}</b> 改為 <b>${currentItem.price}</b>`);
                         
                         // 處理優惠變更
                         const originalPromosMap = new Map((originalItem.promotions || []).map(p => [p.label, p]));
@@ -485,11 +505,10 @@
                     }
                 });
 
-                // 處理組合變更 (特殊處理：名稱對應)
+                // 處理組合變更
                 const originalCombos = this.originalData.combos || [];
                 const currentCombos = this.data.combos || [];
 
-                // 1. 偵測刪除與修改 (基於原始資料掃描)
                 originalCombos.forEach((orig, idx) => {
                     const currAtIdx = currentCombos[idx];
                     const foundByName = currentCombos.find(c => c.name === orig.name);
@@ -513,7 +532,6 @@
                     }
                 });
 
-                // 2. 偵測新增
                 currentCombos.forEach((curr, idx) => {
                     const foundInOrig = originalCombos.find(o => o.name === curr.name);
                     const origAtIdx = originalCombos[idx];
@@ -548,7 +566,7 @@
                     this.updateOriginalDataMaps();
                     this.handleDirtyState();
                 } catch (error) {
-                    alert('無法載入資料!');
+                    console.error('無法載入資料:', error);
                 } finally {
                     this.initialLoadComplete = true;
                 }
