@@ -474,7 +474,90 @@ function updateTotals() {
     };
 }
 
-// ... existing code (updateCheckboxes 到 loadFromUrl 保持不變) ...
+// ==========================================
+// 4. 實用功能 (儲存、讀取、分享、清除)
+// ==========================================
+function saveSelections() {
+    if (selectedItems.size === 0) {
+        showNotice('沒有選擇任何項目可以儲存');
+        return;
+    }
+    localStorage.setItem('dede_saved_selections', JSON.stringify(Array.from(selectedItems)));
+    showNotice('✅ 選擇已儲存！下次開啟可直接載入');
+}
+
+function loadSelections() {
+    const saved = localStorage.getItem('dede_saved_selections');
+    if (saved) {
+        try {
+            const items = JSON.parse(saved);
+            selectedItems = new Set(items);
+            updateCheckboxes();
+            updateTotals();
+            showNotice('✅ 已載入您上次儲存的選擇');
+        } catch (e) {
+            showNotice('❌ 載入失敗，資料可能已損毀');
+        }
+    } else {
+        showNotice('沒有找到儲存的紀錄');
+    }
+}
+
+function clearSelections() {
+    if (selectedItems.size === 0) return;
+    if (confirm('確定要清除所有已勾選的項目嗎？')) {
+        selectedItems.clear();
+        updateCheckboxes();
+        updateTotals();
+        showNotice('🗑️ 已清除所有選擇');
+    }
+}
+
+function generateShareableLink() {
+    if (selectedItems.size === 0) {
+        showNotice('請先勾選服務項目後再產生分享連結');
+        return;
+    }
+    const ids = Array.from(selectedItems).join(',');
+    const url = new URL(window.location.href);
+    url.searchParams.set('items', ids);
+    
+    // 複製到剪貼簿
+    navigator.clipboard.writeText(url.toString()).then(() => {
+        showNotice('🔗 分享連結已複製到剪貼簿！可直接貼給朋友');
+    }).catch(() => {
+        showNotice('❌ 複製失敗，請手動複製網址列的網址');
+    });
+}
+
+function updateCheckboxes() {
+    if (!DOM.serviceList) return;
+    const checkboxes = DOM.serviceList.querySelectorAll('input[type="checkbox"]');
+    checkboxes.forEach(cb => {
+        cb.checked = selectedItems.has(cb.value);
+    });
+}
+
+function loadFromUrl() {
+    const params = new URLSearchParams(window.location.search);
+    const itemsParam = params.get('items');
+    if (itemsParam) {
+        const ids = itemsParam.split(',');
+        let loadedCount = 0;
+        ids.forEach(id => {
+            if (allServices.has(id)) {
+                selectedItems.add(id);
+                loadedCount++;
+            }
+        });
+        if (loadedCount > 0) {
+            updateCheckboxes();
+            showNotice('✅ 已成功載入好友分享的服務清單');
+        }
+        // 清除網址列參數，讓畫面保持乾淨
+        window.history.replaceState({}, document.title, window.location.pathname);
+    }
+}
 
 function exportAsPNG() {
     if (selectedItems.size === 0 || !currentReceiptData) {
