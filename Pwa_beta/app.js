@@ -298,35 +298,38 @@ function updateTotals() {
     let receiptItems = []; 
     let remainingItems = new Set(selectedItems);
 
-    // 1. 處理組合優惠
+    // 1. 處理組合優惠 (純淨新版：僅支援 promotions 陣列)
     if (serviceData.combos && Array.isArray(serviceData.combos)) {
         serviceData.combos.forEach(combo => {
-            if (!combo.items || !Array.isArray(combo.items)) return;
+            const comboItemsList = combo.itemIds; // 統一使用新版 ID 陣列
+            if (!comboItemsList || !Array.isArray(comboItemsList)) return;
 
-            const activeComboPromo = getActivePromotion([combo]); 
-            const hasValidDate = (!combo.start && !combo.end) || activeComboPromo !== null;
+            // 僅從 promotions 陣列尋找目前生效的優惠
+            const activeComboPromo = getActivePromotion(combo.promotions);
 
-            if (hasValidDate) {
-                const isMatch = combo.items.every(id => remainingItems.has(id));
+            if (activeComboPromo) {
+                const currentComboPrice = activeComboPromo.price;
+                const isMatch = comboItemsList.every(id => remainingItems.has(id));
+                
                 if (isMatch) {
                     let comboOriginalPrice = 0;
-                    combo.items.forEach(id => {
+                    comboItemsList.forEach(id => {
                         const item = allServices.get(id);
                         if(item) comboOriginalPrice += item.price;
                         remainingItems.delete(id); 
                     });
                     
                     originalTotal += comboOriginalPrice;
-                    finalTotal += combo.price;
+                    finalTotal += currentComboPrice;
                     
                     receiptItems.push({
                         name: combo.name,
                         originalPrice: comboOriginalPrice,
-                        finalPrice: combo.price,
-                        hasPromo: combo.price < comboOriginalPrice,
-                        promoName: combo.price < comboOriginalPrice ? combo.name : null, 
-                        promoStart: activeComboPromo ? activeComboPromo.start : (combo.start || null), // 記錄優惠期限
-                        promoEnd: activeComboPromo ? activeComboPromo.end : (combo.end || null),
+                        finalPrice: currentComboPrice,
+                        hasPromo: true,
+                        promoName: activeComboPromo.label || combo.name, 
+                        promoStart: activeComboPromo.start, 
+                        promoEnd: activeComboPromo.end,
                         isCombo: true
                     });
                 }
