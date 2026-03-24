@@ -396,32 +396,78 @@
                 if(!this.originalData) return;
                 this.isDirty = JSON.stringify(this.data) !== JSON.stringify(this.originalData);
             },
-            // --- 介面輔助方法 (修復 isItemUnsaved, isPromoUnsaved 錯誤) ---
+            // --- 狀態檢查方法 (改用屬性比對，防範 Proxy 與 JSON 鍵值順序問題) ---
             isItemUnsaved: function(item) {
-                const original = this.originalItemsMap.get(item.id);
-                return original !== JSON.stringify(item);
+                const originalStr = this.originalItemsMap.get(item.id);
+                if (!originalStr) return true;
+                
+                try {
+                    const original = JSON.parse(originalStr);
+                    if (original.name !== item.name || original.price !== item.price) return true;
+                    
+                    const origPromos = original.promotions || [];
+                    const currPromos = item.promotions || [];
+                    if (origPromos.length !== currPromos.length) return true;
+                    
+                    for (let i = 0; i < currPromos.length; i++) {
+                        const p1 = currPromos[i];
+                        const p2 = origPromos.find(p => p.label === p1.label);
+                        if (!p2 || p1.price !== p2.price || p1.start !== p2.start || p1.end !== p2.end) return true;
+                    }
+                    return false;
+                } catch(e) {
+                    return originalStr !== JSON.stringify(item);
+                }
             },
             isComboUnsaved: function(combo) {
-                const original = this.originalCombosMap.get(combo.name);
-                return original !== JSON.stringify(combo);
+                const originalStr = this.originalCombosMap.get(combo.name);
+                if (!originalStr) return true;
+                
+                try {
+                    const original = JSON.parse(originalStr);
+                    if (JSON.stringify(original.itemIds) !== JSON.stringify(combo.itemIds)) return true;
+                    
+                    const origPromos = original.promotions || [];
+                    const currPromos = combo.promotions || [];
+                    if (origPromos.length !== currPromos.length) return true;
+                    
+                    for (let i = 0; i < currPromos.length; i++) {
+                        const p1 = currPromos[i];
+                        const p2 = origPromos.find(p => p.label === p1.label);
+                        if (!p2 || p1.price !== p2.price || p1.start !== p2.start || p1.end !== p2.end) return true;
+                    }
+                    return false;
+                } catch(e) {
+                    return originalStr !== JSON.stringify(combo);
+                }
             },
             isPromoUnsaved: function(itemOrCombo, promo) {
+                if (!itemOrCombo || !promo) return false;
+                
                 let originalStr;
-                // 判斷是單一項目 (有 id) 還是組合 (用 name)
-                if (itemOrCombo.id) {
-                    originalStr = this.originalItemsMap.get(itemOrCombo.id);
-                } else {
+                // 使用 itemIds 來精準判定是否為組合 (Combo)，避免 JSON 若帶有 id 欄位造成誤判
+                if ('itemIds' in itemOrCombo) {
                     originalStr = this.originalCombosMap.get(itemOrCombo.name);
+                } else {
+                    originalStr = this.originalItemsMap.get(itemOrCombo.id);
                 }
                 
                 if (!originalStr) return true; // 若父項目是新增的，優惠自然也是未儲存
                 
-                const originalParent = JSON.parse(originalStr);
-                const originalPromos = originalParent.promotions || [];
-                const promoStr = JSON.stringify(promo);
-                
-                // 檢查原始陣列中是否存在一模一樣的優惠
-                return !originalPromos.some(p => JSON.stringify(p) === promoStr);
+                try {
+                    const originalParent = JSON.parse(originalStr);
+                    const originalPromos = originalParent.promotions || [];
+                    
+                    // 明確比對屬性，避免 JSON.stringify 因鍵值順序不同造成的「假修改」警報
+                    return !originalPromos.some(p => 
+                        p.label === promo.label && 
+                        p.price === promo.price && 
+                        p.start === promo.start && 
+                        p.end === promo.end
+                    );
+                } catch(e) {
+                    return true;
+                }
             },
             
             // --- 組合優惠方法 ---
@@ -468,7 +514,7 @@
                 }, 0);
             },
             
-            // --- 全新變更提交流程 (支援更名偵測) ---
+            // --- 全新變更提交流程 ---
             openChangesModal: function() {
                 this.generateChangesList();
                 if (this.changesList.length === 0) {
@@ -498,7 +544,7 @@
                             const origP = originalPromosMap.get(p.label);
                             if (!origP) {
                                 changes.push(`為 '<b>${currentItem.name}</b>' 新增優惠 '<b>${p.label}</b>'`);
-                            } else if (JSON.stringify(p) !== JSON.stringify(origP)) {
+                            } else if (p.price !== origP.price || p.start !== origP.start || p.end !== origP.end) {
                                 changes.push(`修改了 '<b>${currentItem.name}</b>' 的優惠 '<b>${p.label}</b>'`);
                             }
                         });
@@ -527,7 +573,7 @@
                         (foundByName.promotions || []).forEach(p => {
                             const op = origPromosMap.get(p.label);
                             if(!op) changes.push(`為組合 '<b>${orig.name}</b>' 新增優惠 '<b>${p.label}</b>'`);
-                            else if(JSON.stringify(p) !== JSON.stringify(op)) changes.push(`修改了組合 '<b>${orig.name}</b>' 的優惠 '<b>${p.label}</b>'`);
+                            else if(p.price !== op.price || p.start !== op.start || p.end !== op.end) changes.push(`修改了組合 '<b>${orig.name}</b>' 的優惠 '<b>${p.label}</b>'`);
                         });
                     }
                 });
