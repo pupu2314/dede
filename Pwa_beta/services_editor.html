@@ -395,6 +395,15 @@
                 if(!this.originalData) return;
                 this.isDirty = JSON.stringify(this.data) !== JSON.stringify(this.originalData);
             },
+            // --- 介面輔助方法 (修復 isItemUnsaved 錯誤) ---
+            isItemUnsaved: function(item) {
+                const original = this.originalItemsMap.get(item.id);
+                return original !== JSON.stringify(item);
+            },
+            isComboUnsaved: function(combo) {
+                const original = this.originalCombosMap.get(combo.name);
+                return original !== JSON.stringify(combo);
+            },
             // --- 組合優惠方法 ---
             openComboModal: function(index) {
                 this.editingComboIndex = index;
@@ -461,7 +470,7 @@
                         changes.push(`新增項目：<b>${currentItem.name}</b>`);
                     } else {
                         if (currentItem.name !== originalItem.name) changes.push(`項目 '<b>${originalItem.name}</b>' 更名為 '<b>${currentItem.name}</b>'`);
-                        if (currentItem.price !== originalItem.price) changes.push(`項目 '<b>${currentItem.name}</b>' 價格由 <b>${originalItem.price}</b> 改為 <b>${currentItem.price}</b>`);
+                        if (currentItem.price !== originalItem.price) changes.push(`項目 '<b>${originalItem.price}</b>' 價格由 <b>${originalItem.price}</b> 改為 <b>${currentItem.price}</b>`);
                         
                         // 處理優惠變更
                         const originalPromosMap = new Map((originalItem.promotions || []).map(p => [p.label, p]));
@@ -482,23 +491,19 @@
 
                 // 1. 偵測刪除與修改 (基於原始資料掃描)
                 originalCombos.forEach((orig, idx) => {
-                    // 嘗試在相同位置找到組合 (通常編輯順序不變)
                     const currAtIdx = currentCombos[idx];
                     const foundByName = currentCombos.find(c => c.name === orig.name);
 
                     if (!foundByName) {
-                        // 舊名字不見了，檢查是否是更名 (檢查同索引項目的內容是否雷同)
                         if (currAtIdx && JSON.stringify(currAtIdx.itemIds) === JSON.stringify(orig.itemIds)) {
                             changes.push(`修改組合名稱：<b>${orig.name}</b> → <b>${currAtIdx.name}</b>`);
                         } else {
                             changes.push(`刪除組合：<b>${orig.name}</b>`);
                         }
                     } else {
-                        // 名字還在，檢查內容是否有變
                         if (JSON.stringify(foundByName.itemIds) !== JSON.stringify(orig.itemIds)) {
                             changes.push(`修改了組合 '<b>${orig.name}</b>' 的包含項目`);
                         }
-                        // 檢查組合優惠
                         const origPromosMap = new Map((orig.promotions || []).map(p => [p.label, p]));
                         (foundByName.promotions || []).forEach(p => {
                             const op = origPromosMap.get(p.label);
@@ -508,12 +513,10 @@
                     }
                 });
 
-                // 2. 偵測新增 (目前的組合不在原始清單中)
+                // 2. 偵測新增
                 currentCombos.forEach((curr, idx) => {
                     const foundInOrig = originalCombos.find(o => o.name === curr.name);
                     const origAtIdx = originalCombos[idx];
-                    
-                    // 如果名字沒出現過，且同位置的項目不是更名過來的，就是全新新增
                     if (!foundInOrig) {
                         const isRename = origAtIdx && JSON.stringify(origAtIdx.itemIds) === JSON.stringify(curr.itemIds);
                         if (!isRename) {
