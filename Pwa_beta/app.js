@@ -250,8 +250,8 @@ function renderServiceList(filterText = '') {
                 // 修改：原價換行，接著顯示「優惠名稱」與「優惠價」
                 priceSpan.innerHTML = `
                     <span style="text-decoration: line-through; color: #999; font-size: 0.85em;">$${item.price}</span><br>
-                    <span class="discount-note" style="font-size: 0.85em; color: var(--primary-color, #007bff); margin-right: 5px;">${activePromo.label}</span>
-                    <span style="color: var(--danger-color); font-weight: bold; font-size: 1.05em;">$${activePromo.price}</span>
+                    <span class="discount-note">${activePromo.label}</span>
+                    <span style="color: var(--danger-color);">$${activePromo.price}</span>
                 `;
             } else {
                 priceSpan.textContent = `$${item.price}`;
