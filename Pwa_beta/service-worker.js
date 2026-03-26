@@ -4,7 +4,7 @@
  */
 
 // 升級版號，強制所有用戶端清除舊快取並套用新規則
-const CACHE_NAME = 'price-calculator-v26.4'; 
+const CACHE_NAME = 'price-calculator-v26.4a'; 
 const OFFLINE_URL = 'index.html';
 
 // 移除 services.json，因為 app.js 已經用 localStorage 管理它了
