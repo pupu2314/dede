@@ -488,7 +488,7 @@ function updateTotals() {
         // flex-shrink: 0 確保價格區塊不會被長名字擠壓；word-break: break-word 讓長名字自動換行
         detailsHtml += `
             <li style="margin-bottom: 6px; display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 1px dotted #e0e0e0; padding-bottom: 4px;">
-                <span class="item-name" style="flex: 1; padding-right: 15px; word-break: break-word; line-height: 1.4;">${item.isCombo ? '🎁 ' : ''}${item.name}</span>
+                <span class="item-name" style="flex: 1; padding-right: 15px; word-break: break-word; line-height: 1.4;">${item.isCombo ? '🎁 組合優惠<br>' : ''}${item.name}</span>
                 <span class="item-price-detail" style="text-align: right; white-space: nowrap; flex-shrink: 0;">${priceHtml}</span>
             </li>
         `;
@@ -713,7 +713,7 @@ function exportAsPNG() {
         
         // 截圖的明細同樣設定自動換行與價格靠右
         html += `<li style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px; line-height: 1.4;">
-            <span style="flex: 1; padding-right: 15px; word-break: break-word;">${item.isCombo ? '🎁 ' : ''}${item.name}</span>
+            <span style="flex: 1; padding-right: 15px; word-break: break-word;">${item.isCombo ? '🎁 組合優惠<br>' : ''}${item.name}</span>
             <span style="text-align: right; white-space: nowrap; flex-shrink: 0;">${priceText}</span>
         </li>`;
     });
