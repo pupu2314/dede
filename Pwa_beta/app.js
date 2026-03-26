@@ -41,16 +41,15 @@ function initDOMVariables() {
     DOM.loadingIndicator = document.getElementById('loading-indicator');
     DOM.summarySection = document.getElementById('summary-details'); 
     
-    DOM.originalTotal = document.getElementById('floating-original-total');
+DOM.originalTotal = document.getElementById('floating-original-total');
     DOM.originalTotalP = document.getElementById('original-total-p');
-    DOM.appliedPromoContainer = document.getElementById('applied-promo-container'); // 新增：優惠容器
-    DOM.appliedPromo = document.getElementById('floating-applied-promo');         // 新增：優惠文字
+    DOM.promoSavingsContainer = document.getElementById('promo-savings-container'); // 修改：抓取合併後的容器
+    DOM.appliedPromo = document.getElementById('floating-applied-promo');         
     DOM.discountedTotal = document.getElementById('floating-discounted-total');
     DOM.savings = document.getElementById('floating-savings');
-    DOM.savingsContainer = document.getElementById('savings-container');
     DOM.points = document.getElementById('floating-points');
     DOM.pointsContainer = document.getElementById('points-container');
-    DOM.selectedItemsList = document.querySelector('#floating-selected-items-list ul');
+    DOM.selectedItemsList = document.querySelector('#floating-selected-items-list ul');;
     
     DOM.saveBtn = document.getElementById('save-btn');
     DOM.loadBtn = document.getElementById('load-btn');
@@ -426,31 +425,27 @@ function updateTotals() {
 
     DOM.selectedItemsList.innerHTML = detailsHtml;
 
-    // 5. 動態更新總計區塊的文字與顯示狀態
+// 5. 動態更新總計區塊的文字與顯示狀態
     const discountedTotalPNode = document.getElementById('discounted-total-p');
 
     if (savings > 0) {
-        // 【有折扣時】顯示：原價、套用優惠、共省下、折扣後金額
+        // 【有折扣時】顯示：原價、(套用優惠+共省下) 合併行、折扣後金額
         if (DOM.originalTotalP) {
             DOM.originalTotalP.style.display = 'block';
-            DOM.originalTotalP.innerHTML = `原價：<span id="floating-original-total">${originalTotal.toLocaleString()}</span> 元`;
+            DOM.originalTotalP.innerHTML = `總原價：<span id="floating-original-total">${originalTotal.toLocaleString()}</span> 元`;
         }
-        if (DOM.appliedPromoContainer) {
-            DOM.appliedPromoContainer.style.display = 'block';
+        if (DOM.promoSavingsContainer) {
+            DOM.promoSavingsContainer.style.display = 'block';
             if (DOM.appliedPromo) DOM.appliedPromo.textContent = appliedPromoText;
-        }
-        if (DOM.savingsContainer) {
-            DOM.savingsContainer.style.display = 'block';
-            DOM.savingsContainer.innerHTML = `<p class="savings-note" style="margin: 0; color: #28a745;">共省下：<span id="floating-savings">${savings.toLocaleString()}</span> 元</p>`;
+            if (DOM.savings) DOM.savings.textContent = savings.toLocaleString();
         }
         if (discountedTotalPNode) {
-            discountedTotalPNode.innerHTML = `折扣後金額：<span id="floating-discounted-total">${finalTotal.toLocaleString()}</span> 元`;
+            discountedTotalPNode.innerHTML = `折扣後總金額：<span id="floating-discounted-total">${finalTotal.toLocaleString()}</span> 元`;
         }
     } else {
         // 【無折扣時】只顯示：總金額
         if (DOM.originalTotalP) DOM.originalTotalP.style.display = 'none';
-        if (DOM.appliedPromoContainer) DOM.appliedPromoContainer.style.display = 'none';
-        if (DOM.savingsContainer) DOM.savingsContainer.style.display = 'none';
+        if (DOM.promoSavingsContainer) DOM.promoSavingsContainer.style.display = 'none';
         if (discountedTotalPNode) {
             discountedTotalPNode.innerHTML = `總金額：<span id="floating-discounted-total">${finalTotal.toLocaleString()}</span> 元`;
         }
@@ -627,11 +622,13 @@ function exportAsPNG() {
 
     html += `<div style="border-top: 2px dashed #ccc; padding-top: 15px; text-align: right; font-size: 1em; line-height: 1.6;">`;
     
-    // 如果有折扣，顯示：原價、套用優惠、共省下、折扣後金額
+    // 如果有折扣，顯示：原價、(套用優惠+共省下)、折扣後金額
     if (currentReceiptData.savings > 0) {
         html += `<p style="margin: 0;">原價：$${currentReceiptData.originalTotal.toLocaleString()}</p>
-        <p style="margin: 0; color: #dc3545;">套用優惠：${currentReceiptData.appliedPromoName}</p>
-        <p style="margin: 0; color: #28a745;">共省下：$${currentReceiptData.savings.toLocaleString()}</p>
+        <p style="margin: 0;">
+            <span style="color: #dc3545;">套用優惠：${currentReceiptData.appliedPromoName}</span>
+            <span style="color: #28a745; margin-left: 8px;">(共省下：$${currentReceiptData.savings.toLocaleString()})</span>
+        </p>
         <p style="margin: 8px 0 0 0; font-size: 1.3em; font-weight: bold;">折扣後金額：$${currentReceiptData.finalTotal.toLocaleString()}</p>`;
     } else {
         // 如果無折扣，只顯示：總金額
