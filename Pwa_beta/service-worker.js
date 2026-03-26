@@ -1,5 +1,5 @@
 /**
- * 優化版 Service Worker
+ * Service Worker
  * 策略：App Shell (UI) 網路優先 + 超時控制，動態資料 (services.json) 直接放行
  */
 
@@ -7,7 +7,6 @@
 const CACHE_NAME = 'price-calculator-v26.4a'; 
 const OFFLINE_URL = 'index.html';
 
-// 移除 services.json，因為 app.js 已經用 localStorage 管理它了
 const urlsToCache = [
     'index.html',
     'check.html',
