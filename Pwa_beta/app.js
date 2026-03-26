@@ -178,6 +178,80 @@ function renderServiceList(filterText = '') {
     
     const terms = filterText.toLowerCase().split(/[,，]/).map(t => t.trim()).filter(t => t.length > 0);
 
+    // ==========================================
+    // 新增：置頂套餐區 (只在沒有搜尋條件時顯示)
+    // ==========================================
+    if (serviceData.combos && Array.isArray(serviceData.combos) && terms.length === 0) {
+        // 篩選出目前「有生效優惠」的組合
+        const activeCombos = serviceData.combos.map((combo, index) => ({combo, index}))
+            .filter(item => getActivePromotion(item.combo.promotions) !== null);
+
+        if (activeCombos.length > 0) {
+            const comboFieldset = document.createElement('fieldset');
+            comboFieldset.style.borderColor = '#ff9800';
+            comboFieldset.style.backgroundColor = '#fff8e1';
+            comboFieldset.style.marginBottom = '20px';
+            
+            const legend = document.createElement('legend');
+            legend.style.color = '#e65100';
+            legend.style.fontWeight = 'bold';
+            legend.textContent = '🔥 本月超值套餐 (一鍵全選)';
+            comboFieldset.appendChild(legend);
+
+            activeCombos.forEach(({combo, index}) => {
+                const activePromo = getActivePromotion(combo.promotions);
+                // 串接該套餐包含的服務名稱
+                const itemNames = combo.itemIds.map(id => allServices.get(id)?.name).filter(Boolean).join(' + ');
+                let originalPrice = combo.itemIds.reduce((sum, id) => sum + (allServices.get(id)?.price || 0), 0);
+
+                const div = document.createElement('div');
+                div.className = 'service-item';
+                div.style.borderBottom = '1px solid #ffe0b2';
+                
+                const label = document.createElement('label');
+                const checkbox = document.createElement('input');
+                checkbox.type = 'checkbox';
+                checkbox.className = 'combo-checkbox'; // 給予特殊 class 方便後續連動
+                checkbox.dataset.comboIndex = index;
+                // 如果套餐內的單品都被選了，這個套餐就自動打勾
+                checkbox.checked = combo.itemIds.every(id => selectedItems.has(id));
+                
+                // 一鍵全選/取消全選邏輯
+                checkbox.addEventListener('change', (e) => {
+                    if (e.target.checked) {
+                        combo.itemIds.forEach(id => selectedItems.add(id));
+                    } else {
+                        combo.itemIds.forEach(id => selectedItems.delete(id));
+                    }
+                    updateCheckboxes();
+                    updateTotals();
+                });
+
+                const nameSpan = document.createElement('span');
+                nameSpan.className = 'item-name';
+                nameSpan.innerHTML = `<span style="font-weight: bold; color: #d84315;">${combo.name}</span><br><span style="font-size: 0.85em; color: #666;">包含：${itemNames}</span>`;
+
+                const priceSpan = document.createElement('span');
+                priceSpan.className = 'item-price-detail';
+                priceSpan.innerHTML = `
+                    <span style="text-decoration: line-through; color: #999; font-size: 0.85em;">原價 $${originalPrice}</span><br>
+                    <span style="color: #d84315; font-weight: bold; font-size: 1.05em;">套餐價 $${activePromo.price}</span>
+                `;
+
+                label.appendChild(checkbox);
+                label.appendChild(nameSpan);
+                label.appendChild(priceSpan);
+                div.appendChild(label);
+                comboFieldset.appendChild(div);
+            });
+            
+            DOM.serviceList.appendChild(comboFieldset);
+        }
+    }
+
+    // ==========================================
+    // 原本的分類與服務項目
+    // ==========================================
     serviceData.categories.forEach(category => {
         const filteredItems = category.items.filter(item => {
             if (terms.length === 0) return true;
@@ -235,6 +309,9 @@ function renderServiceList(filterText = '') {
             checkbox.addEventListener('change', (e) => {
                 if (e.target.checked) selectedItems.add(item.id);
                 else selectedItems.delete(item.id);
+                
+                // 勾選單品時，需連帶更新上方套餐區塊的勾選狀態
+                updateCheckboxes();
                 updateTotals();
             });
 
@@ -247,11 +324,10 @@ function renderServiceList(filterText = '') {
             
             const activePromo = getActivePromotion(item.promotions);
             if (activePromo) {
-                // 修改：原價換行，接著顯示「優惠名稱」與「優惠價」
                 priceSpan.innerHTML = `
                     <span style="text-decoration: line-through; color: #999; font-size: 0.85em;">$${item.price}</span><br>
-                    <span class="discount-note">${activePromo.label}</span>
-                    <span style="color: var(--danger-color);">$${activePromo.price}</span>
+                    <span class="discount-note" style="font-size: 0.85em; color: var(--primary-color, #007bff); margin-right: 5px;">${activePromo.label}</span>
+                    <span style="color: var(--danger-color); font-weight: bold; font-size: 1.05em;">$${activePromo.price}</span>
                 `;
             } else {
                 priceSpan.textContent = `$${item.price}`;
@@ -302,13 +378,14 @@ function updateTotals() {
     let receiptItems = []; 
     let remainingItems = new Set(selectedItems);
 
+// 請在 updateTotals() 函式中，替換「1. 處理組合優惠」的這個區塊：
+
     // 1. 處理組合優惠 (純淨新版：僅支援 promotions 陣列)
     if (serviceData.combos && Array.isArray(serviceData.combos)) {
         serviceData.combos.forEach(combo => {
-            const comboItemsList = combo.itemIds; // 統一使用新版 ID 陣列
+            const comboItemsList = combo.itemIds; 
             if (!comboItemsList || !Array.isArray(comboItemsList)) return;
 
-            // 僅從 promotions 陣列尋找目前生效的優惠
             const activeComboPromo = getActivePromotion(combo.promotions);
 
             if (activeComboPromo) {
@@ -317,9 +394,14 @@ function updateTotals() {
                 
                 if (isMatch) {
                     let comboOriginalPrice = 0;
+                    let comboItemNames = []; // 新增：用來收集組合內各單品的名稱
+
                     comboItemsList.forEach(id => {
                         const item = allServices.get(id);
-                        if(item) comboOriginalPrice += item.price;
+                        if(item) {
+                            comboOriginalPrice += item.price;
+                            comboItemNames.push(item.name); // 將單品名稱存起來
+                        }
                         remainingItems.delete(id); 
                     });
                     
@@ -327,7 +409,7 @@ function updateTotals() {
                     finalTotal += currentComboPrice;
                     
                     receiptItems.push({
-                        name: combo.name,
+                        name: comboItemNames.join(' + '), // 修改：顯示「單品A + 單品B」，取代原先的 combo.name
                         originalPrice: comboOriginalPrice,
                         finalPrice: currentComboPrice,
                         hasPromo: true,
@@ -535,9 +617,21 @@ function generateShareableLink() {
 
 function updateCheckboxes() {
     if (!DOM.serviceList) return;
-    const checkboxes = DOM.serviceList.querySelectorAll('input[type="checkbox"]');
+    
+    // 1. 更新一般單品的勾選狀態
+    const checkboxes = DOM.serviceList.querySelectorAll('.service-item input[type="checkbox"]:not(.combo-checkbox)');
     checkboxes.forEach(cb => {
         cb.checked = selectedItems.has(cb.value);
+    });
+
+    // 2. 更新置頂套餐的勾選狀態 (如果底下的單品剛好全被選中，套餐就會自動打勾)
+    const comboCheckboxes = DOM.serviceList.querySelectorAll('.combo-checkbox');
+    comboCheckboxes.forEach(cb => {
+        const comboIndex = cb.dataset.comboIndex;
+        const combo = serviceData.combos[comboIndex];
+        if (combo && combo.itemIds) {
+            cb.checked = combo.itemIds.every(id => selectedItems.has(id));
+        }
     });
 }
 
