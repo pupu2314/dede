@@ -142,7 +142,7 @@ legend {
 .service-item {
     margin-bottom: 12px;
     display: flex;
-    align-items: center;
+    align-items: center; /* 這裡控制整行的垂直對齊 */
     padding: 8px;
     border-radius: 6px;
     transition: background-color 0.2s;
@@ -156,24 +156,29 @@ legend {
     margin-right: 12px;
     transform: scale(1.2);
     cursor: pointer;
+    margin-top: 4px; /* 稍微往下推一點，與第一行文字視覺對齊 */
 }
 
 .service-item label {
     cursor: pointer;
     flex-grow: 1;
     display: flex;
-    align-items: center;
-    flex-wrap: wrap;
+    align-items: flex-start; /* 【關鍵】讓元素對齊第一行，避免名稱換行時價格跑到中間 */
+    flex-wrap: nowrap; /* 【關鍵】絕對不允許換行，把價格擠到下面 */
 }
 
 .item-name {
-    flex-grow: 1;
+    flex: 1 1 auto; /* 【關鍵】填滿剩餘空間，允許自動換行 */
     font-weight: 500;
+    line-height: 1.4;
+    word-break: break-word; /* 允許長文字自動換行 */
+    padding-right: 15px; /* 與右側價格保持安全距離 */
 }
 
 .item-price-detail {
-    white-space: nowrap;
-    margin-left: 15px;
+    flex: 0 0 auto; /* 【關鍵】絕對不壓縮！鎖死寬度 */
+    white-space: nowrap; /* 絕對不換行 */
+    text-align: right;
     color: var(--primary-hover);
     font-weight: 600;
 }
