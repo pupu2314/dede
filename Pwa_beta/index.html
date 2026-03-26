@@ -48,14 +48,14 @@
     <!-- 懸浮視窗區域：包含總計與明細 -->
     <div id="summary-details">
         <!-- 結算總計 (置於懸浮窗頂部，依序排列) -->
+        <div id="summary-details">
         <div class="final-totals" style="border-bottom: 2px solid #eee; padding-bottom: 8px; margin-bottom: 8px; text-align: right; font-size: 0.95em; line-height: 1.4;">
             <p id="original-total-p" style="margin: 2px 0;">總原價：<span id="floating-original-total">0</span> 元</p>
             
-            <p id="applied-promo-container" style="margin: 2px 0; color: #dc3545; display: none;">套用優惠：<span id="floating-applied-promo">無</span></p>
-            
-            <div id="savings-container" style="display: none; margin: 2px 0;">
-                <p class="savings-note" style="margin: 0; color: #28a745;">節省金額：<span id="floating-savings">0</span> 元</p>
-            </div>
+            <p id="promo-savings-container" style="margin: 2px 0; display: none;">
+                <span style="color: #dc3545;">套用優惠：<span id="floating-applied-promo">無</span></span>
+                <span style="color: #28a745; margin-left: 8px;">(共省下：<span id="floating-savings">0</span> 元)</span>
+            </p>
             
             <p id="discounted-total-p" style="margin: 2px 0; font-weight: bold; font-size: 1.1em;">折扣後總金額：<span id="floating-discounted-total">0</span> 元</p>
             
@@ -64,7 +64,6 @@
             </div>
         </div>
 
-        <!-- 消費明細清單 (預設摺疊) -->
         <details class="details-content">
             <summary style="font-weight: bold; cursor: pointer; padding: 5px 0; color: #007bff; outline: none;">🛒 目前選擇明細 (點擊展開)</summary>
             <div id="floating-selected-items-list" style="margin-top: 5px; font-size: 0.9em; max-height: 20vh; overflow-y: auto;">
