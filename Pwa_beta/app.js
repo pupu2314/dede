@@ -472,27 +472,47 @@ function updateTotals() {
     let detailsHtml = '';
 
     // 4. 產生 UI 明細列表 (加入自動換行與價格靠右)
-    receiptItems.forEach(item => {
-        let priceHtml = `$${item.originalPrice}`;
-        if (item.hasPromo) {
-            if (usedIdentity) {
-                // 如果是壽星或學生，保持原色且不加刪除線，並改變提示字眼
-                let identityMsg = currentIdentity === 'student' ? '【學生以原價8折計算】' : '【壽星以原價5折計算】';
-                priceHtml = `<span style="color: var(--text-main); margin-right: 5px;">$${item.originalPrice}</span> <br><span style="color: var(--primary-color, #007bff); font-size: 0.85em;">${identityMsg}</span>`;
-            } else {
-                let promoDateStr = (item.promoStart && item.promoEnd) ? `<br><span style="color: #6c757d; font-size: 0.75em;">(期限: ${item.promoStart} ~ ${item.promoEnd})</span>` : '';
-                priceHtml = `<span style="color: var(--danger-color); font-weight: bold; margin-right: 5px;">$${item.finalPrice}</span> <span style="text-decoration: line-through; color: #999; font-size: 0.8em;">$${item.originalPrice}</span>${promoDateStr}`;
-            }
-        }
+receiptItems.forEach(item => {
+        const li = document.createElement('li');
+        li.style.marginBottom = '6px';
+        li.style.borderBottom = '1px dashed #eee';
+        li.style.paddingBottom = '4px';
         
-        // flex-shrink: 0 確保價格區塊不會被長名字擠壓；word-break: break-word 讓長名字自動換行
-        detailsHtml += `
-            <li style="margin-bottom: 6px; display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 1px dotted #e0e0e0; padding-bottom: 4px;">
-                <span class="item-name" style="flex: 1; padding-right: 15px; word-break: break-word; line-height: 1.4;">${item.isCombo ? '🎁 組合優惠<br>' : ''}${item.name}</span>
-                <span class="item-price-detail" style="text-align: right; white-space: nowrap; flex-shrink: 0;">${priceHtml}</span>
-            </li>
-        `;
-    });
+        // 判斷是否為特殊身分
+        const isSpecialIdentity = (currentIdentity === 'student' || currentIdentity === 'birthday');
+        
+        // 情境 A：正常套用優惠 (有優惠，且「不是」被取消優惠的學生/壽星組合)
+        if (item.hasPromo && !(item.isCombo && isSpecialIdentity)) {
+            let comboBadge = item.isCombo ? `<span style="color: #ff9800; font-size: 0.85em; margin-left: 4px;">🎁 組合優惠</span>` : '';
+            li.innerHTML = `
+                <div style="display: flex; justify-content: space-between;">
+                    <span>${item.name} ${comboBadge}</span>
+                    <span style="color: var(--danger-color); font-weight: bold;">$${item.finalPrice}</span>
+                </div>
+                <div style="text-align: right; font-size: 0.85em; color: #999; text-decoration: line-through;">
+                    原價 $${item.originalPrice}
+                </div>
+            `;
+        } 
+        // 情境 B：一般的顯示方式 (無優惠的單品，或是學生/壽星點了組合)
+        else {
+            let noteHtml = '';
+            // 若為特殊身分的組合，加上專屬備註
+            if (item.isCombo && isSpecialIdentity) {
+                const identityName = currentIdentity === 'birthday' ? '壽星' : '學生';
+                noteHtml = `<div style="text-align: right; font-size: 0.85em; color: var(--danger-color, #dc3545); margin-top: 2px;">【${identityName}無組合優惠】</div>`;
+            }
+
+            li.innerHTML = `
+                <div style="display: flex; justify-content: space-between;">
+                    <span>${item.name}</span>
+                    <span>$${item.originalPrice}</span> <!-- 一般顯示方式統一顯示原價 -->
+                </div>
+                ${noteHtml}
+            `;
+        }
+        DOM.selectedItemsList.appendChild(li);
+    });;
 
     if (usedIdentity) {
         appliedPromoText = identityLabel;
@@ -684,7 +704,7 @@ function exportAsPNG() {
         boxSizing: 'border-box'
     });
 
-    // 標題區 (刪除「估價單」字樣)
+    // 標題區
     let html = `<h2 style="text-align: center; border-bottom: 2px solid #007bff; padding-bottom: 10px; color: #0056b3; margin-top: 0;">德德美體美容中心</h2>`;
 
     if (currentReceiptData.identity !== 'general') {
@@ -697,27 +717,43 @@ function exportAsPNG() {
     html += `<h3 style="margin-bottom: 10px; font-size: 1.1em; border-bottom: 1px solid #eee; padding-bottom: 5px;">服務明細</h3>`;
     html += `<ul style="list-style: none; padding: 0; margin: 0 0 20px 0;">`;
 
-    currentReceiptData.items.forEach(item => {
-        let priceText = `$${item.originalPrice}`;
-        if (item.hasPromo) {
-            if (currentReceiptData.usedIdentity) {
-                // 學生或壽星：原色、無刪除線、客製化提示文字
-                let identityMsg = currentReceiptData.identity === 'student' ? '【學生以原價8折計算】' : '【壽星以原價5折計算】';
-                priceText = `<span style="color: #333;">$${item.originalPrice}</span> <br><span style="color: #007bff; font-size: 0.85em;">${identityMsg}</span>`;
-            } else {
-                // 一般期間限定促銷：顯示特價、原價刪除線、註明期限
-                let promoDateStr = (item.promoStart && item.promoEnd) ? `<br><span style="color: #6c757d; font-size: 0.75em;">(優惠期限: ${item.promoStart} ~ ${item.promoEnd})</span>` : '';
-                priceText = `<span style="color: #dc3545; font-weight: bold;">$${item.finalPrice}</span> <br><span style="color: #999; text-decoration: line-through; font-size: 0.85em;">$${item.originalPrice}</span>${promoDateStr}`;
+currentReceiptData.receiptItems.forEach(item => {
+        // 判斷是否為特殊身分
+        const isSpecialIdentity = (currentIdentity === 'student' || currentIdentity === 'birthday');
+
+        // 情境 A：正常套用優惠
+        if (item.hasPromo && !(item.isCombo && isSpecialIdentity)) {
+            let comboBadge = item.isCombo ? `<span style="color: #ff9800; font-size: 0.85em; margin-left: 4px;">🎁 組合優惠</span>` : '';
+            html += `
+            <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                <div style="flex: 1; padding-right: 10px;">
+                    <div style="font-weight: 500;">${item.name} ${comboBadge}</div>
+                    <div style="font-size: 0.85em; color: #888;">原價 $${item.originalPrice}</div>
+                </div>
+                <div style="text-align: right; font-weight: bold; color: #d84315;">
+                    $${item.finalPrice}
+                </div>
+            </div>`;
+        } 
+        // 情境 B：一般的顯示方式
+        else {
+            let noteHtml = '';
+            // 若為特殊身分的組合，加上專屬備註
+            if (item.isCombo && isSpecialIdentity) {
+                const identityName = currentIdentity === 'birthday' ? '壽星' : '學生';
+                noteHtml = `<div style="font-size: 0.85em; color: #dc3545; text-align: right; margin-top: 2px;">【${identityName}無組合優惠】</div>`;
             }
+            
+            html += `
+            <div style="margin-bottom: 8px;">
+                <div style="display: flex; justify-content: space-between;">
+                    <div style="flex: 1; padding-right: 10px; font-weight: 500;">${item.name}</div>
+                    <div style="text-align: right;">$${item.originalPrice}</div>
+                </div>
+                ${noteHtml}
+            </div>`;
         }
-        
-        // 截圖的明細同樣設定自動換行與價格靠右
-        html += `<li style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px; line-height: 1.4;">
-            <span style="flex: 1; padding-right: 15px; word-break: break-word;">${item.isCombo ? '🎁 組合優惠<br>' : ''}${item.name}</span>
-            <span style="text-align: right; white-space: nowrap; flex-shrink: 0;">${priceText}</span>
-        </li>`;
     });
-    html += `</ul>`;
 
     html += `<div style="border-top: 2px dashed #ccc; padding-top: 15px; text-align: right; font-size: 1em; line-height: 1.6;">`;
     
