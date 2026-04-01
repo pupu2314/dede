@@ -703,7 +703,7 @@ function exportAsPNG() {
             if (currentReceiptData.usedIdentity) {
                 // 學生或壽星：原色、無刪除線、客製化提示文字
                 let identityMsg = currentReceiptData.identity === 'student' ? '【學生以原價8折計算】' : '【壽星以原價5折計算】';
-                priceText = ``<span style="color: #dc3545; font-weight: bold;">$${item.finalPrice}</span> <br><span style="color: #999; text-decoration: line-through; font-size: 0.85em;">$${item.originalPrice}</span> <br><span style="color: #007bff; font-size: 0.85em;">${identityMsg}</span>`;
+                priceText = `<span style="color: #dc3545; font-weight: bold;">$${item.finalPrice}</span> <br><span style="color: #999; text-decoration: line-through; font-size: 0.85em;">$${item.originalPrice}</span> <br><span style="color: #007bff; font-size: 0.85em;">${identityMsg}</span>`;
             } else {
                 // 一般期間限定促銷：顯示特價、原價刪除線、註明期限
                 let promoDateStr = (item.promoStart && item.promoEnd) ? `<br><span style="color: #6c757d; font-size: 0.75em;">(優惠期限: ${item.promoStart} ~ ${item.promoEnd})</span>` : '';
