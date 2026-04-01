@@ -5,7 +5,7 @@ let serviceData = null;
 let allServices = new Map();
 let selectedItems = new Set();
 let currentIdentity = 'general'; 
-let currentReceiptData = null; // 新增：儲存當下所有的結帳與明細資訊，供截圖時使用
+let currentReceiptData = null; 
 const DOM = {};
 
 const DATA_CACHE_KEY = 'dede_services_data_cache';
@@ -37,719 +37,619 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 function initDOMVariables() {
     DOM.serviceList = document.getElementById('service-list');
+    if (!DOM.serviceList) {
+        // 如果 HTML 沒有這個容器，我們動態建立一個以避免報錯
+        DOM.serviceList = document.createElement('div');
+        DOM.serviceList.id = 'service-list';
+        document.querySelector('main').insertBefore(DOM.serviceList, document.querySelector('fieldset'));
+    }
     DOM.searchInput = document.getElementById('search-input');
     DOM.loadingIndicator = document.getElementById('loading-indicator');
-    DOM.summarySection = document.getElementById('summary-details'); 
-    
-DOM.originalTotal = document.getElementById('floating-original-total');
     DOM.originalTotalP = document.getElementById('original-total-p');
-    DOM.promoSavingsContainer = document.getElementById('promo-savings-container'); // 修改：抓取合併後的容器
-    DOM.appliedPromo = document.getElementById('floating-applied-promo');         
-    DOM.discountedTotal = document.getElementById('floating-discounted-total');
-    DOM.savings = document.getElementById('floating-savings');
-    DOM.points = document.getElementById('floating-points');
+    DOM.floatingOriginalTotal = document.getElementById('floating-original-total');
+    DOM.floatingDiscountedTotal = document.getElementById('floating-discounted-total');
+    DOM.floatingPoints = document.getElementById('floating-points');
     DOM.pointsContainer = document.getElementById('points-container');
-    DOM.selectedItemsList = document.querySelector('#floating-selected-items-list ul');;
-    
-    DOM.saveBtn = document.getElementById('save-btn');
-    DOM.loadBtn = document.getElementById('load-btn');
-    DOM.clearBtn = document.getElementById('clear-btn');
-    DOM.shareLinkBtn = document.getElementById('share-link-btn');
-    DOM.screenshotBtn = document.getElementById('screenshot-btn');
+    DOM.floatingSelectedItemsListUl = document.querySelector('#floating-selected-items-list ul');
 }
 
 async function loadServiceData() {
-    let cachedData = null;
-    const localDataString = localStorage.getItem(DATA_CACHE_KEY);
-    if (localDataString) {
-        try {
-            cachedData = JSON.parse(localDataString);
-        } catch (e) {
-            console.warn('本機快取解析失敗', e);
-        }
-    }
-
-    const checkUpdateInBackground = async () => {
-        try {
-            const response = await fetch(`services.json?t=${new Date().getTime()}`, { cache: 'no-store' });
-            if (response.ok) {
-                const latestData = await response.json();
-                const latestDataString = JSON.stringify(latestData);
-
-                if (localDataString !== latestDataString) {
-                    setTimeout(() => {
-                        const userAgreed = confirm('📢 系統通知\n\n發現新的服務項目或價格已更新！\n是否立即載入最新版本？\n\n(若選擇取消，您將繼續使用當前版本直到下次開啟)');
-                        if (userAgreed) {
-                            localStorage.setItem(DATA_CACHE_KEY, latestDataString);
-                            window.location.reload(); 
-                        }
-                    }, 800);
-                }
-            }
-        } catch (error) {
-            console.log('背景檢查更新失敗:', error);
-        }
-    };
-
-    if (cachedData) {
-        setTimeout(checkUpdateInBackground, 1000);
-        return cachedData;
-    } else {
-        try {
-            const response = await fetch(`services.json?t=${new Date().getTime()}`, { cache: 'no-store' });
-            if (!response.ok) throw new Error(`伺服器回應錯誤: ${response.status}`);
-            const data = await response.json();
-            localStorage.setItem(DATA_CACHE_KEY, JSON.stringify(data));
-            return data;
-        } catch (networkError) {
-            throw networkError;
-        }
+    try {
+        const response = await fetch('services.json');
+        if (!response.ok) throw new Error('Network response was not ok');
+        const data = await response.json();
+        return data;
+    } catch (error) {
+        console.error('Fetch error:', error);
+        return null;
     }
 }
 
 function initializePage() {
-    allServices.clear();
-    serviceData.categories.forEach(cat => {
-        cat.items.forEach(item => {
-            allServices.set(item.id, item);
-        });
-    });
-
-    setupFloatingSummary();   
-    renderIdentitySelector(); 
-    renderServiceList();
-    bindEvents();
-    
-    loadFromUrl();
-    updateTotals();
-}
-
-function setupFloatingSummary() {
-    if (DOM.summarySection) {
-        Object.assign(DOM.summarySection.style, {
-            position: 'fixed',
-            bottom: '0',
-            left: '0',
-            width: '100%',
-            backgroundColor: '#ffffff',
-            boxShadow: '0 -4px 15px rgba(0,0,0,0.15)',
-            zIndex: '1000',
-            padding: '15px 20px',
-            margin: '0',
-            boxSizing: 'border-box',
-            borderTopLeftRadius: '20px',
-            borderTopRightRadius: '20px',
-            maxHeight: '40vh',
-            overflowY: 'auto'
-        });
-        document.body.style.paddingBottom = '45vh'; 
-    }
-}
-
-function renderIdentitySelector() {
-    if (!DOM.serviceList) return;
-    const container = document.createElement('fieldset');
-    container.style.marginBottom = '20px';
-    container.style.borderColor = '#007bff';
-    container.style.backgroundColor = '#f8f9fa';
-    container.innerHTML = `
-        <legend style="color: #007bff; font-weight: bold;">👤 客戶身分 (折扣選擇)</legend>
-        <div style="display: flex; gap: 15px; flex-wrap: wrap;">
-            <label><input type="radio" name="identity" value="general" checked> 一般客戶</label>
-            <label><input type="radio" name="identity" value="birthday"> 當月壽星 (原價 5 折)</label>
-            <label><input type="radio" name="identity" value="student"> 學生 (原價 8 折)</label>
-        </div>
-    `;
-    container.querySelectorAll('input[name="identity"]').forEach(radio => {
-        radio.addEventListener('change', (e) => {
-            currentIdentity = e.target.value;
-            updateTotals(); 
-        });
-    });
-    DOM.serviceList.parentNode.insertBefore(container, DOM.serviceList);
-}
-
-// ==========================================
-// 2. 渲染與事件綁定
-// ==========================================
-function renderServiceList(filterText = '') {
-    if (!DOM.serviceList) return;
-    DOM.serviceList.innerHTML = '';
-    
-    const terms = filterText.toLowerCase().split(/[,，]/).map(t => t.trim()).filter(t => t.length > 0);
-
-    // ==========================================
-    // 新增：置頂套餐區 (只在沒有搜尋條件時顯示)
-    // ==========================================
-    if (serviceData.combos && Array.isArray(serviceData.combos) && terms.length === 0) {
-        // 篩選出目前「有生效優惠」的組合
-        const activeCombos = serviceData.combos.map((combo, index) => ({combo, index}))
-            .filter(item => getActivePromotion(item.combo.promotions) !== null);
-
-        if (activeCombos.length > 0) {
-            const comboFieldset = document.createElement('fieldset');
-            comboFieldset.style.borderColor = '#ff9800';
-            comboFieldset.style.backgroundColor = '#fff8e1';
-            comboFieldset.style.marginBottom = '20px';
-            
-            const legend = document.createElement('legend');
-            legend.style.color = '#e65100';
-            legend.style.fontWeight = 'bold';
-            legend.textContent = '🔥 本月超值套餐';
-            comboFieldset.appendChild(legend);
-
-            activeCombos.forEach(({combo, index}) => {
-                const activePromo = getActivePromotion(combo.promotions);
-                // 串接該套餐包含的服務名稱
-                const itemNames = combo.itemIds.map(id => allServices.get(id)?.name).filter(Boolean).join(' + ');
-                let originalPrice = combo.itemIds.reduce((sum, id) => sum + (allServices.get(id)?.price || 0), 0);
-
-                const div = document.createElement('div');
-                div.className = 'service-item';
-                div.style.borderBottom = '1px solid #ffe0b2';
-                
-                const label = document.createElement('label');
-                const checkbox = document.createElement('input');
-                checkbox.type = 'checkbox';
-                checkbox.className = 'combo-checkbox'; // 給予特殊 class 方便後續連動
-                checkbox.dataset.comboIndex = index;
-                // 如果套餐內的單品都被選了，這個套餐就自動打勾
-                checkbox.checked = combo.itemIds.every(id => selectedItems.has(id));
-                
-                // 一鍵全選/取消全選邏輯
-                checkbox.addEventListener('change', (e) => {
-                    if (e.target.checked) {
-                        combo.itemIds.forEach(id => selectedItems.add(id));
-                    } else {
-                        combo.itemIds.forEach(id => selectedItems.delete(id));
-                    }
-                    updateCheckboxes();
-                    updateTotals();
-                });
-
-                const nameSpan = document.createElement('span');
-                nameSpan.className = 'item-name';
-                nameSpan.innerHTML = `<span style="font-weight: bold; color: #d84315;">${combo.name}</span><br><span style="font-size: 0.85em; color: #666;">包含：${itemNames}</span>`;
-
-                const priceSpan = document.createElement('span');
-                priceSpan.className = 'item-price-detail';
-                priceSpan.innerHTML = `
-                    <span style="text-decoration: line-through; color: #999; font-size: 0.85em;">原價 $${originalPrice}</span><br>
-                    <span style="color: #d84315; font-weight: bold; font-size: 1.05em;">套餐價 $${activePromo.price}</span>
-                `;
-
-                label.appendChild(checkbox);
-                label.appendChild(nameSpan);
-                label.appendChild(priceSpan);
-                div.appendChild(label);
-                comboFieldset.appendChild(div);
+    // 建立所有服務的 Map，方便快速查詢
+    if (serviceData.categories) {
+        serviceData.categories.forEach(category => {
+            category.items.forEach(item => {
+                allServices.set(item.id, item);
             });
-            
-            DOM.serviceList.appendChild(comboFieldset);
+        });
+    }
+
+    setupEventListeners();
+    readUrlParams(); // 讀取分享的參數
+    renderAllServices();
+    updateSummary();
+}
+
+// ==========================================
+// 2. 核心計算邏輯
+// ==========================================
+function getActivePromotion(item) {
+    if (!item.promotions || item.promotions.length === 0) return null;
+    const now = new Date();
+    // 尋找當下符合時間區間的促銷
+    const active = item.promotions.find(promo => {
+        if (!promo.start || !promo.end) return false;
+        const start = new Date(promo.start);
+        const end = new Date(promo.end);
+        end.setHours(23, 59, 59, 999);
+        return now >= start && now <= end;
+    });
+    return active || null;
+}
+
+function findBestCombos(selectedItemObjects, combos) {
+    if (!combos || combos.length === 0) return { matchedCombos: [], uncombinedItems: selectedItemObjects };
+    
+    let remainingItems = [...selectedItemObjects];
+    let matchedCombos = [];
+
+    // 優先配對需要項目較多的組合
+    let sortedCombos = [...combos].sort((a, b) => b.itemIds.length - a.itemIds.length);
+
+    for (let combo of sortedCombos) {
+        let canForm = true;
+        for (let reqId of combo.itemIds) {
+            if (!remainingItems.some(item => item.id === reqId)) {
+                canForm = false;
+                break;
+            }
+        }
+
+        if (canForm) {
+            let comboItems = [];
+            for (let reqId of combo.itemIds) {
+                const idx = remainingItems.findIndex(item => item.id === reqId);
+                comboItems.push(remainingItems[idx]);
+                remainingItems.splice(idx, 1);
+            }
+            matchedCombos.push({
+                combo: combo,
+                items: comboItems
+            });
         }
     }
 
-    // ==========================================
-    // 原本的分類與服務項目
-    // ==========================================
-    serviceData.categories.forEach(category => {
-        const filteredItems = category.items.filter(item => {
-            if (terms.length === 0) return true;
-            return terms.some(term => 
-                item.name.toLowerCase().includes(term) || 
-                (item.tags && item.tags.some(tag => tag.toLowerCase().includes(term)))
-            );
+    return { matchedCombos, uncombinedItems: remainingItems };
+}
+
+// ==========================================
+// 3. UI 渲染與更新
+// ==========================================
+function renderAllServices(filterText = '') {
+    DOM.serviceList.innerHTML = '';
+    
+    // 渲染組合套餐 (如果有)
+    if (serviceData.combos && serviceData.combos.length > 0) {
+        const comboSection = document.createElement('div');
+        comboSection.innerHTML = `<h3 style="margin-bottom: 10px; color: var(--primary-color);">✨ 本月超值套餐</h3>`;
+        const comboContainer = document.createElement('div');
+        comboContainer.style.display = 'grid';
+        comboContainer.style.gridTemplateColumns = 'repeat(auto-fill, minmax(280px, 1fr))';
+        comboContainer.style.gap = '10px';
+        comboContainer.style.marginBottom = '20px';
+
+        serviceData.combos.forEach(combo => {
+            if (filterText && !combo.name.includes(filterText)) return;
+            
+            const div = document.createElement('div');
+            // 檢查是否該套餐的所有項目都被選中了
+            const isAllSelected = combo.itemIds.every(id => selectedItems.has(id));
+            div.className = `service-item ${isAllSelected ? 'selected' : ''}`;
+            div.style.padding = '15px';
+            div.style.border = '1px solid var(--border-color)';
+            div.style.borderRadius = '8px';
+            div.style.cursor = 'pointer';
+            div.style.backgroundColor = isAllSelected ? '#e7f1ff' : '#fff';
+            
+            const activePromo = getActivePromotion(combo);
+            const price = activePromo ? activePromo.price : (combo.price || 0);
+
+            div.innerHTML = `
+                <div style="font-weight: bold; margin-bottom: 5px;">${combo.name}</div>
+                <div style="font-size: 0.85em; color: var(--text-muted); margin-bottom: 5px;">包含: ${combo.itemIds.map(id => allServices.get(id)?.name || id).join(', ')}</div>
+                <div style="color: var(--danger-color); font-weight: bold;">${price > 0 ? price + ' 元' : '查看詳情'}</div>
+            `;
+            
+            div.onclick = () => {
+                if (isAllSelected) {
+                    combo.itemIds.forEach(id => selectedItems.delete(id));
+                } else {
+                    combo.itemIds.forEach(id => selectedItems.add(id));
+                }
+                updateSummary();
+                renderAllServices(filterText); // 重新渲染以更新選取狀態
+            };
+            comboContainer.appendChild(div);
         });
-
-        if (filteredItems.length === 0) return; 
-
-        const fieldset = document.createElement('fieldset');
-        const legend = document.createElement('legend');
-        legend.textContent = category.name;
-        fieldset.appendChild(legend);
-
-        const actionDiv = document.createElement('div');
-        actionDiv.style.marginBottom = '10px';
-        actionDiv.style.display = 'flex';
-        actionDiv.style.gap = '10px';
         
-        const selectAllBtn = document.createElement('button');
-        selectAllBtn.className = 'btn btn-sm';
-        selectAllBtn.textContent = '全選';
-        selectAllBtn.onclick = () => {
-            filteredItems.forEach(item => selectedItems.add(item.id));
-            updateCheckboxes();
-            updateTotals();
-        };
+        if(comboContainer.children.length > 0) {
+            comboSection.appendChild(comboContainer);
+            DOM.serviceList.appendChild(comboSection);
+        }
+    }
 
-        const deselectAllBtn = document.createElement('button');
-        deselectAllBtn.className = 'btn btn-sm';
-        deselectAllBtn.style.backgroundColor = 'var(--text-muted)';
-        deselectAllBtn.textContent = '取消全選';
-        deselectAllBtn.onclick = () => {
-            filteredItems.forEach(item => selectedItems.delete(item.id));
-            updateCheckboxes();
-            updateTotals();
-        };
+    // 渲染一般分類
+    serviceData.categories.forEach(category => {
+        const filteredItems = category.items.filter(item => item.name.includes(filterText));
+        if (filteredItems.length === 0) return;
 
-        actionDiv.appendChild(selectAllBtn);
-        actionDiv.appendChild(deselectAllBtn);
-        fieldset.appendChild(actionDiv);
+        const categoryDiv = document.createElement('div');
+        categoryDiv.innerHTML = `<h3 style="margin-top: 15px; margin-bottom: 10px; border-bottom: 2px solid var(--border-color); padding-bottom: 5px;">${category.name}</h3>`;
+        
+        const itemsContainer = document.createElement('div');
+        itemsContainer.style.display = 'grid';
+        itemsContainer.style.gridTemplateColumns = 'repeat(auto-fill, minmax(280px, 1fr))';
+        itemsContainer.style.gap = '10px';
 
         filteredItems.forEach(item => {
             const div = document.createElement('div');
-            div.className = 'service-item';
-            
-            const label = document.createElement('label');
-            
-            const checkbox = document.createElement('input');
-            checkbox.type = 'checkbox';
-            checkbox.value = item.id;
-            checkbox.checked = selectedItems.has(item.id);
-            checkbox.addEventListener('change', (e) => {
-                if (e.target.checked) selectedItems.add(item.id);
-                else selectedItems.delete(item.id);
-                
-                // 勾選單品時，需連帶更新上方套餐區塊的勾選狀態
-                updateCheckboxes();
-                updateTotals();
-            });
+            const isSelected = selectedItems.has(item.id);
+            div.className = `service-item ${isSelected ? 'selected' : ''}`;
+            div.style.padding = '15px';
+            div.style.border = '1px solid var(--border-color)';
+            div.style.borderRadius = '8px';
+            div.style.cursor = 'pointer';
+            div.style.backgroundColor = isSelected ? '#e7f1ff' : '#fff';
 
-            const nameSpan = document.createElement('span');
-            nameSpan.className = 'item-name';
-            nameSpan.textContent = item.name;
+            // --- 價格顯示邏輯 (包含需求1) ---
+            let currentPrice = item.price;
+            let hasDiscount = false;
+            let promoBadge = '';
 
-            const priceSpan = document.createElement('span');
-            priceSpan.className = 'item-price-detail';
-            
-            const activePromo = getActivePromotion(item.promotions);
-            if (activePromo) {
-                priceSpan.innerHTML = `
-                    <span style="text-decoration: line-through; color: #999; font-size: 0.85em;">$${item.price}</span><br>
-                    <span class="discount-note">${activePromo.label}</span>
-                    <span style="color: var(--danger-color);">$${activePromo.price}</span>
-                `;
+            if (currentIdentity === 'birthday') {
+                currentPrice = Math.round(item.price * 0.5);
+                hasDiscount = true;
+            } else if (currentIdentity === 'student') {
+                currentPrice = Math.round(item.price * 0.7);
+                hasDiscount = true;
             } else {
-                priceSpan.textContent = `$${item.price}`;
-            }
-
-            label.appendChild(checkbox);
-            label.appendChild(nameSpan);
-            label.appendChild(priceSpan);
-            div.appendChild(label);
-            fieldset.appendChild(div);
-        });
-
-        DOM.serviceList.appendChild(fieldset);
-    });
-}
-
-function bindEvents() {
-    if (DOM.searchInput) {
-        DOM.searchInput.addEventListener('input', (e) => renderServiceList(e.target.value));
-    }
-    if (DOM.saveBtn) DOM.saveBtn.addEventListener('click', saveSelections);
-    if (DOM.loadBtn) DOM.loadBtn.addEventListener('click', loadSelections);
-    if (DOM.clearBtn) DOM.clearBtn.addEventListener('click', clearSelections);
-    if (DOM.shareLinkBtn) DOM.shareLinkBtn.addEventListener('click', generateShareableLink);
-    if (DOM.screenshotBtn) DOM.screenshotBtn.addEventListener('click', exportAsPNG);
-}
-
-// ==========================================
-// 3. 核心計算邏輯 (價格、優惠、組合)
-// ==========================================
-function getActivePromotion(promotions) {
-    if (!promotions || !Array.isArray(promotions) || promotions.length === 0) return null;
-    const now = new Date();
-    for (const promo of promotions) {
-        const start = new Date(promo.start);
-        const end = new Date(promo.end);
-        end.setHours(23, 59, 59, 999); 
-        if (now >= start && now <= end) return promo;
-    }
-    return null;
-}
-
-function updateTotals() {
-    if (!DOM.discountedTotal || !DOM.selectedItemsList) return;
-
-    let originalTotal = 0;
-    let finalTotal = 0;
-    let receiptItems = []; 
-    let remainingItems = new Set(selectedItems);
-
-// 請在 updateTotals() 函式中，替換「1. 處理組合優惠」的這個區塊：
-
-    // 1. 處理組合優惠 (純淨新版：僅支援 promotions 陣列)
-    if (serviceData.combos && Array.isArray(serviceData.combos)) {
-        serviceData.combos.forEach(combo => {
-            const comboItemsList = combo.itemIds; 
-            if (!comboItemsList || !Array.isArray(comboItemsList)) return;
-
-            const activeComboPromo = getActivePromotion(combo.promotions);
-
-            if (activeComboPromo) {
-                const currentComboPrice = activeComboPromo.price;
-                const isMatch = comboItemsList.every(id => remainingItems.has(id));
-                
-                if (isMatch) {
-                    let comboOriginalPrice = 0;
-                    let comboItemNames = []; // 新增：用來收集組合內各單品的名稱
-
-                    comboItemsList.forEach(id => {
-                        const item = allServices.get(id);
-                        if(item) {
-                            comboOriginalPrice += item.price;
-                            comboItemNames.push(item.name); // 將單品名稱存起來
-                        }
-                        remainingItems.delete(id); 
-                    });
-                    
-                    originalTotal += comboOriginalPrice;
-                    finalTotal += currentComboPrice;
-                    
-                    receiptItems.push({
-                        name: comboItemNames.join('<br>'), // 修改：顯示「單品A (換行) 單品B」，取代原先的 combo.name
-                        originalPrice: comboOriginalPrice,
-                        finalPrice: currentComboPrice,
-                        hasPromo: true,
-                        promoName: activeComboPromo.label || combo.name, 
-                        promoStart: activeComboPromo.start, 
-                        promoEnd: activeComboPromo.end,
-                        isCombo: true
-                    });
+                const activePromo = getActivePromotion(item);
+                if (activePromo) {
+                    currentPrice = activePromo.price;
+                    hasDiscount = true;
+                    promoBadge = `<span style="background: var(--danger-color); color: #fff; font-size: 0.7em; padding: 2px 6px; border-radius: 4px; margin-left: 5px;">${activePromo.label}</span>`;
                 }
             }
-        });
-    }
 
-    // 2. 處理剩餘單品
-    remainingItems.forEach(id => {
-        const item = allServices.get(id);
-        if (!item) return;
-
-        originalTotal += item.price;
-        const activePromo = getActivePromotion(item.promotions);
-        let itemFinalPrice = activePromo ? activePromo.price : item.price;
-
-        finalTotal += itemFinalPrice;
-        
-        receiptItems.push({
-            name: item.name,
-            originalPrice: item.price,
-            finalPrice: itemFinalPrice,
-            hasPromo: activePromo !== null,
-            promoName: activePromo ? activePromo.label : null, 
-            promoStart: activePromo ? activePromo.start : null, // 記錄優惠期限
-            promoEnd: activePromo ? activePromo.end : null,
-            isCombo: false
-        });
-    });
-
-    // 3. 身分比價邏輯
-    let identityDiscountPrice = originalTotal;
-    let identityLabel = '';
-    let usedIdentity = false;
-    
-    if (currentIdentity === 'birthday') {
-        identityDiscountPrice = originalTotal * 0.5;
-        identityLabel = '壽星5折優惠';
-    } else if (currentIdentity === 'student') {
-        identityDiscountPrice = originalTotal * 0.8;
-        identityLabel = '學生8折優惠';
-    }
-
-    if (currentIdentity !== 'general' && selectedItems.size > 0) {
-        if (identityDiscountPrice < finalTotal) {
-            finalTotal = identityDiscountPrice;
-            usedIdentity = true;
-        }
-    }
-
-    const savings = originalTotal - finalTotal;
-    const points = Math.floor(finalTotal / 1500); 
-    let appliedPromoText = '無';
-    let detailsHtml = '';
-
-    // 4. 產生 UI 明細列表 (加入自動換行與價格靠右)
-    receiptItems.forEach(item => {
-        let priceHtml = `$${item.originalPrice}`;
-        if (item.hasPromo) {
-            if (usedIdentity) {
-                // 如果是壽星或學生，保持原色且不加刪除線，並改變提示字眼
-                let identityMsg = currentIdentity === 'student' ? '【學生以原價8折計算】' : '【壽星以原價5折計算】';
-                priceHtml = `<span style="color: var(--text-main); margin-right: 5px;">$${item.originalPrice}</span> <br><span style="color: var(--primary-color, #007bff); font-size: 0.85em;">${identityMsg}</span>`;
-            } else {
-                let promoDateStr = (item.promoStart && item.promoEnd) ? `<br><span style="color: #6c757d; font-size: 0.75em;">(期限: ${item.promoStart} ~ ${item.promoEnd})</span>` : '';
-                priceHtml = `<span style="color: var(--danger-color); font-weight: bold; margin-right: 5px;">$${item.finalPrice}</span> <span style="text-decoration: line-through; color: #999; font-size: 0.8em;">$${item.originalPrice}</span>${promoDateStr}`;
+            let priceDisplayHtml = `${currentPrice} 元`;
+            // 需求 1：壽星與學生價格會將原價已刪除線標示，並於左方顯示優惠後價格。
+            if (hasDiscount && currentPrice !== item.price) {
+                priceDisplayHtml = `<span style="color: var(--danger-color); font-weight: bold; font-size: 1.1em;">${currentPrice}</span> 元 <span style="text-decoration: line-through; color: var(--text-muted); font-size: 0.85em; margin-left: 5px;">${item.price}</span>`;
             }
-        }
+
+            div.innerHTML = `
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <div style="font-weight: bold;">${item.name} ${promoBadge}</div>
+                </div>
+                <div style="margin-top: 5px;">${priceDisplayHtml}</div>
+            `;
+
+            div.onclick = () => {
+                if (selectedItems.has(item.id)) {
+                    selectedItems.delete(item.id);
+                } else {
+                    selectedItems.add(item.id);
+                }
+                updateSummary();
+                renderAllServices(filterText);
+            };
+            itemsContainer.appendChild(div);
+        });
+
+        categoryDiv.appendChild(itemsContainer);
+        DOM.serviceList.appendChild(categoryDiv);
+    });
+}
+
+function updateSummary() {
+    let totalOriginal = 0;
+    let totalDiscounted = 0;
+    let totalPoints = 0;
+    let detailsHTML = '';
+
+    const selectedItemObjects = Array.from(selectedItems).map(id => allServices.get(id)).filter(Boolean);
+    const comboResult = findBestCombos(selectedItemObjects, serviceData.combos || []);
+
+    let activeCombos = [];
+    let singleItems = [];
+
+    // --- 需求 2：壽星與學生若勾選本月超值套餐，則不將項目合併顯示 ---
+    if (currentIdentity === 'birthday' || currentIdentity === 'student') {
+        activeCombos = []; 
+        singleItems = [...selectedItemObjects];
+
+        // 找出原本會組成套餐的項目，為了後續標示提示語
+        const itemsInCombos = new Set();
+        comboResult.matchedCombos.forEach(c => c.items.forEach(i => itemsInCombos.add(i.id)));
         
-        // flex-shrink: 0 確保價格區塊不會被長名字擠壓；word-break: break-word 讓長名字自動換行
-        detailsHtml += `
-            <li style="margin-bottom: 6px; display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 1px dotted #e0e0e0; padding-bottom: 4px;">
-                <span class="item-name" style="flex: 1; padding-right: 15px; word-break: break-word; line-height: 1.4;">${item.isCombo ? '🎁 組合優惠<br>' : ''}${item.name}</span>
-                <span class="item-price-detail" style="text-align: right; white-space: nowrap; flex-shrink: 0;">${priceHtml}</span>
+        singleItems.forEach(item => {
+            item.wasInCombo = itemsInCombos.has(item.id);
+        });
+    } else {
+        activeCombos = comboResult.matchedCombos;
+        singleItems = comboResult.uncombinedItems;
+        singleItems.forEach(item => item.wasInCombo = false);
+    }
+
+    // 處理合併的 Combo (只有一般身份會有)
+    activeCombos.forEach(comboObj => {
+        const combo = comboObj.combo;
+        const activePromo = getActivePromotion(combo);
+        
+        const originalTotal = comboObj.items.reduce((sum, i) => sum + i.price, 0);
+        let comboPrice = originalTotal;
+        if (activePromo) {
+            comboPrice = activePromo.price;
+        } else if (combo.price !== undefined) {
+            comboPrice = combo.price;
+        }
+
+        totalOriginal += originalTotal;
+        totalDiscounted += comboPrice;
+        totalPoints += Math.floor(comboPrice / 100);
+
+        detailsHTML += `
+            <li style="padding: 8px 0; border-bottom: 1px dashed #eee;">
+                <div style="font-weight:bold; color:var(--primary-color);">【套餐組合】${combo.name}</div>
+                <div style="display:flex; justify-content:space-between; margin-top:3px;">
+                    <span style="font-size:0.85em; color:var(--text-muted);">包含: ${comboObj.items.map(i=>i.name).join(', ')}</span>
+                    <span>
+                        <span style="color:var(--danger-color); font-weight:bold;">${comboPrice}</span> 元
+                        ${originalTotal !== comboPrice ? `<span style="text-decoration:line-through; font-size:0.8em; color:var(--text-muted); margin-left:4px;">${originalTotal}</span>` : ''}
+                    </span>
+                </div>
             </li>
         `;
     });
 
-    if (usedIdentity) {
-        appliedPromoText = identityLabel;
-    } else {
-        let promoNames = new Set();
-        receiptItems.forEach(i => {
-            if (i.hasPromo && i.promoName) promoNames.add(i.promoName);
-        });
-        if (promoNames.size > 0) {
-            appliedPromoText = Array.from(promoNames).join('、'); 
+    // 處理獨立項目 (包含被拆解的項目)
+    singleItems.forEach(item => {
+        let basePrice = item.price;
+        let finalPrice = basePrice;
+        let identityDiscountLabel = '';
+
+        if (currentIdentity === 'birthday') {
+            finalPrice = Math.round(basePrice * 0.5);
+            identityDiscountLabel = '<span style="color: #17a2b8; font-size: 0.85em; margin-left: 5px;">(壽星5折)</span>';
+        } else if (currentIdentity === 'student') {
+            finalPrice = Math.round(basePrice * 0.7);
+            identityDiscountLabel = '<span style="color: #28a745; font-size: 0.85em; margin-left: 5px;">(學生7折)</span>';
+        } else {
+            const activePromo = getActivePromotion(item);
+            if (activePromo) {
+                finalPrice = activePromo.price;
+                identityDiscountLabel = `<span style="color: var(--danger-color); font-size: 0.85em; margin-left: 5px;">(${activePromo.label})</span>`;
+            }
         }
-    }
 
-    if (selectedItems.size === 0) {
-        detailsHtml = '<li style="color: #999; padding: 5px 0;">尚未選擇任何服務</li>';
-    }
+        totalOriginal += basePrice;
+        totalDiscounted += finalPrice;
+        totalPoints += Math.floor(finalPrice / 100);
 
-    DOM.selectedItemsList.innerHTML = detailsHtml;
-
-// 5. 動態更新總計區塊的文字與顯示狀態
-    const discountedTotalPNode = document.getElementById('discounted-total-p');
-
-    if (savings > 0) {
-        // 【有折扣時】顯示：原價、(套用優惠+共省下) 合併行、折扣後金額
-        if (DOM.originalTotalP) {
-            DOM.originalTotalP.style.display = 'block';
-            DOM.originalTotalP.innerHTML = `總原價：<span id="floating-original-total">${originalTotal.toLocaleString()}</span> 元`;
+        // 需求 1: 左方顯示優惠後價格，原價已刪除線標示
+        let priceHtml = `${finalPrice} 元`;
+        if (basePrice !== finalPrice) {
+            priceHtml = `<span style="color:var(--danger-color); font-weight:bold;">${finalPrice}</span> 元 <span style="text-decoration:line-through; font-size:0.85em; color:var(--text-muted); margin-left:5px;">${basePrice}</span> 元`;
         }
-        if (DOM.promoSavingsContainer) {
-            DOM.promoSavingsContainer.style.display = 'block';
-            if (DOM.appliedPromo) DOM.appliedPromo.textContent = appliedPromoText;
-            if (DOM.savings) DOM.savings.textContent = savings.toLocaleString();
-        }
-        if (discountedTotalPNode) {
-            discountedTotalPNode.innerHTML = `折扣後總金額：<span id="floating-discounted-total">${finalTotal.toLocaleString()}</span> 元`;
-        }
-    } else {
-        // 【無折扣時】只顯示：總金額
-        if (DOM.originalTotalP) DOM.originalTotalP.style.display = 'none';
-        if (DOM.promoSavingsContainer) DOM.promoSavingsContainer.style.display = 'none';
-        if (discountedTotalPNode) {
-            discountedTotalPNode.innerHTML = `總金額：<span id="floating-discounted-total">${finalTotal.toLocaleString()}</span> 元`;
-        }
-    }
 
-    // 可獲得點數 (若無則免)
-    if (points > 0 && DOM.pointsContainer) {
-        DOM.pointsContainer.style.display = 'block';
-        if (DOM.points) DOM.points.textContent = points.toLocaleString();
-    } else if (DOM.pointsContainer) {
-        DOM.pointsContainer.style.display = 'none';
-    }
+        // 需求 2: 壽星與學生若勾選本月超值套餐，於下方顯示無套餐優惠提示
+        let noticeHtml = '';
+        if ((currentIdentity === 'birthday' || currentIdentity === 'student') && item.wasInCombo) {
+            let discountStr = currentIdentity === 'birthday' ? '5' : '7';
+            noticeHtml = `<div style="font-size: 0.85em; color: var(--danger-color); margin-top: 4px; font-weight: 500;">【${item.name}無套餐優惠，以原價${discountStr}折計算】</div>`;
+        }
 
+        detailsHTML += `
+            <li style="padding: 8px 0; border-bottom: 1px dashed #eee;">
+                <div style="display:flex; justify-content:space-between; align-items: flex-start;">
+                    <span style="flex: 1;">${item.name} ${identityDiscountLabel}</span>
+                    <span style="white-space: nowrap; margin-left: 10px;">${priceHtml}</span>
+                </div>
+                ${noticeHtml}
+            </li>
+        `;
+    });
+
+    // 儲存資料供截圖使用
     currentReceiptData = {
-        identity: currentIdentity,
-        identityLabel,
-        usedIdentity,
-        originalTotal,
-        finalTotal,
-        savings,
-        points,
-        appliedPromoName: appliedPromoText,
-        items: receiptItems
+        totalOriginal, totalDiscounted, totalPoints, activeCombos, singleItems
     };
+
+    // 更新 DOM
+    if (DOM.floatingOriginalTotal) DOM.floatingOriginalTotal.textContent = totalOriginal;
+    if (DOM.floatingDiscountedTotal) DOM.floatingDiscountedTotal.textContent = totalDiscounted;
+    if (DOM.floatingPoints) DOM.floatingPoints.textContent = totalPoints;
+    
+    if (DOM.floatingSelectedItemsListUl) {
+        DOM.floatingSelectedItemsListUl.innerHTML = detailsHTML || '<li style="color:var(--text-muted); text-align:center; padding: 10px;">尚未選擇任何項目</li>';
+    }
+
+    if (DOM.originalTotalP) {
+        DOM.originalTotalP.style.display = (totalOriginal !== totalDiscounted) ? 'block' : 'none';
+    }
+    if (DOM.pointsContainer) {
+        DOM.pointsContainer.style.display = totalPoints > 0 ? 'block' : 'none';
+    }
 }
 
 // ==========================================
-// 4. 實用功能 (儲存、讀取、分享、清除)
+// 4. 事件監聽與功能操作
 // ==========================================
-function saveSelections() {
+function setupEventListeners() {
+    // 搜尋功能
+    if (DOM.searchInput) {
+        DOM.searchInput.addEventListener('input', (e) => {
+            renderAllServices(e.target.value.trim());
+        });
+    }
+
+    // 身份切換 (檢查網頁上是否有 name="identity" 的 radio)
+    const identityRadios = document.querySelectorAll('input[name="identity"]');
+    identityRadios.forEach(radio => {
+        radio.addEventListener('change', (e) => {
+            currentIdentity = e.target.value;
+            updateSummary();
+            renderAllServices(DOM.searchInput ? DOM.searchInput.value.trim() : '');
+        });
+    });
+
+    // 按鈕功能
+    const btnSave = document.getElementById('save-btn');
+    if (btnSave) btnSave.addEventListener('click', saveSelection);
+
+    const btnLoad = document.getElementById('load-btn');
+    if (btnLoad) btnLoad.addEventListener('click', loadSelection);
+
+    const btnClear = document.getElementById('clear-btn');
+    if (btnClear) btnClear.addEventListener('click', () => {
+        selectedItems.clear();
+        updateSummary();
+        renderAllServices();
+        showNotice('🗑️ 已清除所有選項');
+    });
+
+    const btnShare = document.getElementById('share-link-btn');
+    if (btnShare) btnShare.addEventListener('click', generateShareLink);
+
+    const btnScreenshot = document.getElementById('screenshot-btn');
+    if (btnScreenshot) btnScreenshot.addEventListener('click', generateReceiptImage);
+}
+
+function saveSelection() {
     if (selectedItems.size === 0) {
-        showNotice('沒有選擇任何項目可以儲存');
+        showNotice('沒有選擇任何項目可以儲存喔！');
         return;
     }
-    localStorage.setItem('dede_saved_selections', JSON.stringify(Array.from(selectedItems)));
-    showNotice('✅ 選擇已儲存！下次開啟可直接載入');
+    const data = {
+        items: Array.from(selectedItems),
+        identity: currentIdentity
+    };
+    localStorage.setItem(DATA_CACHE_KEY, JSON.stringify(data));
+    showNotice('💾 選擇已儲存！');
 }
 
-function loadSelections() {
-    const saved = localStorage.getItem('dede_saved_selections');
+function loadSelection() {
+    const saved = localStorage.getItem(DATA_CACHE_KEY);
     if (saved) {
         try {
-            const items = JSON.parse(saved);
-            selectedItems = new Set(items);
-            updateCheckboxes();
-            updateTotals();
-            showNotice('✅ 已載入您上次儲存的選擇');
+            const data = JSON.parse(saved);
+            selectedItems = new Set(data.items || []);
+            if (data.identity) {
+                currentIdentity = data.identity;
+                const radio = document.querySelector(`input[name="identity"][value="${currentIdentity}"]`);
+                if (radio) radio.checked = true;
+            }
+            updateSummary();
+            renderAllServices();
+            showNotice('📂 已載入上次的選擇');
         } catch (e) {
-            showNotice('❌ 載入失敗，資料可能已損毀');
+            console.error('讀取失敗', e);
+            showNotice('❌ 讀取失敗，資料可能已損壞');
         }
     } else {
-        showNotice('沒有找到儲存的紀錄');
+        showNotice('沒有找到儲存的紀錄。');
     }
 }
 
-function clearSelections() {
-    if (selectedItems.size === 0) return;
-    if (confirm('確定要清除所有已勾選的項目嗎？')) {
-        selectedItems.clear();
-        updateCheckboxes();
-        updateTotals();
-        showNotice('🗑️ 已清除所有選擇');
-    }
-}
-
-function generateShareableLink() {
+function generateShareLink() {
     if (selectedItems.size === 0) {
-        showNotice('請先勾選服務項目後再產生分享連結');
+        showNotice('請先選擇服務項目再分享喔！');
         return;
     }
-    const ids = Array.from(selectedItems).join(',');
     const url = new URL(window.location.href);
-    url.searchParams.set('items', ids);
+    url.searchParams.set('items', Array.from(selectedItems).join(','));
+    url.searchParams.set('id', currentIdentity);
     
-    // 複製到剪貼簿
-    navigator.clipboard.writeText(url.toString()).then(() => {
-        showNotice('🔗 分享連結已複製到剪貼簿！可直接貼給朋友');
-    }).catch(() => {
-        showNotice('❌ 複製失敗，請手動複製網址列的網址');
-    });
-}
-
-function updateCheckboxes() {
-    if (!DOM.serviceList) return;
-    
-    // 1. 更新一般單品的勾選狀態
-    const checkboxes = DOM.serviceList.querySelectorAll('.service-item input[type="checkbox"]:not(.combo-checkbox)');
-    checkboxes.forEach(cb => {
-        cb.checked = selectedItems.has(cb.value);
-    });
-
-    // 2. 更新置頂套餐的勾選狀態 (如果底下的單品剛好全被選中，套餐就會自動打勾)
-    const comboCheckboxes = DOM.serviceList.querySelectorAll('.combo-checkbox');
-    comboCheckboxes.forEach(cb => {
-        const comboIndex = cb.dataset.comboIndex;
-        const combo = serviceData.combos[comboIndex];
-        if (combo && combo.itemIds) {
-            cb.checked = combo.itemIds.every(id => selectedItems.has(id));
+    // 使用新版 Clipboard API 或 fallback
+    if (navigator.clipboard && window.isSecureContext) {
+        navigator.clipboard.writeText(url.toString()).then(() => {
+            showNotice('🔗 分享網址已複製到剪貼簿！');
+        });
+    } else {
+        const textArea = document.createElement("textarea");
+        textArea.value = url.toString();
+        document.body.appendChild(textArea);
+        textArea.select();
+        try {
+            document.execCommand('copy');
+            showNotice('🔗 分享網址已複製到剪貼簿！');
+        } catch (err) {
+            showNotice('❌ 複製失敗，請手動複製網址');
         }
-    });
+        document.body.removeChild(textArea);
+    }
 }
 
-function loadFromUrl() {
+function readUrlParams() {
     const params = new URLSearchParams(window.location.search);
     const itemsParam = params.get('items');
+    const idParam = params.get('id');
+
     if (itemsParam) {
-        const ids = itemsParam.split(',');
-        let loadedCount = 0;
-        ids.forEach(id => {
-            if (allServices.has(id)) {
-                selectedItems.add(id);
-                loadedCount++;
-            }
+        const items = itemsParam.split(',');
+        items.forEach(id => {
+            if (allServices.has(id)) selectedItems.add(id);
         });
-        if (loadedCount > 0) {
-            updateCheckboxes();
-            showNotice('✅ 已成功載入好友分享的服務清單');
-        }
-        // 清除網址列參數，讓畫面保持乾淨
-        window.history.replaceState({}, document.title, window.location.pathname);
+    }
+    if (idParam) {
+        currentIdentity = idParam;
+        const radio = document.querySelector(`input[name="identity"][value="${currentIdentity}"]`);
+        if (radio) radio.checked = true;
     }
 }
 
-function exportAsPNG() {
-    if (selectedItems.size === 0 || !currentReceiptData) {
-        showNotice('⚠️ 尚未選擇任何服務，無法截圖');
-        return;
-    }
-    if (typeof html2canvas === 'undefined') {
-        showNotice('截圖套件載入中，請稍後再試');
+// ==========================================
+// 5. 截圖功能 (報價單產生)
+// ==========================================
+function generateReceiptImage() {
+    if (!currentReceiptData || selectedItems.size === 0) {
+        showNotice('請先選擇服務項目喔！');
         return;
     }
 
-    const btn = DOM.screenshotBtn;
+    const btn = document.getElementById('screenshot-btn');
     const originalText = btn.textContent;
-    btn.textContent = '處理中...';
+    btn.textContent = '⏳ 產生中...';
     btn.disabled = true;
 
+    // 建立一個暫時的 div 來繪製報價單
     const receiptDiv = document.createElement('div');
-    Object.assign(receiptDiv.style, {
-        position: 'absolute',
-        left: '-9999px',
-        top: '0',
-        width: '450px', 
-        backgroundColor: '#ffffff',
-        padding: '25px',
-        fontFamily: 'sans-serif',
-        color: '#333',
-        boxSizing: 'border-box'
+    receiptDiv.style.cssText = `
+        position: absolute; left: -9999px; top: 0;
+        width: 400px; padding: 30px; background: #fff;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        color: #333; border: 2px solid #007bff; border-radius: 12px;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+    `;
+
+    const now = new Date();
+    const dateStr = `${now.getFullYear()}/${String(now.getMonth()+1).padStart(2,'0')}/${String(now.getDate()).padStart(2,'0')}`;
+    
+    let identityText = '一般會員';
+    if (currentIdentity === 'birthday') identityText = '🎂 本月壽星';
+    if (currentIdentity === 'student') identityText = '🎓 學生專案';
+
+    let listHtml = '';
+    
+    // 渲染套餐
+    currentReceiptData.activeCombos.forEach(comboObj => {
+        const combo = comboObj.combo;
+        const activePromo = getActivePromotion(combo);
+        const originalTotal = comboObj.items.reduce((sum, i) => sum + i.price, 0);
+        const comboPrice = activePromo ? activePromo.price : (combo.price || originalTotal);
+
+        listHtml += `
+            <div style="margin-bottom: 12px; padding-bottom: 12px; border-bottom: 1px dashed #ddd;">
+                <div style="font-weight: bold; color: #0056b3;">【套餐組合】${combo.name}</div>
+                <div style="font-size: 0.85em; color: #666; margin-top: 4px;">包含: ${comboObj.items.map(i=>i.name).join(', ')}</div>
+                <div style="text-align: right; margin-top: 5px;">
+                    ${originalTotal !== comboPrice ? `<span style="text-decoration: line-through; color: #999; font-size: 0.9em; margin-right: 8px;">${originalTotal}元</span>` : ''}
+                    <span style="color: #dc3545; font-weight: bold; font-size: 1.1em;">${comboPrice} 元</span>
+                </div>
+            </div>
+        `;
     });
 
-    // 標題區 (刪除「估價單」字樣)
-    let html = `<h2 style="text-align: center; border-bottom: 2px solid #007bff; padding-bottom: 10px; color: #0056b3; margin-top: 0;">德德美體美容中心</h2>`;
+    // 渲染單項
+    currentReceiptData.singleItems.forEach(item => {
+        let basePrice = item.price;
+        let finalPrice = basePrice;
+        let identityDiscountLabel = '';
 
-    if (currentReceiptData.identity !== 'general') {
-         html += `<div style="background-color: #ffeeba; color: #856404; padding: 10px; border-radius: 5px; text-align: center; font-weight: bold; margin-bottom: 15px;">
-             👤 客戶身分：${currentReceiptData.identityLabel}
-         </div>`;
-    }
-
-    // 服務明細區 (改名為「服務明細」)
-    html += `<h3 style="margin-bottom: 10px; font-size: 1.1em; border-bottom: 1px solid #eee; padding-bottom: 5px;">服務明細</h3>`;
-    html += `<ul style="list-style: none; padding: 0; margin: 0 0 20px 0;">`;
-
-    currentReceiptData.items.forEach(item => {
-        let priceText = `$${item.originalPrice}`;
-        if (item.hasPromo) {
-            if (currentReceiptData.usedIdentity) {
-                // 學生或壽星：原色、無刪除線、客製化提示文字
-                let identityMsg = currentReceiptData.identity === 'student' ? '【學生以原價8折計算】' : '【壽星以原價5折計算】';
-                priceText = `<span style="color: #333;">$${item.originalPrice}</span> <br><span style="color: #007bff; font-size: 0.85em;">${identityMsg}</span>`;
-            } else {
-                // 一般期間限定促銷：顯示特價、原價刪除線、註明期限
-                let promoDateStr = (item.promoStart && item.promoEnd) ? `<br><span style="color: #6c757d; font-size: 0.75em;">(優惠期限: ${item.promoStart} ~ ${item.promoEnd})</span>` : '';
-                priceText = `<span style="color: #dc3545; font-weight: bold;">$${item.finalPrice}</span> <br><span style="color: #999; text-decoration: line-through; font-size: 0.85em;">$${item.originalPrice}</span>${promoDateStr}`;
+        if (currentIdentity === 'birthday') {
+            finalPrice = Math.round(basePrice * 0.5);
+            identityDiscountLabel = '(壽星5折)';
+        } else if (currentIdentity === 'student') {
+            finalPrice = Math.round(basePrice * 0.7);
+            identityDiscountLabel = '(學生7折)';
+        } else {
+            const activePromo = getActivePromotion(item);
+            if (activePromo) {
+                finalPrice = activePromo.price;
+                identityDiscountLabel = `(${activePromo.label})`;
             }
         }
-        
-        // 截圖的明細同樣設定自動換行與價格靠右
-        html += `<li style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px; line-height: 1.4;">
-            <span style="flex: 1; padding-right: 15px; word-break: break-word;">${item.isCombo ? '🎁 組合優惠<br>' : ''}${item.name}</span>
-            <span style="text-align: right; white-space: nowrap; flex-shrink: 0;">${priceText}</span>
-        </li>`;
+
+        // 需求 1 & 2 套用在截圖中
+        let priceHtml = `<span style="color: #dc3545; font-weight: bold; font-size: 1.1em;">${finalPrice} 元</span>`;
+        if (basePrice !== finalPrice) {
+            priceHtml = `<span style="color: #dc3545; font-weight: bold; font-size: 1.1em;">${finalPrice}</span> 元 <span style="text-decoration: line-through; color: #999; font-size: 0.9em; margin-left: 8px;">${basePrice} 元</span>`;
+        }
+
+        let noticeHtml = '';
+        if ((currentIdentity === 'birthday' || currentIdentity === 'student') && item.wasInCombo) {
+            let discountStr = currentIdentity === 'birthday' ? '5' : '7';
+            noticeHtml = `<div style="font-size: 0.85em; color: #dc3545; margin-top: 4px;">【${item.name}無套餐優惠，以原價${discountStr}折計算】</div>`;
+        }
+
+        listHtml += `
+            <div style="margin-bottom: 12px; padding-bottom: 12px; border-bottom: 1px dashed #ddd;">
+                <div style="font-weight: bold;">${item.name} <span style="color: #666; font-size: 0.9em; font-weight: normal;">${identityDiscountLabel}</span></div>
+                ${noticeHtml}
+                <div style="text-align: right; margin-top: 5px;">${priceHtml}</div>
+            </div>
+        `;
     });
-    html += `</ul>`;
 
-    html += `<div style="border-top: 2px dashed #ccc; padding-top: 15px; text-align: right; font-size: 1em; line-height: 1.6;">`;
-    
-    // 如果有折扣，顯示：原價、(套用優惠+共省下)、折扣後金額
-    if (currentReceiptData.savings > 0) {
-        html += `<p style="margin: 0;">原價：$${currentReceiptData.originalTotal.toLocaleString()}</p>
-        <p style="margin: 0;">
-            <span style="color: #dc3545;">套用優惠：${currentReceiptData.appliedPromoName}</span>
-            <span style="color: #28a745; margin-left: 8px;">(共省下：$${currentReceiptData.savings.toLocaleString()})</span>
-        </p>
-        <p style="margin: 8px 0 0 0; font-size: 1.3em; font-weight: bold;">折扣後金額：$${currentReceiptData.finalTotal.toLocaleString()}</p>`;
-    } else {
-        // 如果無折扣，只顯示：總金額
-        html += `<p style="margin: 8px 0 0 0; font-size: 1.3em; font-weight: bold;">總金額：$${currentReceiptData.finalTotal.toLocaleString()}</p>`;
-    }
-    
-    // 點數大於 0 才顯示
-    if (currentReceiptData.points > 0) {
-        html += `<p style="margin: 5px 0 0 0; color: #007bff; font-weight: bold;">🎁 可獲得點數：${currentReceiptData.points.toLocaleString()} 點</p>`;
-    }
-    html += `</div>`;
+    receiptDiv.innerHTML = `
+        <h2 style="text-align: center; color: #0056b3; margin: 0 0 5px 0;">德德美體美容中心</h2>
+        <div style="text-align: center; color: #666; font-size: 0.9em; margin-bottom: 20px;">專屬服務估價單</div>
+        
+        <div style="display: flex; justify-content: space-between; font-size: 0.9em; margin-bottom: 15px; background: #f8f9fa; padding: 10px; border-radius: 6px;">
+            <span>📅 日期：${dateStr}</span>
+            <span>👤 身份：${identityText}</span>
+        </div>
 
-    receiptDiv.innerHTML = html;
+        <div style="margin-bottom: 20px; min-height: 100px;">
+            ${listHtml}
+        </div>
+
+        <div style="background: #e9ecef; padding: 15px; border-radius: 8px; text-align: right;">
+            ${currentReceiptData.totalOriginal !== currentReceiptData.totalDiscounted ? `<div style="color: #666; font-size: 0.9em; margin-bottom: 5px;">原價總計：<span style="text-decoration: line-through;">${currentReceiptData.totalOriginal}</span> 元</div>` : ''}
+            <div style="font-size: 1.3em; font-weight: bold; color: #333;">
+                優惠總金額：<span style="color: #007bff; font-size: 1.2em;">${currentReceiptData.totalDiscounted}</span> 元
+            </div>
+            ${currentReceiptData.totalPoints > 0 ? `<div style="color: #28a745; font-size: 0.9em; margin-top: 5px; font-weight: bold;">🎁 本次可獲得點數：${currentReceiptData.totalPoints} 點</div>` : ''}
+        </div>
+        <div style="text-align: center; font-size: 0.8em; color: #999; margin-top: 20px;">
+            * 實際價格以現場確認為主 *<br>截圖由 Dede PWA 系統產生
+        </div>
+    `;
+
     document.body.appendChild(receiptDiv);
 
-    html2canvas(receiptDiv, {
-        scale: 2, 
-        backgroundColor: '#ffffff',
-        useCORS: true
-    }).then(canvas => {
+    if (typeof html2canvas === 'undefined') {
+        showNotice('❌ 缺少截圖套件，無法產生圖片');
+        document.body.removeChild(receiptDiv);
+        btn.textContent = originalText;
+        btn.disabled = false;
+        return;
+    }
+
+    html2canvas(receiptDiv, { scale: 2, backgroundColor: '#ffffff' }).then(canvas => {
         const link = document.createElement('a');
-        link.download = `德德美體-估價單-${new Date().getTime()}.png`;
+        link.download = `德德美容估價單_${new Date().getTime()}.png`;
         link.href = canvas.toDataURL('image/png');
         link.click();
         showNotice('📷 專屬估價單截圖已下載！');
@@ -764,20 +664,30 @@ function exportAsPNG() {
 }
 
 // ==========================================
-// 5. UI 通知系統
+// 6. UI 通知系統
 // ==========================================
 function showNotice(msg) {
     let toast = document.getElementById('toast-notification');
     if (toast) {
-        toast.textContent = msg; toast.style.opacity = '1'; toast.style.transform = 'translate(-50%, -20px)';
+        toast.textContent = msg; 
+        toast.style.opacity = '1'; 
+        toast.style.transform = 'translate(-50%, -20px)';
         if(toast.timeoutId) clearTimeout(toast.timeoutId);
-        toast.timeoutId = setTimeout(() => { toast.style.opacity = '0'; toast.style.transform = 'translate(-50%, 0)'; }, 3000);
+        toast.timeoutId = setTimeout(() => { 
+            toast.style.opacity = '0'; 
+            toast.style.transform = 'translate(-50%, 0)'; 
+        }, 3000);
         return;
     }
+    
+    // Fallback if toast container is missing
     let noticeDiv = document.getElementById('sw-notice');
     if (noticeDiv) noticeDiv.remove();
-    noticeDiv = document.createElement('div'); noticeDiv.id = 'sw-notice'; noticeDiv.className = 'sw-notice slide-up-animation';
-    noticeDiv.innerHTML = `<span>${msg}</span><button onclick="this.parentElement.remove()">關閉</button>`;
+    noticeDiv = document.createElement('div'); 
+    noticeDiv.id = 'sw-notice'; 
+    noticeDiv.className = 'sw-notice slide-up-animation';
+    noticeDiv.style.cssText = 'position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.85); color: #fff; padding: 12px 24px; border-radius: 30px; z-index: 9999; box-shadow: 0 4px 15px rgba(0,0,0,0.3); display: flex; align-items: center; gap: 15px; white-space: nowrap; transition: opacity 0.3s;';
+    noticeDiv.innerHTML = `<span>${msg}</span><button style="background:none; border:none; color:#007bff; cursor:pointer; font-weight:bold;" onclick="this.parentElement.remove()">關閉</button>`;
     document.body.appendChild(noticeDiv);
-    setTimeout(() => { if (document.getElementById('sw-notice') === noticeDiv) { noticeDiv.style.opacity = '0'; noticeDiv.style.transform = 'translate(-50%, 20px)'; setTimeout(() => noticeDiv.remove(), 500); } }, 4000);
+    setTimeout(() => { if (document.getElementById('sw-notice')) document.getElementById('sw-notice').style.opacity = '0'; setTimeout(()=> { if (document.getElementById('sw-notice')) document.getElementById('sw-notice').remove(); }, 300); }, 3000);
 }
