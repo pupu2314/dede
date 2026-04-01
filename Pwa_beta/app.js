@@ -477,7 +477,7 @@ function updateTotals() {
         if (item.hasPromo) {
             if (usedIdentity) {
                 // 如果是壽星或學生，保持原色且不加刪除線，並改變提示字眼
-                let identityMsg = currentIdentity === 'student' ? '【學生以原價8折計算】' : '【壽星以原價5折計算】';
+                let identityMsg = currentIdentity === 'student' ? '<span style="color: var(--text-main); margin-right: 5px;">$${item.originalPrice}</span>【學生以原價8折計算】' : '【壽星以原價5折計算】';
                 priceHtml = `<span style="color: var(--text-main); margin-right: 5px;">$${item.originalPrice}</span> <br><span style="color: var(--primary-color, #007bff); font-size: 0.85em;">${identityMsg}</span>`;
             } else {
                 let promoDateStr = (item.promoStart && item.promoEnd) ? `<br><span style="color: #6c757d; font-size: 0.75em;">(期限: ${item.promoStart} ~ ${item.promoEnd})</span>` : '';
