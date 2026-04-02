@@ -40,7 +40,7 @@ function initDOMVariables() {
     DOM.searchInput = document.getElementById('search-input');
     DOM.loadingIndicator = document.getElementById('loading-indicator');
     
-    // 【重要修復】：自動相容 id="role" 或 id="identity-select"
+    // 【重要相容】：自動抓取身分下拉選單 (支援 id="role" 或 id="identity-select")
     DOM.identitySelect = document.getElementById('role') || document.getElementById('identity-select');
     
     DOM.originalTotal = document.getElementById('original-total');
@@ -50,7 +50,7 @@ function initDOMVariables() {
     DOM.floatingSelectedItemsList = document.getElementById('floating-selected-items-list');
     DOM.versionSpan = document.getElementById('price-version');
     
-    // 綁定事件 (全面加入 ?. 防呆機制，確保找不到元素時不會造成畫面當機)
+    // 綁定事件 (加入 ?. 避免元素不存在時報錯當機)
     DOM.identitySelect?.addEventListener('change', (e) => {
         currentIdentity = e.target.value;
         renderServiceList(serviceData);
@@ -124,7 +124,7 @@ function initializePage() {
             } else if (combo.price) {
                 total = combo.price;
             }
-            combo.price = total;
+            combo.price = total; // 紀錄套餐原始總價
             allServices.set(combo.id, combo);
         });
     }
@@ -142,7 +142,7 @@ function initializePage() {
     updateTotals();
 }
 
-// 【新增】：統整計算最終價格的邏輯 (負責刪除線與標記)
+// 【新增】：計算最終價格與折扣標籤 (負責刪除線與標記)
 function getFinalPrice(item) {
     if (currentIdentity === 'student') {
         return { price: Math.round(item.price * 0.8), isPromo: true, label: '學生8折', originalPrice: item.price };
@@ -150,6 +150,7 @@ function getFinalPrice(item) {
         return { price: Math.round(item.price * 0.5), isPromo: true, label: '壽星5折', originalPrice: item.price };
     }
     
+    // 一般身分，檢查檔期促銷
     const activePromo = getActivePromotion(item.promotions);
     if (activePromo) {
         return { price: activePromo.price, isPromo: true, label: activePromo.label, originalPrice: item.price };
@@ -173,7 +174,7 @@ function getActivePromotion(promotions) {
 }
 
 // ==========================================
-// 2. UI 渲染
+// 2. UI 渲染 (清單)
 // ==========================================
 
 function renderServiceList(data, filterText = '') {
@@ -288,7 +289,7 @@ function updateTotals() {
     let itemsToProcess = [];
     let hasExplodedCombo = false;
 
-    // 判斷是否需要拆解套餐
+    // 【核心調整】：判斷是否為壽星/學生且選了套餐，若是則拆解套餐為單品
     selectedItems.forEach(itemId => {
         const item = allServices.get(itemId);
         if (!item) return;
@@ -339,6 +340,7 @@ function updateTotals() {
         const li = document.createElement('li');
         li.style.cssText = 'display: flex; justify-content: space-between; padding: 3px 0; border-bottom: 1px dashed #ccc;';
         
+        // 渲染結帳明細的刪除線
         if (finalPriceObj.isPromo && currentPrice !== item.price) {
             li.innerHTML = `
                 <span>${itemText}</span>
@@ -356,6 +358,7 @@ function updateTotals() {
         if (DOM.selectedItemsList) DOM.selectedItemsList.appendChild(li);
     });
 
+    // 顯示「無套餐優惠」的警語
     if (hasExplodedCombo && DOM.selectedItemsList) {
         const labelStr = currentIdentity === 'student' ? '學生無套餐優惠，以原價8折計算' : '壽星無套餐優惠，以原價5折計算';
         const li = document.createElement('li');
@@ -367,6 +370,7 @@ function updateTotals() {
     currentReceiptData.originalTotal = originalTotal;
     currentReceiptData.discountedTotal = discountedTotal;
 
+    // 更新總計顯示
     if (DOM.originalTotal) DOM.originalTotal.textContent = originalTotal.toLocaleString();
     if (DOM.discountedTotal) DOM.discountedTotal.textContent = discountedTotal.toLocaleString();
     if (DOM.floatingDiscountedTotal) DOM.floatingDiscountedTotal.textContent = discountedTotal.toLocaleString();
@@ -376,6 +380,7 @@ function updateTotals() {
         if(ul) ul.innerHTML = DOM.selectedItemsList.innerHTML;
     }
 
+    // 點數計算
     const pointsContainer = document.getElementById('points-container');
     const floatingPoints = document.getElementById('floating-points');
     const ratio = serviceData.pointsRatio || 10;
@@ -393,7 +398,7 @@ function updateTotals() {
     }
 }
 
-// 產生截圖收據的 HTML
+// 產生截圖收據的 HTML (同步包含拆解與警語)
 function generateReceiptHtml() {
     if (!currentReceiptData || currentReceiptData.items.length === 0) return '';
     
