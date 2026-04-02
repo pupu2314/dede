@@ -4,7 +4,7 @@
  */
 
 // 升級版號，強制所有用戶端清除舊快取並套用新規則
-const CACHE_NAME = 'price-calculator-v26.4k3'; 
+const CACHE_NAME = 'price-calculator-v26.4l'; 
 const OFFLINE_URL = 'index.html';
 
 const urlsToCache = [
