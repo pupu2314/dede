@@ -25,23 +25,23 @@
             max-width: 900px; 
             margin: 20px auto; 
             background: #fff; 
-            padding: 30px; 
+            padding: 20px; 
             border-radius: 12px; 
             box-shadow: 0 4px 15px rgba(0,0,0,0.05); 
         }
-        h1 { text-align: center; color: #0056b3; margin-bottom: 5px; }
-        .subtitle { text-align: center; color: #6c757d; font-size: 0.9em; margin-bottom: 30px; }
+        h1 { text-align: center; color: #0056b3; margin-bottom: 5px; font-size: 1.5em; }
+        .subtitle { text-align: center; color: #6c757d; font-size: 0.85em; margin-bottom: 25px; }
 
         /* 卡片與區塊設計 */
         .category-card {
             border: 1px solid #dee2e6;
             border-radius: 8px;
-            padding: 20px;
+            padding: 15px;
             margin-bottom: 25px;
             background: #fafafa;
         }
         .category-title-input {
-            font-size: 1.5em;
+            font-size: 1.3em;
             font-weight: bold;
             color: #333;
             width: 100%;
@@ -55,14 +55,18 @@
             background: #fff;
             border: 1px solid #e9ecef;
             padding: 15px;
-            border-radius: 6px;
+            border-radius: 8px;
             margin-bottom: 15px;
             box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+            transition: all 0.2s ease;
+        }
+        .item-card:hover {
+            border-color: #b8daff;
         }
         .promo-row {
             background: #f8f9fa;
             border-left: 3px solid #28a745;
-            padding: 10px;
+            padding: 12px;
             margin-top: 10px;
             border-radius: 4px;
             display: flex;
@@ -79,7 +83,7 @@
         .input-group label {
             font-size: 0.8em;
             color: #666;
-            margin-bottom: 3px;
+            margin-bottom: 4px;
         }
         input[type="text"], input[type="number"], input[type="date"] {
             padding: 8px;
@@ -87,21 +91,30 @@
             border-radius: 4px;
             width: 100%;
             box-sizing: border-box;
+            font-size: 0.95em;
+        }
+        input[type="text"]:focus, input[type="number"]:focus, input[type="date"]:focus {
+            outline: none;
+            border-color: #007bff;
+            box-shadow: 0 0 0 2px rgba(0,123,255,0.25);
         }
 
         /* 按鈕樣式 */
         .btn-sm {
-            padding: 5px 10px;
+            padding: 6px 10px;
             font-size: 0.85em;
-            border-radius: 4px;
+            border-radius: 6px;
             cursor: pointer;
             border: none;
+            transition: opacity 0.2s;
         }
+        .btn-sm:hover { opacity: 0.85; }
         .btn-danger { background: #dc3545; color: white; }
         .btn-success { background: #28a745; color: white; }
         .btn-info { background: #17a2b8; color: white; }
         .btn-primary { background: #007bff; color: white; }
         .btn-secondary { background: #6c757d; color: white; }
+        .btn-outline { background: transparent; border: 1px solid #ccc; color: #333; }
 
         .floating-bottom-bar {
             position: fixed;
@@ -114,7 +127,8 @@
             padding: 15px;
             display: flex;
             justify-content: center;
-            gap: 15px;
+            flex-wrap: wrap;
+            gap: 10px;
             box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
             z-index: 1000;
         }
@@ -126,13 +140,23 @@
             background: rgba(0,0,0,0.6);
             display: flex; justify-content: center; align-items: center;
             z-index: 2000;
+            padding: 20px;
+            box-sizing: border-box;
         }
         .modal-content {
-            background: white; padding: 20px; border-radius: 8px; width: 90%; max-width: 600px;
+            background: white; padding: 25px; border-radius: 12px; width: 100%; max-width: 600px;
+            box-shadow: 0 5px 25px rgba(0,0,0,0.2);
+            max-height: 90vh;
+            display: flex;
+            flex-direction: column;
         }
-        .modal-content textarea {
-            width: 100%; height: 300px; font-family: monospace; padding: 10px; margin-top: 10px; box-sizing: border-box; border: 1px solid #ccc; border-radius: 4px;
+        .changelog-list {
+            background: #f8f9fa; padding: 15px; border-radius: 8px; border: 1px solid #dee2e6;
+            overflow-y: auto; flex-grow: 1; margin-top: 15px; margin-bottom: 15px;
         }
+        .changelog-list ul { margin: 0; padding-left: 0; list-style: none; font-size: 0.95em; }
+        .changelog-list li { margin-bottom: 8px; line-height: 1.5; padding-bottom: 8px; border-bottom: 1px dashed #e9ecef; }
+        .changelog-list li:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
     </style>
 </head>
 <body>
@@ -151,28 +175,50 @@
                 </div>
 
                 <div v-for="(item, iIndex) in category.items" :key="'item-'+cIndex+'-'+iIndex" class="item-card">
-                    <div style="display: flex; gap: 10px; flex-wrap: wrap;">
-                        <div class="input-group">
-                            <label>項目 ID</label>
-                            <input type="text" v-model="item.id" @input="autoSave">
+                    <!-- 收合狀態：精簡顯示列 -->
+                    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+                        <div style="flex: 1; min-width: 200px;">
+                            <strong style="font-size: 1.1em; color: #333;">{{ item.name }}</strong>
+                            <span style="color: #6c757d; margin-left: 8px; font-weight: 500;">{{ item.price }} 元</span>
+                            <span v-if="item.promotions && item.promotions.length" style="display: inline-block; background: #e1f5fe; color: #0277bd; font-size: 0.8em; padding: 2px 6px; border-radius: 4px; margin-left: 8px;">
+                                含 {{ item.promotions.length }} 筆優惠
+                            </span>
                         </div>
-                        <div class="input-group" style="flex: 2;">
-                            <label>項目名稱</label>
-                            <input type="text" v-model="item.name" @input="autoSave">
-                        </div>
-                        <div class="input-group">
-                            <label>原價 (元)</label>
-                            <input type="number" v-model.number="item.price" @input="autoSave">
-                        </div>
-                        <div class="input-group" style="flex: 0; justify-content: flex-end;">
-                            <button class="btn-sm btn-danger" @click="deleteItem(category, iIndex)" style="height: 33px;">刪除項目</button>
+                        <div style="display: flex; gap: 8px;">
+                            <button class="btn-sm" :class="item._isEditing ? 'btn-secondary' : 'btn-outline'" @click="$set(item, '_isEditing', !item._isEditing)">
+                                {{ item._isEditing ? '收起明細' : '✏️ 編輯明細' }}
+                            </button>
+                            <button class="btn-sm" :class="item._showPromos ? 'btn-secondary' : 'btn-success'" @click="$set(item, '_showPromos', !item._showPromos)">
+                                🏷️ 優惠設定
+                            </button>
                         </div>
                     </div>
 
-                    <!-- 促銷優惠區塊 (一般項目) -->
-                    <div style="margin-top: 15px;">
+                    <!-- 展開狀態：編輯基本資料 -->
+                    <div v-if="item._isEditing" style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin-top: 15px; border: 1px dashed #ccc;">
+                        <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                            <div class="input-group">
+                                <label>項目 ID</label>
+                                <input type="text" v-model="item.id" @input="autoSave">
+                            </div>
+                            <div class="input-group" style="flex: 2;">
+                                <label>項目名稱</label>
+                                <input type="text" v-model="item.name" @input="autoSave">
+                            </div>
+                            <div class="input-group">
+                                <label>原價 (元)</label>
+                                <input type="number" v-model.number="item.price" @input="autoSave">
+                            </div>
+                            <div class="input-group" style="flex: 0; justify-content: flex-end;">
+                                <button class="btn-sm btn-danger" @click="deleteItem(category, iIndex)" style="height: 35px; white-space: nowrap;">🗑️ 刪除項目</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 展開狀態：促銷優惠區塊 -->
+                    <div v-if="item._showPromos" style="margin-top: 15px; border-top: 1px dashed #dee2e6; padding-top: 15px;">
                         <div style="display: flex; justify-content: space-between; align-items: center;">
-                            <strong style="color: #28a745; font-size: 0.9em;">促銷優惠</strong>
+                            <strong style="color: #28a745; font-size: 0.95em;">促銷優惠管理</strong>
                             <button class="btn-sm btn-success" @click="addPromotion(item)">+ 新增優惠</button>
                         </div>
                         <div v-if="item.promotions && item.promotions.length > 0">
@@ -199,40 +245,65 @@
                                 </div>
                             </div>
                         </div>
-                        <div v-else style="color: #999; font-size: 0.8em; margin-top: 5px;">無促銷活動</div>
+                        <div v-else style="color: #999; font-size: 0.85em; margin-top: 10px; text-align: center; background: #fff; padding: 10px; border-radius: 4px; border: 1px solid #eee;">
+                            目前無任何優惠活動
+                        </div>
                     </div>
                 </div>
-                <button class="btn-sm btn-primary" @click="addItem(category)">+ 新增服務項目</button>
+                <button class="btn-sm btn-primary" style="margin-top: 10px;" @click="addItem(category)">+ 新增服務項目</button>
             </div>
         </div>
-        <button class="btn btn-primary" style="width: 100%; margin-bottom: 30px;" @click="addCategory">+ 新增分類</button>
+        <button class="btn btn-primary" style="width: 100%; margin-bottom: 35px;" @click="addCategory">+ 新增分類</button>
 
         <!-- 套餐區塊 -->
-        <h2 style="color: #0056b3; border-bottom: 2px solid #007bff; padding-bottom: 10px;">超值套餐 (Combos)</h2>
+        <h2 style="color: #0056b3; border-bottom: 2px solid #007bff; padding-bottom: 10px; font-size: 1.3em;">超值套餐 (Combos)</h2>
         <div v-if="data && data.combos">
             <div v-for="(combo, comboIndex) in data.combos" :key="'combo-'+comboIndex" class="item-card">
-                <div style="display: flex; gap: 10px; flex-wrap: wrap;">
-                    <div class="input-group">
-                        <label>套餐 ID</label>
-                        <input type="text" v-model="combo.id" @input="autoSave">
+                
+                <!-- 收合狀態：精簡顯示列 -->
+                <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+                    <div style="flex: 1; min-width: 200px;">
+                        <strong style="font-size: 1.1em; color: #333;">{{ combo.name }}</strong>
+                        <span style="color: #6c757d; margin-left: 8px; font-size: 0.85em;">(包含 {{ combo.itemIds ? combo.itemIds.length : 0 }} 項服務)</span>
+                        <span v-if="combo.promotions && combo.promotions.length" style="display: inline-block; background: #e1f5fe; color: #0277bd; font-size: 0.8em; padding: 2px 6px; border-radius: 4px; margin-left: 8px;">
+                            含 {{ combo.promotions.length }} 筆優惠
+                        </span>
                     </div>
-                    <div class="input-group" style="flex: 2;">
-                        <label>套餐名稱</label>
-                        <input type="text" v-model="combo.name" @input="autoSave">
-                    </div>
-                    <div class="input-group" style="flex: 2;">
-                        <label>包含項目 ID (以逗號分隔)</label>
-                        <input type="text" :value="combo.itemIds ? combo.itemIds.join(',') : ''" @input="e => updateComboItems(combo, e.target.value)">
-                    </div>
-                    <div class="input-group" style="flex: 0; justify-content: flex-end;">
-                        <button class="btn-sm btn-danger" @click="deleteCombo(comboIndex)" style="height: 33px;">刪除套餐</button>
+                    <div style="display: flex; gap: 8px;">
+                        <button class="btn-sm" :class="combo._isEditing ? 'btn-secondary' : 'btn-outline'" @click="$set(combo, '_isEditing', !combo._isEditing)">
+                            {{ combo._isEditing ? '收起明細' : '✏️ 編輯明細' }}
+                        </button>
+                        <button class="btn-sm" :class="combo._showPromos ? 'btn-secondary' : 'btn-success'" @click="$set(combo, '_showPromos', !combo._showPromos)">
+                            🏷️ 優惠設定
+                        </button>
                     </div>
                 </div>
 
-                <!-- 促銷優惠區塊 (套餐) -->
-                <div style="margin-top: 15px;">
+                <!-- 展開狀態：編輯基本資料 -->
+                <div v-if="combo._isEditing" style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin-top: 15px; border: 1px dashed #ccc;">
+                    <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                        <div class="input-group">
+                            <label>套餐 ID</label>
+                            <input type="text" v-model="combo.id" @input="autoSave">
+                        </div>
+                        <div class="input-group" style="flex: 2;">
+                            <label>套餐名稱</label>
+                            <input type="text" v-model="combo.name" @input="autoSave">
+                        </div>
+                        <div class="input-group" style="flex: 2;">
+                            <label>包含項目 ID (以逗號分隔)</label>
+                            <input type="text" :value="combo.itemIds ? combo.itemIds.join(',') : ''" @input="e => updateComboItems(combo, e.target.value)">
+                        </div>
+                        <div class="input-group" style="flex: 0; justify-content: flex-end;">
+                            <button class="btn-sm btn-danger" @click="deleteCombo(comboIndex)" style="height: 35px; white-space: nowrap;">🗑️ 刪除套餐</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 展開狀態：促銷優惠區塊 (套餐) -->
+                <div v-if="combo._showPromos" style="margin-top: 15px; border-top: 1px dashed #dee2e6; padding-top: 15px;">
                     <div style="display: flex; justify-content: space-between; align-items: center;">
-                        <strong style="color: #28a745; font-size: 0.9em;">促銷優惠</strong>
+                        <strong style="color: #28a745; font-size: 0.95em;">促銷優惠管理</strong>
                         <button class="btn-sm btn-success" @click="addPromotion(combo)">+ 新增優惠</button>
                     </div>
                     <div v-if="combo.promotions && combo.promotions.length > 0">
@@ -259,7 +330,9 @@
                             </div>
                         </div>
                     </div>
-                    <div v-else style="color: #999; font-size: 0.8em; margin-top: 5px;">無促銷活動</div>
+                    <div v-else style="color: #999; font-size: 0.85em; margin-top: 10px; text-align: center; background: #fff; padding: 10px; border-radius: 4px; border: 1px solid #eee;">
+                        目前無任何優惠活動
+                    </div>
                 </div>
             </div>
         </div>
@@ -273,15 +346,25 @@
         <button class="btn btn-success" @click="openExportModal" style="font-size: 1.1em; padding: 10px 20px;">✅ 確認與匯出明細</button>
     </div>
 
-    <!-- 匯出 Modal -->
+    <!-- 異動確認與匯出 Modal -->
     <div class="modal-overlay" v-if="showModal" @click.self="showModal = false">
         <div class="modal-content">
-            <h2 style="margin-top: 0; color: #007bff;">匯出 JSON 資料</h2>
-            <p style="font-size: 0.9em; color: #666;">請複製以下內容並覆蓋原始的 <code>services.json</code> 檔案。修改與刪除的項目皆已套用至此。</p>
-            <textarea readonly v-model="exportJson"></textarea>
-            <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 15px;">
-                <button class="btn btn-secondary" @click="showModal = false">關閉</button>
-                <button class="btn btn-primary" @click="copyToClipboard">📋 複製代碼</button>
+            <h2 style="margin-top: 0; color: #007bff; border-bottom: 2px solid #eee; padding-bottom: 10px;">確認異動明細</h2>
+            <p style="font-size: 0.9em; color: #666; margin-bottom: 0;">以下為本次編輯偵測到的異動內容，確認無誤後請點擊下方按鈕複製更新後的代碼。</p>
+            
+            <!-- 異動清單顯示區 -->
+            <div class="changelog-list">
+                <ul v-if="changelog.length > 0">
+                    <li v-for="(log, idx) in changelog" :key="'log-'+idx" v-html="log"></li>
+                </ul>
+                <div v-else style="text-align: center; color: #888; padding: 20px 0;">
+                    沒有偵測到任何修改。
+                </div>
+            </div>
+
+            <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: auto;">
+                <button class="btn btn-secondary" @click="showModal = false">返回編輯</button>
+                <button class="btn btn-primary" @click="copyToClipboard">📋 複製 JSON 至剪貼簿</button>
             </div>
         </div>
     </div>
@@ -289,7 +372,6 @@
 </div>
 
 <script>
-    // Vue 應用程式實體
     new Vue({
         el: '#app',
         data: {
@@ -297,6 +379,8 @@
                 categories: [],
                 combos: []
             },
+            originalData: null, // 用於比對異動的原始資料
+            changelog: [],      // 異動紀錄陣列
             showModal: false,
             exportJson: ''
         },
@@ -305,17 +389,20 @@
             autoSave: function() {
                 localStorage.setItem('autosavedData', JSON.stringify(this.data));
             },
+            
             // 從伺服器重新載入
             loadDataFromServer: async function() {
-                if (confirm('這將會覆蓋您目前的變更，確定要從伺服器載入原始資料嗎？')) {
+                if (confirm('這將會放棄您目前的變更，確定要從伺服器載入原始資料嗎？')) {
                     try {
                         const res = await fetch('services.json?t=' + new Date().getTime());
                         if (!res.ok) throw new Error('網路錯誤');
-                        this.data = await res.json();
+                        const serverData = await res.json();
+                        this.originalData = JSON.parse(JSON.stringify(serverData));
+                        this.data = JSON.parse(JSON.stringify(serverData));
                         this.autoSave();
                         this.showToast('📥 載入成功！');
                     } catch (err) {
-                        this.showToast('❌ 載入失敗，請檢查網路連線或檔案路徑。');
+                        this.showToast('❌ 載入失敗，請檢查網路連線。');
                     }
                 }
             },
@@ -333,7 +420,9 @@
             },
             addItem: function(category) {
                 if (!category.items) this.$set(category, 'items', []);
-                category.items.push({ id: 'new_item_' + Date.now(), name: '新服務名稱', price: 0, promotions: [] });
+                // 新增項目時，預設開啟編輯明細
+                const newItem = { id: 'new_item_' + Date.now(), name: '新服務名稱', price: 0, promotions: [], _isEditing: true };
+                category.items.push(newItem);
                 this.autoSave();
             },
             deleteItem: function(category, itemIndex) {
@@ -346,7 +435,8 @@
             // ---- 套餐操作 ----
             addCombo: function() {
                 if (!this.data.combos) this.$set(this.data, 'combos', []);
-                this.data.combos.push({ id: 'combo_' + Date.now(), name: '新套餐名稱', itemIds: [], promotions: [] });
+                // 新增套餐時，預設開啟編輯明細
+                this.data.combos.push({ id: 'combo_' + Date.now(), name: '新套餐名稱', itemIds: [], promotions: [], _isEditing: true });
                 this.autoSave();
             },
             deleteCombo: function(index) {
@@ -366,19 +456,16 @@
                 if (!parent.promotions) this.$set(parent, 'promotions', []);
                 const today = this.formatDate(new Date());
                 parent.promotions.push({ label: '新優惠', price: parent.price || 0, start: today, end: today });
+                this.$set(parent, '_showPromos', true); // 新增優惠時自動確保區塊是展開的
                 this.autoSave();
             },
-            
-            // 修復 2：刪除後強制更新視圖，確保深層陣列在匯出時正確被剔除
             removePromotion: function(parent, index) {
                 if (confirm('確定要刪除此優惠嗎？')) {
                     parent.promotions.splice(index, 1);
-                    this.$forceUpdate(); // 強制 Vue 重繪，避免響應式丟失
+                    this.$forceUpdate();
                     this.autoSave();
                 }
             },
-            
-            // 修復 1：智能延續優惠至下個月
             extendPromotion: function(parent, index) {
                 const original = parent.promotions[index];
                 if (!original.start || !original.end) {
@@ -387,12 +474,9 @@
                 }
 
                 const oldStart = new Date(original.start);
-                
-                // 自動計算下個月的第一天與最後一天
                 const nextMonthStart = new Date(oldStart.getFullYear(), oldStart.getMonth() + 1, 1);
                 const nextMonthEnd = new Date(oldStart.getFullYear(), oldStart.getMonth() + 2, 0);
 
-                // 智慧標籤推算 (例如自動把 "3月優惠" 改成 "4月優惠")
                 let newLabel = original.label;
                 const monthMatch = newLabel.match(/(\d+)(月)/);
                 if (monthMatch) {
@@ -411,7 +495,7 @@
                 };
 
                 parent.promotions.push(newPromo);
-                this.$forceUpdate(); // 確保新加入的優惠立刻繪製
+                this.$forceUpdate();
                 this.autoSave();
                 this.showToast(`✅ 已成功延續優惠至：${newLabel}`);
             },
@@ -428,41 +512,124 @@
                 if (toast) toast.remove();
                 toast = document.createElement('div');
                 toast.id = 'temp-toast';
-                toast.textContent = message;
-                toast.style.cssText = 'position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%); background-color: rgba(0,0,0,0.85); color: #fff; padding: 12px 24px; border-radius: 30px; z-index: 9999; font-size: 15px; transition: opacity 0.3s;';
+                toast.innerHTML = message;
+                toast.style.cssText = 'position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%); background-color: rgba(0,0,0,0.85); color: #fff; padding: 12px 24px; border-radius: 30px; z-index: 9999; font-size: 15px; transition: opacity 0.3s; white-space: nowrap;';
                 document.body.appendChild(toast);
                 setTimeout(() => { toast.style.opacity = '0'; setTimeout(() => toast.remove(), 300); }, 2500);
             },
 
-            // 修復 2：匯出時進行「深拷貝」，確保徹底排除任何刪除殘留，並生成最乾淨的 JSON
+            // 產生異動明細比對
+            generateChangelog: function() {
+                let logs = [];
+                if (!this.originalData) {
+                    this.changelog = ['<span style="color:#dc3545;">⚠️ 無法取得原始資料，略過異動比對。</span>'];
+                    return;
+                }
+
+                const oldMap = new Map();
+                const newMap = new Map();
+
+                // 攤平原始資料
+                if(this.originalData.categories) {
+                    this.originalData.categories.forEach(c => {
+                        if(c.items) c.items.forEach(i => oldMap.set(i.id, i));
+                    });
+                }
+                if(this.originalData.combos) {
+                    this.originalData.combos.forEach(c => oldMap.set(c.id, c));
+                }
+
+                // 攤平新資料 (忽略內部 UI 狀態屬性 _)
+                const cleanData = JSON.parse(JSON.stringify(this.data, (k, v) => k.startsWith('_') ? undefined : v));
+                
+                if(cleanData.categories) {
+                    cleanData.categories.forEach(c => {
+                        if(c.items) c.items.forEach(i => newMap.set(i.id, i));
+                    });
+                }
+                if(cleanData.combos) {
+                    cleanData.combos.forEach(c => newMap.set(c.id, c));
+                }
+
+                // 偵測新增與修改
+                newMap.forEach((newItem, id) => {
+                    const oldItem = oldMap.get(id);
+                    if (!oldItem) {
+                        logs.push(`<strong style="color: #28a745;">[新增]</strong> ${newItem.name}`);
+                    } else {
+                        let changesDetail = [];
+                        if (newItem.name !== oldItem.name) changesDetail.push('名稱');
+                        if (newItem.price !== oldItem.price) changesDetail.push('價格');
+                        if (JSON.stringify(newItem.itemIds) !== JSON.stringify(oldItem.itemIds)) changesDetail.push('套餐內容');
+                        if (JSON.stringify(newItem.promotions || []) !== JSON.stringify(oldItem.promotions || [])) changesDetail.push('促銷優惠');
+
+                        if (changesDetail.length > 0) {
+                            logs.push(`<strong style="color: #007bff;">[更新]</strong> ${newItem.name} <span style="color:#666; font-size:0.9em;">(變更了: ${changesDetail.join(', ')})</span>`);
+                        }
+                    }
+                });
+
+                // 偵測刪除
+                oldMap.forEach((oldItem, id) => {
+                    if (!newMap.has(id)) {
+                        logs.push(`<strong style="color: #dc3545;">[刪除]</strong> ${oldItem.name}`);
+                    }
+                });
+
+                this.changelog = logs;
+            },
+
             openExportModal: function() {
-                const cleanData = JSON.parse(JSON.stringify(this.data));
-                this.exportJson = JSON.stringify(cleanData, null, 2);
+                // 1. 先產生異動紀錄
+                this.generateChangelog();
+                
+                // 2. 產出乾淨的 JSON (過濾掉用於控制 UI 展開的 _isEditing, _showPromos 等屬性)
+                this.exportJson = JSON.stringify(this.data, (key, value) => {
+                    if (key.startsWith('_')) return undefined;
+                    return value;
+                }, 2);
+                
                 this.showModal = true;
-                this.autoSave(); // 同步保存
+                this.autoSave(); 
             },
             
             copyToClipboard: function() {
                 navigator.clipboard.writeText(this.exportJson).then(() => {
-                    this.showToast('📋 代碼已複製！請覆蓋至 services.json 檔案中。');
-                    this.showModal = false;
+                    this.showToast('📋 JSON 原始碼已複製成功！<br><span style="font-size:0.85em; color:#ddd;">請前往覆蓋至 services.json 檔案。</span>');
+                    this.showModal = false; // 複製後自動關閉 Modal
                 }).catch(() => {
-                    this.showToast('❌ 複製失敗，請手動全選複製。');
+                    // Fallback
+                    const textArea = document.createElement("textarea");
+                    textArea.value = this.exportJson;
+                    document.body.appendChild(textArea);
+                    textArea.select();
+                    try {
+                        document.execCommand('copy');
+                        this.showToast('📋 JSON 原始碼已複製成功！<br><span style="font-size:0.85em; color:#ddd;">請前往覆蓋至 services.json 檔案。</span>');
+                    } catch (err) {
+                        this.showToast('❌ 複製失敗，請手動全選複製。');
+                    }
+                    document.body.removeChild(textArea);
+                    this.showModal = false;
                 });
             }
         },
-        mounted: function() {
-            // 優先讀取 LocalStorage 自動保存的內容
+        mounted: async function() {
+            // 優先抓取伺服器上的原始資料，用作日後產生 Changelog 比對基準
+            try {
+                const res = await fetch('services.json?t=' + new Date().getTime());
+                const serverData = await res.json();
+                this.originalData = JSON.parse(JSON.stringify(serverData));
+            } catch (err) {
+                console.warn('無法抓取原始 services.json 用於比對', err);
+            }
+
             const savedData = localStorage.getItem('autosavedData');
             if (savedData) {
                 this.data = JSON.parse(savedData);
                 this.showToast('📂 已載入上次尚未匯出的草稿內容。');
-            } else {
-                // 若無快取，靜默抓取伺服器 json
-                fetch('services.json?t=' + new Date().getTime())
-                    .then(res => res.json())
-                    .then(data => { this.data = data; })
-                    .catch(err => console.error(err));
+            } else if (this.originalData) {
+                this.data = JSON.parse(JSON.stringify(this.originalData));
             }
         }
     });
