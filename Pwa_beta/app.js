@@ -450,6 +450,7 @@ function updateTotals() {
                 `【${discountName}以原價${discountStr}計算】`;
 
             receiptItems.push({
+                ids: [id], // 新增：記錄項目 ID 以供取消按鈕使用
                 name: item.name,
                 originalPrice: item.price,
                 finalPrice: finalP,
@@ -485,6 +486,7 @@ function updateTotals() {
                         });
                         
                         receiptItems.push({
+                            ids: comboItemsList, // 新增：記錄組合內所有項目 ID 以供取消按鈕使用
                             name: comboItemNames.join('<br>'), 
                             originalPrice: comboOriginalPrice,
                             finalPrice: activeComboPromo.price,
@@ -508,6 +510,7 @@ function updateTotals() {
             let itemFinalPrice = activePromo ? activePromo.price : item.price;
 
             receiptItems.push({
+                ids: [id], // 新增：記錄項目 ID 以供取消按鈕使用
                 name: item.name,
                 originalPrice: item.price,
                 finalPrice: itemFinalPrice,
@@ -540,8 +543,13 @@ function updateTotals() {
         }
         
         detailsHtml += `
-            <li style="margin-bottom: 6px; display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 1px dotted #e0e0e0; padding-bottom: 4px;">
-                <span class="item-name" style="flex: 1; padding-right: 15px; word-break: break-word; line-height: 1.4;">${item.isCombo ? '🎁 組合優惠<br>' : ''}${item.name}</span>
+            <li style="margin-bottom: 8px; display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 1px dotted #e0e0e0; padding-bottom: 8px;">
+                <div style="flex: 1; padding-right: 15px; word-break: break-word; line-height: 1.4;">
+                    <span class="item-name">${item.isCombo ? '🎁 組合優惠<br>' : ''}${item.name}</span>
+                    <div style="margin-top: 6px;">
+                        <button class="cancel-item-btn" style="background-color: #dc3545; color: white; padding: 2px 8px; font-size: 0.8em; border-radius: 4px; border: none; cursor: pointer; box-shadow: 0 1px 3px rgba(0,0,0,0.2);" data-ids="${item.ids.join(',')}" data-name="${item.name.replace(/<br>/g, ' + ')}">❌ 取消</button>
+                    </div>
+                </div>
                 <span class="item-price-detail" style="text-align: right; white-space: nowrap; flex-shrink: 0;">${priceHtml}</span>
             </li>
         `;
@@ -564,6 +572,21 @@ function updateTotals() {
     }
 
     DOM.selectedItemsList.innerHTML = detailsHtml;
+
+    // 綁定明細上的取消按鈕事件
+    const cancelBtns = DOM.selectedItemsList.querySelectorAll('.cancel-item-btn');
+    cancelBtns.forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            const idsToRemove = e.target.getAttribute('data-ids').split(',');
+            const itemName = e.target.getAttribute('data-name');
+            if (confirm(`確定要取消「${itemName}」嗎？`)) {
+                idsToRemove.forEach(id => selectedItems.delete(id));
+                updateCheckboxes();
+                updateTotals();
+                showNotice(`🗑️ 已取消：${itemName}`);
+            }
+        });
+    });
 
     // 5. 動態更新總計區塊的文字與顯示狀態
     const discountedTotalPNode = document.getElementById('discounted-total-p');
