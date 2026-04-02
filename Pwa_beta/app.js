@@ -5,7 +5,7 @@ let serviceData = null;
 let allServices = new Map();
 let selectedItems = new Set();
 let currentIdentity = 'general'; 
-let currentReceiptData = null; // 新增：儲存當下所有的結帳與明細資訊，供截圖時使用
+let currentReceiptData = null; // 儲存當下所有的結帳與明細資訊，供截圖時使用
 const DOM = {};
 
 const DATA_CACHE_KEY = 'dede_services_data_cache';
@@ -39,53 +39,52 @@ function initDOMVariables() {
     DOM.serviceList = document.getElementById('service-list');
     DOM.searchInput = document.getElementById('search-input');
     DOM.loadingIndicator = document.getElementById('loading-indicator');
-    DOM.identitySelect = document.getElementById('identity-select');
+    
+    // 【重要修復】：自動相容 id="role" 或 id="identity-select"
+    DOM.identitySelect = document.getElementById('role') || document.getElementById('identity-select');
+    
     DOM.originalTotal = document.getElementById('original-total');
     DOM.discountedTotal = document.getElementById('discounted-total');
     DOM.floatingDiscountedTotal = document.getElementById('floating-discounted-total');
     DOM.selectedItemsList = document.getElementById('selected-items-list');
     DOM.floatingSelectedItemsList = document.getElementById('floating-selected-items-list');
-    DOM.floatingActionBtn = document.getElementById('floating-action-btn');
     DOM.versionSpan = document.getElementById('price-version');
     
-    // 綁定事件
-    DOM.identitySelect.addEventListener('change', (e) => {
+    // 綁定事件 (全面加入 ?. 防呆機制，確保找不到元素時不會造成畫面當機)
+    DOM.identitySelect?.addEventListener('change', (e) => {
         currentIdentity = e.target.value;
         renderServiceList(serviceData);
         updateTotals();
     });
     
-    DOM.searchInput.addEventListener('input', () => {
+    DOM.searchInput?.addEventListener('input', () => {
         renderServiceList(serviceData, DOM.searchInput.value.trim());
     });
     
-    document.getElementById('clear-btn').addEventListener('click', () => {
+    document.getElementById('clear-btn')?.addEventListener('click', () => {
         selectedItems.clear();
-        DOM.searchInput.value = '';
+        if (DOM.searchInput) DOM.searchInput.value = '';
         currentIdentity = 'general';
-        DOM.identitySelect.value = 'general';
+        if (DOM.identitySelect) DOM.identitySelect.value = 'general';
         renderServiceList(serviceData);
         updateTotals();
         showNotice('已清除所有選項');
     });
 
-    document.getElementById('save-btn').addEventListener('click', saveState);
-    document.getElementById('load-btn').addEventListener('click', loadState);
-    document.getElementById('share-link-btn').addEventListener('click', generateShareLink);
-    document.getElementById('screenshot-btn').addEventListener('click', generateScreenshot);
+    document.getElementById('save-btn')?.addEventListener('click', saveState);
+    document.getElementById('load-btn')?.addEventListener('click', loadState);
+    document.getElementById('share-link-btn')?.addEventListener('click', generateShareLink);
+    document.getElementById('screenshot-btn')?.addEventListener('click', generateScreenshot);
 }
 
 async function loadServiceData() {
     try {
-        // 加入時間戳記避免快取
         const response = await fetch(`services.json?v=${new Date().getTime()}`, { cache: "no-cache" });
         if (!response.ok) throw new Error('Network response was not ok');
         const data = await response.json();
-        // 驗證資料結構 (基本驗證)
         if (!data || !data.categories) {
             throw new Error('Invalid JSON format');
         }
-        // 儲存到 localStorage 作為備用
         localStorage.setItem(DATA_CACHE_KEY, JSON.stringify(data));
         return data;
     } catch (error) {
@@ -116,7 +115,6 @@ function initializePage() {
     if (serviceData.combos) {
         serviceData.combos.forEach(combo => {
             combo.isCombo = true;
-            // 預先計算 combo 的 price，供後續原價與打折計算使用
             let total = 0;
             if (combo.itemIds) {
                 combo.itemIds.forEach(id => {
@@ -133,20 +131,18 @@ function initializePage() {
 
     renderServiceList(serviceData);
     
-    // 預設選擇一般身分
-    DOM.identitySelect.value = 'general';
+    if (DOM.identitySelect) DOM.identitySelect.value = 'general';
     currentIdentity = 'general';
     
     if(serviceData.version && DOM.versionSpan) {
         DOM.versionSpan.textContent = `(v${serviceData.version})`;
     }
 
-    // 處理 URL 參數 (分享連結功能)
     processUrlParams();
     updateTotals();
 }
 
-// 輔助函式：取得最後結算價格與促銷狀態
+// 【新增】：統整計算最終價格的邏輯 (負責刪除線與標記)
 function getFinalPrice(item) {
     if (currentIdentity === 'student') {
         return { price: Math.round(item.price * 0.8), isPromo: true, label: '學生8折', originalPrice: item.price };
@@ -154,24 +150,17 @@ function getFinalPrice(item) {
         return { price: Math.round(item.price * 0.5), isPromo: true, label: '壽星5折', originalPrice: item.price };
     }
     
-    // 一般身分，檢查促銷
     const activePromo = getActivePromotion(item.promotions);
     if (activePromo) {
         return { price: activePromo.price, isPromo: true, label: activePromo.label, originalPrice: item.price };
     }
     
-    // 無優惠
     return { price: item.price, isPromo: false, label: '', originalPrice: item.price };
 }
-
-// ==========================================
-// 2. 促銷邏輯與 UI 渲染
-// ==========================================
 
 function getActivePromotion(promotions) {
     if (!promotions || promotions.length === 0) return null;
     const now = new Date();
-    // 將今天日期格式化為 YYYY-MM-DD 以便比較 (忽略時間)
     const todayStr = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
 
     for (let promo of promotions) {
@@ -183,11 +172,16 @@ function getActivePromotion(promotions) {
     return null;
 }
 
+// ==========================================
+// 2. UI 渲染
+// ==========================================
+
 function renderServiceList(data, filterText = '') {
+    if (!DOM.serviceList) return;
     DOM.serviceList.innerHTML = '';
     filterText = filterText.toLowerCase();
 
-    // 渲染一般分類與項目
+    // 渲染一般項目
     data.categories.forEach(category => {
         let hasMatch = false;
         let html = `<h3>${category.name}</h3><div class="category-grid">`;
@@ -282,24 +276,23 @@ function toggleItem(itemId) {
 }
 
 // ==========================================
-// 3. 計算與狀態更新
+// 3. 計算與狀態更新 (包含套餐拆解邏輯)
 // ==========================================
 
 function updateTotals() {
     let originalTotal = 0;
     let discountedTotal = 0;
     
-    DOM.selectedItemsList.innerHTML = '';
+    if (DOM.selectedItemsList) DOM.selectedItemsList.innerHTML = '';
     
     let itemsToProcess = [];
     let hasExplodedCombo = false;
 
-    // 第一階段：決定要結帳的項目清單（處理套餐拆解）
+    // 判斷是否需要拆解套餐
     selectedItems.forEach(itemId => {
         const item = allServices.get(itemId);
         if (!item) return;
 
-        // 如果是壽星或學生且為套餐，則將項目拆解以單品計算
         if (item.isCombo && (currentIdentity === 'student' || currentIdentity === 'birthday')) {
             hasExplodedCombo = true;
             if (item.itemIds && item.itemIds.length > 0) {
@@ -323,7 +316,6 @@ function updateTotals() {
         hasExplodedCombo: hasExplodedCombo
     };
     
-    // 第二階段：產生明細與計算
     itemsToProcess.forEach(item => {
         const finalPriceObj = getFinalPrice(item);
         const currentPrice = finalPriceObj.price;
@@ -339,7 +331,6 @@ function updateTotals() {
             label: finalPriceObj.label
         });
         
-        // 明細列表渲染
         let itemText = item.name;
         if (finalPriceObj.isPromo) {
             itemText += ` <span style="font-size: 0.85em; color: var(--danger-color, #dc3545);">(${finalPriceObj.label})</span>`;
@@ -362,11 +353,10 @@ function updateTotals() {
                 <span>$${currentPrice.toLocaleString()}</span>
             `;
         }
-        DOM.selectedItemsList.appendChild(li);
+        if (DOM.selectedItemsList) DOM.selectedItemsList.appendChild(li);
     });
 
-    // 若有拆解套餐，加入提示文字
-    if (hasExplodedCombo) {
+    if (hasExplodedCombo && DOM.selectedItemsList) {
         const labelStr = currentIdentity === 'student' ? '學生無套餐優惠，以原價8折計算' : '壽星無套餐優惠，以原價5折計算';
         const li = document.createElement('li');
         li.style.cssText = 'padding: 5px 0; color: var(--danger-color, #dc3545); font-weight: bold; font-size: 0.9em; text-align: center;';
@@ -379,32 +369,31 @@ function updateTotals() {
 
     if (DOM.originalTotal) DOM.originalTotal.textContent = originalTotal.toLocaleString();
     if (DOM.discountedTotal) DOM.discountedTotal.textContent = discountedTotal.toLocaleString();
-    
-    // 更新浮動列
     if (DOM.floatingDiscountedTotal) DOM.floatingDiscountedTotal.textContent = discountedTotal.toLocaleString();
-    if (DOM.floatingSelectedItemsList) {
-        // 複製明細內容到浮動清單
+    
+    if (DOM.floatingSelectedItemsList && DOM.selectedItemsList) {
         const ul = DOM.floatingSelectedItemsList.querySelector('ul');
         if(ul) ul.innerHTML = DOM.selectedItemsList.innerHTML;
     }
 
-    // 計算點數
     const pointsContainer = document.getElementById('points-container');
     const floatingPoints = document.getElementById('floating-points');
     const ratio = serviceData.pointsRatio || 10;
     
-    if (currentIdentity === 'general' && discountedTotal > 0 && selectedItems.size > 0) {
-        const points = Math.floor(discountedTotal / ratio);
-        pointsContainer.style.display = 'block';
-        floatingPoints.textContent = points;
-        currentReceiptData.points = points;
-    } else {
-         pointsContainer.style.display = 'none';
-         currentReceiptData.points = 0;
+    if (pointsContainer && floatingPoints) {
+        if (currentIdentity === 'general' && discountedTotal > 0 && selectedItems.size > 0) {
+            const points = Math.floor(discountedTotal / ratio);
+            pointsContainer.style.display = 'block';
+            floatingPoints.textContent = points;
+            currentReceiptData.points = points;
+        } else {
+             pointsContainer.style.display = 'none';
+             currentReceiptData.points = 0;
+        }
     }
 }
 
-// 產生要用來截圖的 HTML 字串
+// 產生截圖收據的 HTML
 function generateReceiptHtml() {
     if (!currentReceiptData || currentReceiptData.items.length === 0) return '';
     
@@ -503,7 +492,7 @@ function loadState() {
         state.items.forEach(id => selectedItems.add(id));
         
         currentIdentity = state.identity || 'general';
-        DOM.identitySelect.value = currentIdentity;
+        if (DOM.identitySelect) DOM.identitySelect.value = currentIdentity;
         
         renderServiceList(serviceData);
         updateTotals();
@@ -523,7 +512,6 @@ function generateShareLink() {
     url.searchParams.set('items', ids);
     url.searchParams.set('role', currentIdentity);
     
-    // 複製到剪貼簿 (使用較為兼容的寫法)
     const tempInput = document.createElement('input');
     tempInput.value = url.toString();
     document.body.appendChild(tempInput);
@@ -550,9 +538,8 @@ function processUrlParams() {
         });
         if (roleParam && ['general', 'student', 'birthday'].includes(roleParam)) {
             currentIdentity = roleParam;
-            DOM.identitySelect.value = currentIdentity;
+            if (DOM.identitySelect) DOM.identitySelect.value = currentIdentity;
         }
-        // 清除 URL 參數讓網址變乾淨，但不重新載入頁面
         window.history.replaceState({}, document.title, window.location.pathname);
         showNotice('📥 已載入分享的選擇清單');
         renderServiceList(serviceData);
@@ -571,11 +558,12 @@ function generateScreenshot() {
     }
 
     const btn = document.getElementById('screenshot-btn');
-    const originalText = btn.textContent;
-    btn.textContent = '處理中...';
-    btn.disabled = true;
+    const originalText = btn ? btn.textContent : '截圖';
+    if (btn) {
+        btn.textContent = '處理中...';
+        btn.disabled = true;
+    }
 
-    // 建立一個暫時的 div 來放置要截圖的內容，並設定樣式使其在畫面外或隱藏
     const receiptDiv = document.createElement('div');
     receiptDiv.style.position = 'absolute';
     receiptDiv.style.left = '-9999px';
@@ -583,15 +571,13 @@ function generateScreenshot() {
     receiptDiv.innerHTML = generateReceiptHtml();
     document.body.appendChild(receiptDiv);
 
-    // 延遲一點點確保 DOM 渲染完畢
     setTimeout(() => {
         html2canvas(receiptDiv, {
-            scale: 2, // 提高解析度
+            scale: 2,
             backgroundColor: '#ffffff',
             logging: false,
             useCORS: true
         }).then(canvas => {
-            // 下載圖片
             const link = document.createElement('a');
             link.download = `德德估價單_${new Date().getTime()}.png`;
             link.href = canvas.toDataURL('image/png');
@@ -602,8 +588,10 @@ function generateScreenshot() {
             showNotice('❌ 截圖發生錯誤');
         }).finally(() => {
             document.body.removeChild(receiptDiv);
-            btn.textContent = originalText;
-            btn.disabled = false;
+            if (btn) {
+                btn.textContent = originalText;
+                btn.disabled = false;
+            }
         });
     }, 100);
 }
