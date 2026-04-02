@@ -41,15 +41,15 @@ function initDOMVariables() {
     DOM.loadingIndicator = document.getElementById('loading-indicator');
     DOM.summarySection = document.getElementById('summary-details'); 
     
-DOM.originalTotal = document.getElementById('floating-original-total');
+    DOM.originalTotal = document.getElementById('floating-original-total');
     DOM.originalTotalP = document.getElementById('original-total-p');
-    DOM.promoSavingsContainer = document.getElementById('promo-savings-container'); // 修改：抓取合併後的容器
+    DOM.promoSavingsContainer = document.getElementById('promo-savings-container');
     DOM.appliedPromo = document.getElementById('floating-applied-promo');         
     DOM.discountedTotal = document.getElementById('floating-discounted-total');
     DOM.savings = document.getElementById('floating-savings');
     DOM.points = document.getElementById('floating-points');
     DOM.pointsContainer = document.getElementById('points-container');
-    DOM.selectedItemsList = document.querySelector('#floating-selected-items-list ul');;
+    DOM.selectedItemsList = document.querySelector('#floating-selected-items-list ul');
     
     DOM.saveBtn = document.getElementById('save-btn');
     DOM.loadBtn = document.getElementById('load-btn');
@@ -178,11 +178,8 @@ function renderServiceList(filterText = '') {
     
     const terms = filterText.toLowerCase().split(/[,，]/).map(t => t.trim()).filter(t => t.length > 0);
 
-    // ==========================================
-    // 新增：置頂套餐區 (只在沒有搜尋條件時顯示)
-    // ==========================================
+    // 置頂套餐區 (只在沒有搜尋條件時顯示)
     if (serviceData.combos && Array.isArray(serviceData.combos) && terms.length === 0) {
-        // 篩選出目前「有生效優惠」的組合
         const activeCombos = serviceData.combos.map((combo, index) => ({combo, index}))
             .filter(item => getActivePromotion(item.combo.promotions) !== null);
 
@@ -200,7 +197,6 @@ function renderServiceList(filterText = '') {
 
             activeCombos.forEach(({combo, index}) => {
                 const activePromo = getActivePromotion(combo.promotions);
-                // 串接該套餐包含的服務名稱
                 const itemNames = combo.itemIds.map(id => allServices.get(id)?.name).filter(Boolean).join(' + ');
                 let originalPrice = combo.itemIds.reduce((sum, id) => sum + (allServices.get(id)?.price || 0), 0);
 
@@ -211,12 +207,10 @@ function renderServiceList(filterText = '') {
                 const label = document.createElement('label');
                 const checkbox = document.createElement('input');
                 checkbox.type = 'checkbox';
-                checkbox.className = 'combo-checkbox'; // 給予特殊 class 方便後續連動
+                checkbox.className = 'combo-checkbox'; 
                 checkbox.dataset.comboIndex = index;
-                // 如果套餐內的單品都被選了，這個套餐就自動打勾
                 checkbox.checked = combo.itemIds.every(id => selectedItems.has(id));
                 
-                // 一鍵全選/取消全選邏輯
                 checkbox.addEventListener('change', (e) => {
                     if (e.target.checked) {
                         combo.itemIds.forEach(id => selectedItems.add(id));
@@ -249,9 +243,7 @@ function renderServiceList(filterText = '') {
         }
     }
 
-    // ==========================================
-    // 原本的分類與服務項目
-    // ==========================================
+    // 一般分類與服務項目
     serviceData.categories.forEach(category => {
         const filteredItems = category.items.filter(item => {
             if (terms.length === 0) return true;
@@ -310,7 +302,6 @@ function renderServiceList(filterText = '') {
                 if (e.target.checked) selectedItems.add(item.id);
                 else selectedItems.delete(item.id);
                 
-                // 勾選單品時，需連帶更新上方套餐區塊的勾選狀態
                 updateCheckboxes();
                 updateTotals();
             });
@@ -374,96 +365,160 @@ function updateTotals() {
     if (!DOM.discountedTotal || !DOM.selectedItemsList) return;
 
     let originalTotal = 0;
-    let finalTotal = 0;
-    let receiptItems = []; 
-    let remainingItems = new Set(selectedItems);
+    let promoTotal = 0; // 用於試算一般促銷/套餐的總額
+    let remainingForCalc = new Set(selectedItems);
 
-// 請在 updateTotals() 函式中，替換「1. 處理組合優惠」的這個區塊：
-
-    // 1. 處理組合優惠 (純淨新版：僅支援 promotions 陣列)
+    // 1. 試算：打包套餐與單品促銷
     if (serviceData.combos && Array.isArray(serviceData.combos)) {
         serviceData.combos.forEach(combo => {
-            const comboItemsList = combo.itemIds; 
-            if (!comboItemsList || !Array.isArray(comboItemsList)) return;
-
             const activeComboPromo = getActivePromotion(combo.promotions);
-
             if (activeComboPromo) {
-                const currentComboPrice = activeComboPromo.price;
-                const isMatch = comboItemsList.every(id => remainingItems.has(id));
-                
+                const isMatch = combo.itemIds && combo.itemIds.every(id => remainingForCalc.has(id));
                 if (isMatch) {
-                    let comboOriginalPrice = 0;
-                    let comboItemNames = []; // 新增：用來收集組合內各單品的名稱
-
-                    comboItemsList.forEach(id => {
+                    promoTotal += activeComboPromo.price;
+                    combo.itemIds.forEach(id => {
+                        remainingForCalc.delete(id);
                         const item = allServices.get(id);
-                        if(item) {
-                            comboOriginalPrice += item.price;
-                            comboItemNames.push(item.name); // 將單品名稱存起來
-                        }
-                        remainingItems.delete(id); 
-                    });
-                    
-                    originalTotal += comboOriginalPrice;
-                    finalTotal += currentComboPrice;
-                    
-                    receiptItems.push({
-                        name: comboItemNames.join('<br>'), // 修改：顯示「單品A (換行) 單品B」，取代原先的 combo.name
-                        originalPrice: comboOriginalPrice,
-                        finalPrice: currentComboPrice,
-                        hasPromo: true,
-                        promoName: activeComboPromo.label || combo.name, 
-                        promoStart: activeComboPromo.start, 
-                        promoEnd: activeComboPromo.end,
-                        isCombo: true
+                        if(item) originalTotal += item.price;
                     });
                 }
             }
         });
     }
-
-    // 2. 處理剩餘單品
-    remainingItems.forEach(id => {
+    
+    remainingForCalc.forEach(id => {
         const item = allServices.get(id);
-        if (!item) return;
-
-        originalTotal += item.price;
-        const activePromo = getActivePromotion(item.promotions);
-        let itemFinalPrice = activePromo ? activePromo.price : item.price;
-
-        finalTotal += itemFinalPrice;
-        
-        receiptItems.push({
-            name: item.name,
-            originalPrice: item.price,
-            finalPrice: itemFinalPrice,
-            hasPromo: activePromo !== null,
-            promoName: activePromo ? activePromo.label : null, 
-            promoStart: activePromo ? activePromo.start : null, // 記錄優惠期限
-            promoEnd: activePromo ? activePromo.end : null,
-            isCombo: false
-        });
+        if (item) {
+            originalTotal += item.price;
+            const activePromo = getActivePromotion(item.promotions);
+            promoTotal += activePromo ? activePromo.price : item.price;
+        }
     });
 
-    // 3. 身分比價邏輯
-    let identityDiscountPrice = originalTotal;
+    // 2. 身分設定與比對
+    let identityDiscountPrice = 0;
     let identityLabel = '';
-    let usedIdentity = false;
-    
+    let discountName = '';
+    let discountStr = '';
+    let discountRate = 1;
+
     if (currentIdentity === 'birthday') {
-        identityDiscountPrice = originalTotal * 0.5;
-        identityLabel = '壽星5折優惠';
+        discountRate = 0.5; identityLabel = '壽星5折優惠'; discountName = '壽星'; discountStr = '5折';
     } else if (currentIdentity === 'student') {
-        identityDiscountPrice = originalTotal * 0.8;
-        identityLabel = '學生8折優惠';
+        discountRate = 0.8; identityLabel = '學生8折優惠'; discountName = '學生'; discountStr = '8折';
     }
 
-    if (currentIdentity !== 'general' && selectedItems.size > 0) {
-        if (identityDiscountPrice < finalTotal) {
-            finalTotal = identityDiscountPrice;
-            usedIdentity = true;
+    if (currentIdentity !== 'general') {
+        selectedItems.forEach(id => {
+            const item = allServices.get(id);
+            if (item) identityDiscountPrice += Math.round(item.price * discountRate);
+        });
+    }
+
+    let finalTotal = promoTotal;
+    let usedIdentity = false;
+
+    // 當身分折扣價低於或等於促銷總價時，啟用身分折扣
+    if (currentIdentity !== 'general' && selectedItems.size > 0 && identityDiscountPrice <= promoTotal) {
+        finalTotal = identityDiscountPrice;
+        usedIdentity = true;
+    }
+
+    let receiptItems = [];
+
+    // 3. 根據是否使用身分折扣，決定如何生成明細清單
+    if (usedIdentity) {
+        // 【身分折扣模式】：不合併顯示，強制拆解組合並標記
+        let comboItemsSet = new Set();
+        // 找出哪些單品本來可以組成目前勾選的組合
+        if (serviceData.combos && Array.isArray(serviceData.combos)) {
+            serviceData.combos.forEach(combo => {
+                const activeComboPromo = getActivePromotion(combo.promotions);
+                if (activeComboPromo && combo.itemIds && combo.itemIds.every(id => selectedItems.has(id))) {
+                    combo.itemIds.forEach(id => comboItemsSet.add(id));
+                }
+            });
         }
+
+        selectedItems.forEach(id => {
+            const item = allServices.get(id);
+            if (!item) return;
+            
+            let finalP = Math.round(item.price * discountRate);
+            let msg = comboItemsSet.has(id) ?
+                `【${discountName}無套餐優惠，以原價${discountStr}計算】` :
+                `【${discountName}以原價${discountStr}計算】`;
+
+            receiptItems.push({
+                name: item.name,
+                originalPrice: item.price,
+                finalPrice: finalP,
+                hasPromo: true, 
+                isIdentity: true, // 新增屬性以區別一般促銷
+                identityMsg: msg,
+                isCombo: false
+            });
+        });
+
+    } else {
+        // 【一般模式】：走原本的套餐打包邏輯
+        let remainingItems = new Set(selectedItems);
+        if (serviceData.combos && Array.isArray(serviceData.combos)) {
+            serviceData.combos.forEach(combo => {
+                const comboItemsList = combo.itemIds; 
+                if (!comboItemsList || !Array.isArray(comboItemsList)) return;
+
+                const activeComboPromo = getActivePromotion(combo.promotions);
+                if (activeComboPromo) {
+                    const isMatch = comboItemsList.every(id => remainingItems.has(id));
+                    if (isMatch) {
+                        let comboOriginalPrice = 0;
+                        let comboItemNames = []; 
+
+                        comboItemsList.forEach(id => {
+                            const item = allServices.get(id);
+                            if(item) {
+                                comboOriginalPrice += item.price;
+                                comboItemNames.push(item.name); 
+                            }
+                            remainingItems.delete(id); 
+                        });
+                        
+                        receiptItems.push({
+                            name: comboItemNames.join('<br>'), 
+                            originalPrice: comboOriginalPrice,
+                            finalPrice: activeComboPromo.price,
+                            hasPromo: true,
+                            promoName: activeComboPromo.label || combo.name, 
+                            promoStart: activeComboPromo.start, 
+                            promoEnd: activeComboPromo.end,
+                            isCombo: true,
+                            isIdentity: false
+                        });
+                    }
+                }
+            });
+        }
+
+        remainingItems.forEach(id => {
+            const item = allServices.get(id);
+            if (!item) return;
+
+            const activePromo = getActivePromotion(item.promotions);
+            let itemFinalPrice = activePromo ? activePromo.price : item.price;
+
+            receiptItems.push({
+                name: item.name,
+                originalPrice: item.price,
+                finalPrice: itemFinalPrice,
+                hasPromo: activePromo !== null,
+                promoName: activePromo ? activePromo.label : null, 
+                promoStart: activePromo ? activePromo.start : null, 
+                promoEnd: activePromo ? activePromo.end : null,
+                isCombo: false,
+                isIdentity: false
+            });
+        });
     }
 
     const savings = originalTotal - finalTotal;
@@ -475,17 +530,15 @@ function updateTotals() {
     receiptItems.forEach(item => {
         let priceHtml = `$${item.originalPrice}`;
         if (item.hasPromo) {
-            if (usedIdentity) {
-                // 如果是壽星或學生，保持原色且不加刪除線，並改變提示字眼
-                let identityMsg = currentIdentity === 'student' ? '【學生以原價8折計算】' : '【壽星以原價5折計算】';
-                priceHtml = `<span style="color: var(--text-main); margin-right: 5px;">$${item.originalPrice}</span> <br><span style="color: var(--primary-color, #007bff); font-size: 0.85em;">${identityMsg}</span>`;
+            if (item.isIdentity) {
+                // 需求 1 修改：優惠價 + 刪除線原價 + 左下角客製化提示
+                priceHtml = `<span style="color: var(--danger-color); font-weight: bold; margin-right: 5px;">$${item.finalPrice}</span> <span style="text-decoration: line-through; color: #999; font-size: 0.8em;">$${item.originalPrice}</span> <br><span style="color: var(--primary-color, #007bff); font-size: 0.85em;">${item.identityMsg}</span>`;
             } else {
                 let promoDateStr = (item.promoStart && item.promoEnd) ? `<br><span style="color: #6c757d; font-size: 0.75em;">(期限: ${item.promoStart} ~ ${item.promoEnd})</span>` : '';
                 priceHtml = `<span style="color: var(--danger-color); font-weight: bold; margin-right: 5px;">$${item.finalPrice}</span> <span style="text-decoration: line-through; color: #999; font-size: 0.8em;">$${item.originalPrice}</span>${promoDateStr}`;
             }
         }
         
-        // flex-shrink: 0 確保價格區塊不會被長名字擠壓；word-break: break-word 讓長名字自動換行
         detailsHtml += `
             <li style="margin-bottom: 6px; display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 1px dotted #e0e0e0; padding-bottom: 4px;">
                 <span class="item-name" style="flex: 1; padding-right: 15px; word-break: break-word; line-height: 1.4;">${item.isCombo ? '🎁 組合優惠<br>' : ''}${item.name}</span>
@@ -512,11 +565,10 @@ function updateTotals() {
 
     DOM.selectedItemsList.innerHTML = detailsHtml;
 
-// 5. 動態更新總計區塊的文字與顯示狀態
+    // 5. 動態更新總計區塊的文字與顯示狀態
     const discountedTotalPNode = document.getElementById('discounted-total-p');
 
     if (savings > 0) {
-        // 【有折扣時】顯示：原價、(套用優惠+共省下) 合併行、折扣後金額
         if (DOM.originalTotalP) {
             DOM.originalTotalP.style.display = 'block';
             DOM.originalTotalP.innerHTML = `總原價：<span id="floating-original-total">${originalTotal.toLocaleString()}</span> 元`;
@@ -530,7 +582,6 @@ function updateTotals() {
             discountedTotalPNode.innerHTML = `折扣後總金額：<span id="floating-discounted-total">${finalTotal.toLocaleString()}</span> 元`;
         }
     } else {
-        // 【無折扣時】只顯示：總金額
         if (DOM.originalTotalP) DOM.originalTotalP.style.display = 'none';
         if (DOM.promoSavingsContainer) DOM.promoSavingsContainer.style.display = 'none';
         if (discountedTotalPNode) {
@@ -538,7 +589,7 @@ function updateTotals() {
         }
     }
 
-    // 可獲得點數 (若無則免)
+    // 可獲得點數
     if (points > 0 && DOM.pointsContainer) {
         DOM.pointsContainer.style.display = 'block';
         if (DOM.points) DOM.points.textContent = points.toLocaleString();
@@ -624,7 +675,7 @@ function updateCheckboxes() {
         cb.checked = selectedItems.has(cb.value);
     });
 
-    // 2. 更新置頂套餐的勾選狀態 (如果底下的單品剛好全被選中，套餐就會自動打勾)
+    // 2. 更新置頂套餐的勾選狀態
     const comboCheckboxes = DOM.serviceList.querySelectorAll('.combo-checkbox');
     comboCheckboxes.forEach(cb => {
         const comboIndex = cb.dataset.comboIndex;
@@ -651,7 +702,6 @@ function loadFromUrl() {
             updateCheckboxes();
             showNotice('✅ 已成功載入好友分享的服務清單');
         }
-        // 清除網址列參數，讓畫面保持乾淨
         window.history.replaceState({}, document.title, window.location.pathname);
     }
 }
@@ -684,7 +734,7 @@ function exportAsPNG() {
         boxSizing: 'border-box'
     });
 
-    // 標題區 (刪除「估價單」字樣)
+    // 標題區
     let html = `<h2 style="text-align: center; border-bottom: 2px solid #007bff; padding-bottom: 10px; color: #0056b3; margin-top: 0;">德德美體美容中心</h2>`;
 
     if (currentReceiptData.identity !== 'general') {
@@ -693,25 +743,22 @@ function exportAsPNG() {
          </div>`;
     }
 
-    // 服務明細區 (改名為「服務明細」)
+    // 服務明細區
     html += `<h3 style="margin-bottom: 10px; font-size: 1.1em; border-bottom: 1px solid #eee; padding-bottom: 5px;">服務明細</h3>`;
     html += `<ul style="list-style: none; padding: 0; margin: 0 0 20px 0;">`;
 
     currentReceiptData.items.forEach(item => {
         let priceText = `$${item.originalPrice}`;
         if (item.hasPromo) {
-            if (currentReceiptData.usedIdentity) {
-                // 學生或壽星：原色、無刪除線、客製化提示文字
-                let identityMsg = currentReceiptData.identity === 'student' ? '【學生以原價8折計算】' : '【壽星以原價5折計算】';
-                priceText = `<span style="color: #333;">$${item.originalPrice}</span> <br><span style="color: #007bff; font-size: 0.85em;">${identityMsg}</span>`;
+            if (item.isIdentity) {
+                // 截圖也統一排版：特價 原價(刪除線) 換行 提示
+                priceText = `<span style="color: #dc3545; font-weight: bold;">$${item.finalPrice}</span> <span style="color: #999; text-decoration: line-through; font-size: 0.85em;">$${item.originalPrice}</span> <br><span style="color: #007bff; font-size: 0.85em;">${item.identityMsg}</span>`;
             } else {
-                // 一般期間限定促銷：顯示特價、原價刪除線、註明期限
                 let promoDateStr = (item.promoStart && item.promoEnd) ? `<br><span style="color: #6c757d; font-size: 0.75em;">(優惠期限: ${item.promoStart} ~ ${item.promoEnd})</span>` : '';
-                priceText = `<span style="color: #dc3545; font-weight: bold;">$${item.finalPrice}</span> <br><span style="color: #999; text-decoration: line-through; font-size: 0.85em;">$${item.originalPrice}</span>${promoDateStr}`;
+                priceText = `<span style="color: #dc3545; font-weight: bold;">$${item.finalPrice}</span> <span style="color: #999; text-decoration: line-through; font-size: 0.85em;">$${item.originalPrice}</span>${promoDateStr}`;
             }
         }
         
-        // 截圖的明細同樣設定自動換行與價格靠右
         html += `<li style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px; line-height: 1.4;">
             <span style="flex: 1; padding-right: 15px; word-break: break-word;">${item.isCombo ? '🎁 組合優惠<br>' : ''}${item.name}</span>
             <span style="text-align: right; white-space: nowrap; flex-shrink: 0;">${priceText}</span>
@@ -721,7 +768,6 @@ function exportAsPNG() {
 
     html += `<div style="border-top: 2px dashed #ccc; padding-top: 15px; text-align: right; font-size: 1em; line-height: 1.6;">`;
     
-    // 如果有折扣，顯示：原價、(套用優惠+共省下)、折扣後金額
     if (currentReceiptData.savings > 0) {
         html += `<p style="margin: 0;">原價：$${currentReceiptData.originalTotal.toLocaleString()}</p>
         <p style="margin: 0;">
@@ -730,11 +776,9 @@ function exportAsPNG() {
         </p>
         <p style="margin: 8px 0 0 0; font-size: 1.3em; font-weight: bold;">折扣後金額：$${currentReceiptData.finalTotal.toLocaleString()}</p>`;
     } else {
-        // 如果無折扣，只顯示：總金額
         html += `<p style="margin: 8px 0 0 0; font-size: 1.3em; font-weight: bold;">總金額：$${currentReceiptData.finalTotal.toLocaleString()}</p>`;
     }
     
-    // 點數大於 0 才顯示
     if (currentReceiptData.points > 0) {
         html += `<p style="margin: 5px 0 0 0; color: #007bff; font-weight: bold;">🎁 可獲得點數：${currentReceiptData.points.toLocaleString()} 點</p>`;
     }
