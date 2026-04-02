@@ -1,9 +1,10 @@
 /**
- * 穩定版 Service Worker (含訊息回饋)
- * 策略：網路優先 (Network First) + 超時控制
+ * Service Worker
+ * 策略：App Shell (UI) 網路優先 + 超時控制，動態資料 (services.json) 直接放行
  */
 
-const CACHE_NAME = 'price-calculator-v26.4';
+// 升級版號，強制所有用戶端清除舊快取並套用新規則
+const CACHE_NAME = 'price-calculator-v26.4b'; 
 const OFFLINE_URL = 'index.html';
 
 const urlsToCache = [
@@ -12,7 +13,6 @@ const urlsToCache = [
     'services_editor.html',
     'dede.css',
     'app.js',
-    'services.json',
     'logo_64.png',
     'logo_128.png',
     'logo_192.png',
@@ -35,7 +35,7 @@ function sendMessageToClients(msg) {
     });
 }
 
-// 1. 安裝
+// 1. 安裝：快取靜態資源 (App Shell)
 self.addEventListener('install', event => {
     self.skipWaiting();
     event.waitUntil(
@@ -44,24 +44,26 @@ self.addEventListener('install', event => {
                 urlsToCache.map(url => {
                     return fetch(new Request(url, { cache: 'reload' }))
                         .then(res => cache.put(url, res))
-                        .catch(err => console.warn(`預載入失敗: ${url}`, err));
+                        .catch(err => console.log('部分快取預載入失敗，但不影響主程式:', url));
                 })
             );
         })
     );
 });
 
-// 2. 啟用
+// 2. 啟動：清除舊版快取
 self.addEventListener('activate', event => {
     event.waitUntil(
-        Promise.all([
-            self.clients.claim(),
-            caches.keys().then(keys => Promise.all(
-                keys.map(key => {
-                    if (key !== CACHE_NAME) return caches.delete(key);
+        caches.keys().then(cacheNames => {
+            return Promise.all(
+                cacheNames.map(cacheName => {
+                    if (cacheName !== CACHE_NAME) {
+                        console.log('清除舊快取:', cacheName);
+                        return caches.delete(cacheName);
+                    }
                 })
-            ))
-        ])
+            );
+        }).then(() => self.clients.claim())
     );
 });
 
@@ -69,9 +71,18 @@ self.addEventListener('activate', event => {
 self.addEventListener('fetch', event => {
     if (event.request.method !== 'GET') return;
 
-    // 只有導航請求（開啟頁面）時才顯示「更新中」提示，避免 API 請求干擾
+    // ==========================================
+    // 【重要修改】遇到 services.json 直接放行，不進 SW 快取
+    // 因為 app.js 已經使用了 localStorage 進行本機優先與背景更新
+    // ==========================================
+    if (event.request.url.includes('services.json')) {
+        event.respondWith(fetch(event.request));
+        return;
+    }
+
+    // 只有導航請求（開啟 HTML 頁面）時才顯示「更新中」提示
     if (event.request.mode === 'navigate') {
-        sendMessageToClients('正在嘗試自網路更新內容...');
+        sendMessageToClients('正在檢查網頁更新...');
     }
 
     event.respondWith(
@@ -84,7 +95,7 @@ self.addEventListener('fetch', event => {
                 return networkResponse;
             })
             .catch(error => {
-                // 判斷錯誤類型發送訊息
+                // 如果無網路或超時，降級使用快取
                 if (error.message === '網路請求超時') {
                     sendMessageToClients('連線過久，已切換至快取模式');
                 } else if (!navigator.onLine) {
