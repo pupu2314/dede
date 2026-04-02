@@ -558,13 +558,90 @@
                         logs.push(`<strong style="color: #28a745;">[新增]</strong> ${newItem.name}`);
                     } else {
                         let changesDetail = [];
-                        if (newItem.name !== oldItem.name) changesDetail.push('名稱');
-                        if (newItem.price !== oldItem.price) changesDetail.push('價格');
-                        if (JSON.stringify(newItem.itemIds) !== JSON.stringify(oldItem.itemIds)) changesDetail.push('套餐內容');
-                        if (JSON.stringify(newItem.promotions || []) !== JSON.stringify(oldItem.promotions || [])) changesDetail.push('促銷優惠');
+                        let subLogs = [];
 
-                        if (changesDetail.length > 0) {
-                            logs.push(`<strong style="color: #007bff;">[更新]</strong> ${newItem.name} <span style="color:#666; font-size:0.9em;">(變更了: ${changesDetail.join(', ')})</span>`);
+                        if (newItem.name !== oldItem.name) changesDetail.push(`名稱 (${oldItem.name} > ${newItem.name})`);
+                        if (newItem.price !== oldItem.price) changesDetail.push(`價格 ($${oldItem.price} > $${newItem.price})`);
+                        if (JSON.stringify(newItem.itemIds) !== JSON.stringify(oldItem.itemIds)) changesDetail.push('套餐內容');
+
+                        // 詳細比對促銷優惠
+                        let oldPromos = oldItem.promotions || [];
+                        let newPromos = newItem.promotions || [];
+                        if (JSON.stringify(oldPromos) !== JSON.stringify(newPromos)) {
+                            let oldP = JSON.parse(JSON.stringify(oldPromos));
+                            let newP = JSON.parse(JSON.stringify(newPromos));
+                            const fmtD = d => (d || '').replace(/-/g, '/');
+
+                            // 1. 移除完全相同的優惠
+                            for (let i = oldP.length - 1; i >= 0; i--) {
+                                for (let j = newP.length - 1; j >= 0; j--) {
+                                    if (JSON.stringify(oldP[i]) === JSON.stringify(newP[j])) {
+                                        oldP.splice(i, 1);
+                                        newP.splice(j, 1);
+                                        break;
+                                    }
+                                }
+                            }
+
+                            // 2. 透過標籤 (Label) 進行配對比對
+                            let remainingOld = [];
+                            for (let i = 0; i < oldP.length; i++) {
+                                let matchedIdx = newP.findIndex(p => p.label === oldP[i].label);
+                                if (matchedIdx !== -1) {
+                                    let op = oldP[i];
+                                    let np = newP[matchedIdx];
+                                    if (op.price !== np.price) subLogs.push(`變更促銷金額 ($${op.price} > $${np.price})`);
+                                    if (op.start !== np.start || op.end !== np.end) {
+                                        subLogs.push(`變更促銷日期 (${fmtD(op.start)}→${fmtD(op.end)} > ${fmtD(np.start)}→${fmtD(np.end)})`);
+                                    }
+                                    newP.splice(matchedIdx, 1);
+                                } else {
+                                    remainingOld.push(oldP[i]);
+                                }
+                            }
+
+                            // 3. 將剩餘的依照順序配對 (適用於直接改掉標籤與日期的情況)
+                            let pairCount = Math.min(remainingOld.length, newP.length);
+                            for(let i=0; i<pairCount; i++) {
+                                let op = remainingOld[i];
+                                let np = newP[i];
+                                if (op.label !== np.label) subLogs.push(`變更促銷標籤 (${op.label} > ${np.label})`);
+                                if (op.price !== np.price) subLogs.push(`變更促銷金額 ($${op.price} > $${np.price})`);
+                                if (op.start !== np.start || op.end !== np.end) {
+                                    subLogs.push(`變更促銷日期 (${fmtD(op.start)}→${fmtD(op.end)} > ${fmtD(np.start)}→${fmtD(np.end)})`);
+                                }
+                            }
+
+                            // 4. 剩下無法配對的即為單純刪除或新增
+                            for(let i=pairCount; i<remainingOld.length; i++) {
+                                let op = remainingOld[i];
+                                subLogs.push(`刪除了促銷 (${op.label}、${fmtD(op.start)}→${fmtD(op.end)}、$${op.price})`);
+                            }
+                            for(let i=pairCount; i<newP.length; i++) {
+                                let np = newP[i];
+                                subLogs.push(`新增了促銷 (${np.label}、${fmtD(np.start)}→${fmtD(np.end)}、$${np.price})`);
+                            }
+                        }
+
+                        if (changesDetail.length > 0 || subLogs.length > 0) {
+                            let logHtml = `<strong style="color: #007bff;">[更新]</strong> <span style="font-weight: 500;">${newItem.name}</span>`;
+                            
+                            if (changesDetail.length > 0) {
+                                logHtml += ` <span style="color:#666; font-size:0.9em;">(變更了基本資訊: ${changesDetail.join(', ')})</span>`;
+                            }
+                            
+                            if (subLogs.length > 0) {
+                                logHtml += `<div style="margin-top: 6px; padding-left: 5px; font-size: 0.9em; color: #555;">`;
+                                subLogs.forEach(sl => {
+                                    logHtml += `<div style="position: relative; padding-left: 15px; margin-bottom: 4px;">
+                                        <span style="position: absolute; left: 0; color: #888;">•</span> 
+                                        ${sl}
+                                    </div>`;
+                                });
+                                logHtml += `</div>`;
+                            }
+                            
+                            logs.push(logHtml);
                         }
                     }
                 });
