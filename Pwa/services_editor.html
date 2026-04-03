@@ -349,7 +349,10 @@
                         </div>
                         <div class="input-group" style="flex: 2;">
                             <label>套餐名稱</label>
-                            <input type="text" v-model="combo.name" @input="autoSave">
+                            <div style="display: flex; gap: 5px;">
+                                <input type="text" v-model="combo.name" @input="autoSave" style="flex: 1;">
+                                <button class="btn-sm btn-info" @click="autoGenerateComboName(combo)" style="flex-shrink: 0;" title="根據下方勾選的服務自動命名">✨ 自動命名</button>
+                            </div>
                         </div>
                         <div class="input-group" style="flex: 0; justify-content: flex-end;">
                             <button class="btn-sm btn-danger" @click="deleteCombo(comboIndex)" style="height: 35px; white-space: nowrap;">🗑️ 刪除套餐</button>
@@ -424,7 +427,7 @@
 
     </div>
 
-    <!-- 浮動控制列 (新增一鍵清理按鈕) -->
+    <!-- 浮動控制列 -->
     <div class="floating-bottom-bar">
         <button class="btn" style="background-color: #dc3545; color: white; border: none;" @click="removeExpiredPromotions">🗑️ 清理過期優惠</button>
         <button class="btn btn-secondary" @click="loadDataFromServer">📥 重新載入伺服器資料</button>
@@ -514,9 +517,7 @@
 
             // ---- 折數與原價計算系統 ----
             getOriginalPrice: function(parent) {
-                // 如果是一般項目
                 if (parent.price !== undefined) return parent.price;
-                // 如果是套餐 (加總底下 itemIds 的原價)
                 if (parent.itemIds && parent.itemIds.length > 0) {
                     let total = 0;
                     parent.itemIds.forEach(id => {
@@ -534,18 +535,14 @@
             },
             
             getDiscountStats: function(originalPrice, promoPrice) {
-                // 防止空值或計算錯誤
                 if (!originalPrice || originalPrice <= 0 || promoPrice === undefined || promoPrice === '') return null;
-                // 若促銷價等於或高於原價，則視為無優惠
                 if (Number(promoPrice) >= Number(originalPrice)) return { saved: 0, zhe: 10, isLow: false, noDiscount: true };
                 
                 let saved = originalPrice - promoPrice;
                 let rate = promoPrice / originalPrice;
-                // 將 0.85 轉換為 8.5 折，0.8 轉換為 8 折
                 let zhe = Math.round(rate * 100); 
                 zhe = (zhe % 10 === 0) ? (zhe / 10) : (zhe / 10); 
                 
-                // 判斷是否低於 8 折
                 let isLow = rate < 0.8;
                 return { saved: saved, zhe: zhe, isLow: isLow, noDiscount: false };
             },
@@ -556,14 +553,12 @@
                 let removedCount = 0;
                 let previewCount = 0;
 
-                // 掃描函式 (僅計算數量)
                 const countPromos = (parent) => {
                     if (parent.promotions && parent.promotions.length > 0) {
                         previewCount += parent.promotions.filter(p => p.end && p.end < todayStr).length;
                     }
                 };
 
-                // 執行刪除函式
                 const cleanPromos = (parent) => {
                     if (parent.promotions && parent.promotions.length > 0) {
                         const originalLength = parent.promotions.length;
@@ -572,7 +567,6 @@
                     }
                 };
 
-                // 1. 先計算總共有幾筆過期
                 if (this.data.categories) {
                     this.data.categories.forEach(c => {
                         if (c.items) c.items.forEach(i => countPromos(i));
@@ -587,7 +581,6 @@
                     return;
                 }
 
-                // 2. 詢問使用者是否刪除
                 if (confirm(`🔍 系統偵測到全站共有 ${previewCount} 筆已過期優惠。\n(結束日期早於今日 ${todayStr})\n\n確定要一鍵清除它們嗎？`)) {
                     if (this.data.categories) {
                         this.data.categories.forEach(c => {
@@ -636,6 +629,32 @@
                 if (confirm('確定要刪除套餐嗎？')) {
                     this.data.combos.splice(index, 1);
                     this.autoSave();
+                }
+            },
+            
+            // 新增：根據勾選項目智慧產生套餐名稱
+            autoGenerateComboName: function(combo) {
+                if (!combo.itemIds || combo.itemIds.length === 0) {
+                    this.showToast('⚠️ 請先在下方勾選包含的服務項目！');
+                    return;
+                }
+                
+                let itemNames = [];
+                // 照著勾選清單的 ID 順序找尋並串接名稱
+                combo.itemIds.forEach(id => {
+                    for (let c of (this.data.categories || [])) {
+                        let it = (c.items || []).find(i => i.id === id);
+                        if (it) {
+                            itemNames.push(it.name);
+                            break;
+                        }
+                    }
+                });
+
+                if (itemNames.length > 0) {
+                    combo.name = itemNames.join(' + ') + ' 組合優惠';
+                    this.autoSave();
+                    this.showToast('✨ 套餐名稱已自動產生！');
                 }
             },
 
@@ -751,7 +770,7 @@
                         let newIds = [...(newItem.itemIds || [])].sort();
                         if (JSON.stringify(oldIds) !== JSON.stringify(newIds)) changesDetail.push('套餐內容');
 
-                        // 詳細比對促銷優惠 (多項異動整併至同一行)
+                        // 詳細比對促銷優惠
                         let oldPromos = oldItem.promotions || [];
                         let newPromos = newItem.promotions || [];
                         if (JSON.stringify(oldPromos) !== JSON.stringify(newPromos)) {
@@ -759,7 +778,6 @@
                             let newP = JSON.parse(JSON.stringify(newPromos));
                             const fmtD = d => (d || '').replace(/-/g, '/');
 
-                            // 1. 移除完全相同的優惠
                             for (let i = oldP.length - 1; i >= 0; i--) {
                                 for (let j = newP.length - 1; j >= 0; j--) {
                                     if (JSON.stringify(oldP[i]) === JSON.stringify(newP[j])) {
@@ -770,7 +788,6 @@
                                 }
                             }
 
-                            // 2. 透過標籤配對 (同一優惠名稱)
                             let remainingOld = [];
                             for (let i = 0; i < oldP.length; i++) {
                                 let matchedIdx = newP.findIndex(p => p.label === oldP[i].label);
@@ -793,7 +810,6 @@
                                 }
                             }
 
-                            // 3. 順序配對 (標籤名稱被改掉的情況)
                             let pairCount = Math.min(remainingOld.length, newP.length);
                             for(let i=0; i<pairCount; i++) {
                                 let op = remainingOld[i];
@@ -811,7 +827,6 @@
                                 }
                             }
 
-                            // 4. 單純的刪除或新增
                             for(let i=pairCount; i<remainingOld.length; i++) {
                                 let op = remainingOld[i];
                                 subLogs.push(`<span style="color:#dc3545;">刪除了促銷</span> (${op.label}、${fmtD(op.start)}→${fmtD(op.end)}、$${op.price})`);
@@ -856,10 +871,8 @@
             },
 
             openExportModal: function() {
-                // 1. 產生異動清單
                 this.generateChangelog();
                 
-                // 2. 進行低價警示掃描 (低於8折)
                 this.warnings = [];
                 const checkLowPromos = (parent, parentName) => {
                     let origPrice = this.getOriginalPrice(parent);
@@ -882,7 +895,6 @@
                     this.data.combos.forEach(c => checkLowPromos(c, c.name));
                 }
                 
-                // 3. 產出乾淨的匯出用 JSON
                 this.exportJson = JSON.stringify(this.data, (key, value) => {
                     if (key.startsWith('_')) return undefined;
                     return value;
