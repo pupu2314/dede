@@ -99,6 +99,59 @@
             box-shadow: 0 0 0 2px rgba(0,123,255,0.25);
         }
 
+        /* 勾選清單專屬樣式 */
+        .combo-items-selector {
+            background: #fff;
+            border: 1px solid #ced4da;
+            border-radius: 6px;
+            padding: 15px;
+            max-height: 280px;
+            overflow-y: auto;
+            margin-top: 5px;
+        }
+        .combo-category-group {
+            margin-bottom: 15px;
+        }
+        .combo-category-group:last-child {
+            margin-bottom: 0;
+        }
+        .combo-category-group .cat-name {
+            font-weight: bold;
+            color: #0056b3;
+            border-bottom: 1px solid #e9ecef;
+            margin-bottom: 10px;
+            padding-bottom: 4px;
+            font-size: 0.95em;
+        }
+        .combo-item-checkbox {
+            display: inline-flex;
+            align-items: center;
+            margin-right: 12px;
+            margin-bottom: 10px;
+            font-size: 0.9em;
+            cursor: pointer;
+            color: #444;
+            background: #f8f9fa;
+            padding: 6px 12px;
+            border-radius: 20px;
+            border: 1px solid #dee2e6;
+            transition: all 0.2s;
+        }
+        .combo-item-checkbox:hover {
+            background: #e2e6ea;
+            border-color: #ced4da;
+        }
+        .combo-item-checkbox input[type="checkbox"] {
+            margin-right: 6px;
+            cursor: pointer;
+            width: auto;
+        }
+        /* 勾選時加強視覺標示 */
+        .combo-item-checkbox input[type="checkbox"]:checked + span {
+            color: #0056b3;
+            font-weight: 600;
+        }
+
         /* 按鈕樣式 */
         .btn-sm {
             padding: 6px 10px;
@@ -279,7 +332,7 @@
                     </div>
                 </div>
 
-                <!-- 展開狀態：編輯基本資料 -->
+                <!-- 展開狀態：編輯基本資料與勾選項目 -->
                 <div v-if="combo._isEditing" style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin-top: 15px; border: 1px dashed #ccc;">
                     <div style="display: flex; gap: 10px; flex-wrap: wrap;">
                         <div class="input-group">
@@ -290,12 +343,27 @@
                             <label>套餐名稱</label>
                             <input type="text" v-model="combo.name" @input="autoSave">
                         </div>
-                        <div class="input-group" style="flex: 2;">
-                            <label>包含項目 ID (以逗號分隔)</label>
-                            <input type="text" :value="combo.itemIds ? combo.itemIds.join(',') : ''" @input="e => updateComboItems(combo, e.target.value)">
-                        </div>
                         <div class="input-group" style="flex: 0; justify-content: flex-end;">
                             <button class="btn-sm btn-danger" @click="deleteCombo(comboIndex)" style="height: 35px; white-space: nowrap;">🗑️ 刪除套餐</button>
+                        </div>
+                    </div>
+                    
+                    <!-- 套餐包含項目勾選區塊 -->
+                    <div style="margin-top: 18px;">
+                        <label style="font-size: 0.85em; color: #666; font-weight: bold;">包含項目 (請直接點擊勾選此套餐包含的服務)</label>
+                        <div class="combo-items-selector">
+                            <div v-for="(cat, catIdx) in data.categories" :key="'ccat-'+catIdx" class="combo-category-group">
+                                <div class="cat-name">{{ cat.name }}</div>
+                                <div style="display: flex; flex-wrap: wrap;">
+                                    <label v-for="item in cat.items" :key="item.id" class="combo-item-checkbox">
+                                        <input type="checkbox" :value="item.id" v-model="combo.itemIds" @change="autoSave">
+                                        <span>{{ item.name }}</span>
+                                    </label>
+                                </div>
+                            </div>
+                            <div v-if="!data.categories || data.categories.length === 0" style="color: #999; font-size: 0.85em;">
+                                尚未建立任何服務分類，請先至上方新增服務項目。
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -379,18 +447,26 @@
                 categories: [],
                 combos: []
             },
-            originalData: null, // 用於比對異動的原始資料
-            changelog: [],      // 異動紀錄陣列
+            originalData: null,
+            changelog: [],
             showModal: false,
             exportJson: ''
         },
         methods: {
-            // 自動儲存到 LocalStorage
             autoSave: function() {
                 localStorage.setItem('autosavedData', JSON.stringify(this.data));
             },
             
-            // 從伺服器重新載入
+            ensureItemIdsArray: function() {
+                if (this.data && this.data.combos) {
+                    this.data.combos.forEach(combo => {
+                        if (!combo.itemIds) {
+                            this.$set(combo, 'itemIds', []);
+                        }
+                    });
+                }
+            },
+
             loadDataFromServer: async function() {
                 if (confirm('這將會放棄您目前的變更，確定要從伺服器載入原始資料嗎？')) {
                     try {
@@ -399,6 +475,7 @@
                         const serverData = await res.json();
                         this.originalData = JSON.parse(JSON.stringify(serverData));
                         this.data = JSON.parse(JSON.stringify(serverData));
+                        this.ensureItemIdsArray();
                         this.autoSave();
                         this.showToast('📥 載入成功！');
                     } catch (err) {
@@ -407,7 +484,6 @@
                 }
             },
 
-            // ---- 分類與項目操作 ----
             addCategory: function() {
                 this.data.categories.push({ name: '新分類', items: [] });
                 this.autoSave();
@@ -420,7 +496,6 @@
             },
             addItem: function(category) {
                 if (!category.items) this.$set(category, 'items', []);
-                // 新增項目時，預設開啟編輯明細
                 const newItem = { id: 'new_item_' + Date.now(), name: '新服務名稱', price: 0, promotions: [], _isEditing: true };
                 category.items.push(newItem);
                 this.autoSave();
@@ -432,10 +507,8 @@
                 }
             },
 
-            // ---- 套餐操作 ----
             addCombo: function() {
                 if (!this.data.combos) this.$set(this.data, 'combos', []);
-                // 新增套餐時，預設開啟編輯明細
                 this.data.combos.push({ id: 'combo_' + Date.now(), name: '新套餐名稱', itemIds: [], promotions: [], _isEditing: true });
                 this.autoSave();
             },
@@ -445,18 +518,12 @@
                     this.autoSave();
                 }
             },
-            updateComboItems: function(combo, value) {
-                const ids = value.split(',').map(s => s.trim()).filter(s => s);
-                this.$set(combo, 'itemIds', ids);
-                this.autoSave();
-            },
 
-            // ---- 優惠操作 ----
             addPromotion: function(parent) {
                 if (!parent.promotions) this.$set(parent, 'promotions', []);
                 const today = this.formatDate(new Date());
                 parent.promotions.push({ label: '新優惠', price: parent.price || 0, start: today, end: today });
-                this.$set(parent, '_showPromos', true); // 新增優惠時自動確保區塊是展開的
+                this.$set(parent, '_showPromos', true);
                 this.autoSave();
             },
             removePromotion: function(parent, index) {
@@ -500,7 +567,6 @@
                 this.showToast(`✅ 已成功延續優惠至：${newLabel}`);
             },
 
-            // ---- 輔助與匯出函式 ----
             formatDate: function(date) {
                 const y = date.getFullYear();
                 const m = ('0' + (date.getMonth() + 1)).slice(-2);
@@ -529,7 +595,6 @@
                 const oldMap = new Map();
                 const newMap = new Map();
 
-                // 攤平原始資料
                 if(this.originalData.categories) {
                     this.originalData.categories.forEach(c => {
                         if(c.items) c.items.forEach(i => oldMap.set(i.id, i));
@@ -539,7 +604,6 @@
                     this.originalData.combos.forEach(c => oldMap.set(c.id, c));
                 }
 
-                // 攤平新資料 (忽略內部 UI 狀態屬性 _)
                 const cleanData = JSON.parse(JSON.stringify(this.data, (k, v) => k.startsWith('_') ? undefined : v));
                 
                 if(cleanData.categories) {
@@ -561,10 +625,13 @@
                         let subLogs = [];
 
                         if (newItem.name !== oldItem.name) changesDetail.push(`名稱 (${oldItem.name} > ${newItem.name})`);
-                        if (newItem.price !== oldItem.price) changesDetail.push(`價格 ($${oldItem.price} > $${newItem.price})`);
-                        if (JSON.stringify(newItem.itemIds) !== JSON.stringify(oldItem.itemIds)) changesDetail.push('套餐內容');
+                        if (newItem.price !== oldItem.price && typeof newItem.price !== 'undefined') changesDetail.push(`價格 ($${oldItem.price} > $${newItem.price})`);
+                        
+                        let oldIds = [...(oldItem.itemIds || [])].sort();
+                        let newIds = [...(newItem.itemIds || [])].sort();
+                        if (JSON.stringify(oldIds) !== JSON.stringify(newIds)) changesDetail.push('套餐內容');
 
-                        // 詳細比對促銷優惠
+                        // 詳細比對促銷優惠 (多項異動整併至同一行)
                         let oldPromos = oldItem.promotions || [];
                         let newPromos = newItem.promotions || [];
                         if (JSON.stringify(oldPromos) !== JSON.stringify(newPromos)) {
@@ -583,16 +650,22 @@
                                 }
                             }
 
-                            // 2. 透過標籤 (Label) 進行配對比對
+                            // 2. 透過標籤配對 (同一優惠名稱)
                             let remainingOld = [];
                             for (let i = 0; i < oldP.length; i++) {
                                 let matchedIdx = newP.findIndex(p => p.label === oldP[i].label);
                                 if (matchedIdx !== -1) {
                                     let op = oldP[i];
                                     let np = newP[matchedIdx];
-                                    if (op.price !== np.price) subLogs.push(`變更促銷金額 ($${op.price} > $${np.price})`);
+                                    let pChanges = [];
+                                    
+                                    if (op.price !== np.price) pChanges.push(`變更金額 ($${op.price} > $${np.price})`);
                                     if (op.start !== np.start || op.end !== np.end) {
-                                        subLogs.push(`變更促銷日期 (${fmtD(op.start)}→${fmtD(op.end)} > ${fmtD(np.start)}→${fmtD(np.end)})`);
+                                        pChanges.push(`變更日期 (${fmtD(op.start)}→${fmtD(op.end)} > ${fmtD(np.start)}→${fmtD(np.end)})`);
+                                    }
+                                    
+                                    if (pChanges.length > 0) {
+                                        subLogs.push(`<strong style="color: #444;">${op.label}</strong>：${pChanges.join('、')}`);
                                     }
                                     newP.splice(matchedIdx, 1);
                                 } else {
@@ -600,26 +673,32 @@
                                 }
                             }
 
-                            // 3. 將剩餘的依照順序配對 (適用於直接改掉標籤與日期的情況)
+                            // 3. 順序配對 (標籤名稱被改掉的情況)
                             let pairCount = Math.min(remainingOld.length, newP.length);
                             for(let i=0; i<pairCount; i++) {
                                 let op = remainingOld[i];
                                 let np = newP[i];
-                                if (op.label !== np.label) subLogs.push(`變更促銷標籤 (${op.label} > ${np.label})`);
-                                if (op.price !== np.price) subLogs.push(`變更促銷金額 ($${op.price} > $${np.price})`);
+                                let pChanges = [];
+                                
+                                if (op.label !== np.label) pChanges.push(`變更標籤 (${op.label} > ${np.label})`);
+                                if (op.price !== np.price) pChanges.push(`變更金額 ($${op.price} > $${np.price})`);
                                 if (op.start !== np.start || op.end !== np.end) {
-                                    subLogs.push(`變更促銷日期 (${fmtD(op.start)}→${fmtD(op.end)} > ${fmtD(np.start)}→${fmtD(np.end)})`);
+                                    pChanges.push(`變更日期 (${fmtD(op.start)}→${fmtD(op.end)} > ${fmtD(np.start)}→${fmtD(np.end)})`);
+                                }
+                                
+                                if (pChanges.length > 0) {
+                                    subLogs.push(`<strong style="color: #444;">${op.label}</strong>：${pChanges.join('、')}`);
                                 }
                             }
 
-                            // 4. 剩下無法配對的即為單純刪除或新增
+                            // 4. 單純的刪除或新增
                             for(let i=pairCount; i<remainingOld.length; i++) {
                                 let op = remainingOld[i];
-                                subLogs.push(`刪除了促銷 (${op.label}、${fmtD(op.start)}→${fmtD(op.end)}、$${op.price})`);
+                                subLogs.push(`<span style="color:#dc3545;">刪除了促銷</span> (${op.label}、${fmtD(op.start)}→${fmtD(op.end)}、$${op.price})`);
                             }
                             for(let i=pairCount; i<newP.length; i++) {
                                 let np = newP[i];
-                                subLogs.push(`新增了促銷 (${np.label}、${fmtD(np.start)}→${fmtD(np.end)}、$${np.price})`);
+                                subLogs.push(`<span style="color:#28a745;">新增了促銷</span> (${np.label}、${fmtD(np.start)}→${fmtD(np.end)}、$${np.price})`);
                             }
                         }
 
@@ -631,10 +710,10 @@
                             }
                             
                             if (subLogs.length > 0) {
-                                logHtml += `<div style="margin-top: 6px; padding-left: 5px; font-size: 0.9em; color: #555;">`;
+                                logHtml += `<div style="margin-top: 6px; padding-left: 5px; font-size: 0.95em; color: #555;">`;
                                 subLogs.forEach(sl => {
                                     logHtml += `<div style="position: relative; padding-left: 15px; margin-bottom: 4px;">
-                                        <span style="position: absolute; left: 0; color: #888;">•</span> 
+                                        <span style="position: absolute; left: 0; color: #007bff;">•</span> 
                                         ${sl}
                                     </div>`;
                                 });
@@ -657,10 +736,8 @@
             },
 
             openExportModal: function() {
-                // 1. 先產生異動紀錄
                 this.generateChangelog();
                 
-                // 2. 產出乾淨的 JSON (過濾掉用於控制 UI 展開的 _isEditing, _showPromos 等屬性)
                 this.exportJson = JSON.stringify(this.data, (key, value) => {
                     if (key.startsWith('_')) return undefined;
                     return value;
@@ -673,9 +750,8 @@
             copyToClipboard: function() {
                 navigator.clipboard.writeText(this.exportJson).then(() => {
                     this.showToast('📋 JSON 原始碼已複製成功！<br><span style="font-size:0.85em; color:#ddd;">請前往覆蓋至 services.json 檔案。</span>');
-                    this.showModal = false; // 複製後自動關閉 Modal
+                    this.showModal = false;
                 }).catch(() => {
-                    // Fallback
                     const textArea = document.createElement("textarea");
                     textArea.value = this.exportJson;
                     document.body.appendChild(textArea);
@@ -692,7 +768,6 @@
             }
         },
         mounted: async function() {
-            // 優先抓取伺服器上的原始資料，用作日後產生 Changelog 比對基準
             try {
                 const res = await fetch('services.json?t=' + new Date().getTime());
                 const serverData = await res.json();
@@ -704,9 +779,11 @@
             const savedData = localStorage.getItem('autosavedData');
             if (savedData) {
                 this.data = JSON.parse(savedData);
+                this.ensureItemIdsArray();
                 this.showToast('📂 已載入上次尚未匯出的草稿內容。');
             } else if (this.originalData) {
                 this.data = JSON.parse(JSON.stringify(this.originalData));
+                this.ensureItemIdsArray();
             }
         }
     });
