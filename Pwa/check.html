@@ -1,1017 +1,336 @@
 <!DOCTYPE html>
-<html lang="zh-TW">
+<html lang="zh-Hant">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>服務資料編輯器</title>
-    <link rel="stylesheet" href="dede.css">
-    <script src="https://cdn.jsdelivr.net/npm/vue@2.6.14/dist/vue.js"></script>
-    
+    <title>德德美體美容中心 - 促銷設定檢查頁面</title>
+    <link rel="stylesheet" href="dede.css"> <!-- 與主頁共用樣式 -->
     <style>
-        [v-cloak] { display: none; }
-        
-        body { 
-            background-color: #f4f6f9; 
-            padding-bottom: 160px; 
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        /* 專屬於此頁面的樣式 */
+        body {
+            background-color: #f8f9fa;
+            color: #212529;
         }
-        .editor-container { 
-            max-width: 1000px; 
-            margin: 20px auto; 
-            background: #fff; 
-            padding: 20px; 
-            border-radius: 12px; 
-            box-shadow: 0 4px 15px rgba(0,0,0,0.05); 
+        .container {
+            max-width: 960px;
         }
-        h1 { text-align: center; color: #0056b3; margin-bottom: 5px; font-size: 1.5em; }
-        .subtitle { text-align: center; color: #6c757d; font-size: 0.85em; margin-bottom: 25px; }
-
-        .category-card {
-            border: 1px solid #dee2e6;
-            border-radius: 8px;
-            padding: 15px;
-            margin-bottom: 25px;
-            background: #fafafa;
-        }
-        .category-title-input {
-            font-size: 1.3em;
-            font-weight: bold;
-            color: #333;
-            width: 100%;
-            border: none;
+        h1, h2 {
+            color: #0056b3;
             border-bottom: 2px solid #007bff;
-            background: transparent;
-            padding: 5px 0;
-            margin-bottom: 15px;
-            outline: none;
+            padding-bottom: 10px;
+            margin-top: 30px;
         }
-
-        /* =========================================
-           全新資料表排版 (Table-like Layout)
-        ========================================= */
-        /* 響應式橫向滑動容器 */
-        .table-responsive {
-            overflow-x: auto;
-            margin-bottom: 10px;
-            border: 1px solid #e9ecef;
-            border-radius: 8px;
-            background: #fff;
+        h3 {
+            color: #343a40;
+            margin-top: 2.5rem;
+            margin-bottom: 1rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 1px solid #ced4da;
         }
-        /* 隱藏原生滾動條，但保留滾動功能使外觀簡潔 */
-        .table-responsive::-webkit-scrollbar { height: 6px; }
-        .table-responsive::-webkit-scrollbar-thumb { background: #ccc; border-radius: 3px; }
-
-        .table-container {
-            padding: 5px 10px;
-        }
-        
-        .table-header {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            padding: 10px 0;
-            border-bottom: 2px solid #dee2e6;
-            color: #555;
-            font-weight: bold;
-            font-size: 0.85em;
-        }
-
-        .item-wrapper {
-            border-bottom: 1px solid #f1f3f5;
-        }
-        .item-wrapper:last-child {
-            border-bottom: none;
-        }
-
-        .super-row {
-            display: flex;
-            flex-wrap: nowrap;
-            align-items: center;
-            gap: 10px;
-            padding: 8px 0;
-        }
-
-        /* 欄位寬度定義 */
-        .col-name { flex: 0 0 160px; max-width: 160px; }
-        .col-combo-items { flex: 0 0 130px; max-width: 130px; cursor: pointer; }
-        .col-price { flex: 0 0 95px; display: flex; flex-direction: column; gap: 4px; }
-        .col-promo { flex: 0 0 100px; }
-        .col-discount { flex: 0 0 65px; display: flex; flex-direction: column; align-items: center; justify-content: center; }
-        .col-date { flex: 0 0 125px; display: flex; flex-direction: column; gap: 4px; }
-        .col-status { flex: 0 0 180px; display: flex; align-items: center; gap: 4px; }
-
-        /* 文字省略與內嵌輸入框 */
-        .ellipsis {
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-        }
-        .inline-input {
-            border: 1px solid transparent;
-            background: transparent;
-            padding: 2px 4px;
+        table {
+            border-collapse: collapse;
             width: 100%;
-            border-radius: 4px;
-            transition: all 0.2s;
+            margin-bottom: 15px;
             font-size: 0.95em;
-            box-sizing: border-box;
         }
-        .inline-input:hover, .inline-input:focus {
-            border-color: #80bdff;
-            background: #fff;
-            outline: none;
-            box-shadow: 0 0 0 2px rgba(0,123,255,.25);
+        th, td {
+            border: 1px solid #dee2e6;
+            padding: 10px;
+            text-align: left;
+            vertical-align: middle;
         }
+        th {
+            background-color: #e9ecef;
+            font-weight: bold;
+        }
+        tr:nth-child(even) {
+            background-color: #f8f9fa;
+        }
+        .status { padding: 3px 8px; border-radius: 12px; color: #fff; font-weight: bold; font-size: 0.85em; }
+        .status.active { background-color: #28a745; }
+        .status.upcoming { background-color: #17a2b8; }
+        .status.expired { background-color: #6c757d; }
+        .status.invalid { background-color: #dc3545; }
 
-        /* 上下排顯示專用容器 */
-        .stacked-field {
-            display: flex;
-            align-items: center;
-            gap: 4px;
-        }
-        .lbl {
-            font-size: 0.75em;
-            color: #888;
-            flex-shrink: 0;
-            width: 14px;
+        .discount-info { color: #28a745; font-weight: bold; font-size: 0.9em; white-space: nowrap; }
+        .note { background-color: #fff3cd; border-left: 5px solid #ffeeba; padding: 15px; margin-bottom: 20px; border-radius: 4px; }
+        .no-promo-cell { text-align: center; color: #6c757d; }
+
+        /* Mode Selection & JSON Input Styles */
+        .selection-container {
+            max-width: 600px; margin: 40px auto; padding: 30px;
+            background: #fff; border: 1px solid #ddd;
+            border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1);
             text-align: center;
         }
-
-        /* 狀態徽章與按鈕 */
-        .status-badge {
-            font-size: 0.75em;
-            padding: 2px 6px;
-            border-radius: 10px;
-            white-space: nowrap;
-            margin-right: 4px;
-            font-weight: bold;
+        #json-textarea {
+            width: 100%; height: 35vh; min-height: 200px; font-family: monospace;
+            font-size: 14px; padding: 10px; border: 1px solid #ccc; border-radius: 5px; margin-bottom: 10px;
         }
-        .status-active { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
-        .status-expired { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
-        .status-upcoming { background: #fff3cd; color: #856404; border: 1px solid #ffeeba; }
-
-        .btn-icon {
-            background: transparent;
-            border: none;
-            cursor: pointer;
-            font-size: 1.1em;
-            padding: 2px 4px;
-            border-radius: 4px;
-            transition: background 0.2s;
-        }
-        .btn-icon:hover { background: #e9ecef; }
+        .btn { display: inline-block; width: 100%; padding: 12px 20px; border-radius: 5px; font-weight: bold; text-align: center; cursor: pointer; border: none; color: #fff; background-color: #007bff; transition: background-color 0.2s; font-size: 1em; margin-top: 10px; }
+        .btn.btn-secondary { background-color: #6c757d; }
+        .btn:hover { opacity: 0.9; }
         
-        .btn-sm {
-            padding: 4px 8px;
-            font-size: 0.85em;
-            border-radius: 4px;
-            cursor: pointer;
-            border: none;
-            transition: opacity 0.2s;
-            white-space: nowrap;
+        /* View Toggle Style */
+        .view-toggle {
+            text-align: right; margin-bottom: 15px; background: #e9ecef; padding: 10px; border-radius: 5px;
         }
-        .btn-sm:hover { opacity: 0.85; }
-        .btn-danger { background: #dc3545; color: white; }
-        .btn-success { background: #28a745; color: white; }
-        .btn-info { background: #17a2b8; color: white; }
-        .btn-primary { background: #007bff; color: white; }
-        .btn-secondary { background: #6c757d; color: white; }
-        .btn-outline { background: #f8f9fa; border: 1px solid #ced4da; color: #495057; }
+        .view-toggle label { font-weight: normal; cursor: pointer; user-select: none; }
+        .view-toggle input { margin-right: 5px; vertical-align: middle; }
 
-        /* 進階編輯面板 (選服/改ID) */
-        .advanced-panel {
-            background: #f8f9fa;
-            padding: 15px;
-            border-top: 1px dashed #ced4da;
-            font-size: 0.9em;
-            margin-bottom: 5px;
-        }
-        
-        /* 勾選清單 (組合專用) */
-        .combo-items-selector {
-            background: #fff;
-            border: 1px solid #ced4da;
-            border-radius: 6px;
-            padding: 15px;
-            max-height: 280px;
-            overflow-y: auto;
-            margin-bottom: 10px;
-        }
-        .combo-category-group { margin-bottom: 15px; }
-        .combo-category-group:last-child { margin-bottom: 0; }
-        .cat-name { font-weight: bold; color: #0056b3; border-bottom: 1px solid #e9ecef; margin-bottom: 10px; padding-bottom: 4px; }
-        .combo-item-checkbox {
-            display: inline-flex; align-items: center; margin-right: 12px; margin-bottom: 10px;
-            font-size: 0.9em; cursor: pointer; color: #444; background: #f8f9fa;
-            padding: 6px 12px; border-radius: 20px; border: 1px solid #dee2e6; transition: all 0.2s;
-        }
-        .combo-item-checkbox:hover { background: #e2e6ea; border-color: #ced4da; }
-        .combo-item-checkbox input { margin-right: 6px; width: auto; }
-        .combo-item-checkbox input:checked + span { color: #0056b3; font-weight: 600; }
 
-        .floating-bottom-bar {
-            position: fixed; bottom: 0; left: 0; width: 100%;
-            background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(5px);
-            border-top: 1px solid #ddd; padding: 15px;
-            display: flex; justify-content: center; flex-wrap: wrap; gap: 10px;
-            box-shadow: 0 -2px 10px rgba(0,0,0,0.1); z-index: 1000;
+        @media (max-width: 768px) {
+            body { margin: 0; font-size: 16px; }
+            .container { padding: 10px; }
+            table thead { display: none; }
+            table, tbody, tr, td { display: block; width: 100%; box-sizing: border-box; }
+            tr { margin-bottom: 15px; border: 1px solid #dee2e6; border-radius: 5px; padding: 5px; }
+            td { display: flex; justify-content: space-between; align-items: center; padding: 8px 10px; border: none; border-bottom: 1px dotted #e9ecef; text-align: right; position: relative; }
+            tr td:last-child { border-bottom: none; }
+            td::before { content: attr(data-label); font-weight: bold; text-align: left; margin-right: 15px; color: #495057; }
         }
-        
-        /* Modal for Export */
-        .modal-overlay {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.6); display: flex; justify-content: center; align-items: center;
-            z-index: 2000; padding: 20px; box-sizing: border-box;
-        }
-        .modal-content {
-            background: white; padding: 25px; border-radius: 12px; width: 100%; max-width: 600px;
-            box-shadow: 0 5px 25px rgba(0,0,0,0.2); max-height: 90vh; display: flex; flex-direction: column;
-        }
-        .changelog-list {
-            background: #f8f9fa; padding: 15px; border-radius: 8px; border: 1px solid #dee2e6;
-            overflow-y: auto; flex-grow: 1; margin-top: 5px; margin-bottom: 15px;
-        }
-        .changelog-list ul { margin: 0; padding-left: 0; list-style: none; font-size: 0.95em; }
-        .changelog-list li { margin-bottom: 8px; line-height: 1.5; padding-bottom: 8px; border-bottom: 1px dashed #e9ecef; }
-        .changelog-list li:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
     </style>
 </head>
 <body>
 
-<div id="app" v-cloak>
-    <div class="editor-container">
-        <h1>服務資料編輯器</h1>
-        <div class="subtitle">自動儲存於瀏覽器，編輯完成後請點擊下方「確認與匯出明細」覆蓋原始檔案</div>
-
-        <!-- ================= 一般分類區塊 ================= -->
-        <div v-if="data && data.categories">
-            <div v-for="(category, cIndex) in data.categories" :key="'cat-'+cIndex" class="category-card">
-                <div style="display: flex; justify-content: space-between; align-items: center;">
-                    <input class="category-title-input" v-model="category.name" placeholder="分類名稱" @input="autoSave">
-                    <button class="btn-sm btn-danger" @click="deleteCategory(cIndex)">刪除分類</button>
-                </div>
-
-                <div class="table-responsive">
-                    <div class="table-container" style="min-width: 720px;">
-                        
-                        <!-- 表頭 -->
-                        <div class="table-header">
-                            <div class="col-name">項目名稱</div>
-                            <div class="col-price">原/促價</div>
-                            <div class="col-promo">活動標籤</div>
-                            <div class="col-discount">折扣</div>
-                            <div class="col-date">始/迄日期</div>
-                            <div class="col-status">狀態與操作</div>
-                        </div>
-
-                        <!-- 項目行 -->
-                        <div class="item-wrapper" v-for="(item, iIndex) in category.items" :key="'item-'+cIndex+'-'+iIndex">
-                            
-                            <!-- 主力排版列 (動態生成，無優惠則至少跑 1 次) -->
-                            <div class="super-row" v-for="(promo, pIdx) in (item.promotions && item.promotions.length ? item.promotions : [null])">
-                                
-                                <!-- 項目名稱 -->
-                                <div class="col-name ellipsis">
-                                    <input type="text" v-model="item.name" v-if="pIdx === 0" @input="autoSave" class="inline-input ellipsis" style="font-weight: bold;" :title="item.name" placeholder="項目名稱">
-                                    <span v-else class="text-muted" style="font-size:0.8em; padding-left:10px;">↳ 同上</span>
-                                </div>
-
-                                <!-- 價格 (上下排) -->
-                                <div class="col-price">
-                                    <div class="stacked-field">
-                                        <span class="lbl" title="原價">原</span>
-                                        <input type="number" v-model.number="item.price" v-if="pIdx === 0" @input="autoSave" class="inline-input" placeholder="原價">
-                                        <span v-else class="text-muted" style="padding: 3px 6px; font-size: 0.9em;">{{ item.price }}</span>
-                                    </div>
-                                    <div class="stacked-field" v-if="promo">
-                                        <span class="lbl text-danger" title="促銷價">促</span>
-                                        <input type="number" v-model.number="promo.price" @input="autoSave" class="inline-input text-danger" style="font-weight:bold;" placeholder="促銷價">
-                                    </div>
-                                    <div v-else class="stacked-field" style="height: 26px; align-items:center;">
-                                        <span class="text-muted" style="font-size:0.8em; margin-left: 18px;">- 無促銷 -</span>
-                                    </div>
-                                </div>
-
-                                <!-- 促銷標籤 -->
-                                <div class="col-promo">
-                                    <input type="text" v-model="promo.label" v-if="promo" @input="autoSave" class="inline-input ellipsis" :title="promo.label" placeholder="活動標籤">
-                                </div>
-
-                                <!-- 折扣計算 -->
-                                <div class="col-discount">
-                                    <template v-if="promo">
-                                        <div v-if="getDiscountStats(item.price, promo.price) && !getDiscountStats(item.price, promo.price).noDiscount" 
-                                             :class="{'text-danger': getDiscountStats(item.price, promo.price).isLow, 'text-success': !getDiscountStats(item.price, promo.price).isLow}"
-                                             style="font-size: 0.8em; font-weight: bold; line-height: 1.3; text-align: center;">
-                                            <div>{{ getDiscountStats(item.price, promo.price).zhe }}折</div>
-                                            <div>省${{ getDiscountStats(item.price, promo.price).saved }}</div>
-                                        </div>
-                                        <div v-else class="text-muted" style="font-size:0.8em;">-</div>
-                                    </template>
-                                </div>
-
-                                <!-- 日期 (上下排) -->
-                                <div class="col-date">
-                                    <template v-if="promo">
-                                        <div class="stacked-field">
-                                            <span class="lbl" title="開始日期">始</span>
-                                            <input type="date" v-model="promo.start" @input="autoSave" class="inline-input">
-                                        </div>
-                                        <div class="stacked-field">
-                                            <span class="lbl" title="結束日期">迄</span>
-                                            <input type="date" v-model="promo.end" @input="autoSave" class="inline-input">
-                                        </div>
-                                    </template>
-                                </div>
-
-                                <!-- 狀態與操作 -->
-                                <div class="col-status">
-                                    <span v-if="promo" class="status-badge" :class="getPromoStatus(promo).class">{{ getPromoStatus(promo).text }}</span>
-                                    
-                                    <button class="btn-icon" v-if="promo" @click="extendPromotion(item, pIdx)" title="延續至下個月">🗓️</button>
-                                    <button class="btn-icon text-danger" v-if="promo" @click="removePromotion(item, pIdx)" title="刪除此優惠">🗑️</button>
-                                    
-                                    <!-- 僅在第一列顯示的共用操作 -->
-                                    <button class="btn-sm btn-success" v-if="pIdx === 0" @click="addPromotion(item)" style="margin-left:auto;">+促銷</button>
-                                    <button class="btn-sm btn-outline" v-if="pIdx === 0" @click="item._isEditing = !item._isEditing" title="設定ID/刪除" style="margin-left:4px;">⚙️</button>
-                                </div>
-                            </div>
-                            
-                            <!-- 進階編輯區塊 (隱藏於列下方) -->
-                            <div v-if="item._isEditing" class="advanced-panel">
-                                <div style="display: flex; gap: 10px; align-items: center;">
-                                    <label style="color: #666; font-weight: bold;">服務項目 ID:</label>
-                                    <input type="text" v-model="item.id" @input="autoSave" style="width: 150px; padding: 4px; border: 1px solid #ccc; border-radius: 4px;">
-                                    <button class="btn-sm btn-danger" @click="deleteItem(category, iIndex)" style="margin-left: auto;">刪除此服務項目</button>
-                                </div>
-                            </div>
-
-                        </div>
-                    </div>
-                </div>
-                <button class="btn-sm btn-primary" style="margin-top: 5px;" @click="addItem(category)">+ 新增服務項目</button>
-            </div>
-        </div>
-        <button class="btn btn-primary" style="width: 100%; margin-bottom: 35px;" @click="addCategory">+ 新增分類</button>
-
-        <!-- ================= 套餐 (Combos) 區塊 ================= -->
-        <h2 style="color: #0056b3; border-bottom: 2px solid #007bff; padding-bottom: 10px; font-size: 1.3em;">超值套餐 (Combos)</h2>
-        <div class="category-card" style="padding-top: 5px;" v-if="data && data.combos">
-            <div class="table-responsive">
-                <div class="table-container" style="min-width: 850px;">
-                    
-                    <!-- 表頭 -->
-                    <div class="table-header">
-                        <div class="col-name">組合名稱</div>
-                        <div class="col-combo-items">包含項目</div>
-                        <div class="col-price">原/促價</div>
-                        <div class="col-promo">活動標籤</div>
-                        <div class="col-discount">折扣</div>
-                        <div class="col-date">始/迄日期</div>
-                        <div class="col-status">狀態與操作</div>
-                    </div>
-
-                    <!-- 套餐行 -->
-                    <div class="item-wrapper" v-for="(combo, comboIndex) in data.combos" :key="'combo-'+comboIndex">
-                        
-                        <div class="super-row" v-for="(promo, pIdx) in (combo.promotions && combo.promotions.length ? combo.promotions : [null])">
-                            
-                            <!-- 組合名稱 -->
-                            <div class="col-name ellipsis">
-                                <input type="text" v-model="combo.name" v-if="pIdx === 0" @input="autoSave" class="inline-input ellipsis" style="font-weight: bold;" :title="combo.name" placeholder="組合名稱">
-                                <span v-else class="text-muted" style="font-size:0.8em; padding-left:10px;">↳ 同上</span>
-                            </div>
-
-                            <!-- 包含項目摘要 -->
-                            <div class="col-combo-items ellipsis">
-                                <div v-if="pIdx === 0" @click="combo._isEditing = !combo._isEditing" :title="(getComboItemsText(combo) || '點擊設定包含項目') + ' (點擊展開設定)'" style="font-size: 0.85em; color: #666;">
-                                    {{ getComboItemsText(combo) || '➕點擊設定項目' }}
-                                </div>
-                            </div>
-
-                            <!-- 價格 (上下排) -->
-                            <div class="col-price">
-                                <div class="stacked-field">
-                                    <span class="lbl" title="原價(依項目自動加總)">原</span>
-                                    <span class="text-muted" style="padding: 3px 6px; font-size: 0.9em;">{{ getOriginalPrice(combo) }}</span>
-                                </div>
-                                <div class="stacked-field" v-if="promo">
-                                    <span class="lbl text-danger" title="促銷價">促</span>
-                                    <input type="number" v-model.number="promo.price" @input="autoSave" class="inline-input text-danger" style="font-weight:bold;" placeholder="促銷價">
-                                </div>
-                                <div v-else class="stacked-field" style="height: 26px; align-items:center;">
-                                    <span class="text-muted" style="font-size:0.8em; margin-left: 18px;">- 無促銷 -</span>
-                                </div>
-                            </div>
-
-                            <!-- 促銷標籤 -->
-                            <div class="col-promo">
-                                <input type="text" v-model="promo.label" v-if="promo" @input="autoSave" class="inline-input ellipsis" :title="promo.label" placeholder="活動標籤">
-                            </div>
-
-                            <!-- 折扣計算 -->
-                            <div class="col-discount">
-                                <template v-if="promo">
-                                    <div v-if="getDiscountStats(getOriginalPrice(combo), promo.price) && !getDiscountStats(getOriginalPrice(combo), promo.price).noDiscount" 
-                                         :class="{'text-danger': getDiscountStats(getOriginalPrice(combo), promo.price).isLow, 'text-success': !getDiscountStats(getOriginalPrice(combo), promo.price).isLow}"
-                                         style="font-size: 0.8em; font-weight: bold; line-height: 1.3; text-align: center;">
-                                        <div>{{ getDiscountStats(getOriginalPrice(combo), promo.price).zhe }}折</div>
-                                        <div>省${{ getDiscountStats(getOriginalPrice(combo), promo.price).saved }}</div>
-                                    </div>
-                                    <div v-else class="text-muted" style="font-size:0.8em;">-</div>
-                                </template>
-                            </div>
-
-                            <!-- 日期 (上下排) -->
-                            <div class="col-date">
-                                <template v-if="promo">
-                                    <div class="stacked-field">
-                                        <span class="lbl" title="開始日期">始</span>
-                                        <input type="date" v-model="promo.start" @input="autoSave" class="inline-input">
-                                    </div>
-                                    <div class="stacked-field">
-                                        <span class="lbl" title="結束日期">迄</span>
-                                        <input type="date" v-model="promo.end" @input="autoSave" class="inline-input">
-                                    </div>
-                                </template>
-                            </div>
-
-                            <!-- 狀態與操作 -->
-                            <div class="col-status">
-                                <span v-if="promo" class="status-badge" :class="getPromoStatus(promo).class">{{ getPromoStatus(promo).text }}</span>
-                                
-                                <button class="btn-icon" v-if="promo" @click="extendPromotion(combo, pIdx)" title="延續至下個月">🗓️</button>
-                                <button class="btn-icon text-danger" v-if="promo" @click="removePromotion(combo, pIdx)" title="刪除此優惠">🗑️</button>
-                                
-                                <button class="btn-sm btn-success" v-if="pIdx === 0" @click="addPromotion(combo)" style="margin-left:auto;">+促銷</button>
-                                <button class="btn-sm btn-outline" v-if="pIdx === 0" @click="combo._isEditing = !combo._isEditing" title="設定服務項目與ID" style="margin-left:4px;">⚙️</button>
-                            </div>
-                        </div>
-
-                        <!-- 進階編輯區塊 (設定服務項目) -->
-                        <div v-if="combo._isEditing" class="advanced-panel">
-                            <div style="display: flex; gap: 10px; align-items: center; margin-bottom: 12px;">
-                                <label style="font-weight: bold; color: #666;">套餐 ID:</label>
-                                <input type="text" v-model="combo.id" @input="autoSave" style="width: 150px; padding: 4px; border: 1px solid #ccc; border-radius: 4px;">
-                                <button class="btn-sm btn-info" @click="autoGenerateComboName(combo)">✨ 依下方勾選自動命名</button>
-                                <button class="btn-sm btn-danger" @click="deleteCombo(comboIndex)" style="margin-left: auto;">刪除此套餐</button>
-                            </div>
-                            
-                            <label style="font-size: 0.9em; color: #0056b3; font-weight: bold;">☑️ 請點擊勾選此套餐包含的服務：</label>
-                            <div class="combo-items-selector">
-                                <div v-for="(cat, catIdx) in data.categories" :key="'ccat-'+catIdx" class="combo-category-group">
-                                    <div class="cat-name">{{ cat.name }}</div>
-                                    <div style="display: flex; flex-wrap: wrap;">
-                                        <label v-for="item in cat.items" :key="item.id" class="combo-item-checkbox">
-                                            <input type="checkbox" :value="item.id" v-model="combo.itemIds" @change="autoSave">
-                                            <span>{{ item.name }} ({{ item.price }}元)</span>
-                                        </label>
-                                    </div>
-                                </div>
-                                <div v-if="!data.categories || data.categories.length === 0" style="color: #999; font-size: 0.85em;">
-                                    尚未建立任何服務分類，請先至上方新增服務項目。
-                                </div>
-                            </div>
-                        </div>
-
-                    </div>
-                </div>
-            </div>
-            <button class="btn-sm btn-primary" style="margin-top: 5px;" @click="addCombo">+ 新增套餐</button>
-        </div>
-
+    <div id="mode-selection-container" class="selection-container">
+        <h2>選擇資料來源</h2>
+        <p>請選擇您要檢查的 services.json 資料來源。</p>
+        <button id="load-from-server-btn" class="btn">檢查伺服器線上版本</button>
+        <button id="load-from-clipboard-btn" class="btn btn-secondary">檢查剪貼簿/本機版本</button>
+        <p id="server-load-error" style="color:red; margin-top:10px;"></p>
     </div>
 
-    <!-- 浮動控制列 -->
-    <div class="floating-bottom-bar">
-        <button class="btn" style="background-color: #dc3545; color: white; border: none;" @click="removeExpiredPromotions">🗑️ 清理過期優惠</button>
-        <button class="btn btn-secondary" @click="loadDataFromServer">📥 重新載入伺服器資料</button>
-        <button class="btn btn-success" @click="openExportModal" style="font-size: 1.1em; padding: 10px 20px;">✅ 確認與匯出明細</button>
+    <div id="json-input-container" class="selection-container" style="display: none;">
+        <h2>貼上 services.json 內容</h2>
+        <p>請將 JSON 內容貼到下方文字框中以產生報表。</p>
+        <textarea id="json-textarea" placeholder="在這裡貼上 JSON..."></textarea>
+        <button id="generate-report-btn" class="btn">產生報表</button>
+        <button id="back-to-selection-btn1" class="btn btn-secondary">返回選擇</button>
+        <p id="json-error" style="color:red; margin-top:10px;"></p>
     </div>
 
-    <!-- 異動確認與匯出 Modal -->
-    <div class="modal-overlay" v-if="showModal" @click.self="showModal = false">
-        <div class="modal-content">
-            <h2 style="margin-top: 0; color: #007bff; border-bottom: 2px solid #eee; padding-bottom: 10px;">確認異動明細</h2>
+    <div id="report-container" style="display: none;">
+        <div class="container">
+            <button id="back-to-selection-btn2" class="btn btn-secondary" style="float: right; width: auto; margin: 15px 0;">返回選擇</button>
+            <h1>促銷設定檢查頁面</h1>
+            <p class="note">此頁面用於檢查所有服務項目與組合的促銷活動狀態，方便您快速了解哪些活動正在進行、即將開始或已經過期。</p>
             
-            <div v-if="warnings.length > 0" style="background: #fff3cd; border-left: 4px solid #ffc107; padding: 12px 15px; border-radius: 4px; margin-top: 15px; font-size: 0.9em; color: #856404;">
-                <strong style="display: block; margin-bottom: 5px; color: #dc3545; font-size: 1.1em;">⚠️ 注意：偵測到超低優惠折數 (低於8折)</strong>
-                <p style="margin: 0 0 8px 0; color: #666;">為避免價格設定錯誤，匯出前請特別確認以下項目金額是否正確：</p>
-                <ul style="margin: 0; padding-left: 20px;">
-                    <li v-for="(warn, wIdx) in warnings" :key="'warn-'+wIdx" v-html="warn" style="margin-bottom: 4px;"></li>
-                </ul>
+            <div class="view-toggle">
+                <label>
+                    <input type="checkbox" id="show-only-promos-toggle">
+                    僅顯示優惠項目
+                </label>
             </div>
 
-            <p style="font-size: 0.9em; color: #666; margin-top: 15px; margin-bottom: 0;">以下為本次編輯偵測到的異動內容，確認無誤後請點擊下方按鈕複製更新後的代碼。</p>
-            
-            <div class="changelog-list">
-                <ul v-if="changelog.length > 0">
-                    <li v-for="(log, idx) in changelog" :key="'log-'+idx" v-html="log"></li>
-                </ul>
-                <div v-else style="text-align: center; color: #888; padding: 20px 0;">
-                    沒有偵測到任何修改。
-                </div>
-            </div>
-
-            <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: auto;">
-                <button class="btn btn-secondary" @click="showModal = false">返回編輯</button>
-                <button class="btn btn-primary" @click="copyToClipboard">📋 複製 JSON 至剪貼簿</button>
-            </div>
+            <h2>服務項目</h2>
+            <div id="item-reports-container"></div>
+        
+            <h2>組合優惠</h2>
+            <div id="combo-reports-container"></div>
         </div>
     </div>
 
-</div>
 
-<script>
-    new Vue({
-        el: '#app',
-        data: {
-            data: {
-                categories: [],
-                combos: []
-            },
-            originalData: null,
-            changelog: [],
-            warnings: [], 
-            showModal: false,
-            exportJson: ''
-        },
-        methods: {
-            autoSave: function() {
-                localStorage.setItem('autosavedData', JSON.stringify(this.data));
-            },
-            
-            ensureItemIdsArray: function() {
-                if (this.data && this.data.combos) {
-                    this.data.combos.forEach(combo => {
-                        if (!combo.itemIds) {
-                            this.$set(combo, 'itemIds', []);
-                        }
-                    });
-                }
-            },
+    <script src="app.js"></script>
+    <script>
+        let currentJsonData = null; // Store loaded data globally for filtering
 
-            loadDataFromServer: async function() {
-                if (confirm('這將會放棄您目前的變更，確定要從伺服器載入原始資料嗎？')) {
-                    try {
-                        const res = await fetch('services.json?t=' + new Date().getTime());
-                        if (!res.ok) throw new Error('網路錯誤');
-                        const serverData = await res.json();
-                        this.originalData = JSON.parse(JSON.stringify(serverData));
-                        this.data = JSON.parse(JSON.stringify(serverData));
-                        this.ensureItemIdsArray();
-                        this.autoSave();
-                        this.showToast('📥 載入成功！');
-                    } catch (err) {
-                        this.showToast('❌ 載入失敗，請檢查網路連線。');
-                    }
-                }
-            },
-
-            // ---- UI 輔助方法 ----
-            getPromoStatus: function(promo) {
-                if (!promo.start || !promo.end) return { text: '未定', class: 'status-upcoming' };
-                const today = this.formatDate(new Date());
-                if (promo.end < today) return { text: '過期', class: 'status-expired' };
-                if (promo.start > today) return { text: '未開', class: 'status-upcoming' };
-                return { text: '進行', class: 'status-active' };
-            },
-            getComboItemsText: function(combo) {
-                if (!combo.itemIds || combo.itemIds.length === 0) return '';
-                let names = [];
-                combo.itemIds.forEach(id => {
-                    for (let c of (this.data.categories || [])) {
-                        let it = (c.items || []).find(i => i.id === id);
-                        if (it) {
-                            names.push(it.name);
-                            break;
-                        }
-                    }
-                });
-                return names.join(' + ');
-            },
-
-            // ---- 折數與原價計算系統 ----
-            getOriginalPrice: function(parent) {
-                if (parent.price !== undefined) return parent.price;
-                if (parent.itemIds && parent.itemIds.length > 0) {
-                    let total = 0;
-                    parent.itemIds.forEach(id => {
-                        for (let c of (this.data.categories || [])) {
-                            let it = (c.items || []).find(i => i.id === id);
-                            if (it) {
-                                total += (Number(it.price) || 0);
-                                break;
-                            }
-                        }
-                    });
-                    return total;
-                }
-                return 0;
-            },
-            
-            getDiscountStats: function(originalPrice, promoPrice) {
-                if (!originalPrice || originalPrice <= 0 || promoPrice === undefined || promoPrice === '') return null;
-                if (Number(promoPrice) >= Number(originalPrice)) return { saved: 0, zhe: 10, isLow: false, noDiscount: true };
-                
-                let saved = originalPrice - promoPrice;
-                let rate = promoPrice / originalPrice;
-                let zhe = Math.round(rate * 100); 
-                zhe = (zhe % 10 === 0) ? (zhe / 10) : (zhe / 10); 
-                
-                let isLow = rate < 0.8;
-                return { saved: saved, zhe: zhe, isLow: isLow, noDiscount: false };
-            },
-
-            // ---- 批次清理過期促銷 ----
-            removeExpiredPromotions: function() {
-                const todayStr = this.formatDate(new Date());
-                let removedCount = 0;
-                let previewCount = 0;
-
-                const countPromos = (parent) => {
-                    if (parent.promotions && parent.promotions.length > 0) {
-                        previewCount += parent.promotions.filter(p => p.end && p.end < todayStr).length;
-                    }
-                };
-
-                const cleanPromos = (parent) => {
-                    if (parent.promotions && parent.promotions.length > 0) {
-                        const originalLength = parent.promotions.length;
-                        parent.promotions = parent.promotions.filter(p => !p.end || p.end >= todayStr);
-                        removedCount += (originalLength - parent.promotions.length);
-                    }
-                };
-
-                if (this.data.categories) {
-                    this.data.categories.forEach(c => {
-                        if (c.items) c.items.forEach(i => countPromos(i));
-                    });
-                }
-                if (this.data.combos) {
-                    this.data.combos.forEach(c => countPromos(c));
-                }
-
-                if (previewCount === 0) {
-                    this.showToast('✨ 目前全站沒有任何過期的促銷優惠！');
-                    return;
-                }
-
-                if (confirm(`🔍 系統偵測到全站共有 ${previewCount} 筆已過期優惠。\n(結束日期早於今日 ${todayStr})\n\n確定要一鍵清除它們嗎？`)) {
-                    if (this.data.categories) {
-                        this.data.categories.forEach(c => {
-                            if (c.items) c.items.forEach(i => cleanPromos(i));
-                        });
-                    }
-                    if (this.data.combos) {
-                        this.data.combos.forEach(c => cleanPromos(c));
-                    }
-                    this.$forceUpdate();
-                    this.autoSave();
-                    this.showToast(`✅ 成功清理了 ${removedCount} 筆過期優惠！`);
-                }
-            },
-
-            // ---- 分類與項目操作 ----
-            addCategory: function() {
-                this.data.categories.push({ name: '新分類', items: [] });
-                this.autoSave();
-            },
-            deleteCategory: function(index) {
-                if (confirm('確定要刪除整個分類嗎？這會移除底下所有項目！')) {
-                    this.data.categories.splice(index, 1);
-                    this.autoSave();
-                }
-            },
-            addItem: function(category) {
-                if (!category.items) this.$set(category, 'items', []);
-                const newItem = { id: 'new_item_' + Date.now(), name: '新服務名稱', price: 0, promotions: [], _isEditing: true };
-                category.items.push(newItem);
-                this.autoSave();
-            },
-            deleteItem: function(category, itemIndex) {
-                if (confirm('確定要永久刪除服務項目嗎？')) {
-                    category.items.splice(itemIndex, 1);
-                    this.autoSave();
-                }
-            },
-
-            addCombo: function() {
-                if (!this.data.combos) this.$set(this.data, 'combos', []);
-                this.data.combos.push({ id: 'combo_' + Date.now(), name: '新套餐名稱', itemIds: [], promotions: [], _isEditing: true });
-                this.autoSave();
-            },
-            deleteCombo: function(index) {
-                if (confirm('確定要刪除套餐嗎？')) {
-                    this.data.combos.splice(index, 1);
-                    this.autoSave();
-                }
-            },
-            
-            autoGenerateComboName: function(combo) {
-                if (!combo.itemIds || combo.itemIds.length === 0) {
-                    this.showToast('⚠️ 請先在下方勾選包含的服務項目！');
-                    return;
-                }
-                let itemNames = [];
-                combo.itemIds.forEach(id => {
-                    for (let c of (this.data.categories || [])) {
-                        let it = (c.items || []).find(i => i.id === id);
-                        if (it) {
-                            itemNames.push(it.name);
-                            break;
-                        }
-                    }
-                });
-
-                if (itemNames.length > 0) {
-                    combo.name = itemNames.join(' + ') + ' 組合優惠';
-                    this.autoSave();
-                    this.showToast('✨ 套餐名稱已自動產生！');
-                }
-            },
-
-            addPromotion: function(parent) {
-                if (!parent.promotions) this.$set(parent, 'promotions', []);
-                const today = this.formatDate(new Date());
-                parent.promotions.push({ label: '新優惠', price: parent.price || 0, start: today, end: today });
-                this.autoSave();
-            },
-            removePromotion: function(parent, index) {
-                if (confirm('確定要刪除此優惠嗎？')) {
-                    parent.promotions.splice(index, 1);
-                    this.$forceUpdate();
-                    this.autoSave();
-                }
-            },
-            extendPromotion: function(parent, index) {
-                const original = parent.promotions[index];
-                if (!original.start || !original.end) {
-                    this.showToast('❌ 請先設定原優惠的開始與結束日期！');
-                    return;
-                }
-
-                const oldStart = new Date(original.start);
-                const nextMonthStart = new Date(oldStart.getFullYear(), oldStart.getMonth() + 1, 1);
-                const nextMonthEnd = new Date(oldStart.getFullYear(), oldStart.getMonth() + 2, 0);
-
-                let newLabel = original.label;
-                const monthMatch = newLabel.match(/(\d+)(月)/);
-                if (monthMatch) {
-                    let nextMonthNum = parseInt(monthMatch[1]) + 1;
-                    if (nextMonthNum > 12) nextMonthNum = 1;
-                    newLabel = newLabel.replace(/(\d+)(月)/, `${nextMonthNum}$2`);
-                } else {
-                    newLabel += ' (延續)';
-                }
-
-                const newPromo = {
-                    label: newLabel,
-                    price: original.price,
-                    start: this.formatDate(nextMonthStart),
-                    end: this.formatDate(nextMonthEnd)
-                };
-
-                parent.promotions.push(newPromo);
-                this.$forceUpdate();
-                this.autoSave();
-                this.showToast(`✅ 已成功延續優惠至：${newLabel}`);
-            },
-
-            formatDate: function(date) {
-                const y = date.getFullYear();
-                const m = ('0' + (date.getMonth() + 1)).slice(-2);
-                const d = ('0' + date.getDate()).slice(-2);
-                return `${y}-${m}-${d}`;
-            },
-            showToast: function(message) {
-                let toast = document.getElementById('temp-toast');
-                if (toast) toast.remove();
-                toast = document.createElement('div');
-                toast.id = 'temp-toast';
-                toast.innerHTML = message;
-                toast.style.cssText = 'position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%); background-color: rgba(0,0,0,0.85); color: #fff; padding: 12px 24px; border-radius: 30px; z-index: 9999; font-size: 15px; transition: opacity 0.3s; white-space: nowrap;';
-                document.body.appendChild(toast);
-                setTimeout(() => { toast.style.opacity = '0'; setTimeout(() => toast.remove(), 300); }, 2500);
-            },
-
-            generateChangelog: function() {
-                let logs = [];
-                if (!this.originalData) {
-                    this.changelog = ['<span style="color:#dc3545;">⚠️ 無法取得原始資料，略過異動比對。</span>'];
-                    return;
-                }
-
-                const oldMap = new Map();
-                const newMap = new Map();
-
-                if(this.originalData.categories) {
-                    this.originalData.categories.forEach(c => {
-                        if(c.items) c.items.forEach(i => oldMap.set(i.id, i));
-                    });
-                }
-                if(this.originalData.combos) {
-                    this.originalData.combos.forEach(c => oldMap.set(c.id, c));
-                }
-
-                const cleanData = JSON.parse(JSON.stringify(this.data, (k, v) => k.startsWith('_') ? undefined : v));
-                
-                if(cleanData.categories) {
-                    cleanData.categories.forEach(c => {
-                        if(c.items) c.items.forEach(i => newMap.set(i.id, i));
-                    });
-                }
-                if(cleanData.combos) {
-                    cleanData.combos.forEach(c => newMap.set(c.id, c));
-                }
-
-                newMap.forEach((newItem, id) => {
-                    const oldItem = oldMap.get(id);
-                    if (!oldItem) {
-                        logs.push(`<strong style="color: #28a745;">[新增]</strong> ${newItem.name}`);
-                    } else {
-                        let changesDetail = [];
-                        let subLogs = [];
-
-                        if (newItem.name !== oldItem.name) changesDetail.push(`名稱 (${oldItem.name} > ${newItem.name})`);
-                        if (newItem.price !== oldItem.price && typeof newItem.price !== 'undefined') changesDetail.push(`價格 ($${oldItem.price} > $${newItem.price})`);
-                        
-                        let oldIds = [...(oldItem.itemIds || [])].sort();
-                        let newIds = [...(newItem.itemIds || [])].sort();
-                        if (JSON.stringify(oldIds) !== JSON.stringify(newIds)) changesDetail.push('套餐內容');
-
-                        let oldPromos = oldItem.promotions || [];
-                        let newPromos = newItem.promotions || [];
-                        if (JSON.stringify(oldPromos) !== JSON.stringify(newPromos)) {
-                            let oldP = JSON.parse(JSON.stringify(oldPromos));
-                            let newP = JSON.parse(JSON.stringify(newPromos));
-                            const fmtD = d => (d || '').replace(/-/g, '/');
-
-                            for (let i = oldP.length - 1; i >= 0; i--) {
-                                for (let j = newP.length - 1; j >= 0; j--) {
-                                    if (JSON.stringify(oldP[i]) === JSON.stringify(newP[j])) {
-                                        oldP.splice(i, 1);
-                                        newP.splice(j, 1);
-                                        break;
-                                    }
-                                }
-                            }
-
-                            let remainingOld = [];
-                            for (let i = 0; i < oldP.length; i++) {
-                                let matchedIdx = newP.findIndex(p => p.label === oldP[i].label);
-                                if (matchedIdx !== -1) {
-                                    let op = oldP[i];
-                                    let np = newP[matchedIdx];
-                                    let pChanges = [];
-                                    
-                                    if (op.price !== np.price) pChanges.push(`變更金額 ($${op.price} > $${np.price})`);
-                                    if (op.start !== np.start || op.end !== np.end) {
-                                        pChanges.push(`變更日期 (${fmtD(op.start)}→${fmtD(op.end)} > ${fmtD(np.start)}→${fmtD(np.end)})`);
-                                    }
-                                    
-                                    if (pChanges.length > 0) {
-                                        subLogs.push(`<strong style="color: #444;">${op.label}</strong>：${pChanges.join('、')}`);
-                                    }
-                                    newP.splice(matchedIdx, 1);
-                                } else {
-                                    remainingOld.push(oldP[i]);
-                                }
-                            }
-
-                            let pairCount = Math.min(remainingOld.length, newP.length);
-                            for(let i=0; i<pairCount; i++) {
-                                let op = remainingOld[i];
-                                let np = newP[i];
-                                let pChanges = [];
-                                
-                                if (op.label !== np.label) pChanges.push(`變更標籤 (${op.label} > ${np.label})`);
-                                if (op.price !== np.price) pChanges.push(`變更金額 ($${op.price} > $${np.price})`);
-                                if (op.start !== np.start || op.end !== np.end) {
-                                    pChanges.push(`變更日期 (${fmtD(op.start)}→${fmtD(op.end)} > ${fmtD(np.start)}→${fmtD(np.end)})`);
-                                }
-                                
-                                if (pChanges.length > 0) {
-                                    subLogs.push(`<strong style="color: #444;">${op.label}</strong>：${pChanges.join('、')}`);
-                                }
-                            }
-
-                            for(let i=pairCount; i<remainingOld.length; i++) {
-                                let op = remainingOld[i];
-                                subLogs.push(`<span style="color:#dc3545;">刪除了促銷</span> (${op.label}、${fmtD(op.start)}→${fmtD(op.end)}、$${op.price})`);
-                            }
-                            for(let i=pairCount; i<newP.length; i++) {
-                                let np = newP[i];
-                                subLogs.push(`<span style="color:#28a745;">新增了促銷</span> (${np.label}、${fmtD(np.start)}→${fmtD(np.end)}、$${np.price})`);
-                            }
-                        }
-
-                        if (changesDetail.length > 0 || subLogs.length > 0) {
-                            let logHtml = `<strong style="color: #007bff;">[更新]</strong> <span style="font-weight: 500;">${newItem.name}</span>`;
-                            
-                            if (changesDetail.length > 0) {
-                                logHtml += ` <span style="color:#666; font-size:0.9em;">(變更了基本資訊: ${changesDetail.join(', ')})</span>`;
-                            }
-                            
-                            if (subLogs.length > 0) {
-                                logHtml += `<div style="margin-top: 6px; padding-left: 5px; font-size: 0.95em; color: #555;">`;
-                                subLogs.forEach(sl => {
-                                    logHtml += `<div style="position: relative; padding-left: 15px; margin-bottom: 4px;">
-                                        <span style="position: absolute; left: 0; color: #007bff;">•</span> 
-                                        ${sl}
-                                    </div>`;
-                                });
-                                logHtml += `</div>`;
-                            }
-                            
-                            logs.push(logHtml);
-                        }
-                    }
-                });
-
-                oldMap.forEach((oldItem, id) => {
-                    if (!newMap.has(id)) {
-                        logs.push(`<strong style="color: #dc3545;">[刪除]</strong> ${oldItem.name}`);
-                    }
-                });
-
-                this.changelog = logs;
-            },
-
-            openExportModal: function() {
-                this.generateChangelog();
-                
-                this.warnings = [];
-                const checkLowPromos = (parent, parentName) => {
-                    let origPrice = this.getOriginalPrice(parent);
-                    if (parent.promotions && parent.promotions.length > 0 && origPrice > 0) {
-                        parent.promotions.forEach(p => {
-                            let stats = this.getDiscountStats(origPrice, p.price);
-                            if (stats && stats.isLow) {
-                                this.warnings.push(`<strong>${parentName}</strong> 的「${p.label}」設定為 <span style="color:#dc3545; font-weight:bold;">${stats.zhe}折</span> (現省 $${stats.saved})`);
-                            }
-                        });
-                    }
-                };
-
-                if (this.data.categories) {
-                    this.data.categories.forEach(c => {
-                        if (c.items) c.items.forEach(i => checkLowPromos(i, i.name));
-                    });
-                }
-                if (this.data.combos) {
-                    this.data.combos.forEach(c => checkLowPromos(c, c.name));
-                }
-                
-                this.exportJson = JSON.stringify(this.data, (key, value) => {
-                    if (key.startsWith('_')) return undefined;
-                    return value;
-                }, 2);
-                
-                this.showModal = true;
-                this.autoSave(); 
-            },
-            
-            copyToClipboard: function() {
-                navigator.clipboard.writeText(this.exportJson).then(() => {
-                    this.showToast('📋 JSON 原始碼已複製成功！<br><span style="font-size:0.85em; color:#ddd;">請前往覆蓋至 services.json 檔案。</span>');
-                    this.showModal = false;
-                }).catch(() => {
-                    const textArea = document.createElement("textarea");
-                    textArea.value = this.exportJson;
-                    document.body.appendChild(textArea);
-                    textArea.select();
-                    try {
-                        document.execCommand('copy');
-                        this.showToast('📋 JSON 原始碼已複製成功！<br><span style="font-size:0.85em; color:#ddd;">請前往覆蓋至 services.json 檔案。</span>');
-                    } catch (err) {
-                        this.showToast('❌ 複製失敗，請手動全選複製。');
-                    }
-                    document.body.removeChild(textArea);
-                    this.showModal = false;
-                });
-            }
-        },
-        mounted: async function() {
-            try {
-                const res = await fetch('services.json?t=' + new Date().getTime());
-                const serverData = await res.json();
-                this.originalData = JSON.parse(JSON.stringify(serverData));
-            } catch (err) {
-                console.warn('無法抓取原始 services.json 用於比對', err);
-            }
-
-            const savedData = localStorage.getItem('autosavedData');
-            if (savedData) {
-                this.data = JSON.parse(savedData);
-                this.ensureItemIdsArray();
-                this.showToast('📂 已載入上次尚未匯出的草稿內容。');
-            } else if (this.originalData) {
-                this.data = JSON.parse(JSON.stringify(this.originalData));
-                this.ensureItemIdsArray();
-            }
+        function getPromoStatus(promo, today) {
+            if (!promo.start || !promo.end) return { text: '日期無效', class: 'invalid' };
+            if (today >= promo.start && today <= promo.end) return { text: '進行中', class: 'active' };
+            if (today < promo.start) return { text: '即將開始', class: 'upcoming' };
+            return { text: '已過期', class: 'expired' };
         }
-    });
-</script>
+
+        function renderItemsReport(today, allServices, categories = [], showOnlyPromos) {
+            const container = document.getElementById('item-reports-container');
+            let finalHtml = '';
+
+            categories.forEach(category => {
+                const itemsToShow = showOnlyPromos
+                    ? (category.items || []).filter(item => item.promotions && item.promotions.length > 0)
+                    : (category.items || []);
+
+                if (itemsToShow.length === 0) return; // Skip category if no items to show
+
+                let tableHtml = `
+                    <h3>${category.name}</h3>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>項目名稱</th>
+                                <th style="text-align: right;">原價</th>
+                                <th>促銷活動</th>
+                                <th style="text-align: right;">促銷價</th>
+                                <th>折扣</th>
+                                <th>開始日期</th>
+                                <th>結束日期</th>
+                                <th>狀態</th>
+                            </tr>
+                        </thead>
+                        <tbody>`;
+
+                itemsToShow.forEach(item => {
+                    const hasPromos = item.promotions && item.promotions.length > 0;
+                    const rowCount = hasPromos ? item.promotions.length : 1;
+
+                    if (hasPromos) {
+                        item.promotions.forEach((promo, index) => {
+                            const status = getPromoStatus(promo, today);
+                            const discountAmount = item.price - promo.price;
+                            const discountPercentage = item.price > 0 ? (discountAmount / item.price) * 100 : 0;
+                            const discountText = `省 ${discountAmount.toLocaleString()} (${discountPercentage.toFixed(1)}%)`;
+                            
+                            tableHtml += `<tr>
+                                ${index === 0 ? `<td data-label="項目名稱" rowspan="${rowCount}">${item.name}</td><td data-label="原價" rowspan="${rowCount}" style="text-align: right;">${item.price.toLocaleString()}</td>` : ''}
+                                <td data-label="促銷活動">${promo.label}</td>
+                                <td data-label="促銷價" style="text-align: right;">${promo.price.toLocaleString()}</td>
+                                <td data-label="折扣" class="discount-info">${discountText}</td>
+                                <td data-label="開始日期">${promo.start}</td>
+                                <td data-label="結束日期">${promo.end}</td>
+                                <td data-label="狀態"><span class="status ${status.class}">${status.text}</span></td>
+                            </tr>`;
+                        });
+                    } else {
+                        tableHtml += `<tr>
+                            <td data-label="項目名稱">${item.name}</td>
+                            <td data-label="原價" style="text-align: right;">${item.price.toLocaleString()}</td>
+                            <td data-label="促銷詳情" colspan="6" class="no-promo-cell">---</td>
+                        </tr>`;
+                    }
+                });
+                tableHtml += '</tbody></table>';
+                finalHtml += tableHtml;
+            });
+
+            if (!finalHtml) {
+                finalHtml = '<p>找不到符合篩選條件的服務項目。</p>';
+            }
+            container.innerHTML = finalHtml;
+        }
+
+        function renderCombosReport(today, allServices, combos = [], showOnlyPromos) {
+            const container = document.getElementById('combo-reports-container');
+            
+            const combosToShow = showOnlyPromos
+                ? (combos || []).filter(combo => combo.promotions && combo.promotions.length > 0)
+                : (combos || []);
+
+            if (combosToShow.length === 0) {
+                 container.innerHTML = '<p>找不到符合篩選條件的組合優惠。</p>';
+                 return;
+            }
+
+            let tableHtml = `
+                <table>
+                    <thead>
+                        <tr>
+                            <th>組合名稱</th>
+                            <th>包含項目</th>
+                            <th style="text-align: right;">原價</th>
+                            <th>促銷活動</th>
+                            <th style="text-align: right;">促銷價</th>
+                            <th>折扣</th>
+                            <th>開始日期</th>
+                            <th>結束日期</th>
+                            <th>狀態</th>
+                        </tr>
+                    </thead>
+                    <tbody>`;
+            
+            combosToShow.forEach(combo => {
+                const hasPromos = combo.promotions && combo.promotions.length > 0;
+                const rowCount = hasPromos ? combo.promotions.length : 1;
+                const itemNames = (combo.itemIds || []).map(id => allServices.get(id)?.name || '<span style="color:red;">錯誤ID</span>').join('<br>');
+                const comboOriginalPrice = (combo.itemIds || []).reduce((sum, id) => sum + (allServices.get(id)?.price || 0), 0);
+
+                if (hasPromos) {
+                    combo.promotions.forEach((promo, index) => {
+                        const status = getPromoStatus(promo, today);
+                        const discountAmount = comboOriginalPrice - promo.price;
+                        const discountPercentage = comboOriginalPrice > 0 ? (discountAmount / comboOriginalPrice) * 100 : 0;
+                        const discountText = `省 ${discountAmount.toLocaleString()} (${discountPercentage.toFixed(1)}%)`;
+                        tableHtml += `<tr>
+                            ${index === 0 ? `<td data-label="組合名稱" rowspan="${rowCount}">${combo.name}</td><td data-label="包含項目" rowspan="${rowCount}">${itemNames}</td><td data-label="原價" rowspan="${rowCount}" style="text-align: right;">${comboOriginalPrice.toLocaleString()}</td>` : ''}
+                            <td data-label="促銷活動">${promo.label}</td><td data-label="促銷價" style="text-align: right;">${promo.price.toLocaleString()}</td><td data-label="折扣" class="discount-info">${discountText}</td><td data-label="開始日期">${promo.start}</td><td data-label="結束日期">${promo.end}</td><td data-label="狀態"><span class="status ${status.class}">${status.text}</span></td>
+                        </tr>`;
+                    });
+                } else {
+                     tableHtml += `<tr>
+                        <td data-label="組合名稱">${combo.name}</td>
+                        <td data-label="包含項目">${itemNames}</td>
+                        <td data-label="原價" style="text-align: right;">${comboOriginalPrice.toLocaleString()}</td>
+                        <td data-label="促銷詳情" colspan="6" class="no-promo-cell">---</td>
+                    </tr>`;
+                }
+            });
+            tableHtml += '</tbody></table>';
+            container.innerHTML = tableHtml;
+        }
+        
+        function renderReport() {
+            if (!currentJsonData) return;
+            const showOnlyPromos = document.getElementById('show-only-promos-toggle').checked;
+            const allServices = new Map();
+            (currentJsonData.categories || []).forEach(category => {
+                (category.items || []).forEach(item => {
+                    allServices.set(item.id, item);
+                });
+            });
+            const today = new Date().toISOString().split('T')[0];
+            renderItemsReport(today, allServices, currentJsonData.categories, showOnlyPromos);
+            renderCombosReport(today, allServices, currentJsonData.combos, showOnlyPromos);
+        }
+
+        function startReport(jsonData) {
+            currentJsonData = jsonData;
+            renderReport();
+        }
+
+        // --- UI Control & Event Listeners ---
+        const modeSelectionContainer = document.getElementById('mode-selection-container');
+        const jsonInputContainer = document.getElementById('json-input-container');
+        const reportContainer = document.getElementById('report-container');
+
+        function showView(view) {
+            modeSelectionContainer.style.display = 'none';
+            jsonInputContainer.style.display = 'none';
+            reportContainer.style.display = 'none';
+            view.style.display = 'block';
+        }
+        
+        document.getElementById('load-from-server-btn').addEventListener('click', async () => {
+            document.getElementById('server-load-error').textContent = '載入中...';
+            const jsonData = await loadServiceData();
+            if (jsonData) {
+                startReport(jsonData);
+                showView(reportContainer);
+            } else {
+                document.getElementById('server-load-error').textContent = '從伺服器載入資料失敗，請檢查檔案或網路連線。';
+            }
+        });
+
+        document.getElementById('load-from-clipboard-btn').addEventListener('click', () => { showView(jsonInputContainer); });
+        
+        document.getElementById('generate-report-btn').addEventListener('click', () => {
+            const jsonText = document.getElementById('json-textarea').value;
+            const errorEl = document.getElementById('json-error');
+            if (!jsonText) { errorEl.textContent = '請貼上 JSON 內容。'; return; }
+            try {
+                const parsedData = JSON.parse(jsonText);
+                errorEl.textContent = '';
+                startReport(parsedData);
+                showView(reportContainer);
+            } catch (e) {
+                errorEl.textContent = 'JSON 格式無效，請檢查您的輸入。 ' + e.message;
+            }
+        });
+        
+        document.getElementById('show-only-promos-toggle').addEventListener('change', renderReport);
+        document.getElementById('back-to-selection-btn1').addEventListener('click', () => { showView(modeSelectionContainer); });
+        document.getElementById('back-to-selection-btn2').addEventListener('click', () => { showView(modeSelectionContainer); });
+
+    </script>
 </body>
 </html>
