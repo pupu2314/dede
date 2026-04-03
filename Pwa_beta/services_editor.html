@@ -205,7 +205,7 @@
         }
         .changelog-list {
             background: #f8f9fa; padding: 15px; border-radius: 8px; border: 1px solid #dee2e6;
-            overflow-y: auto; flex-grow: 1; margin-top: 15px; margin-bottom: 15px;
+            overflow-y: auto; flex-grow: 1; margin-top: 5px; margin-bottom: 15px;
         }
         .changelog-list ul { margin: 0; padding-left: 0; list-style: none; font-size: 0.95em; }
         .changelog-list li { margin-bottom: 8px; line-height: 1.5; padding-bottom: 8px; border-bottom: 1px dashed #e9ecef; }
@@ -280,9 +280,17 @@
                                     <label>標籤 (例: 3月優惠)</label>
                                     <input type="text" v-model="promo.label" @input="autoSave">
                                 </div>
-                                <div class="input-group">
+                                <!-- 促銷金額與即時計算折數顯示 -->
+                                <div class="input-group" style="flex: 2; min-width: 220px;">
                                     <label>促銷價</label>
-                                    <input type="number" v-model.number="promo.price" @input="autoSave">
+                                    <div style="display: flex; align-items: center; gap: 8px;">
+                                        <input type="number" v-model.number="promo.price" @input="autoSave" style="width: 90px; flex-shrink: 0;">
+                                        <div v-if="getDiscountStats(getOriginalPrice(item), promo.price) && !getDiscountStats(getOriginalPrice(item), promo.price).noDiscount"
+                                             :style="{ color: getDiscountStats(getOriginalPrice(item), promo.price).isLow ? '#dc3545' : '#28a745', fontSize: '0.85em', fontWeight: 'bold', whiteSpace: 'nowrap' }">
+                                            (省${{ getDiscountStats(getOriginalPrice(item), promo.price).saved }} / {{ getDiscountStats(getOriginalPrice(item), promo.price).zhe }}折)
+                                            <span v-if="getDiscountStats(getOriginalPrice(item), promo.price).isLow" title="低於8折警示">⚠️</span>
+                                        </div>
+                                    </div>
                                 </div>
                                 <div class="input-group">
                                     <label>開始日期</label>
@@ -317,7 +325,7 @@
                 <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
                     <div style="flex: 1; min-width: 200px;">
                         <strong style="font-size: 1.1em; color: #333;">{{ combo.name }}</strong>
-                        <span style="color: #6c757d; margin-left: 8px; font-size: 0.85em;">(包含 {{ combo.itemIds ? combo.itemIds.length : 0 }} 項服務)</span>
+                        <span style="color: #6c757d; margin-left: 8px; font-size: 0.85em;">(包含 {{ combo.itemIds ? combo.itemIds.length : 0 }} 項服務，原價 {{ getOriginalPrice(combo) }} 元)</span>
                         <span v-if="combo.promotions && combo.promotions.length" style="display: inline-block; background: #e1f5fe; color: #0277bd; font-size: 0.8em; padding: 2px 6px; border-radius: 4px; margin-left: 8px;">
                             含 {{ combo.promotions.length }} 筆優惠
                         </span>
@@ -357,7 +365,7 @@
                                 <div style="display: flex; flex-wrap: wrap;">
                                     <label v-for="item in cat.items" :key="item.id" class="combo-item-checkbox">
                                         <input type="checkbox" :value="item.id" v-model="combo.itemIds" @change="autoSave">
-                                        <span>{{ item.name }}</span>
+                                        <span>{{ item.name }} ({{ item.price }}元)</span>
                                     </label>
                                 </div>
                             </div>
@@ -380,9 +388,17 @@
                                 <label>標籤</label>
                                 <input type="text" v-model="promo.label" @input="autoSave">
                             </div>
-                            <div class="input-group">
+                            <!-- 促銷金額與即時計算折數顯示 (連動套餐加總) -->
+                            <div class="input-group" style="flex: 2; min-width: 220px;">
                                 <label>促銷價</label>
-                                <input type="number" v-model.number="promo.price" @input="autoSave">
+                                <div style="display: flex; align-items: center; gap: 8px;">
+                                    <input type="number" v-model.number="promo.price" @input="autoSave" style="width: 90px; flex-shrink: 0;">
+                                    <div v-if="getDiscountStats(getOriginalPrice(combo), promo.price) && !getDiscountStats(getOriginalPrice(combo), promo.price).noDiscount"
+                                         :style="{ color: getDiscountStats(getOriginalPrice(combo), promo.price).isLow ? '#dc3545' : '#28a745', fontSize: '0.85em', fontWeight: 'bold', whiteSpace: 'nowrap' }">
+                                        (省${{ getDiscountStats(getOriginalPrice(combo), promo.price).saved }} / {{ getDiscountStats(getOriginalPrice(combo), promo.price).zhe }}折)
+                                        <span v-if="getDiscountStats(getOriginalPrice(combo), promo.price).isLow" title="低於8折警示">⚠️</span>
+                                    </div>
+                                </div>
                             </div>
                             <div class="input-group">
                                 <label>開始日期</label>
@@ -418,7 +434,17 @@
     <div class="modal-overlay" v-if="showModal" @click.self="showModal = false">
         <div class="modal-content">
             <h2 style="margin-top: 0; color: #007bff; border-bottom: 2px solid #eee; padding-bottom: 10px;">確認異動明細</h2>
-            <p style="font-size: 0.9em; color: #666; margin-bottom: 0;">以下為本次編輯偵測到的異動內容，確認無誤後請點擊下方按鈕複製更新後的代碼。</p>
+            
+            <!-- 優惠折數過低警示區塊 -->
+            <div v-if="warnings.length > 0" style="background: #fff3cd; border-left: 4px solid #ffc107; padding: 12px 15px; border-radius: 4px; margin-top: 15px; font-size: 0.9em; color: #856404;">
+                <strong style="display: block; margin-bottom: 5px; color: #dc3545; font-size: 1.1em;">⚠️ 注意：偵測到超低優惠折數 (低於8折)</strong>
+                <p style="margin: 0 0 8px 0; color: #666;">為避免價格設定錯誤，匯出前請特別確認以下項目金額是否正確：</p>
+                <ul style="margin: 0; padding-left: 20px;">
+                    <li v-for="(warn, wIdx) in warnings" :key="'warn-'+wIdx" v-html="warn" style="margin-bottom: 4px;"></li>
+                </ul>
+            </div>
+
+            <p style="font-size: 0.9em; color: #666; margin-top: 15px; margin-bottom: 0;">以下為本次編輯偵測到的異動內容，確認無誤後請點擊下方按鈕複製更新後的代碼。</p>
             
             <!-- 異動清單顯示區 -->
             <div class="changelog-list">
@@ -449,6 +475,7 @@
             },
             originalData: null,
             changelog: [],
+            warnings: [], // 用於存放匯出時的折數警示
             showModal: false,
             exportJson: ''
         },
@@ -484,6 +511,45 @@
                 }
             },
 
+            // ---- 折數與原價計算系統 ----
+            getOriginalPrice: function(parent) {
+                // 如果是一般項目
+                if (parent.price !== undefined) return parent.price;
+                // 如果是套餐 (加總底下 itemIds 的原價)
+                if (parent.itemIds && parent.itemIds.length > 0) {
+                    let total = 0;
+                    parent.itemIds.forEach(id => {
+                        for (let c of (this.data.categories || [])) {
+                            let it = (c.items || []).find(i => i.id === id);
+                            if (it) {
+                                total += (Number(it.price) || 0);
+                                break;
+                            }
+                        }
+                    });
+                    return total;
+                }
+                return 0;
+            },
+            
+            getDiscountStats: function(originalPrice, promoPrice) {
+                // 防止空值或計算錯誤
+                if (!originalPrice || originalPrice <= 0 || promoPrice === undefined || promoPrice === '') return null;
+                // 若促銷價等於或高於原價，則視為無優惠
+                if (Number(promoPrice) >= Number(originalPrice)) return { saved: 0, zhe: 10, isLow: false, noDiscount: true };
+                
+                let saved = originalPrice - promoPrice;
+                let rate = promoPrice / originalPrice;
+                // 將 0.85 轉換為 8.5 折，0.8 轉換為 8 折
+                let zhe = Math.round(rate * 100); 
+                zhe = (zhe % 10 === 0) ? (zhe / 10) : (zhe / 10); 
+                
+                // 判斷是否低於 8 折
+                let isLow = rate < 0.8;
+                return { saved: saved, zhe: zhe, isLow: isLow, noDiscount: false };
+            },
+
+            // ---- 分類與項目操作 ----
             addCategory: function() {
                 this.data.categories.push({ name: '新分類', items: [] });
                 this.autoSave();
@@ -736,8 +802,33 @@
             },
 
             openExportModal: function() {
+                // 1. 產生異動清單
                 this.generateChangelog();
                 
+                // 2. 進行低價警示掃描 (低於8折)
+                this.warnings = [];
+                const checkLowPromos = (parent, parentName) => {
+                    let origPrice = this.getOriginalPrice(parent);
+                    if (parent.promotions && parent.promotions.length > 0 && origPrice > 0) {
+                        parent.promotions.forEach(p => {
+                            let stats = this.getDiscountStats(origPrice, p.price);
+                            if (stats && stats.isLow) {
+                                this.warnings.push(`<strong>${parentName}</strong> 的「${p.label}」設定為 <span style="color:#dc3545; font-weight:bold;">${stats.zhe}折</span> (現省 $${stats.saved})`);
+                            }
+                        });
+                    }
+                };
+
+                if (this.data.categories) {
+                    this.data.categories.forEach(c => {
+                        if (c.items) c.items.forEach(i => checkLowPromos(i, i.name));
+                    });
+                }
+                if (this.data.combos) {
+                    this.data.combos.forEach(c => checkLowPromos(c, c.name));
+                }
+                
+                // 3. 產出乾淨的匯出用 JSON
                 this.exportJson = JSON.stringify(this.data, (key, value) => {
                     if (key.startsWith('_')) return undefined;
                     return value;
