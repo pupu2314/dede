@@ -424,8 +424,9 @@
 
     </div>
 
-    <!-- 浮動控制列 -->
+    <!-- 浮動控制列 (新增一鍵清理按鈕) -->
     <div class="floating-bottom-bar">
+        <button class="btn" style="background-color: #dc3545; color: white; border: none;" @click="removeExpiredPromotions">🗑️ 清理過期優惠</button>
         <button class="btn btn-secondary" @click="loadDataFromServer">📥 重新載入伺服器資料</button>
         <button class="btn btn-success" @click="openExportModal" style="font-size: 1.1em; padding: 10px 20px;">✅ 確認與匯出明細</button>
     </div>
@@ -547,6 +548,59 @@
                 // 判斷是否低於 8 折
                 let isLow = rate < 0.8;
                 return { saved: saved, zhe: zhe, isLow: isLow, noDiscount: false };
+            },
+
+            // ---- 批次清理過期促銷 ----
+            removeExpiredPromotions: function() {
+                const todayStr = this.formatDate(new Date());
+                let removedCount = 0;
+                let previewCount = 0;
+
+                // 掃描函式 (僅計算數量)
+                const countPromos = (parent) => {
+                    if (parent.promotions && parent.promotions.length > 0) {
+                        previewCount += parent.promotions.filter(p => p.end && p.end < todayStr).length;
+                    }
+                };
+
+                // 執行刪除函式
+                const cleanPromos = (parent) => {
+                    if (parent.promotions && parent.promotions.length > 0) {
+                        const originalLength = parent.promotions.length;
+                        parent.promotions = parent.promotions.filter(p => !p.end || p.end >= todayStr);
+                        removedCount += (originalLength - parent.promotions.length);
+                    }
+                };
+
+                // 1. 先計算總共有幾筆過期
+                if (this.data.categories) {
+                    this.data.categories.forEach(c => {
+                        if (c.items) c.items.forEach(i => countPromos(i));
+                    });
+                }
+                if (this.data.combos) {
+                    this.data.combos.forEach(c => countPromos(c));
+                }
+
+                if (previewCount === 0) {
+                    this.showToast('✨ 目前全站沒有任何過期的促銷優惠！');
+                    return;
+                }
+
+                // 2. 詢問使用者是否刪除
+                if (confirm(`🔍 系統偵測到全站共有 ${previewCount} 筆已過期優惠。\n(結束日期早於今日 ${todayStr})\n\n確定要一鍵清除它們嗎？`)) {
+                    if (this.data.categories) {
+                        this.data.categories.forEach(c => {
+                            if (c.items) c.items.forEach(i => cleanPromos(i));
+                        });
+                    }
+                    if (this.data.combos) {
+                        this.data.combos.forEach(c => cleanPromos(c));
+                    }
+                    this.$forceUpdate();
+                    this.autoSave();
+                    this.showToast(`✅ 成功清理了 ${removedCount} 筆過期優惠！`);
+                }
             },
 
             // ---- 分類與項目操作 ----
