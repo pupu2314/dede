@@ -761,7 +761,6 @@ function exportAsPNG() {
     // 標題區
     let html = `<h2 style="text-align: center; border-bottom: 2px solid #007bff; padding-bottom: 10px; color: #0056b3; margin-top: 0;">德德美體美容中心</h2>`;
     
-    // 【修改重點 1】：加上 crossorigin="anonymous" 並稍微設定樣式置中
     html += `<div style="text-align: center; margin-bottom: 15px;">
                  <img src="https://pupu2314.github.io/dede/Pwa/dede.png" crossorigin="anonymous" style="max-width: 100%; height: auto;">
              </div>`;
@@ -816,7 +815,6 @@ function exportAsPNG() {
     receiptDiv.innerHTML = html;
     document.body.appendChild(receiptDiv);
 
-    // 【修改重點 2】：將原本的 html2canvas 包裝成一個獨立的執行函式
     const takeScreenshot = () => {
         html2canvas(receiptDiv, {
             scale: 2, 
@@ -838,7 +836,6 @@ function exportAsPNG() {
         });
     };
 
-    // 【修改重點 3】：抓取剛剛塞入的圖片，等待它載入完成後再呼叫截圖
     const imgInDiv = receiptDiv.querySelector('img');
     
     if (imgInDiv) {
