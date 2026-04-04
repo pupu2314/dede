@@ -10,7 +10,9 @@
         .container { max-width: 1000px; padding: 20px; }
         h1, h2 { color: #0056b3; border-bottom: 2px solid #007bff; padding-bottom: 10px; margin-top: 30px; }
         
-        /* 表格結構優化 */
+        /* =========================================
+           表格基礎結構 (桌面版)
+        ========================================= */
         table { 
             border-collapse: collapse; 
             width: 100%; 
@@ -22,14 +24,17 @@
         th, td { border: 1px solid #dee2e6; padding: 10px 8px; text-align: left; vertical-align: middle; }
         th { background-color: #e9ecef; position: sticky; top: 0; z-index: 10; }
 
-        /* 自動限制名稱寬度 */
+        /* 欄位寬度與文字限制 */
         .col-name { max-width: 180px; word-wrap: break-word; font-weight: 600; }
         .col-items { max-width: 200px; word-wrap: break-word; color: #666; font-size: 0.85em; }
         
         /* 金額與日期上下排顯示 */
         .price-group, .date-group { display: flex; flex-direction: column; line-height: 1.4; }
-        .price-orig { color: #6c757d; text-decoration: line-through; font-size: 0.85em; }
+        .price-orig { color: #6c757d; font-size: 0.85em; }
+        /* 只有當有促銷時，才會加上刪除線 */
+        .has-promo { text-decoration: line-through; opacity: 0.7; }
         .price-promo { color: #d63384; font-weight: bold; font-size: 1.05em; }
+        
         .date-label { color: #adb5bd; font-size: 0.75em; margin-right: 4px; }
         .date-val { font-family: monospace; font-size: 0.85em; color: #495057; }
 
@@ -42,6 +47,46 @@
         textarea { width: 100%; height: 200px; font-family: monospace; margin: 15px 0; padding: 10px; border: 1px solid #ced4da; border-radius: 8px; }
         .hidden { display: none; }
         .filter-bar { background: #fff; padding: 10px 15px; border-radius: 8px; margin-bottom: 15px; display: flex; align-items: center; gap: 10px; border: 1px solid #dee2e6; }
+
+        /* =========================================
+           手機版響應式卡片設計 (Mobile Card Layout)
+        ========================================= */
+        @media (max-width: 768px) {
+            table { box-shadow: none; background: transparent; border: none; }
+            thead { display: none; /* 隱藏原本的表頭 */ }
+            tr { 
+                display: block; 
+                background: #fff; 
+                margin-bottom: 15px; 
+                border-radius: 12px; 
+                box-shadow: 0 4px 8px rgba(0,0,0,0.05); 
+                border: 1px solid #dee2e6;
+                overflow: hidden;
+            }
+            td { 
+                display: flex; 
+                justify-content: space-between; 
+                align-items: center; 
+                border: none; 
+                border-bottom: 1px dashed #e9ecef; 
+                padding: 12px 15px; 
+                text-align: right; 
+            }
+            td:last-child { border-bottom: none; }
+            /* 利用 data-label 屬性自動生成左側標題 */
+            td::before { 
+                content: attr(data-label); 
+                font-weight: 600; 
+                color: #6c757d; 
+                margin-right: 15px; 
+                text-align: left; 
+                flex-shrink: 0; 
+            }
+            
+            /* 行動版文字靠右對齊修正 */
+            .col-name, .col-items { max-width: 65%; text-align: right; }
+            .price-group, .date-group { align-items: flex-end; }
+        }
     </style>
 </head>
 <body>
@@ -118,11 +163,11 @@
             html += `<table>
                 <thead>
                     <tr>
-                        <th>項目名稱</th>
-                        <th style="width: 70px;">優惠標籤</th>
-                        <th style="width: 70px;">原價<br>促銷價</th>
+                        <th style="width: 180px;">項目名稱</th>
+                        <th>優惠標籤</th>
+                        <th style="width: 100px;">原價 / 促銷價</th>
                         <th style="width: 60px;">折扣</th>
-                        <th style="width: 110px;">開始日期<br>結束日期</th>
+                        <th style="width: 110px;">開始 / 結束日期</th>
                         <th style="width: 70px;">狀態</th>
                     </tr>
                 </thead>
@@ -141,24 +186,26 @@
                             discountTxt = (Math.round(rate * 100) / 10) + ' 折';
                         }
 
+                        // 加入 data-label 以支援手機版卡片顯示
+                        // 如果 p 存在，原價加入 has-promo 刪除線類別
                         html += `<tr>
-                            <td class="col-name">${item.name}</td>
-                            <td>${p ? `<span class="promo-label">${p.label}</span>` : '-'}</td>
-                            <td>
+                            <td class="col-name" data-label="項目名稱">${item.name}</td>
+                            <td data-label="優惠標籤">${p ? `<span class="promo-label">${p.label}</span>` : '-'}</td>
+                            <td data-label="原價 / 促銷價">
                                 <div class="price-group">
-                                    <span class="price-orig">$${item.price}</span>
+                                    <span class="price-orig ${p ? 'has-promo' : ''}">$${item.price}</span>
                                     <span class="price-promo">${p ? '$'+p.price : '-'}</span>
                                 </div>
                             </td>
-                            <td style="font-weight:bold; color:#0056b3;">${discountTxt}</td>
-                            <td>
+                            <td data-label="折扣" style="font-weight:bold; color:#0056b3;">${discountTxt}</td>
+                            <td data-label="開始 / 結束日期">
                                 ${p ? `
                                 <div class="date-group">
                                     <span><span class="date-label">起</span><span class="date-val">${p.start}</span></span>
                                     <span><span class="date-label">迄</span><span class="date-val">${p.end}</span></span>
                                 </div>` : '-'}
                             </td>
-                            <td class="${status.class}">${status.text}</td>
+                            <td data-label="狀態" class="${status.class}">${status.text}</td>
                         </tr>`;
                     });
                 });
@@ -170,11 +217,11 @@
             html += `<table>
                 <thead>
                     <tr>
-                        <th>組合名稱</th>
-                        <th>包含項目</th>
-                        <th style="width: 70px;">原價<br>促銷價</th>
+                        <th style="width: 180px;">組合名稱</th>
+                        <th style="width: 200px;">包含項目</th>
+                        <th style="width: 100px;">原價 / 促銷價</th>
                         <th style="width: 60px;">折扣</th>
-                        <th style="width: 110px;">開始日期<br>結束日期</th>
+                        <th style="width: 110px;">開始 / 結束日期</th>
                         <th style="width: 70px;">狀態</th>
                     </tr>
                 </thead>
@@ -203,24 +250,26 @@
                             discountTxt = (Math.round(rate * 100) / 10) + ' 折';
                         }
 
+                        // 加入 data-label 以支援手機版卡片顯示
+                        // 如果 p 存在，原價加入 has-promo 刪除線類別
                         html += `<tr>
-                            <td class="col-name">${combo.name}</td>
-                            <td class="col-items">${itemNames.join(' + ')}</td>
-                            <td>
+                            <td class="col-name" data-label="組合名稱">${combo.name}</td>
+                            <td class="col-items" data-label="包含項目">${itemNames.join(' + ')}</td>
+                            <td data-label="原價 / 促銷價">
                                 <div class="price-group">
-                                    <span class="price-orig">$${originalTotal}</span>
+                                    <span class="price-orig ${p ? 'has-promo' : ''}">$${originalTotal}</span>
                                     <span class="price-promo">${p ? '$'+p.price : '-'}</span>
                                 </div>
                             </td>
-                            <td style="font-weight:bold; color:#0056b3;">${discountTxt}</td>
-                            <td>
+                            <td data-label="折扣" style="font-weight:bold; color:#0056b3;">${discountTxt}</td>
+                            <td data-label="開始 / 結束日期">
                                 ${p ? `
                                 <div class="date-group">
                                     <span><span class="date-label">起</span><span class="date-val">${p.start}</span></span>
                                     <span><span class="date-label">迄</span><span class="date-val">${p.end}</span></span>
                                 </div>` : '-'}
                             </td>
-                            <td class="${status.class}">${status.text}</td>
+                            <td data-label="狀態" class="${status.class}">${status.text}</td>
                         </tr>`;
                     });
                 });
