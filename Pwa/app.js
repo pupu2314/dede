@@ -535,7 +535,6 @@ function updateTotals() {
         let priceHtml = `$${item.originalPrice}`;
         if (item.hasPromo) {
             if (item.isIdentity) {
-                // 需求 1 修改：優惠價 + 刪除線原價 + 左下角客製化提示
                 priceHtml = `<span style="color: var(--danger-color); font-weight: bold; margin-right: 5px;">$${item.finalPrice}</span> <span style="text-decoration: line-through; color: #999; font-size: 0.8em;">$${item.originalPrice}</span> <br><span style="color: var(--primary-color, #007bff); font-size: 0.85em;">${item.identityMsg}</span>`;
             } else {
                 let promoDateStr = (item.promoStart && item.promoEnd) ? `<br><span style="color: #6c757d; font-size: 0.75em;">(期限: ${item.promoStart} ~ ${item.promoEnd})</span>` : '';
@@ -794,7 +793,7 @@ function exportAsPNG() {
     // 2. 左邊區塊
     html += `
         <div style="display: flex; flex-direction: column; align-items: center; justify-content: center;">
-            <img src="LINE.png" crossorigin="anonymous" style="width: 8px; height: 80px; margin-bottom: 5px;">
+            <img src="LINE.png" crossorigin="anonymous" style="width: 80px; height: 80px; margin-bottom: 5px;">
             <span style="font-size: 0.8em; color: #555; font-weight: bold;">官方LINE帳號</span>
         </div>
     `;
