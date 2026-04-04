@@ -4,19 +4,25 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>服務資料編輯器</title>
+    <!-- 引入共用的按鈕與基礎樣式 -->
     <link rel="stylesheet" href="dede.css">
+    <!-- 引入 Vue.js 框架 -->
     <script src="https://cdn.jsdelivr.net/npm/vue@2.6.14/dist/vue.js"></script>
     
     <style>
+        /* 隱藏 Vue 尚未載入時的原始模板 */
         [v-cloak] { display: none; }
         
+        /* =========================================
+           編輯器專屬基礎佈局
+        ========================================= */
         body { 
             background-color: #f4f6f9; 
-            padding-bottom: 160px; 
+            padding-bottom: 160px; /* 留給底部浮動列足夠的空間 (考慮手機版折行) */
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
         }
         .editor-container { 
-            max-width: 1000px; 
+            max-width: 900px; 
             margin: 20px auto; 
             background: #fff; 
             padding: 20px; 
@@ -26,6 +32,7 @@
         h1 { text-align: center; color: #0056b3; margin-bottom: 5px; font-size: 1.5em; }
         .subtitle { text-align: center; color: #6c757d; font-size: 0.85em; margin-bottom: 25px; }
 
+        /* 卡片與區塊設計 */
         .category-card {
             border: 1px solid #dee2e6;
             border-radius: 8px;
@@ -43,160 +50,56 @@
             background: transparent;
             padding: 5px 0;
             margin-bottom: 15px;
-            outline: none;
         }
-
-        /* =========================================
-           全新資料表排版 (單行限制 + 上下疊加)
-        ========================================= */
-        .table-responsive {
-            overflow-x: auto;
-            margin-bottom: 10px;
+        .item-card {
+            background: #fff;
             border: 1px solid #e9ecef;
-            border-radius: 8px;
-            background: #fff;
-        }
-        .table-responsive::-webkit-scrollbar { height: 6px; }
-        .table-responsive::-webkit-scrollbar-thumb { background: #ccc; border-radius: 3px; }
-
-        .table-container {
-            padding: 5px 10px;
-        }
-        
-        .table-header {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            padding: 10px 0;
-            border-bottom: 2px solid #dee2e6;
-            color: #555;
-            font-weight: bold;
-            font-size: 0.85em;
-        }
-
-        .item-wrapper {
-            border-bottom: 1px solid #f1f3f5;
-        }
-        .item-wrapper:last-child {
-            border-bottom: none;
-        }
-
-        .super-row {
-            display: flex;
-            flex-wrap: nowrap;
-            align-items: center;
-            gap: 10px;
-            padding: 8px 0;
-            width: 100%;
-        }
-
-        /* --- 欄位寬度定義 (自動壓縮文字欄位以保證單行) --- */
-        /* 名稱、組合項目、標籤使用彈性縮放 (flex: 1 1 auto) 並加上 min/max 限制 */
-        .col-name { flex: 1 1 140px; min-width: 90px; max-width: 200px; }
-        .col-combo-items { flex: 1 1 120px; min-width: 80px; max-width: 160px; cursor: pointer; }
-        .col-promo { flex: 1 1 100px; min-width: 80px; max-width: 130px; }
-        
-        /* 數值、日期、操作欄位使用固定寬度 (flex: 0 0 width) 保證不被擠壓變形 */
-        .col-price { flex: 0 0 95px; display: flex; flex-direction: column; gap: 4px; }
-        .col-discount { flex: 0 0 60px; display: flex; flex-direction: column; align-items: center; justify-content: center; }
-        .col-date { flex: 0 0 130px; display: flex; flex-direction: column; gap: 4px; }
-        .col-status { flex: 0 0 170px; display: flex; align-items: center; gap: 4px; justify-content: flex-end;}
-
-        /* --- 智慧文字省略 (Ellipsis) --- */
-        .ellipsis {
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            display: block;
-            width: 100%;
-        }
-        
-        /* 內嵌輸入框 */
-        .inline-input {
-            border: 1px solid transparent;
-            background: transparent;
-            padding: 2px 4px;
-            width: 100%;
-            border-radius: 4px;
-            transition: all 0.2s;
-            font-size: 0.95em;
-            box-sizing: border-box;
-        }
-        .inline-input:hover, .inline-input:focus {
-            border-color: #80bdff;
-            background: #fff;
-            outline: none;
-            box-shadow: 0 0 0 2px rgba(0,123,255,.25);
-        }
-
-        /* --- 上下排顯示專用容器 (價格/日期) --- */
-        .stacked-field {
-            display: flex;
-            align-items: center;
-            gap: 4px;
-            width: 100%;
-        }
-        .lbl {
-            font-size: 0.75em;
-            color: #888;
-            flex-shrink: 0;
-            width: 16px;
-            text-align: center;
-            background: #f8f9fa;
-            border-radius: 3px;
-        }
-
-        /* 狀態徽章與按鈕 */
-        .status-badge {
-            font-size: 0.75em;
-            padding: 2px 6px;
-            border-radius: 10px;
-            white-space: nowrap;
-            margin-right: 4px;
-            font-weight: bold;
-        }
-        .status-active { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
-        .status-expired { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
-        .status-upcoming { background: #fff3cd; color: #856404; border: 1px solid #ffeeba; }
-
-        .btn-icon {
-            background: transparent;
-            border: none;
-            cursor: pointer;
-            font-size: 1.1em;
-            padding: 2px 4px;
-            border-radius: 4px;
-            transition: background 0.2s;
-        }
-        .btn-icon:hover { background: #e9ecef; }
-        
-        .btn-sm {
-            padding: 4px 8px;
-            font-size: 0.85em;
-            border-radius: 4px;
-            cursor: pointer;
-            border: none;
-            transition: opacity 0.2s;
-            white-space: nowrap;
-        }
-        .btn-sm:hover { opacity: 0.85; }
-        .btn-danger { background: #dc3545; color: white; }
-        .btn-success { background: #28a745; color: white; }
-        .btn-info { background: #17a2b8; color: white; }
-        .btn-primary { background: #007bff; color: white; }
-        .btn-secondary { background: #6c757d; color: white; }
-        .btn-outline { background: #f8f9fa; border: 1px solid #ced4da; color: #495057; }
-
-        /* 進階編輯面板 (選服/改ID) */
-        .advanced-panel {
-            background: #f8f9fa;
             padding: 15px;
-            border-top: 1px dashed #ced4da;
-            font-size: 0.9em;
-            margin-bottom: 5px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+            transition: all 0.2s ease;
         }
-        
-        /* 勾選清單 (組合專用) */
+        .item-card:hover {
+            border-color: #b8daff;
+        }
+        .promo-row {
+            background: #f8f9fa;
+            border-left: 3px solid #28a745;
+            padding: 12px;
+            margin-top: 10px;
+            border-radius: 4px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            align-items: center;
+        }
+        .input-group {
+            display: flex;
+            flex-direction: column;
+            flex: 1;
+            min-width: 120px;
+        }
+        .input-group label {
+            font-size: 0.8em;
+            color: #666;
+            margin-bottom: 4px;
+        }
+        input[type="text"], input[type="number"], input[type="date"] {
+            padding: 8px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            width: 100%;
+            box-sizing: border-box;
+            font-size: 0.95em;
+        }
+        input[type="text"]:focus, input[type="number"]:focus, input[type="date"]:focus {
+            outline: none;
+            border-color: #007bff;
+            box-shadow: 0 0 0 2px rgba(0,123,255,0.25);
+        }
+
+        /* 勾選清單專屬樣式 */
         .combo-items-selector {
             background: #fff;
             border: 1px solid #ced4da;
@@ -204,37 +107,101 @@
             padding: 15px;
             max-height: 280px;
             overflow-y: auto;
+            margin-top: 5px;
+        }
+        .combo-category-group {
+            margin-bottom: 15px;
+        }
+        .combo-category-group:last-child {
+            margin-bottom: 0;
+        }
+        .combo-category-group .cat-name {
+            font-weight: bold;
+            color: #0056b3;
+            border-bottom: 1px solid #e9ecef;
             margin-bottom: 10px;
+            padding-bottom: 4px;
+            font-size: 0.95em;
         }
-        .combo-category-group { margin-bottom: 15px; }
-        .combo-category-group:last-child { margin-bottom: 0; }
-        .cat-name { font-weight: bold; color: #0056b3; border-bottom: 1px solid #e9ecef; margin-bottom: 10px; padding-bottom: 4px; }
         .combo-item-checkbox {
-            display: inline-flex; align-items: center; margin-right: 12px; margin-bottom: 10px;
-            font-size: 0.9em; cursor: pointer; color: #444; background: #f8f9fa;
-            padding: 6px 12px; border-radius: 20px; border: 1px solid #dee2e6; transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            margin-right: 12px;
+            margin-bottom: 10px;
+            font-size: 0.9em;
+            cursor: pointer;
+            color: #444;
+            background: #f8f9fa;
+            padding: 6px 12px;
+            border-radius: 20px;
+            border: 1px solid #dee2e6;
+            transition: all 0.2s;
         }
-        .combo-item-checkbox:hover { background: #e2e6ea; border-color: #ced4da; }
-        .combo-item-checkbox input { margin-right: 6px; width: auto; }
-        .combo-item-checkbox input:checked + span { color: #0056b3; font-weight: 600; }
+        .combo-item-checkbox:hover {
+            background: #e2e6ea;
+            border-color: #ced4da;
+        }
+        .combo-item-checkbox input[type="checkbox"] {
+            margin-right: 6px;
+            cursor: pointer;
+            width: auto;
+        }
+        /* 勾選時加強視覺標示 */
+        .combo-item-checkbox input[type="checkbox"]:checked + span {
+            color: #0056b3;
+            font-weight: 600;
+        }
+
+        /* 按鈕樣式 */
+        .btn-sm {
+            padding: 6px 10px;
+            font-size: 0.85em;
+            border-radius: 6px;
+            cursor: pointer;
+            border: none;
+            transition: opacity 0.2s;
+        }
+        .btn-sm:hover { opacity: 0.85; }
+        .btn-danger { background: #dc3545; color: white; }
+        .btn-success { background: #28a745; color: white; }
+        .btn-info { background: #17a2b8; color: white; }
+        .btn-primary { background: #007bff; color: white; }
+        .btn-secondary { background: #6c757d; color: white; }
+        .btn-outline { background: transparent; border: 1px solid #ccc; color: #333; }
 
         .floating-bottom-bar {
-            position: fixed; bottom: 0; left: 0; width: 100%;
-            background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(5px);
-            border-top: 1px solid #ddd; padding: 15px;
-            display: flex; justify-content: center; flex-wrap: wrap; gap: 10px;
-            box-shadow: 0 -2px 10px rgba(0,0,0,0.1); z-index: 1000;
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(5px);
+            border-top: 1px solid #ddd;
+            padding: 15px;
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 10px;
+            box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
+            z-index: 1000;
         }
-        
+
         /* Modal for Export */
         .modal-overlay {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.6); display: flex; justify-content: center; align-items: center;
-            z-index: 2000; padding: 20px; box-sizing: border-box;
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.6);
+            display: flex; justify-content: center; align-items: center;
+            z-index: 2000;
+            padding: 20px;
+            box-sizing: border-box;
         }
         .modal-content {
             background: white; padding: 25px; border-radius: 12px; width: 100%; max-width: 600px;
-            box-shadow: 0 5px 25px rgba(0,0,0,0.2); max-height: 90vh; display: flex; flex-direction: column;
+            box-shadow: 0 5px 25px rgba(0,0,0,0.2);
+            max-height: 90vh;
+            display: flex;
+            flex-direction: column;
         }
         .changelog-list {
             background: #f8f9fa; padding: 15px; border-radius: 8px; border: 1px solid #dee2e6;
@@ -252,7 +219,7 @@
         <h1>服務資料編輯器</h1>
         <div class="subtitle">自動儲存於瀏覽器，編輯完成後請點擊下方「確認與匯出明細」覆蓋原始檔案</div>
 
-        <!-- ================= 一般分類區塊 ================= -->
+        <!-- 一般分類區塊 -->
         <div v-if="data && data.categories">
             <div v-for="(category, cIndex) in data.categories" :key="'cat-'+cIndex" class="category-card">
                 <div style="display: flex; justify-content: space-between; align-items: center;">
@@ -260,240 +227,205 @@
                     <button class="btn-sm btn-danger" @click="deleteCategory(cIndex)">刪除分類</button>
                 </div>
 
-                <div class="table-responsive">
-                    <!-- min-width 確保縮小到極限時會有捲軸，不會擠壓到破版 -->
-                    <div class="table-container" style="min-width: 650px;">
-                        
-                        <!-- 表頭 -->
-                        <div class="table-header">
-                            <div class="col-name">項目名稱</div>
-                            <div class="col-price">原/促價</div>
-                            <div class="col-promo">活動標籤</div>
-                            <div class="col-discount">折扣</div>
-                            <div class="col-date">始/迄日期</div>
-                            <div class="col-status">狀態與操作</div>
+                <div v-for="(item, iIndex) in category.items" :key="'item-'+cIndex+'-'+iIndex" class="item-card">
+                    <!-- 收合狀態：精簡顯示列 -->
+                    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+                        <div style="flex: 1; min-width: 200px;">
+                            <strong style="font-size: 1.1em; color: #333;">{{ item.name }}</strong>
+                            <span style="color: #6c757d; margin-left: 8px; font-weight: 500;">{{ item.price }} 元</span>
+                            <span v-if="item.promotions && item.promotions.length" style="display: inline-block; background: #e1f5fe; color: #0277bd; font-size: 0.8em; padding: 2px 6px; border-radius: 4px; margin-left: 8px;">
+                                含 {{ item.promotions.length }} 筆優惠
+                            </span>
                         </div>
+                        <div style="display: flex; gap: 8px;">
+                            <button class="btn-sm" :class="item._isEditing ? 'btn-secondary' : 'btn-outline'" @click="$set(item, '_isEditing', !item._isEditing)">
+                                {{ item._isEditing ? '收起明細' : '✏️ 編輯明細' }}
+                            </button>
+                            <button class="btn-sm" :class="item._showPromos ? 'btn-secondary' : 'btn-success'" @click="$set(item, '_showPromos', !item._showPromos)">
+                                🏷️ 優惠設定
+                            </button>
+                        </div>
+                    </div>
 
-                        <!-- 項目行 -->
-                        <div class="item-wrapper" v-for="(item, iIndex) in category.items" :key="'item-'+cIndex+'-'+iIndex">
-                            
-                            <!-- 主力排版列 (動態生成，無優惠則至少跑 1 次) -->
-                            <div class="super-row" v-for="(promo, pIdx) in (item.promotions && item.promotions.length ? item.promotions : [null])">
-                                
-                                <!-- 項目名稱 (加 ellipsis 自動省略過長文字) -->
-                                <div class="col-name">
-                                    <input type="text" v-model="item.name" v-if="pIdx === 0" @input="autoSave" class="inline-input ellipsis" style="font-weight: bold;" :title="item.name" placeholder="項目名稱">
-                                    <span v-else class="text-muted ellipsis" style="font-size:0.8em; padding-left:10px;">↳ 同上</span>
+                    <!-- 展開狀態：編輯基本資料 -->
+                    <div v-if="item._isEditing" style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin-top: 15px; border: 1px dashed #ccc;">
+                        <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                            <div class="input-group">
+                                <label>項目 ID</label>
+                                <input type="text" v-model="item.id" @input="autoSave">
+                            </div>
+                            <div class="input-group" style="flex: 2;">
+                                <label>項目名稱</label>
+                                <input type="text" v-model="item.name" @input="autoSave">
+                            </div>
+                            <div class="input-group">
+                                <label>原價 (元)</label>
+                                <input type="number" v-model.number="item.price" @input="autoSave">
+                            </div>
+                            <div class="input-group" style="flex: 0; justify-content: flex-end;">
+                                <button class="btn-sm btn-danger" @click="deleteItem(category, iIndex)" style="height: 35px; white-space: nowrap;">🗑️ 刪除項目</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 展開狀態：促銷優惠區塊 -->
+                    <div v-if="item._showPromos" style="margin-top: 15px; border-top: 1px dashed #dee2e6; padding-top: 15px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <strong style="color: #28a745; font-size: 0.95em;">促銷優惠管理</strong>
+                            <button class="btn-sm btn-success" @click="addPromotion(item)">+ 新增優惠</button>
+                        </div>
+                        <div v-if="item.promotions && item.promotions.length > 0">
+                            <div v-for="(promo, pIndex) in item.promotions" :key="'promo-'+iIndex+'-'+pIndex" class="promo-row">
+                                <div class="input-group">
+                                    <label>標籤 (例: 3月優惠)</label>
+                                    <input type="text" v-model="promo.label" @input="autoSave">
                                 </div>
-
-                                <!-- 價格 (上下疊加) -->
-                                <div class="col-price">
-                                    <div class="stacked-field">
-                                        <span class="lbl" title="原價">原</span>
-                                        <input type="number" v-model.number="item.price" v-if="pIdx === 0" @input="autoSave" class="inline-input" placeholder="原價">
-                                        <span v-else class="text-muted" style="padding: 2px 4px; font-size: 0.9em; width:100%; display:inline-block;">{{ item.price }}</span>
-                                    </div>
-                                    <div class="stacked-field" v-if="promo">
-                                        <span class="lbl text-danger" title="促銷價">促</span>
-                                        <input type="number" v-model.number="promo.price" @input="autoSave" class="inline-input text-danger" style="font-weight:bold;" placeholder="促銷價">
-                                    </div>
-                                    <div v-else class="stacked-field" style="height: 24px; align-items:center;">
-                                        <span class="text-muted" style="font-size:0.8em; margin-left: 18px;">- 無促銷 -</span>
-                                    </div>
-                                </div>
-
-                                <!-- 促銷標籤 (自動省略過長文字) -->
-                                <div class="col-promo">
-                                    <input type="text" v-model="promo.label" v-if="promo" @input="autoSave" class="inline-input ellipsis" :title="promo.label" placeholder="活動標籤">
-                                </div>
-
-                                <!-- 折扣計算 -->
-                                <div class="col-discount">
-                                    <template v-if="promo">
-                                        <div v-if="getDiscountStats(item.price, promo.price) && !getDiscountStats(item.price, promo.price).noDiscount" 
-                                             :class="{'text-danger': getDiscountStats(item.price, promo.price).isLow, 'text-success': !getDiscountStats(item.price, promo.price).isLow}"
-                                             style="font-size: 0.8em; font-weight: bold; line-height: 1.3; text-align: center;">
-                                            <div>{{ getDiscountStats(item.price, promo.price).zhe }}折</div>
-                                            <div>省${{ getDiscountStats(item.price, promo.price).saved }}</div>
+                                <!-- 促銷金額與即時計算折數顯示 -->
+                                <div class="input-group" style="flex: 2; min-width: 220px;">
+                                    <label>促銷價</label>
+                                    <div style="display: flex; align-items: center; gap: 8px;">
+                                        <input type="number" v-model.number="promo.price" @input="autoSave" style="width: 90px; flex-shrink: 0;">
+                                        <div v-if="getDiscountStats(getOriginalPrice(item), promo.price) && !getDiscountStats(getOriginalPrice(item), promo.price).noDiscount"
+                                             :style="{ color: getDiscountStats(getOriginalPrice(item), promo.price).isLow ? '#dc3545' : '#28a745', fontSize: '0.85em', fontWeight: 'bold', whiteSpace: 'nowrap' }">
+                                            (省${{ getDiscountStats(getOriginalPrice(item), promo.price).saved }} / {{ getDiscountStats(getOriginalPrice(item), promo.price).zhe }}折)
+                                            <span v-if="getDiscountStats(getOriginalPrice(item), promo.price).isLow" title="低於8折警示">⚠️</span>
                                         </div>
-                                        <div v-else class="text-muted" style="font-size:0.8em;">-</div>
-                                    </template>
+                                    </div>
                                 </div>
-
-                                <!-- 日期 (上下疊加) -->
-                                <div class="col-date">
-                                    <template v-if="promo">
-                                        <div class="stacked-field">
-                                            <span class="lbl" title="開始日期">始</span>
-                                            <input type="date" v-model="promo.start" @input="autoSave" class="inline-input" style="padding: 1px 2px;">
-                                        </div>
-                                        <div class="stacked-field">
-                                            <span class="lbl" title="結束日期">迄</span>
-                                            <input type="date" v-model="promo.end" @input="autoSave" class="inline-input" style="padding: 1px 2px;">
-                                        </div>
-                                    </template>
+                                <div class="input-group">
+                                    <label>開始日期</label>
+                                    <input type="date" v-model="promo.start" @input="autoSave">
                                 </div>
-
-                                <!-- 狀態與操作 -->
-                                <div class="col-status">
-                                    <span v-if="promo" class="status-badge" :class="getPromoStatus(promo).class">{{ getPromoStatus(promo).text }}</span>
-                                    
-                                    <button class="btn-icon" v-if="promo" @click="extendPromotion(item, pIdx)" title="延續至下個月">🗓️</button>
-                                    <button class="btn-icon text-danger" v-if="promo" @click="removePromotion(item, pIdx)" title="刪除此優惠">🗑️</button>
-                                    
-                                    <!-- 僅在第一列顯示的共用操作 -->
-                                    <button class="btn-sm btn-success" v-if="pIdx === 0" @click="addPromotion(item)" style="margin-left:auto;">+促銷</button>
-                                    <button class="btn-sm btn-outline" v-if="pIdx === 0" @click="item._isEditing = !item._isEditing" title="設定ID/刪除" style="margin-left:4px;">⚙️</button>
+                                <div class="input-group">
+                                    <label>結束日期</label>
+                                    <input type="date" v-model="promo.end" @input="autoSave">
+                                </div>
+                                <div style="display: flex; gap: 5px; margin-top: 18px;">
+                                    <button class="btn-sm btn-info" @click="extendPromotion(item, pIndex)" title="自動建立下個月的相同優惠">延續下月</button>
+                                    <button class="btn-sm btn-danger" @click="removePromotion(item, pIndex)">刪除</button>
                                 </div>
                             </div>
-                            
-                            <!-- 進階編輯區塊 (隱藏於列下方) -->
-                            <div v-if="item._isEditing" class="advanced-panel">
-                                <div style="display: flex; gap: 10px; align-items: center;">
-                                    <label style="color: #666; font-weight: bold;">服務項目 ID:</label>
-                                    <input type="text" v-model="item.id" @input="autoSave" style="width: 150px; padding: 4px; border: 1px solid #ccc; border-radius: 4px;">
-                                    <button class="btn-sm btn-danger" @click="deleteItem(category, iIndex)" style="margin-left: auto;">刪除此服務項目</button>
-                                </div>
-                            </div>
-
+                        </div>
+                        <div v-else style="color: #999; font-size: 0.85em; margin-top: 10px; text-align: center; background: #fff; padding: 10px; border-radius: 4px; border: 1px solid #eee;">
+                            目前無任何優惠活動
                         </div>
                     </div>
                 </div>
-                <button class="btn-sm btn-primary" style="margin-top: 5px;" @click="addItem(category)">+ 新增服務項目</button>
+                <button class="btn-sm btn-primary" style="margin-top: 10px;" @click="addItem(category)">+ 新增服務項目</button>
             </div>
         </div>
         <button class="btn btn-primary" style="width: 100%; margin-bottom: 35px;" @click="addCategory">+ 新增分類</button>
 
-        <!-- ================= 套餐 (Combos) 區塊 ================= -->
+        <!-- 套餐區塊 -->
         <h2 style="color: #0056b3; border-bottom: 2px solid #007bff; padding-bottom: 10px; font-size: 1.3em;">超值套餐 (Combos)</h2>
-        <div class="category-card" style="padding-top: 5px;" v-if="data && data.combos">
-            <div class="table-responsive">
-                <!-- 套餐欄位較多，min-width 稍微加大 -->
-                <div class="table-container" style="min-width: 750px;">
-                    
-                    <!-- 表頭 -->
-                    <div class="table-header">
-                        <div class="col-name">組合名稱</div>
-                        <div class="col-combo-items">包含項目</div>
-                        <div class="col-price">原/促價</div>
-                        <div class="col-promo">活動標籤</div>
-                        <div class="col-discount">折扣</div>
-                        <div class="col-date">始/迄日期</div>
-                        <div class="col-status">狀態與操作</div>
+        <div v-if="data && data.combos">
+            <div v-for="(combo, comboIndex) in data.combos" :key="'combo-'+comboIndex" class="item-card">
+                
+                <!-- 收合狀態：精簡顯示列 -->
+                <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+                    <div style="flex: 1; min-width: 200px;">
+                        <strong style="font-size: 1.1em; color: #333;">{{ combo.name }}</strong>
+                        <span style="color: #6c757d; margin-left: 8px; font-size: 0.85em;">(包含 {{ combo.itemIds ? combo.itemIds.length : 0 }} 項服務，原價 {{ getOriginalPrice(combo) }} 元)</span>
+                        <span v-if="combo.promotions && combo.promotions.length" style="display: inline-block; background: #e1f5fe; color: #0277bd; font-size: 0.8em; padding: 2px 6px; border-radius: 4px; margin-left: 8px;">
+                            含 {{ combo.promotions.length }} 筆優惠
+                        </span>
                     </div>
+                    <div style="display: flex; gap: 8px;">
+                        <button class="btn-sm" :class="combo._isEditing ? 'btn-secondary' : 'btn-outline'" @click="$set(combo, '_isEditing', !combo._isEditing)">
+                            {{ combo._isEditing ? '收起明細' : '✏️ 編輯明細' }}
+                        </button>
+                        <button class="btn-sm" :class="combo._showPromos ? 'btn-secondary' : 'btn-success'" @click="$set(combo, '_showPromos', !combo._showPromos)">
+                            🏷️ 優惠設定
+                        </button>
+                    </div>
+                </div>
 
-                    <!-- 套餐行 -->
-                    <div class="item-wrapper" v-for="(combo, comboIndex) in data.combos" :key="'combo-'+comboIndex">
-                        
-                        <div class="super-row" v-for="(promo, pIdx) in (combo.promotions && combo.promotions.length ? combo.promotions : [null])">
-                            
-                            <!-- 組合名稱 (自動省略) -->
-                            <div class="col-name">
-                                <input type="text" v-model="combo.name" v-if="pIdx === 0" @input="autoSave" class="inline-input ellipsis" style="font-weight: bold;" :title="combo.name" placeholder="組合名稱">
-                                <span v-else class="text-muted ellipsis" style="font-size:0.8em; padding-left:10px;">↳ 同上</span>
-                            </div>
-
-                            <!-- 包含項目摘要 (點擊展開，自動省略) -->
-                            <div class="col-combo-items">
-                                <div class="ellipsis" v-if="pIdx === 0" @click="combo._isEditing = !combo._isEditing" :title="(getComboItemsText(combo) || '點擊設定包含項目') + ' (點擊展開設定)'" style="font-size: 0.85em; color: #666;">
-                                    {{ getComboItemsText(combo) || '➕點擊設定項目' }}
+                <!-- 展開狀態：編輯基本資料與勾選項目 -->
+                <div v-if="combo._isEditing" style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin-top: 15px; border: 1px dashed #ccc;">
+                    <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                        <div class="input-group">
+                            <label>套餐 ID</label>
+                            <input type="text" v-model="combo.id" @input="autoSave">
+                        </div>
+                        <div class="input-group" style="flex: 2;">
+                            <label>套餐名稱</label>
+                            <input type="text" v-model="combo.name" @input="autoSave">
+                        </div>
+                        <div class="input-group" style="flex: 0; justify-content: flex-end;">
+                            <button class="btn-sm btn-danger" @click="deleteCombo(comboIndex)" style="height: 35px; white-space: nowrap;">🗑️ 刪除套餐</button>
+                        </div>
+                    </div>
+                    
+                    <!-- 套餐包含項目勾選區塊 -->
+                    <div style="margin-top: 18px;">
+                        <label style="font-size: 0.85em; color: #666; font-weight: bold;">包含項目 (請直接點擊勾選此套餐包含的服務)</label>
+                        <div class="combo-items-selector">
+                            <div v-for="(cat, catIdx) in data.categories" :key="'ccat-'+catIdx" class="combo-category-group">
+                                <div class="cat-name">{{ cat.name }}</div>
+                                <div style="display: flex; flex-wrap: wrap;">
+                                    <label v-for="item in cat.items" :key="item.id" class="combo-item-checkbox">
+                                        <!-- 修改這裡的 @change 為觸發智能命名的函式 -->
+                                        <input type="checkbox" :value="item.id" v-model="combo.itemIds" @change="onComboItemsChanged(combo)">
+                                        <span>{{ item.name }} ({{ item.price }}元)</span>
+                                    </label>
                                 </div>
                             </div>
-
-                            <!-- 價格 (上下疊加) -->
-                            <div class="col-price">
-                                <div class="stacked-field">
-                                    <span class="lbl" title="原價(依項目自動加總)">原</span>
-                                    <span class="text-muted" style="padding: 2px 4px; font-size: 0.9em; width:100%; display:inline-block;">{{ getOriginalPrice(combo) }}</span>
-                                </div>
-                                <div class="stacked-field" v-if="promo">
-                                    <span class="lbl text-danger" title="促銷價">促</span>
-                                    <input type="number" v-model.number="promo.price" @input="autoSave" class="inline-input text-danger" style="font-weight:bold;" placeholder="促銷價">
-                                </div>
-                                <div v-else class="stacked-field" style="height: 24px; align-items:center;">
-                                    <span class="text-muted" style="font-size:0.8em; margin-left: 18px;">- 無促銷 -</span>
-                                </div>
-                            </div>
-
-                            <!-- 促銷標籤 (自動省略) -->
-                            <div class="col-promo">
-                                <input type="text" v-model="promo.label" v-if="promo" @input="autoSave" class="inline-input ellipsis" :title="promo.label" placeholder="活動標籤">
-                            </div>
-
-                            <!-- 折扣計算 -->
-                            <div class="col-discount">
-                                <template v-if="promo">
-                                    <div v-if="getDiscountStats(getOriginalPrice(combo), promo.price) && !getDiscountStats(getOriginalPrice(combo), promo.price).noDiscount" 
-                                         :class="{'text-danger': getDiscountStats(getOriginalPrice(combo), promo.price).isLow, 'text-success': !getDiscountStats(getOriginalPrice(combo), promo.price).isLow}"
-                                         style="font-size: 0.8em; font-weight: bold; line-height: 1.3; text-align: center;">
-                                        <div>{{ getDiscountStats(getOriginalPrice(combo), promo.price).zhe }}折</div>
-                                        <div>省${{ getDiscountStats(getOriginalPrice(combo), promo.price).saved }}</div>
-                                    </div>
-                                    <div v-else class="text-muted" style="font-size:0.8em;">-</div>
-                                </template>
-                            </div>
-
-                            <!-- 日期 (上下疊加) -->
-                            <div class="col-date">
-                                <template v-if="promo">
-                                    <div class="stacked-field">
-                                        <span class="lbl" title="開始日期">始</span>
-                                        <input type="date" v-model="promo.start" @input="autoSave" class="inline-input" style="padding: 1px 2px;">
-                                    </div>
-                                    <div class="stacked-field">
-                                        <span class="lbl" title="結束日期">迄</span>
-                                        <input type="date" v-model="promo.end" @input="autoSave" class="inline-input" style="padding: 1px 2px;">
-                                    </div>
-                                </template>
-                            </div>
-
-                            <!-- 狀態與操作 -->
-                            <div class="col-status">
-                                <span v-if="promo" class="status-badge" :class="getPromoStatus(promo).class">{{ getPromoStatus(promo).text }}</span>
-                                
-                                <button class="btn-icon" v-if="promo" @click="extendPromotion(combo, pIdx)" title="延續至下個月">🗓️</button>
-                                <button class="btn-icon text-danger" v-if="promo" @click="removePromotion(combo, pIdx)" title="刪除此優惠">🗑️</button>
-                                
-                                <button class="btn-sm btn-success" v-if="pIdx === 0" @click="addPromotion(combo)" style="margin-left:auto;">+促銷</button>
-                                <button class="btn-sm btn-outline" v-if="pIdx === 0" @click="combo._isEditing = !combo._isEditing" title="設定服務項目與ID" style="margin-left:4px;">⚙️</button>
+                            <div v-if="!data.categories || data.categories.length === 0" style="color: #999; font-size: 0.85em;">
+                                尚未建立任何服務分類，請先至上方新增服務項目。
                             </div>
                         </div>
+                    </div>
+                </div>
 
-                        <!-- 進階編輯區塊 (設定服務項目) -->
-                        <div v-if="combo._isEditing" class="advanced-panel">
-                            <div style="display: flex; gap: 10px; align-items: center; margin-bottom: 12px;">
-                                <label style="font-weight: bold; color: #666;">套餐 ID:</label>
-                                <input type="text" v-model="combo.id" @input="autoSave" style="width: 150px; padding: 4px; border: 1px solid #ccc; border-radius: 4px;">
-                                <button class="btn-sm btn-info" @click="autoGenerateComboName(combo)">✨ 依下方勾選自動命名</button>
-                                <button class="btn-sm btn-danger" @click="deleteCombo(comboIndex)" style="margin-left: auto;">刪除此套餐</button>
+                <!-- 展開狀態：促銷優惠區塊 (套餐) -->
+                <div v-if="combo._showPromos" style="margin-top: 15px; border-top: 1px dashed #dee2e6; padding-top: 15px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <strong style="color: #28a745; font-size: 0.95em;">促銷優惠管理</strong>
+                        <button class="btn-sm btn-success" @click="addPromotion(combo)">+ 新增優惠</button>
+                    </div>
+                    <div v-if="combo.promotions && combo.promotions.length > 0">
+                        <div v-for="(promo, pIndex) in combo.promotions" :key="'cpromo-'+comboIndex+'-'+pIndex" class="promo-row">
+                            <div class="input-group">
+                                <label>標籤</label>
+                                <input type="text" v-model="promo.label" @input="autoSave">
                             </div>
-                            
-                            <label style="font-size: 0.9em; color: #0056b3; font-weight: bold;">☑️ 請點擊勾選此套餐包含的服務：</label>
-                            <div class="combo-items-selector">
-                                <div v-for="(cat, catIdx) in data.categories" :key="'ccat-'+catIdx" class="combo-category-group">
-                                    <div class="cat-name">{{ cat.name }}</div>
-                                    <div style="display: flex; flex-wrap: wrap;">
-                                        <label v-for="item in cat.items" :key="item.id" class="combo-item-checkbox">
-                                            <input type="checkbox" :value="item.id" v-model="combo.itemIds" @change="onComboItemsChanged(combo)">
-                                            <span>{{ item.name }} ({{ item.price }}元)</span>
-                                        </label>
+                            <!-- 促銷金額與即時計算折數顯示 (連動套餐加總) -->
+                            <div class="input-group" style="flex: 2; min-width: 220px;">
+                                <label>促銷價</label>
+                                <div style="display: flex; align-items: center; gap: 8px;">
+                                    <input type="number" v-model.number="promo.price" @input="autoSave" style="width: 90px; flex-shrink: 0;">
+                                    <div v-if="getDiscountStats(getOriginalPrice(combo), promo.price) && !getDiscountStats(getOriginalPrice(combo), promo.price).noDiscount"
+                                         :style="{ color: getDiscountStats(getOriginalPrice(combo), promo.price).isLow ? '#dc3545' : '#28a745', fontSize: '0.85em', fontWeight: 'bold', whiteSpace: 'nowrap' }">
+                                        (省${{ getDiscountStats(getOriginalPrice(combo), promo.price).saved }} / {{ getDiscountStats(getOriginalPrice(combo), promo.price).zhe }}折)
+                                        <span v-if="getDiscountStats(getOriginalPrice(combo), promo.price).isLow" title="低於8折警示">⚠️</span>
                                     </div>
                                 </div>
-                                <div v-if="!data.categories || data.categories.length === 0" style="color: #999; font-size: 0.85em;">
-                                    尚未建立任何服務分類，請先至上方新增服務項目。
-                                </div>
+                            </div>
+                            <div class="input-group">
+                                <label>開始日期</label>
+                                <input type="date" v-model="promo.start" @input="autoSave">
+                            </div>
+                            <div class="input-group">
+                                <label>結束日期</label>
+                                <input type="date" v-model="promo.end" @input="autoSave">
+                            </div>
+                            <div style="display: flex; gap: 5px; margin-top: 18px;">
+                                <button class="btn-sm btn-info" @click="extendPromotion(combo, pIndex)">延續下月</button>
+                                <button class="btn-sm btn-danger" @click="removePromotion(combo, pIndex)">刪除</button>
                             </div>
                         </div>
-
+                    </div>
+                    <div v-else style="color: #999; font-size: 0.85em; margin-top: 10px; text-align: center; background: #fff; padding: 10px; border-radius: 4px; border: 1px solid #eee;">
+                        目前無任何優惠活動
                     </div>
                 </div>
             </div>
-            <button class="btn-sm btn-primary" style="margin-top: 5px;" @click="addCombo">+ 新增套餐</button>
         </div>
+        <button class="btn btn-primary" style="width: 100%; margin-bottom: 30px;" @click="addCombo">+ 新增套餐</button>
 
     </div>
 
-    <!-- 浮動控制列 -->
+    <!-- 浮動控制列 (新增一鍵清理按鈕) -->
     <div class="floating-bottom-bar">
         <button class="btn" style="background-color: #dc3545; color: white; border: none;" @click="removeExpiredPromotions">🗑️ 清理過期優惠</button>
         <button class="btn btn-secondary" @click="loadDataFromServer">📥 重新載入伺服器資料</button>
@@ -505,6 +437,7 @@
         <div class="modal-content">
             <h2 style="margin-top: 0; color: #007bff; border-bottom: 2px solid #eee; padding-bottom: 10px;">確認異動明細</h2>
             
+            <!-- 優惠折數過低警示區塊 -->
             <div v-if="warnings.length > 0" style="background: #fff3cd; border-left: 4px solid #ffc107; padding: 12px 15px; border-radius: 4px; margin-top: 15px; font-size: 0.9em; color: #856404;">
                 <strong style="display: block; margin-bottom: 5px; color: #dc3545; font-size: 1.1em;">⚠️ 注意：偵測到超低優惠折數 (低於8折)</strong>
                 <p style="margin: 0 0 8px 0; color: #666;">為避免價格設定錯誤，匯出前請特別確認以下項目金額是否正確：</p>
@@ -515,6 +448,7 @@
 
             <p style="font-size: 0.9em; color: #666; margin-top: 15px; margin-bottom: 0;">以下為本次編輯偵測到的異動內容，確認無誤後請點擊下方按鈕複製更新後的代碼。</p>
             
+            <!-- 異動清單顯示區 -->
             <div class="changelog-list">
                 <ul v-if="changelog.length > 0">
                     <li v-for="(log, idx) in changelog" :key="'log-'+idx" v-html="log"></li>
@@ -543,7 +477,7 @@
             },
             originalData: null,
             changelog: [],
-            warnings: [], 
+            warnings: [], // 用於存放匯出時的折數警示
             showModal: false,
             exportJson: ''
         },
@@ -579,32 +513,41 @@
                 }
             },
 
-            // ---- UI 輔助方法 ----
-            getPromoStatus: function(promo) {
-                if (!promo.start || !promo.end) return { text: '未定', class: 'status-upcoming' };
-                const today = this.formatDate(new Date());
-                if (promo.end < today) return { text: '過期', class: 'status-expired' };
-                if (promo.start > today) return { text: '未開', class: 'status-upcoming' };
-                return { text: '進行', class: 'status-active' };
-            },
-            getComboItemsText: function(combo) {
-                if (!combo.itemIds || combo.itemIds.length === 0) return '';
-                let names = [];
-                combo.itemIds.forEach(id => {
-                    for (let c of (this.data.categories || [])) {
-                        let it = (c.items || []).find(i => i.id === id);
-                        if (it) {
-                            names.push(it.name);
-                            break;
+            // ---- 智慧產生套餐名稱 (新增功能) ----
+            onComboItemsChanged: function(combo) {
+                let selectedNames = [];
+                // 找出目前勾選的項目名稱
+                if (this.data.categories) {
+                    this.data.categories.forEach(cat => {
+                        if (cat.items) {
+                            cat.items.forEach(item => {
+                                if (combo.itemIds && combo.itemIds.includes(item.id)) {
+                                    selectedNames.push(item.name);
+                                }
+                            });
                         }
-                    }
-                });
-                return names.join(' + ');
+                    });
+                }
+
+                // 產生新的預設名稱
+                let generatedName = selectedNames.length > 0
+                    ? selectedNames.join(' + ') + ' 組合優惠'
+                    : '新套餐名稱';
+
+                // 防呆機制：若目前名稱是預設的，或是由系統產生的，就允許覆寫；若使用者已手動修改過，則保留原樣
+                if (!combo.name || combo.name === '新套餐名稱' || combo.name.endsWith(' 組合優惠')) {
+                    this.$set(combo, 'name', generatedName);
+                }
+
+                // 儲存狀態
+                this.autoSave();
             },
 
             // ---- 折數與原價計算系統 ----
             getOriginalPrice: function(parent) {
+                // 如果是一般項目
                 if (parent.price !== undefined) return parent.price;
+                // 如果是套餐 (加總底下 itemIds 的原價)
                 if (parent.itemIds && parent.itemIds.length > 0) {
                     let total = 0;
                     parent.itemIds.forEach(id => {
@@ -622,14 +565,18 @@
             },
             
             getDiscountStats: function(originalPrice, promoPrice) {
+                // 防止空值或計算錯誤
                 if (!originalPrice || originalPrice <= 0 || promoPrice === undefined || promoPrice === '') return null;
+                // 若促銷價等於或高於原價，則視為無優惠
                 if (Number(promoPrice) >= Number(originalPrice)) return { saved: 0, zhe: 10, isLow: false, noDiscount: true };
                 
                 let saved = originalPrice - promoPrice;
                 let rate = promoPrice / originalPrice;
+                // 將 0.85 轉換為 8.5 折，0.8 轉換為 8 折
                 let zhe = Math.round(rate * 100); 
                 zhe = (zhe % 10 === 0) ? (zhe / 10) : (zhe / 10); 
                 
+                // 判斷是否低於 8 折
                 let isLow = rate < 0.8;
                 return { saved: saved, zhe: zhe, isLow: isLow, noDiscount: false };
             },
@@ -640,12 +587,14 @@
                 let removedCount = 0;
                 let previewCount = 0;
 
+                // 掃描函式 (僅計算數量)
                 const countPromos = (parent) => {
                     if (parent.promotions && parent.promotions.length > 0) {
                         previewCount += parent.promotions.filter(p => p.end && p.end < todayStr).length;
                     }
                 };
 
+                // 執行刪除函式
                 const cleanPromos = (parent) => {
                     if (parent.promotions && parent.promotions.length > 0) {
                         const originalLength = parent.promotions.length;
@@ -654,6 +603,7 @@
                     }
                 };
 
+                // 1. 先計算總共有幾筆過期
                 if (this.data.categories) {
                     this.data.categories.forEach(c => {
                         if (c.items) c.items.forEach(i => countPromos(i));
@@ -668,6 +618,7 @@
                     return;
                 }
 
+                // 2. 詢問使用者是否刪除
                 if (confirm(`🔍 系統偵測到全站共有 ${previewCount} 筆已過期優惠。\n(結束日期早於今日 ${todayStr})\n\n確定要一鍵清除它們嗎？`)) {
                     if (this.data.categories) {
                         this.data.categories.forEach(c => {
@@ -718,65 +669,12 @@
                     this.autoSave();
                 }
             },
-            
-            // 新增：勾選項目時自動智慧命名
-            onComboItemsChanged: function(combo) {
-                // 如果目前名稱是預設的，或是已經是自動產生的後綴，就自動同步更新名稱
-                if (combo.name === '新套餐名稱' || combo.name.endsWith(' 組合優惠')) {
-                    if (!combo.itemIds || combo.itemIds.length === 0) {
-                        combo.name = '新套餐名稱';
-                    } else {
-                        let itemNames = [];
-                        // 依照分類原始順序來組合名稱，確保名稱有邏輯順序
-                        if (this.data.categories) {
-                            this.data.categories.forEach(c => {
-                                if (c.items) {
-                                    c.items.forEach(i => {
-                                        if (combo.itemIds.includes(i.id)) {
-                                            itemNames.push(i.name);
-                                        }
-                                    });
-                                }
-                            });
-                        }
-                        if (itemNames.length > 0) {
-                            combo.name = itemNames.join(' + ') + ' 組合優惠';
-                        }
-                    }
-                }
-                this.autoSave();
-            },
-
-            autoGenerateComboName: function(combo) {
-                if (!combo.itemIds || combo.itemIds.length === 0) {
-                    this.showToast('⚠️ 請先在下方勾選包含的服務項目！');
-                    return;
-                }
-                let itemNames = [];
-                // 依照分類原始順序來組合名稱
-                if (this.data.categories) {
-                    this.data.categories.forEach(c => {
-                        if (c.items) {
-                            c.items.forEach(i => {
-                                if (combo.itemIds.includes(i.id)) {
-                                    itemNames.push(i.name);
-                                }
-                            });
-                        }
-                    });
-                }
-
-                if (itemNames.length > 0) {
-                    combo.name = itemNames.join(' + ') + ' 組合優惠';
-                    this.autoSave();
-                    this.showToast('✨ 套餐名稱已自動產生！');
-                }
-            },
 
             addPromotion: function(parent) {
                 if (!parent.promotions) this.$set(parent, 'promotions', []);
                 const today = this.formatDate(new Date());
                 parent.promotions.push({ label: '新優惠', price: parent.price || 0, start: today, end: today });
+                this.$set(parent, '_showPromos', true);
                 this.autoSave();
             },
             removePromotion: function(parent, index) {
@@ -837,6 +735,7 @@
                 setTimeout(() => { toast.style.opacity = '0'; setTimeout(() => toast.remove(), 300); }, 2500);
             },
 
+            // 產生異動明細比對
             generateChangelog: function() {
                 let logs = [];
                 if (!this.originalData) {
@@ -867,6 +766,7 @@
                     cleanData.combos.forEach(c => newMap.set(c.id, c));
                 }
 
+                // 偵測新增與修改
                 newMap.forEach((newItem, id) => {
                     const oldItem = oldMap.get(id);
                     if (!oldItem) {
@@ -882,6 +782,7 @@
                         let newIds = [...(newItem.itemIds || [])].sort();
                         if (JSON.stringify(oldIds) !== JSON.stringify(newIds)) changesDetail.push('套餐內容');
 
+                        // 詳細比對促銷優惠 (多項異動整併至同一行)
                         let oldPromos = oldItem.promotions || [];
                         let newPromos = newItem.promotions || [];
                         if (JSON.stringify(oldPromos) !== JSON.stringify(newPromos)) {
@@ -889,6 +790,7 @@
                             let newP = JSON.parse(JSON.stringify(newPromos));
                             const fmtD = d => (d || '').replace(/-/g, '/');
 
+                            // 1. 移除完全相同的優惠
                             for (let i = oldP.length - 1; i >= 0; i--) {
                                 for (let j = newP.length - 1; j >= 0; j--) {
                                     if (JSON.stringify(oldP[i]) === JSON.stringify(newP[j])) {
@@ -899,6 +801,7 @@
                                 }
                             }
 
+                            // 2. 透過標籤配對 (同一優惠名稱)
                             let remainingOld = [];
                             for (let i = 0; i < oldP.length; i++) {
                                 let matchedIdx = newP.findIndex(p => p.label === oldP[i].label);
@@ -921,6 +824,7 @@
                                 }
                             }
 
+                            // 3. 順序配對 (標籤名稱被改掉的情況)
                             let pairCount = Math.min(remainingOld.length, newP.length);
                             for(let i=0; i<pairCount; i++) {
                                 let op = remainingOld[i];
@@ -938,6 +842,7 @@
                                 }
                             }
 
+                            // 4. 單純的刪除或新增
                             for(let i=pairCount; i<remainingOld.length; i++) {
                                 let op = remainingOld[i];
                                 subLogs.push(`<span style="color:#dc3545;">刪除了促銷</span> (${op.label}、${fmtD(op.start)}→${fmtD(op.end)}、$${op.price})`);
@@ -971,6 +876,7 @@
                     }
                 });
 
+                // 偵測刪除
                 oldMap.forEach((oldItem, id) => {
                     if (!newMap.has(id)) {
                         logs.push(`<strong style="color: #dc3545;">[刪除]</strong> ${oldItem.name}`);
@@ -981,8 +887,10 @@
             },
 
             openExportModal: function() {
+                // 1. 產生異動清單
                 this.generateChangelog();
                 
+                // 2. 進行低價警示掃描 (低於8折)
                 this.warnings = [];
                 const checkLowPromos = (parent, parentName) => {
                     let origPrice = this.getOriginalPrice(parent);
@@ -1005,6 +913,7 @@
                     this.data.combos.forEach(c => checkLowPromos(c, c.name));
                 }
                 
+                // 3. 產出乾淨的匯出用 JSON
                 this.exportJson = JSON.stringify(this.data, (key, value) => {
                     if (key.startsWith('_')) return undefined;
                     return value;
