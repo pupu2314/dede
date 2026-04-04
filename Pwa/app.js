@@ -760,7 +760,11 @@ function exportAsPNG() {
 
     // 標題區
     let html = `<h2 style="text-align: center; border-bottom: 2px solid #007bff; padding-bottom: 10px; color: #0056b3; margin-top: 0;">德德美體美容中心</h2>`;
-    html +=`<img src="https://pupu2314.github.io/dede/Pwa/dede.png">`
+    
+    // 【修改重點 1】：加上 crossorigin="anonymous" 並稍微設定樣式置中
+    html += `<div style="text-align: center; margin-bottom: 15px;">
+                 <img src="https://pupu2314.github.io/dede/Pwa/dede.png" crossorigin="anonymous" style="max-width: 100%; height: auto;">
+             </div>`;
     
     if (currentReceiptData.identity !== 'general') {
          html += `<div style="background-color: #ffeeba; color: #856404; padding: 10px; border-radius: 5px; text-align: center; font-weight: bold; margin-bottom: 15px;">
@@ -807,31 +811,53 @@ function exportAsPNG() {
     if (currentReceiptData.points > 0) {
         html += `<p style="margin: 5px 0 0 0; color: #007bff; font-weight: bold;">🎁 可獲得點數：${currentReceiptData.points.toLocaleString()} 點</p>`;
     }
-    html += `</div>`;
+    html += `</div>`; // 結尾
 
     receiptDiv.innerHTML = html;
     document.body.appendChild(receiptDiv);
 
-    html2canvas(receiptDiv, {
-        scale: 2, 
-        backgroundColor: '#ffffff',
-        useCORS: true
-    }).then(canvas => {
-        const link = document.createElement('a');
-        link.download = `德德美體-估價單-${new Date().getTime()}.png`;
-        link.href = canvas.toDataURL('image/png');
-        link.click();
-        showNotice('📷 專屬估價單截圖已下載！');
-    }).catch(err => {
-        console.error('截圖失敗:', err);
-        showNotice('❌ 截圖發生錯誤');
-    }).finally(() => {
-        document.body.removeChild(receiptDiv);
-        btn.textContent = originalText;
-        btn.disabled = false;
-    });
-}
+    // 【修改重點 2】：將原本的 html2canvas 包裝成一個獨立的執行函式
+    const takeScreenshot = () => {
+        html2canvas(receiptDiv, {
+            scale: 2, 
+            backgroundColor: '#ffffff',
+            useCORS: true // 允許載入跨域圖片
+        }).then(canvas => {
+            const link = document.createElement('a');
+            link.download = `德德美體-估價單-${new Date().getTime()}.png`;
+            link.href = canvas.toDataURL('image/png');
+            link.click();
+            showNotice('📷 專屬估價單截圖已下載！');
+        }).catch(err => {
+            console.error('截圖失敗:', err);
+            showNotice('❌ 截圖發生錯誤');
+        }).finally(() => {
+            document.body.removeChild(receiptDiv);
+            btn.textContent = originalText;
+            btn.disabled = false;
+        });
+    };
 
+    // 【修改重點 3】：抓取剛剛塞入的圖片，等待它載入完成後再呼叫截圖
+    const imgInDiv = receiptDiv.querySelector('img');
+    
+    if (imgInDiv) {
+        if (imgInDiv.complete) {
+            // 如果圖片已經在瀏覽器快取裡，就直接截圖
+            takeScreenshot();
+        } else {
+            // 等待圖片載入完成
+            imgInDiv.onload = takeScreenshot;
+            // 萬一圖片網址失效或網路斷線，為了不卡死，還是繼續產生沒有圖片的估價單
+            imgInDiv.onerror = () => {
+                console.warn('Logo 圖檔載入失敗');
+                takeScreenshot(); 
+            };
+        }
+    } else {
+        takeScreenshot();
+    }
+}
 // ==========================================
 // 5. UI 通知系統
 // ==========================================
