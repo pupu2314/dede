@@ -4,7 +4,7 @@
  */
 
 // 升級版號，強制所有用戶端清除舊快取並套用新規則
-const CACHE_NAME = 'price-calculator-v26.4e'; 
+const CACHE_NAME = 'price-calculator-v26.4b'; 
 const OFFLINE_URL = 'index.html';
 
 const urlsToCache = [
@@ -19,6 +19,7 @@ const urlsToCache = [
     'logo_256.png',
     'logo_512.png',
     'dede.png',
+    'LINE.png',
     'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js'
 ];
 
