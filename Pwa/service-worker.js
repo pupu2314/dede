@@ -4,7 +4,7 @@
  */
 
 // 升級版號，強制所有用戶端清除舊快取並套用新規則
-const CACHE_NAME = 'price-calculator-v26.4c'; 
+const CACHE_NAME = 'price-calculator-v26.4d'; 
 const OFFLINE_URL = 'index.html';
 
 const urlsToCache = [
@@ -69,7 +69,14 @@ self.addEventListener('activate', event => {
 
 // 3. 攔截請求
 self.addEventListener('fetch', event => {
+    // 忽略非 GET 請求
     if (event.request.method !== 'GET') return;
+
+    // 【修正】忽略不支援的通訊協定 (例如 chrome-extension://)
+    // 只有 http 與 https 的請求才進行快取處理
+    if (!event.request.url.startsWith('http')) {
+        return;
+    }
 
     // ==========================================
     // 【重要修改】遇到 services.json 直接放行，不進 SW 快取
