@@ -762,7 +762,7 @@ function exportAsPNG() {
     let html = `<h2 style="text-align: center; border-bottom: 2px solid #007bff; padding-bottom: 10px; color: #0056b3; margin-top: 0;">德德美體美容中心</h2>`;
     
     html += `<div style="text-align: center; margin-bottom: 15px;">
-                 <img src="https://pupu2314.github.io/dede/Pwa/dede.png" crossorigin="anonymous" style="max-width: 100%; height: auto;">
+                 <img src="dede.png" crossorigin="anonymous" style="max-width: 100%; height: auto;">
              </div>`;
     
     if (currentReceiptData.identity !== 'general') {
