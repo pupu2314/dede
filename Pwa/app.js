@@ -775,7 +775,6 @@ function exportAsPNG() {
         let priceText = `$${item.originalPrice}`;
         if (item.hasPromo) {
             if (item.isIdentity) {
-                // 截圖也統一排版：特價 原價(刪除線) 換行 提示
                 priceText = `<span style="color: #dc3545; font-weight: bold;">$${item.finalPrice}</span> <span style="color: #999; text-decoration: line-through; font-size: 0.85em;">$${item.originalPrice}</span> <br><span style="color: #007bff; font-size: 0.85em;">${item.identityMsg}</span>`;
             } else {
                 let promoDateStr = (item.promoStart && item.promoEnd) ? `<br><span style="color: #6c757d; font-size: 0.75em;">(優惠期限: ${item.promoStart} ~ ${item.promoEnd})</span>` : '';
@@ -790,7 +789,18 @@ function exportAsPNG() {
     });
     html += `</ul>`;
 
-    html += `<div style="border-top: 2px dashed #ccc; padding-top: 15px; text-align: right; font-size: 1em; line-height: 1.6;">`;
+    html += `<div style="border-top: 2px dashed #ccc; padding-top: 15px; display: flex; justify-content: space-between; align-items: flex-end; font-size: 1em; line-height: 1.6;">`;
+    
+    // 2. 左邊區塊
+    html += `
+        <div style="display: flex; flex-direction: column; align-items: center; justify-content: center;">
+            <img src="LINE.png" crossorigin="anonymous" style="width: 8px; height: 80px; margin-bottom: 5px;">
+            <span style="font-size: 0.8em; color: #555; font-weight: bold;">官方LINE帳號</span>
+        </div>
+    `;
+
+    // 3. 右邊區塊
+    html += `<div style="text-align: right;">`;
     
     if (currentReceiptData.savings > 0) {
         html += `<p style="margin: 0;">原價：$${currentReceiptData.originalTotal.toLocaleString()}</p>
@@ -806,7 +816,9 @@ function exportAsPNG() {
     if (currentReceiptData.points > 0) {
         html += `<p style="margin: 5px 0 0 0; color: #007bff; font-weight: bold;">🎁 可獲得點數：${currentReceiptData.points.toLocaleString()} 點</p>`;
     }
-    html += `</div>`; // 結尾
+    
+    html += `</div>`;
+    html += `</div>`;
 
     receiptDiv.innerHTML = html;
     document.body.appendChild(receiptDiv);
