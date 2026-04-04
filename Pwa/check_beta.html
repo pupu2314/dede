@@ -84,7 +84,7 @@
             }
             
             /* 行動版文字靠右對齊修正 */
-            .col-name, .col-items { max-width: 65%; text-align: right; }
+            .col-name, .col-items { max-width: 100%; text-align: right; }
             .price-group, .date-group { align-items: flex-end; }
         }
     </style>
@@ -191,14 +191,14 @@
                         html += `<tr>
                             <td class="col-name" data-label="項目名稱">${item.name}</td>
                             <td data-label="優惠標籤">${p ? `<span class="promo-label">${p.label}</span>` : '-'}</td>
-                            <td data-label="原價 / 促銷價">
+                            <td data-label="原價<br>促銷價">
                                 <div class="price-group">
                                     <span class="price-orig ${p ? 'has-promo' : ''}">$${item.price}</span>
                                     <span class="price-promo">${p ? '$'+p.price : '-'}</span>
                                 </div>
                             </td>
                             <td data-label="折扣" style="font-weight:bold; color:#0056b3;">${discountTxt}</td>
-                            <td data-label="開始 / 結束日期">
+                            <td data-label="開始<br>結束日期">
                                 ${p ? `
                                 <div class="date-group">
                                     <span><span class="date-label">起</span><span class="date-val">${p.start}</span></span>
