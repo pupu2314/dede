@@ -18,6 +18,7 @@ const urlsToCache = [
     'logo_192.png',
     'logo_256.png',
     'logo_512.png',
+    'dede.png',
     'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js'
 ];
 
