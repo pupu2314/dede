@@ -760,7 +760,8 @@ function exportAsPNG() {
 
     // 標題區
     let html = `<h2 style="text-align: center; border-bottom: 2px solid #007bff; padding-bottom: 10px; color: #0056b3; margin-top: 0;">德德美體美容中心</h2>`;
-
+    html +=`<img src="https://pupu2314.github.io/dede/Pwa/dede.jpg">`
+    
     if (currentReceiptData.identity !== 'general') {
          html += `<div style="background-color: #ffeeba; color: #856404; padding: 10px; border-radius: 5px; text-align: center; font-weight: bold; margin-bottom: 15px;">
              👤 客戶身分：${currentReceiptData.identityLabel}
