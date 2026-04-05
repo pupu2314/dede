@@ -14,6 +14,165 @@
             min-height: 100vh;
         }
         
+        /* 隱藏捲動條但保留捲動功能 */
+        .hide-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .hide-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+
+        /* -------------------------------------
+           置頂篩選器 (Sticky Filter) 相關樣式
+           ------------------------------------- */
+        .filter-wrapper {
+            position: sticky;
+            top: 0;
+            z-index: 40;
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        /* 當進入精簡模式(向下捲動)時的 Wrapper 背景 */
+        .filter-wrapper.compact-mode {
+            background-color: rgba(26, 32, 44, 0.95);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5);
+            border-bottom: 1px solid rgba(75, 85, 99, 0.6);
+            padding-top: 0.5rem;
+            padding-bottom: 0.5rem;
+        }
+
+        /* 原本的篩選卡片背景與邊框 */
+        .filter-card {
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            background-color: rgba(31, 41, 55, 0.8);
+            backdrop-filter: blur(8px);
+            border: 1px solid #4a5568;
+            border-radius: 1rem;
+            padding: 1.5rem;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.3);
+        }
+
+        /* 精簡模式下，卡片背景透明化，融入 Wrapper */
+        .filter-wrapper.compact-mode .filter-card {
+            background-color: transparent;
+            border-color: transparent;
+            backdrop-filter: none;
+            box-shadow: none;
+            padding: 0;
+            border-radius: 0;
+        }
+
+        /* 輸入框佈局容器 */
+        .filter-inputs-container {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        /* 精簡模式：改為一列橫向滑動 */
+        .filter-wrapper.compact-mode .filter-inputs-container {
+            flex-direction: row;
+            overflow-x: auto;
+            align-items: center;
+            gap: 0.75rem;
+            padding-bottom: 0.25rem;
+        }
+
+        /* 標籤文字動畫 */
+        .filter-label {
+            transition: opacity 0.3s ease, max-height 0.3s ease, margin 0.3s ease;
+            max-height: 24px;
+            opacity: 1;
+            overflow: hidden;
+        }
+
+        /* 精簡模式：隱藏標籤文字 */
+        .filter-wrapper.compact-mode .filter-label {
+            max-height: 0;
+            opacity: 0;
+            margin: 0;
+        }
+
+        /* 搜尋框與下拉選單的尺寸動畫 */
+        .search-box { transition: all 0.3s ease; }
+        .filter-grid { 
+            display: grid; 
+            grid-template-columns: repeat(1, minmax(0, 1fr)); 
+            gap: 1rem; 
+        }
+        @media (min-width: 640px) { .filter-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+        @media (min-width: 1024px) { .filter-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+        @media (min-width: 1280px) { .filter-grid { grid-template-columns: repeat(5, minmax(0, 1fr)); } }
+
+        /* 精簡模式：強制為橫向單列 */
+        .filter-wrapper.compact-mode .search-box {
+            flex: 0 0 auto;
+            min-width: 220px;
+        }
+        .filter-wrapper.compact-mode .filter-grid {
+            display: flex;
+            flex: 1 1 auto;
+            gap: 0.75rem;
+        }
+        .filter-wrapper.compact-mode .filter-grid > div {
+            flex: 0 0 auto;
+            min-width: 130px;
+        }
+
+        /* 輸入元件自身的大小過渡 */
+        .filter-input {
+            transition: all 0.3s ease;
+            height: 3rem;
+        }
+        .filter-wrapper.compact-mode .filter-input {
+            height: 2.25rem;
+            padding-top: 0.25rem;
+            padding-bottom: 0.25rem;
+            font-size: 0.875rem;
+            border-radius: 0.5rem;
+        }
+
+        /* 頁尾區塊（計數與清除按鈕） */
+        .filter-footer {
+            transition: all 0.3s ease;
+            max-height: 60px;
+            opacity: 1;
+            overflow: hidden;
+            margin-top: 1rem;
+        }
+        .filter-wrapper.compact-mode .filter-footer {
+            max-height: 0;
+            opacity: 0;
+            margin-top: 0;
+            pointer-events: none;
+        }
+
+        /* 已套用篩選標籤區塊（第二列） */
+        .active-filters-wrapper {
+            transition: all 0.3s ease;
+            margin-top: 1.5rem;
+        }
+        .filter-wrapper.compact-mode .active-filters-wrapper {
+            margin-top: 0.5rem;
+            margin-bottom: 0;
+        }
+        .filter-wrapper.compact-mode #active-filters {
+            flex-wrap: nowrap;
+            overflow-x: auto;
+            padding-bottom: 0.25rem;
+            gap: 0.5rem;
+        }
+        .filter-wrapper.compact-mode .filter-badge {
+            padding: 0.25rem 0.75rem;
+            font-size: 0.75rem;
+        }
+
+        /* -------------------------------------
+           其他原本的樣式
+           ------------------------------------- */
         .scroll-to-top {
             position: fixed;
             bottom: 6rem;
@@ -33,71 +192,32 @@
             cursor: pointer;
             z-index: 1000;
         }
-        
         .scroll-to-top.show {
             transform: translateY(0);
             opacity: 1;
         }
-        
         .scroll-to-top:hover {
             transform: translateY(0) scale(1.1);
             box-shadow: 0 15px 35px rgba(99, 102, 241, 0.4);
         }
-        
         .deactivated-card {
             opacity: 0.6;
             position: relative;
             overflow: hidden;
         }
-        
         .deactivated-card::before {
             content: '';
             position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: repeating-linear-gradient(
-                45deg,
-                transparent,
-                transparent 10px,
-                rgba(255, 255, 255, 0.03) 10px,
-                rgba(255, 255, 255, 0.03) 20px
-            );
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: repeating-linear-gradient(45deg, transparent, transparent 10px, rgba(255, 255, 255, 0.03) 10px, rgba(255, 255, 255, 0.03) 20px);
             pointer-events: none;
         }
-        
-        .deactivated-card h2, 
-        .deactivated-card .text-indigo-400 {
-            color: #9ca3af !important;
-        }
-        
-        .card-enter {
-            animation: cardEnter 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-        }
-        
+        .deactivated-card h2, .deactivated-card .text-indigo-400 { color: #9ca3af !important; }
+        .card-enter { animation: cardEnter 0.4s cubic-bezier(0.4, 0, 0.2, 1); }
         @keyframes cardEnter {
-            from {
-                opacity: 0;
-                transform: translateY(20px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
         }
-        
-        .skeleton {
-            background: linear-gradient(90deg, #2d3748 25%, #4a5568 50%, #2d3748 75%);
-            background-size: 200% 100%;
-            animation: loading 1.5s infinite;
-        }
-        
-        @keyframes loading {
-            0% { background-position: 200% 0; }
-            100% { background-position: -200% 0; }
-        }
-        
         .filter-badge {
             display: inline-flex;
             align-items: center;
@@ -109,123 +229,125 @@
             font-size: 0.875rem;
             transition: all 0.2s;
         }
-        
         .filter-badge:hover {
             background: rgba(99, 102, 241, 0.3);
             border-color: rgba(99, 102, 241, 0.6);
         }
-        
         .clear-btn {
             background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
             transition: all 0.3s;
         }
-        
         .clear-btn:hover {
             transform: translateY(-2px);
             box-shadow: 0 10px 25px rgba(239, 68, 68, 0.3);
         }
-
         .header-gradient {
             background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #ec4899 100%);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             background-clip: text;
         }
-
         @keyframes slideDown {
-            from {
-                transform: translate(-50%, -100%);
-                opacity: 0;
-            }
-            to {
-                transform: translate(-50%, 0);
-                opacity: 1;
-            }
+            from { transform: translate(-50%, -100%); opacity: 0; }
+            to { transform: translate(-50%, 0); opacity: 1; }
         }
-
         @keyframes slideUp {
-            from {
-                transform: translate(-50%, 0);
-                opacity: 1;
-            }
-            to {
-                transform: translate(-50%, -100%);
-                opacity: 0;
-            }
+            from { transform: translate(-50%, 0); opacity: 1; }
+            to { transform: translate(-50%, -100%); opacity: 0; }
         }
     </style>
 </head>
-<body class="p-4 sm:p-8">
+<body class="pb-20">
 
-    <div class="max-w-7xl mx-auto pb-20">
-        <!-- Header -->
-        <div class="text-center mb-8">
+    <!-- 頂部標題區 -->
+    <div class="max-w-7xl mx-auto px-4 sm:px-8 pt-8 mb-6">
+        <div class="text-center">
             <h1 class="text-4xl sm:text-5xl font-extrabold mb-3 header-gradient">
                 平交道資訊查詢
             </h1>
             <p class="text-gray-400 text-sm">快速搜尋全台灣平交道資訊</p>
         </div>
-        
-        <!-- 搜尋與篩選區 -->
-        <div class="bg-gray-800/80 backdrop-blur-sm p-6 rounded-2xl shadow-2xl mb-6 border border-gray-700">
-            <!-- 搜尋欄 -->
-            <div class="mb-4">
-                <label for="search-input" class="block text-sm font-medium text-gray-400 mb-2">
-                    🔍 平交道名稱搜尋
-                </label>
-                <input 
-                    type="text" 
-                    id="search-input" 
-                    placeholder="例如：「成功路」或「成」" 
-                    class="w-full px-4 py-3 bg-gray-700/50 text-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all border border-gray-600 focus:border-indigo-500">
-            </div>
+    </div>
+    
+    <!-- 捲動錨點：用於判斷是否進入置頂模式 -->
+    <div id="sticky-anchor"></div>
 
-            <!-- 篩選器網格 -->
-            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4 mb-4">
-                <div>
-                    <label for="electric-section-filter" class="block text-sm font-medium text-gray-400 mb-2">電務段</label>
-                    <select id="electric-section-filter" class="w-full px-4 py-3 bg-gray-700/50 text-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all border border-gray-600 focus:border-indigo-500 cursor-pointer">
-                        <option value="">全部</option>
-                    </select>
-                </div>
-                <div>
-                    <label for="station-filter" class="block text-sm font-medium text-gray-400 mb-2">分駐所</label>
-                    <select id="station-filter" class="w-full px-4 py-3 bg-gray-700/50 text-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all border border-gray-600 focus:border-indigo-500 cursor-pointer">
-                        <option value="">全部</option>
-                    </select>
-                </div>
-                <div>
-                    <label for="city-filter" class="block text-sm font-medium text-gray-400 mb-2">所在縣市</label>
-                    <select id="city-filter" class="w-full px-4 py-3 bg-gray-700/50 text-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all border border-gray-600 focus:border-indigo-500 cursor-pointer">
-                        <option value="">全部</option>
-                    </select>
-                </div>
-                <div>
-                    <label for="section-filter" class="block text-sm font-medium text-gray-400 mb-2">區間</label>
-                    <select id="section-filter" class="w-full px-4 py-3 bg-gray-700/50 text-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all border border-gray-600 focus:border-indigo-500 cursor-pointer">
-                        <option value="">全部</option>
-                    </select>
-                </div>
-                <div>
-                    <label for="line-filter" class="block text-sm font-medium text-gray-400 mb-2">路線別</label>
-                    <select id="line-filter" class="w-full px-4 py-3 bg-gray-700/50 text-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all border border-gray-600 focus:border-indigo-500 cursor-pointer">
-                        <option value="">全部</option>
-                    </select>
-                </div>
-            </div>
+    <!-- 置頂搜尋與篩選區 Wrapper (涵蓋全螢幕寬度) -->
+    <div id="filter-sticky-wrapper" class="filter-wrapper w-full px-4 sm:px-8">
+        <div class="max-w-7xl mx-auto py-1">
+            
+            <div id="filter-card" class="filter-card">
+                
+                <!-- 條件設定列 (第一列) -->
+                <div class="filter-inputs-container hide-scrollbar">
+                    
+                    <!-- 搜尋欄 -->
+                    <div class="search-box">
+                        <label for="search-input" class="filter-label block text-sm font-medium text-gray-400 mb-2 whitespace-nowrap">
+                            🔍 平交道名稱搜尋
+                        </label>
+                        <input 
+                            type="text" 
+                            id="search-input" 
+                            placeholder="例如：「成功路」或「成」" 
+                            class="filter-input w-full px-4 py-3 bg-gray-700/50 text-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all border border-gray-600 focus:border-indigo-500">
+                    </div>
 
-            <!-- 清除按鈕與結果計數 -->
-            <div class="flex flex-col sm:flex-row justify-between items-center gap-3">
-                <p id="results-count" class="text-sm text-gray-400"></p>
-                <button id="clear-filters-btn" class="clear-btn text-white px-6 py-2 rounded-xl font-medium shadow-lg hidden">
-                    ✕ 清除所有篩選
-                </button>
+                    <!-- 篩選器網格 -->
+                    <div class="filter-grid hide-scrollbar">
+                        <div>
+                            <label for="electric-section-filter" class="filter-label block text-sm font-medium text-gray-400 mb-2">電務段</label>
+                            <select id="electric-section-filter" class="filter-input w-full px-4 py-3 bg-gray-700/50 text-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all border border-gray-600 focus:border-indigo-500 cursor-pointer">
+                                <option value="">全部</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label for="station-filter" class="filter-label block text-sm font-medium text-gray-400 mb-2">分駐所</label>
+                            <select id="station-filter" class="filter-input w-full px-4 py-3 bg-gray-700/50 text-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all border border-gray-600 focus:border-indigo-500 cursor-pointer">
+                                <option value="">全部</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label for="city-filter" class="filter-label block text-sm font-medium text-gray-400 mb-2">所在縣市</label>
+                            <select id="city-filter" class="filter-input w-full px-4 py-3 bg-gray-700/50 text-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all border border-gray-600 focus:border-indigo-500 cursor-pointer">
+                                <option value="">全部</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label for="section-filter" class="filter-label block text-sm font-medium text-gray-400 mb-2">區間</label>
+                            <select id="section-filter" class="filter-input w-full px-4 py-3 bg-gray-700/50 text-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all border border-gray-600 focus:border-indigo-500 cursor-pointer">
+                                <option value="">全部</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label for="line-filter" class="filter-label block text-sm font-medium text-gray-400 mb-2">路線別</label>
+                            <select id="line-filter" class="filter-input w-full px-4 py-3 bg-gray-700/50 text-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all border border-gray-600 focus:border-indigo-500 cursor-pointer">
+                                <option value="">全部</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 底部按鈕區 (精簡模式下隱藏) -->
+                <div class="filter-footer flex flex-col sm:flex-row justify-between items-center gap-3">
+                    <p id="results-count" class="text-sm text-gray-400"></p>
+                    <button id="clear-filters-btn" class="clear-btn text-white px-6 py-2 rounded-xl font-medium shadow-lg hidden">
+                        ✕ 清除所有篩選
+                    </button>
+                </div>
+
+                <!-- 目前條件列 (第二列) -->
+                <div class="active-filters-wrapper">
+                    <div id="active-filters" class="flex flex-wrap gap-2 hide-scrollbar"></div>
+                </div>
+
             </div>
         </div>
+    </div>
 
-        <!-- 已套用篩選標籤 -->
-        <div id="active-filters" class="flex flex-wrap gap-2 mb-6"></div>
-
+    <!-- 主要內容區 -->
+    <div class="max-w-7xl mx-auto px-4 sm:px-8 mt-6 pb-20">
+        
         <!-- 結果容器 -->
         <div id="results-container" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             <!-- 動態生成的平交道卡片會顯示在這裡 -->
@@ -260,7 +382,7 @@
     </div>
 
     <!-- 置底浮動版權視窗 -->
-    <div class="fixed bottom-0 left-0 right-0 bg-gray-900/95 backdrop-blur-sm text-center p-4 text-gray-400 text-xs z-20 shadow-lg border-t border-gray-800">
+    <div class="fixed bottom-0 left-0 right-0 bg-gray-900/95 backdrop-blur-sm text-center p-4 text-gray-400 text-xs z-50 shadow-lg border-t border-gray-800">
         TaiXIong ©2025 All Rights Reserved
     </div>
 
@@ -268,6 +390,7 @@
         // 全域變數
         let fullCrossingData = [];
         let debounceTimer;
+        let isCompactModeActive = false;
 
         // DOM 元素
         const searchInput = document.getElementById('search-input');
@@ -283,6 +406,43 @@
         const scrollToTopBtn = document.getElementById('scroll-to-top-btn');
         const clearFiltersBtn = document.getElementById('clear-filters-btn');
         const activeFiltersContainer = document.getElementById('active-filters');
+        
+        // Sticky 監聽元素
+        const stickyAnchor = document.getElementById('sticky-anchor');
+        const filterWrapper = document.getElementById('filter-sticky-wrapper');
+
+        // 監聽捲動，處理 Sticky 與精簡模式動畫
+        function handleScroll() {
+            // 由於 stickyAnchor 會隨著畫面捲動，當網頁往下捲動超過它的位置時觸發
+            // 加入 10px 緩衝避免邊緣閃爍
+            if (window.scrollY > (stickyAnchor.offsetTop + 10)) {
+                if (!isCompactModeActive) {
+                    filterWrapper.classList.add('compact-mode');
+                    isCompactModeActive = true;
+                    updateActiveFilters(); // 重新渲染標籤以顯示小型清除按鈕
+                }
+            } else {
+                if (isCompactModeActive) {
+                    filterWrapper.classList.remove('compact-mode');
+                    isCompactModeActive = false;
+                    updateActiveFilters(); // 重新渲染標籤以隱藏小型清除按鈕
+                }
+            }
+
+            // 返回頂端按鈕邏輯
+            if (window.scrollY > 300) {
+                scrollToTopBtn.classList.add('show');
+            } else {
+                scrollToTopBtn.classList.remove('show');
+            }
+        }
+
+        window.addEventListener('scroll', handleScroll);
+        window.addEventListener('resize', handleScroll);
+
+        scrollToTopBtn.addEventListener('click', () => {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        });
 
         // 輔助函數：判斷是否為「不明」
         function isUnknownValue(value, key) {
@@ -308,7 +468,7 @@
                     
                     const card = document.createElement('div');
                     card.className = `bg-gray-800/80 backdrop-blur-sm p-6 rounded-2xl shadow-xl transition-all transform hover:scale-105 hover:shadow-2xl border border-gray-700 hover:border-indigo-500 card-enter ${isDeactivated ? 'deactivated-card' : ''}`;
-                    card.style.animationDelay = `${index * 0.05}s`;
+                    card.style.animationDelay = `${(index % 15) * 0.05}s`;
 
                     const oldName = item['舊名或別名'] ? ` （${item['舊名或別名']}）` : '';
                     const electricSectionDisplay = getDisplayValue(item['電務段'], '電務段');
@@ -419,9 +579,20 @@
             
             if (filters.length > 0) {
                 clearFiltersBtn.classList.remove('hidden');
+                
+                // 在精簡模式下，於橫列最前方新增一個小型清除全部按鈕
+                if (isCompactModeActive) {
+                    const compactClearBadge = document.createElement('span');
+                    compactClearBadge.className = 'filter-badge cursor-pointer shrink-0 !bg-red-500/20 !border-red-500/40 text-red-300 hover:!bg-red-500/40 font-medium transition-colors';
+                    compactClearBadge.innerHTML = '✕ 清除全部';
+                    compactClearBadge.onclick = clearAllFilters;
+                    activeFiltersContainer.appendChild(compactClearBadge);
+                }
+
                 filters.forEach(filter => {
                     const badge = document.createElement('span');
-                    badge.className = 'filter-badge cursor-pointer';
+                    // 加上 shrink-0 確保在單列橫滑時不會被壓縮變形
+                    badge.className = 'filter-badge cursor-pointer shrink-0';
                     badge.innerHTML = `
                         ${filter.label}
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -534,19 +705,6 @@
         lineFilter.addEventListener('change', filterAndRender);
         clearFiltersBtn.addEventListener('click', clearAllFilters);
 
-        // 滾動到頂端功能
-        window.addEventListener('scroll', () => {
-            if (window.scrollY > 300) {
-                scrollToTopBtn.classList.add('show');
-            } else {
-                scrollToTopBtn.classList.remove('show');
-            }
-        });
-
-        scrollToTopBtn.addEventListener('click', () => {
-            window.scrollTo({ top: 0, behavior: 'smooth' });
-        });
-
         // 分享功能
         document.addEventListener('click', (e) => {
             if (e.target.closest('.share-btn')) {
@@ -560,7 +718,6 @@
                     `📝 編號：${item['編號']}` +
                     (item['Google地圖'] ? `\n🗺️ 地圖：${item['Google地圖']}` : '');
 
-                // 檢查是否支援 Web Share API
                 if (navigator.share) {
                     navigator.share({
                         title: `平交道資訊 - ${item['平交道名稱']}`,
@@ -573,7 +730,6 @@
                         }
                     });
                 } else {
-                    // 降級方案：複製到剪貼簿
                     copyToClipboard(shareText);
                 }
             }
@@ -627,6 +783,7 @@
 
         // 載入資料
         window.addEventListener('load', () => {
+            handleScroll(); // 初始化檢查 Sticky 狀態
             fetch('evelcrossing.json')
                 .then(response => {
                     if (!response.ok) {
