@@ -18,12 +18,17 @@
         .hide-scrollbar::-webkit-scrollbar { display: none; }
         .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 
+        /* 佔位容器：防止切換模式時頁面跳動 */
+        .header-placeholder {
+            min-height: 180px; /* 與未縮小前的 filter-card 大致等高 */
+        }
+
         /* 置頂篩選器基礎樣式 */
         .filter-wrapper {
             position: sticky;
             top: 0;
             z-index: 40;
-            transition: background-color 0.2s;
+            transition: background-color 0.2s, padding 0.2s;
         }
 
         /* 精簡模式：背景變深並縮減內距 */
@@ -82,6 +87,7 @@
             border-radius: 0.5rem;
             padding: 0 0.75rem;
             width: 100%;
+            color: #fff;
         }
         .filter-wrapper.compact-mode .filter-input {
             height: 2.25rem;
@@ -160,46 +166,48 @@
         </h1>
     </div>
 
-    <!-- 滾動參考點 -->
-    <div id="top-marker"></div>
+    <!-- 將滾動參考點放在 Placeholder 上方 -->
+    <div id="top-marker" class="h-1"></div>
 
-    <div id="sticky-header" class="filter-wrapper px-4">
-        <div class="max-w-7xl mx-auto">
-            <div class="filter-card">
-                <!-- 第一列：條件設定 -->
-                <div class="filter-layout hide-scrollbar">
-                    <div class="search-input-box">
-                        <label class="filter-label text-xs text-gray-400 mb-1 block">搜尋名稱</label>
-                        <input type="text" id="search-input" placeholder="搜尋平交道..." class="filter-input focus:ring-1 focus:ring-indigo-500 outline-none">
+    <div class="header-placeholder">
+        <div id="sticky-header" class="filter-wrapper px-4">
+            <div class="max-w-7xl mx-auto">
+                <div class="filter-card">
+                    <!-- 第一列：條件設定 -->
+                    <div class="filter-layout hide-scrollbar">
+                        <div class="search-input-box">
+                            <label class="filter-label text-xs text-gray-400 mb-1 block">搜尋名稱</label>
+                            <input type="text" id="search-input" placeholder="搜尋平交道..." class="filter-input focus:ring-1 focus:ring-indigo-500 outline-none">
+                        </div>
+                        <div>
+                            <label class="filter-label text-xs text-gray-400 mb-1 block">電務段</label>
+                            <select id="electric-filter" class="filter-input outline-none"><option value="">全部電務段</option></select>
+                        </div>
+                        <div>
+                            <label class="filter-label text-xs text-gray-400 mb-1 block">分駐所</label>
+                            <select id="station-filter" class="filter-input outline-none"><option value="">全部分駐所</option></select>
+                        </div>
+                        <div>
+                            <label class="filter-label text-xs text-gray-400 mb-1 block">縣市</label>
+                            <select id="city-filter" class="filter-input outline-none"><option value="">全部縣市</option></select>
+                        </div>
+                        <div>
+                            <label class="filter-label text-xs text-gray-400 mb-1 block">區間</label>
+                            <select id="section-filter" class="filter-input outline-none"><option value="">全部區間</option></select>
+                        </div>
+                        <div>
+                            <label class="filter-label text-xs text-gray-400 mb-1 block">路線</label>
+                            <select id="line-filter" class="filter-input outline-none"><option value="">全部路線</option></select>
+                        </div>
                     </div>
-                    <div>
-                        <label class="filter-label text-xs text-gray-400 mb-1 block">電務段</label>
-                        <select id="electric-filter" class="filter-input outline-none"><option value="">全部電務段</option></select>
-                    </div>
-                    <div>
-                        <label class="filter-label text-xs text-gray-400 mb-1 block">分駐所</label>
-                        <select id="station-filter" class="filter-input outline-none"><option value="">全部分駐所</option></select>
-                    </div>
-                    <div>
-                        <label class="filter-label text-xs text-gray-400 mb-1 block">縣市</label>
-                        <select id="city-filter" class="filter-input outline-none"><option value="">全部縣市</option></select>
-                    </div>
-                    <div>
-                        <label class="filter-label text-xs text-gray-400 mb-1 block">區間</label>
-                        <select id="section-filter" class="filter-input outline-none"><option value="">全部區間</option></select>
-                    </div>
-                    <div>
-                        <label class="filter-label text-xs text-gray-400 mb-1 block">路線</label>
-                        <select id="line-filter" class="filter-input outline-none"><option value="">全部路線</option></select>
-                    </div>
-                </div>
 
-                <!-- 第二列：目前條件與計數 -->
-                <div id="tags-container" class="active-tags-row hide-scrollbar"></div>
-                
-                <div class="filter-info-row">
-                    <span id="result-count" class="text-xs text-gray-400">載入中...</span>
-                    <button id="reset-btn" class="text-xs text-red-400 hover:underline hidden">清除篩選</button>
+                    <!-- 第二列：目前條件與計數 -->
+                    <div id="tags-container" class="active-tags-row hide-scrollbar"></div>
+                    
+                    <div class="filter-info-row">
+                        <span id="result-count" class="text-xs text-gray-400">載入中...</span>
+                        <button id="reset-btn" class="text-xs text-red-400 hover:underline hidden">清除篩選</button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -222,11 +230,15 @@
 
         // 監聽滾動切換精簡模式
         window.addEventListener('scroll', () => {
-            const shouldBeCompact = window.scrollY > marker.offsetTop + 20;
+            // 獲取參考點相對於視窗頂部的距離
+            const markerRect = marker.getBoundingClientRect();
+            // 當參考點完全消失在視窗上方時（距離小於 0），開啟精簡模式
+            const shouldBeCompact = markerRect.top < 0;
+
             if (shouldBeCompact !== isCompact) {
                 isCompact = shouldBeCompact;
                 header.classList.toggle('compact-mode', isCompact);
-                renderTags(); // 重新渲染標籤以適應精簡模式
+                renderTags(); 
             }
             
             const scrollBtn = document.getElementById('scroll-btn');
@@ -236,7 +248,6 @@
 
         document.getElementById('scroll-btn').onclick = () => window.scrollTo({top: 0, behavior: 'smooth'});
 
-        // 初始化篩選器選單
         function initSelects() {
             const fields = {
                 'electric-filter': '電務段',
@@ -289,9 +300,10 @@
             document.getElementById('result-count').textContent = `共 ${filtered.length} 筆資料`;
             document.getElementById('reset-btn').classList.toggle('hidden', filtered.length === allData.length);
 
-            // 若在精簡模式下變更條件，回到第一筆資料
+            // 若在精簡模式下變更條件，回到資料頂部（即 Placeholder 的位置）
             if (shouldScrollBack && isCompact) {
-                window.scrollTo({ top: marker.offsetTop + 10, behavior: 'smooth' });
+                const scrollTarget = marker.offsetTop;
+                window.scrollTo({ top: scrollTarget, behavior: 'smooth' });
             }
         }
 
@@ -333,7 +345,6 @@
             const container = document.getElementById('tags-container');
             container.innerHTML = '';
 
-            const active = [];
             const inputs = {
                 '搜尋': 'search-input',
                 '段': 'electric-filter',
@@ -343,7 +354,6 @@
                 '線': 'line-filter'
             };
 
-            // 如果是精簡模式且有篩選，最前面放一個清除鈕
             const hasAnyFilter = Object.values(inputs).some(id => document.getElementById(id).value !== '');
             if (isCompact && hasAnyFilter) {
                 const clearTag = document.createElement('div');
@@ -368,7 +378,6 @@
             });
         }
 
-        // 載入資料
         fetch('evelcrossing.json')
             .then(res => res.json())
             .then(data => {
