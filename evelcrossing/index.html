@@ -5,6 +5,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>平交道資訊查詢</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    
+    <!-- 新增 Leaflet 地圖套件 -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+    
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         body {
@@ -170,6 +175,17 @@
             font-size: 0.75rem;
         }
 
+        /* 修正地圖層級，避免蓋過置頂選單 */
+        .leaflet-top, .leaflet-bottom {
+            z-index: 30 !important;
+        }
+        #map-view-container {
+            height: 70vh;
+            min-height: 500px;
+            border-radius: 1rem;
+            z-index: 10;
+        }
+
         /* -------------------------------------
            其他原本的樣式
            ------------------------------------- */
@@ -330,7 +346,20 @@
 
                 <!-- 底部按鈕區 (精簡模式下隱藏) -->
                 <div class="filter-footer flex flex-col sm:flex-row justify-between items-center gap-3">
-                    <p id="results-count" class="text-sm text-gray-400"></p>
+                    <div class="flex flex-col sm:flex-row items-center gap-4 w-full sm:w-auto">
+                        <p id="results-count" class="text-sm text-gray-400 whitespace-nowrap"></p>
+                        
+                        <!-- 檢視模式切換按鈕 -->
+                        <div class="bg-gray-700/80 p-1 rounded-lg flex space-x-1 border border-gray-600">
+                            <button id="btn-list-view" class="px-4 py-1.5 rounded-md text-sm font-medium bg-indigo-500 text-white shadow transition-all flex items-center gap-2">
+                                📋 列表
+                            </button>
+                            <button id="btn-map-view" class="px-4 py-1.5 rounded-md text-sm font-medium text-gray-400 hover:text-gray-200 transition-all flex items-center gap-2">
+                                🗺️ 地圖
+                            </button>
+                        </div>
+                    </div>
+
                     <button id="clear-filters-btn" class="clear-btn text-white px-6 py-2 rounded-xl font-medium shadow-lg hidden">
                         ✕ 清除所有篩選
                     </button>
@@ -348,6 +377,9 @@
     <!-- 主要內容區 -->
     <div class="max-w-7xl mx-auto px-4 sm:px-8 mt-6 pb-20">
         
+        <!-- 地圖容器 (預設隱藏) -->
+        <div id="map-view-container" class="hidden shadow-2xl border border-gray-700 mb-6"></div>
+
         <!-- 結果容器 -->
         <div id="results-container" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             <!-- 動態生成的平交道卡片會顯示在這裡 -->
@@ -392,6 +424,12 @@
         let debounceTimer;
         let isCompactModeActive = false;
 
+        // 地圖相關變數
+        let map = null;
+        let markersGroup = null;
+        let isMapView = false;
+        let currentFilteredData = [];
+
         // DOM 元素
         const searchInput = document.getElementById('search-input');
         const electricSectionFilter = document.getElementById('electric-section-filter');
@@ -406,6 +444,11 @@
         const scrollToTopBtn = document.getElementById('scroll-to-top-btn');
         const clearFiltersBtn = document.getElementById('clear-filters-btn');
         const activeFiltersContainer = document.getElementById('active-filters');
+        
+        // 切換檢視模式的 DOM 元素
+        const btnListView = document.getElementById('btn-list-view');
+        const btnMapView = document.getElementById('btn-map-view');
+        const mapViewContainer = document.getElementById('map-view-container');
         
         // Sticky 監聽元素
         const stickyAnchor = document.getElementById('sticky-anchor');
@@ -456,6 +499,7 @@
 
         // 渲染平交道卡片
         function renderCrossings(data) {
+            currentFilteredData = data; // 儲存目前篩選的資料供地圖使用
             resultsContainer.innerHTML = '';
             resultsCountElement.textContent = `共 ${data.length} 筆符合的平交道資訊`;
 
@@ -521,7 +565,149 @@
                     resultsContainer.appendChild(card);
                 });
             }
+
+            // 如果當前是地圖模式，同步更新地圖標記
+            if (isMapView) {
+                updateMapMarkers();
+            }
         }
+
+        // --- 地圖相關功能 ---
+
+        // 從資料中解析經緯度 (支援直接欄位或從 Google Maps URL 提取)
+        function extractCoordinates(item) {
+            // 1. 如果 JSON 本身有提供明確的經緯度欄位
+            if (item['緯度'] && item['經度']) return [parseFloat(item['緯度']), parseFloat(item['經度'])];
+            if (item['lat'] && item['lng']) return [parseFloat(item['lat']), parseFloat(item['lng'])];
+            
+            // 2. 嘗試從 Google地圖 網址中解析座標 (Regex 擷取)
+            const url = item['Google地圖'];
+            if (url) {
+                // 格式例: @23.123,120.123
+                let match = url.match(/@([0-9.]+),([0-9.]+)/);
+                if (match) return [parseFloat(match[1]), parseFloat(match[2])];
+                
+                // 格式例: q=23.123,120.123
+                match = url.match(/[?&]q=([0-9.]+),([0-9.]+)/);
+                if (match) return [parseFloat(match[1]), parseFloat(match[2])];
+                
+                // 格式例: place/23.123,120.123
+                match = url.match(/place\/([0-9.]+),([0-9.]+)/);
+                if (match) return [parseFloat(match[1]), parseFloat(match[2])];
+            }
+            
+            return null; // 無法取得座標
+        }
+
+        // 初始化地圖
+        function initMap() {
+            if (map) return; // 避免重複初始化
+            
+            // 預設中心點設定為台灣中心
+            map = L.map('map-view-container').setView([23.6978, 120.9605], 7);
+            
+            // 使用 OpenStreetMap 圖磚 (完全免費、免 API Key)
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+                maxZoom: 19
+            }).addTo(map);
+            
+            markersGroup = L.layerGroup().addTo(map);
+        }
+
+        // 更新地圖標記
+        function updateMapMarkers() {
+            if (!map || !markersGroup) return;
+            
+            markersGroup.clearLayers(); // 清除舊標記
+            
+            let bounds = L.latLngBounds();
+            let hasValidMarkers = false;
+
+            currentFilteredData.forEach(item => {
+                const coords = extractCoordinates(item);
+                if (coords) {
+                    hasValidMarkers = true;
+                    const isDeactivated = item['停用'] && item['停用'] !== '';
+                    
+                    // 建立簡易地圖圖示 (以顏色區分是否停用)
+                    const markerIcon = L.divIcon({
+                        className: 'custom-div-icon',
+                        html: `<div style="background-color: ${isDeactivated ? '#ef4444' : '#6366f1'}; width: 14px; height: 14px; border-radius: 50%; border: 2px solid white; box-shadow: 0 0 4px rgba(0,0,0,0.5);"></div>`,
+                        iconSize: [14, 14],
+                        iconAnchor: [7, 7]
+                    });
+
+                    // 點擊標記顯示的彈出視窗
+                    const popupContent = `
+                        <div class="text-gray-800 p-1 min-w-[200px]">
+                            <h3 class="font-bold text-base mb-1 ${isDeactivated ? 'text-red-600' : 'text-indigo-600'}">
+                                ${item['平交道名稱']}
+                                ${isDeactivated ? '<span class="text-xs bg-red-100 text-red-600 px-1 rounded ml-1">停用</span>' : ''}
+                            </h3>
+                            <p class="text-sm m-0 mt-1">📍 ${item['所在縣市']} / ${item['區間']}間</p>
+                            <p class="text-sm m-0">🚂 ${item['路線別']} (${item['平交道種類']})</p>
+                            ${item['Google地圖'] ? `<a href="${item['Google地圖']}" target="_blank" class="text-blue-500 text-sm mt-2 inline-block underline">開啟 Google 地圖</a>` : ''}
+                        </div>
+                    `;
+
+                    L.marker(coords, { icon: markerIcon })
+                        .bindPopup(popupContent)
+                        .addTo(markersGroup);
+                        
+                    bounds.extend(coords);
+                }
+            });
+
+            // 調整視角以包含所有標記
+            if (hasValidMarkers) {
+                map.fitBounds(bounds, { padding: [50, 50], maxZoom: 15 });
+            } else {
+                map.setView([23.6978, 120.9605], 7); // 重置為台灣全圖
+            }
+        }
+
+        // 切換檢視模式邏輯
+        function toggleViewMode(mode) {
+            isMapView = mode === 'map';
+            
+            if (isMapView) {
+                btnMapView.classList.replace('text-gray-400', 'text-white');
+                btnMapView.classList.replace('hover:text-gray-200', 'bg-indigo-500');
+                btnMapView.classList.add('shadow');
+                
+                btnListView.classList.replace('bg-indigo-500', 'hover:text-gray-200');
+                btnListView.classList.replace('text-white', 'text-gray-400');
+                btnListView.classList.remove('shadow');
+                
+                resultsContainer.classList.add('hidden');
+                mapViewContainer.classList.remove('hidden');
+                noResultsMessage.classList.add('hidden'); // 地圖模式下隱藏文字警告
+                
+                initMap();
+                updateMapMarkers();
+                // 確保容器顯示後地圖重新計算尺寸，避免灰格破圖
+                setTimeout(() => map.invalidateSize(), 100);
+            } else {
+                btnListView.classList.replace('text-gray-400', 'text-white');
+                btnListView.classList.replace('hover:text-gray-200', 'bg-indigo-500');
+                btnListView.classList.add('shadow');
+                
+                btnMapView.classList.replace('bg-indigo-500', 'hover:text-gray-200');
+                btnMapView.classList.replace('text-white', 'text-gray-400');
+                btnMapView.classList.remove('shadow');
+                
+                mapViewContainer.classList.add('hidden');
+                resultsContainer.classList.remove('hidden');
+                
+                if (currentFilteredData.length === 0) {
+                    noResultsMessage.classList.remove('hidden');
+                }
+            }
+        }
+
+        btnListView.addEventListener('click', () => toggleViewMode('list'));
+        btnMapView.addEventListener('click', () => toggleViewMode('map'));
 
         // 填充下拉選單選項
         function populateFilter(selectElement, data, key) {
