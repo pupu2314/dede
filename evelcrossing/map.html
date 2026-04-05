@@ -16,9 +16,25 @@
             min-height: 100vh;
         }
         
+        /* 地圖樣式自訂 */
+        #map {
+            height: 400px;
+            border-radius: 1.5rem;
+            border: 2px solid rgba(74, 85, 104, 0.5);
+            z-index: 10;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+        }
+
+        .header-gradient {
+            background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #ec4899 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
         .scroll-to-top {
             position: fixed;
-            bottom: 6rem;
+            bottom: 2rem;
             right: 2rem;
             width: 3.5rem;
             height: 3.5rem;
@@ -40,45 +56,15 @@
             transform: translateY(0);
             opacity: 1;
         }
-        
-        .deactivated-card {
-            opacity: 0.6;
-            position: relative;
-        }
-        
-        #map {
-            height: 450px;
-            border-radius: 1rem;
-            z-index: 10;
-            border: 2px solid rgba(74, 85, 104, 0.5);
-        }
 
-        .header-gradient {
-            background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #ec4899 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
+        /* 讓 Popup 更符合深色主題 */
+        .leaflet-popup-content-wrapper {
+            background: #2d3748 !important;
+            color: #f7fafc !important;
+            border-radius: 0.75rem !important;
         }
-
-        .filter-badge {
-            display: inline-flex;
-            align-items: center;
-            gap: 0.5rem;
-            padding: 0.5rem 1rem;
-            background: rgba(99, 102, 241, 0.2);
-            border: 1px solid rgba(99, 102, 241, 0.4);
-            border-radius: 9999px;
-            font-size: 0.875rem;
-            transition: all 0.2s;
-        }
-
-        .custom-popup .leaflet-popup-content-wrapper {
-            background: #2d3748;
-            color: #fff;
-            border-radius: 0.5rem;
-        }
-        .custom-popup .leaflet-popup-tip {
-            background: #2d3748;
+        .leaflet-popup-tip {
+            background: #2d3748 !important;
         }
     </style>
 </head>
@@ -86,262 +72,273 @@
 
     <div class="max-w-7xl mx-auto pb-20">
         <!-- Header -->
-        <div class="text-center mb-8">
-            <h1 class="text-4xl sm:text-5xl font-extrabold mb-3 header-gradient">
+        <div class="text-center mb-10">
+            <h1 class="text-4xl sm:text-6xl font-extrabold mb-4 header-gradient">
                 平交道資訊查詢
             </h1>
-            <p class="text-gray-400 text-sm">快速搜尋全台灣平交道資訊並在地圖上顯示</p>
+            <p class="text-gray-400 text-lg">整合經緯度圖標與自動化條件篩選</p>
         </div>
         
-        <!-- 搜尋與篩選區 -->
-        <div class="bg-gray-800/80 backdrop-blur-sm p-6 rounded-2xl shadow-2xl mb-6 border border-gray-700">
-            <div class="mb-4">
-                <label for="search-input" class="block text-sm font-medium text-gray-400 mb-2">🔍 名稱搜尋</label>
-                <input type="text" id="search-input" placeholder="輸入平交道名稱..." class="w-full px-4 py-3 bg-gray-700/50 text-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 border border-gray-600">
-            </div>
-
-            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4 mb-4">
+        <!-- 搜尋與篩選面板 -->
+        <div class="bg-gray-800/60 backdrop-blur-md p-6 rounded-3xl shadow-2xl mb-8 border border-gray-700/50">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
                 <div>
-                    <label class="block text-sm font-medium text-gray-400 mb-2">電務段</label>
-                    <select id="electric-section-filter" class="w-full px-4 py-3 bg-gray-700/50 text-gray-200 rounded-xl border border-gray-600 cursor-pointer"><option value="">全部</option></select>
+                    <label class="block text-sm font-semibold text-indigo-300 mb-2 ml-1">🔍 名稱或編號搜尋</label>
+                    <input type="text" id="search-input" placeholder="例如：成功路..." class="w-full px-5 py-4 bg-gray-900/50 text-white rounded-2xl focus:outline-none focus:ring-2 focus:ring-indigo-500 border border-gray-700 transition-all">
                 </div>
                 <div>
-                    <label class="block text-sm font-medium text-gray-400 mb-2">分駐所</label>
-                    <select id="station-filter" class="w-full px-4 py-3 bg-gray-700/50 text-gray-200 rounded-xl border border-gray-600 cursor-pointer"><option value="">全部</option></select>
-                </div>
-                <div>
-                    <label class="block text-sm font-medium text-gray-400 mb-2">所在縣市</label>
-                    <select id="city-filter" class="w-full px-4 py-3 bg-gray-700/50 text-gray-200 rounded-xl border border-gray-600 cursor-pointer"><option value="">全部</option></select>
-                </div>
-                <div>
-                    <label class="block text-sm font-medium text-gray-400 mb-2">區間</label>
-                    <select id="section-filter" class="w-full px-4 py-3 bg-gray-700/50 text-gray-200 rounded-xl border border-gray-600 cursor-pointer"><option value="">全部</option></select>
-                </div>
-                <div>
-                    <label class="block text-sm font-medium text-gray-400 mb-2">路線別</label>
-                    <select id="line-filter" class="w-full px-4 py-3 bg-gray-700/50 text-gray-200 rounded-xl border border-gray-600 cursor-pointer"><option value="">全部</option></select>
+                    <label class="block text-sm font-semibold text-indigo-300 mb-2 ml-1">📍 所在縣市</label>
+                    <select id="city-filter" class="w-full px-5 py-4 bg-gray-900/50 text-white rounded-2xl border border-gray-700 cursor-pointer focus:ring-2 focus:ring-indigo-500 appearance-none">
+                        <option value="">全部縣市</option>
+                    </select>
                 </div>
             </div>
 
-            <div class="flex flex-col sm:flex-row justify-between items-center gap-3">
-                <p id="results-count" class="text-sm text-gray-400"></p>
-                <button id="clear-filters-btn" class="bg-red-500/80 hover:bg-red-600 text-white px-6 py-2 rounded-xl font-medium hidden transition-all">✕ 清除篩選</button>
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div>
+                    <label class="block text-xs font-medium text-gray-500 mb-2 ml-1">電務段</label>
+                    <select id="electric-filter" class="w-full px-4 py-3 bg-gray-900/30 text-gray-300 rounded-xl border border-gray-700 cursor-pointer appearance-none">
+                        <option value="">全部</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-gray-500 mb-2 ml-1">路線別</label>
+                    <select id="line-filter" class="w-full px-4 py-3 bg-gray-900/30 text-gray-300 rounded-xl border border-gray-700 cursor-pointer appearance-none">
+                        <option value="">全部</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-gray-500 mb-2 ml-1">種類</label>
+                    <select id="type-filter" class="w-full px-4 py-3 bg-gray-900/30 text-gray-300 rounded-xl border border-gray-700 cursor-pointer appearance-none">
+                        <option value="">全部</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="flex justify-between items-center mt-6 pt-6 border-t border-gray-700/50">
+                <span id="results-count" class="text-indigo-400 font-medium">載入中...</span>
+                <button id="reset-btn" class="text-gray-400 hover:text-white transition-colors text-sm flex items-center gap-1">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
+                    重設所有篩選
+                </button>
             </div>
         </div>
 
-        <!-- 地圖區塊 -->
-        <div class="mb-8 relative">
+        <!-- 互動地圖 -->
+        <div class="mb-10">
             <div id="map"></div>
-            <div class="absolute bottom-4 right-4 z-[1000] bg-gray-900/80 p-2 rounded-lg text-[10px] text-gray-400">
-                點擊圖釘可查看詳細資訊
-            </div>
         </div>
 
-        <div id="active-filters" class="flex flex-wrap gap-2 mb-6"></div>
+        <!-- 結果卡片 -->
+        <div id="results-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6"></div>
 
-        <div id="results-container" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6"></div>
-
-        <div id="loading-message" class="text-center mt-12">
-            <p class="text-gray-400 animate-pulse">正在載入地圖與資料...</p>
-        </div>
-
-        <div id="no-results-message" class="hidden text-center mt-12">
-            <p class="text-gray-400 text-lg">沒有找到符合條件的平交道</p>
+        <!-- 提示訊息 -->
+        <div id="status-message" class="text-center py-20 hidden">
+            <p class="text-gray-500 text-xl font-medium">沒有符合搜尋條件的平交道</p>
         </div>
     </div>
 
-    <div id="scroll-to-top-btn" class="scroll-to-top">
+    <!-- 浮動按鈕 -->
+    <div id="scroll-to-top" class="scroll-to-top">
         <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 10l7-7m0 0l7 7m-7-7v18" /></svg>
     </div>
 
     <!-- Leaflet JS -->
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script>
-        let fullCrossingData = [];
-        let map, markerLayer;
-        let debounceTimer;
+        let fullData = [];
+        let map, markerGroup;
 
-        // 初始化地圖
+        // --- 地圖初始化 ---
         function initMap() {
+            // 預設中心點在台灣
             map = L.map('map').setView([23.6, 121.0], 7);
-            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                attribution: '&copy; OpenStreetMap contributors'
+            
+            L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+                attribution: '&copy; OpenStreetMap &copy; CARTO'
             }).addTo(map);
-            markerLayer = L.layerGroup().addTo(map);
+
+            markerGroup = L.layerGroup().addTo(map);
         }
 
-        // 解析座標 (假設資料中有 緯度/經度 欄位，或從 Google地圖 連結解析)
-        function getLatLng(item) {
-            // 優先檢查是否有明確的經緯度欄位
-            if (item['緯度'] && item['經度']) {
-                return [parseFloat(item['緯度']), parseFloat(item['經度'])];
-            }
-            // 其次嘗試從 Google 地圖 URL 解析 (例如 q=25.123,121.456)
-            if (item['Google地圖']) {
-                const url = item['Google地圖'];
-                const match = url.match(/q=([-+]?\d*\.\d+|\d+),([-+]?\d*\.\d+|\d+)/);
-                if (match) return [parseFloat(match[1]), parseFloat(match[2])];
+        // --- 核心功能：從 Google 地圖 URL 解析經緯度 ---
+        function parseLatLngFromUrl(url) {
+            if (!url) return null;
+            // 比對 query=25.xxxx,121.xxxx 格式
+            const regex = /query=([-+]?\d*\.\d+|\d+),([-+]?\d*\.\d+|\d+)/;
+            const match = url.match(regex);
+            if (match && match.length >= 3) {
+                return [parseFloat(match[1]), parseFloat(match[2])];
             }
             return null;
         }
 
-        function renderMarkers(data) {
-            if (!markerLayer) return;
-            markerLayer.clearLayers();
-            
+        // --- 渲染地圖標記 ---
+        function updateMapMarkers(data) {
+            markerGroup.clearLayers();
             const bounds = [];
+
             data.forEach(item => {
-                const latlng = getLatLng(item);
+                const latlng = parseLatLngFromUrl(item['Google地圖']);
                 if (latlng) {
-                    const marker = L.marker(latlng).bindPopup(`
-                        <div class="p-1">
-                            <strong class="text-indigo-600">${item['平交道名稱']}</strong><br>
-                            <span class="text-xs text-gray-600">編號：${item['編號']}</span><br>
-                            <span class="text-xs text-gray-600">位置：${item['所在縣市']} ${item['區間']}</span>
+                    const marker = L.circleMarker(latlng, {
+                        radius: 8,
+                        fillColor: "#6366f1",
+                        color: "#fff",
+                        weight: 2,
+                        opacity: 1,
+                        fillOpacity: 0.8
+                    });
+
+                    marker.bindPopup(`
+                        <div class="font-sans">
+                            <h4 class="font-bold text-lg mb-1">${item['平交道名稱']}</h4>
+                            <p class="text-xs text-gray-400 mb-2">${item['編號']} | ${item['路線別']}</p>
+                            <p class="text-sm">區間：${item['區間']}</p>
+                            <a href="${item['Google地圖']}" target="_blank" class="block mt-2 text-center bg-indigo-500 text-white py-1 rounded-md text-xs">開啟 Google 地圖導航</a>
                         </div>
-                    `, { className: 'custom-popup' });
-                    marker.addTo(markerLayer);
+                    `);
+
+                    marker.addTo(markerGroup);
                     bounds.push(latlng);
                 }
             });
 
-            // 如果有資料點，縮放地圖到適合範圍
+            // 如果有資料且超過 1 筆，則自動縮放地圖視角
             if (bounds.length > 0) {
-                map.fitBounds(L.latLngBounds(bounds), { padding: [50, 50], maxZoom: 15 });
-            }
-        }
-
-        // --- 以下保留你原有的篩選邏輯並做微調以整合地圖 ---
-
-        const searchInput = document.getElementById('search-input');
-        const electricSectionFilter = document.getElementById('electric-section-filter');
-        const cityFilter = document.getElementById('city-filter');
-        const stationFilter = document.getElementById('station-filter');
-        const sectionFilter = document.getElementById('section-filter');
-        const lineFilter = document.getElementById('line-filter');
-        const resultsContainer = document.getElementById('results-container');
-        const loadingMessage = document.getElementById('loading-message');
-        const noResultsMessage = document.getElementById('no-results-message');
-        const resultsCountElement = document.getElementById('results-count');
-        const clearFiltersBtn = document.getElementById('clear-filters-btn');
-        const activeFiltersContainer = document.getElementById('active-filters');
-
-        function isUnknownValue(value, key) { return (key === '電務段' || key === '分駐所') && (value === '' || value === 0); }
-        function getDisplayValue(value, key) { return isUnknownValue(value, key) ? '不明' : value; }
-
-        function renderCrossings(data) {
-            resultsContainer.innerHTML = '';
-            resultsCountElement.textContent = `共 ${data.length} 筆結果`;
-            
-            if (data.length === 0) {
-                noResultsMessage.classList.remove('hidden');
-                markerLayer.clearLayers();
-            } else {
-                noResultsMessage.classList.add('hidden');
-                data.slice(0, 50).forEach((item, index) => { // 僅在清單顯示前 50 筆避免效能問題
-                    const isDeactivated = item['停用'] && item['停用'] !== '';
-                    const card = document.createElement('div');
-                    card.className = `bg-gray-800/80 p-5 rounded-2xl border border-gray-700 hover:border-indigo-500 transition-all ${isDeactivated ? 'deactivated-card' : ''}`;
-                    
-                    card.innerHTML = `
-                        <div class="flex justify-between items-start mb-2">
-                            <h3 class="font-bold text-indigo-400">${item['平交道名稱']}</h3>
-                            <span class="text-xs text-gray-500">${item['編號']}</span>
-                        </div>
-                        <p class="text-xs text-gray-300">📍 ${item['所在縣市']} | ${item['區間']}</p>
-                        <div class="mt-3 flex gap-2">
-                            ${item['Google地圖'] ? `<a href="${item['Google地圖']}" target="_blank" class="text-xs text-indigo-400 underline">地圖導航</a>` : ''}
-                        </div>
-                    `;
-                    resultsContainer.appendChild(card);
-                });
-                
-                if(data.length > 50) {
-                    const more = document.createElement('p');
-                    more.className = 'col-span-full text-center text-gray-500 text-sm py-4';
-                    more.textContent = '... 僅顯示前 50 筆詳細資訊，地圖上已標註所有位置';
-                    resultsContainer.appendChild(more);
+                if (bounds.length === 1) {
+                    map.setView(bounds[0], 15);
+                } else {
+                    map.fitBounds(L.latLngBounds(bounds), { padding: [50, 50], maxZoom: 14 });
                 }
             }
-            renderMarkers(data);
         }
 
-        function filterAndRender() {
-            const searchTerm = searchInput.value.toLowerCase();
-            const sElectric = electricSectionFilter.value;
-            const sCity = cityFilter.value;
-            const sStation = stationFilter.value;
-            const sSection = sectionFilter.value;
-            const sLine = lineFilter.value;
+        // --- UI 渲染與篩選邏輯 ---
+        const searchInput = document.getElementById('search-input');
+        const cityFilter = document.getElementById('city-filter');
+        const electricFilter = document.getElementById('electric-filter');
+        const lineFilter = document.getElementById('line-filter');
+        const typeFilter = document.getElementById('type-filter');
+        const resultsGrid = document.getElementById('results-grid');
+        const resultsCountText = document.getElementById('results-count');
+        const statusMsg = document.getElementById('status-message');
 
-            const filtered = fullCrossingData.filter(item => {
-                const nameMatch = item['平交道名稱'].toLowerCase().includes(searchTerm);
-                const electricMatch = !sElectric || getDisplayValue(item['電務段'], '電務段') === sElectric;
-                const cityMatch = !sCity || item['所在縣市'] === sCity;
-                const stationMatch = !sStation || getDisplayValue(item['分駐所'], '分駐所') === sStation;
-                const sectionMatch = !sSection || item['區間'] === sSection;
-                const lineMatch = !sLine || item['路線別'] === sLine;
-                return nameMatch && electricMatch && cityMatch && stationMatch && sectionMatch && lineMatch;
-            });
-
-            renderCrossings(filtered);
-            updateClearBtn();
-        }
-
-        function updateClearBtn() {
-            const hasFilter = searchInput.value || electricSectionFilter.value || cityFilter.value || stationFilter.value || sectionFilter.value || lineFilter.value;
-            clearFiltersBtn.classList.toggle('hidden', !hasFilter);
-        }
-
-        function populateOptions() {
-            const getUnique = (key) => [...new Set(fullCrossingData.map(item => getDisplayValue(item[key], key)))].filter(v => v && v !== 'undefined').sort();
+        function populateSelects(data) {
+            const getUnique = (key) => [...new Set(data.map(i => i[key]))].filter(Boolean).sort();
             
-            const setup = (el, key) => {
-                const opts = getUnique(key);
-                el.innerHTML = '<option value="">全部</option>' + opts.map(v => `<option value="${v}">${v}</option>`).join('');
+            const fill = (el, items) => {
+                const current = el.value;
+                el.innerHTML = '<option value="">全部</option>' + items.map(v => `<option value="${v}">${v}</option>`).join('');
+                el.value = current;
             };
 
-            setup(electricSectionFilter, '電務段');
-            setup(stationFilter, '分駐所');
-            setup(cityFilter, '所在縣市');
-            setup(sectionFilter, '區間');
-            setup(lineFilter, '路線別');
+            fill(cityFilter, getUnique('所在縣市'));
+            fill(electricFilter, getUnique('電務段'));
+            fill(lineFilter, getUnique('路線別'));
+            fill(typeFilter, getUnique('平交道種類'));
         }
 
-        // 事件綁定
-        [searchInput, electricSectionFilter, cityFilter, stationFilter, sectionFilter, lineFilter].forEach(el => {
-            el.addEventListener(el.tagName === 'INPUT' ? 'input' : 'change', () => {
-                clearTimeout(debounceTimer);
-                debounceTimer = setTimeout(filterAndRender, 300);
+        function filterData() {
+            const query = searchInput.value.toLowerCase();
+            const city = cityFilter.value;
+            const electric = electricFilter.value;
+            const line = lineFilter.value;
+            const type = typeFilter.value;
+
+            const filtered = fullData.filter(item => {
+                const matchSearch = item['平交道名稱'].toLowerCase().includes(query) || item['編號'].toString().includes(query);
+                const matchCity = !city || item['所在縣市'] === city;
+                const matchElectric = !electric || item['電務段'] === electric;
+                const matchLine = !line || item['路線別'] === line;
+                const matchType = !type || item['平交道種類'] === type;
+                return matchSearch && matchCity && matchElectric && matchLine && matchType;
             });
+
+            renderGrid(filtered);
+            updateMapMarkers(filtered);
+        }
+
+        function renderGrid(data) {
+            resultsGrid.innerHTML = '';
+            resultsCountText.textContent = `找到 ${data.length} 個平交道`;
+            
+            if (data.length === 0) {
+                statusMsg.classList.remove('hidden');
+            } else {
+                statusMsg.classList.add('hidden');
+                // 為了效能，卡片只顯示前 60 筆，地圖則顯示全部
+                data.slice(0, 60).forEach(item => {
+                    const card = document.createElement('div');
+                    card.className = 'bg-gray-800/40 border border-gray-700/50 p-6 rounded-2xl hover:border-indigo-500/50 transition-all group';
+                    card.innerHTML = `
+                        <div class="flex justify-between items-start mb-4">
+                            <div>
+                                <span class="text-xs font-bold text-indigo-400 tracking-wider uppercase">${item['編號']}</span>
+                                <h3 class="text-xl font-bold text-white group-hover:text-indigo-300 transition-colors">${item['平交道名稱']}</h3>
+                            </div>
+                            <span class="px-2 py-1 bg-gray-700 text-gray-300 text-[10px] rounded">${item['平交道種類']}</span>
+                        </div>
+                        <div class="space-y-2 text-sm text-gray-400">
+                            <p class="flex items-center gap-2">📍 ${item['所在縣市']} (${item['區間']})</p>
+                            <p class="flex items-center gap-2">🛤️ ${item['路線別']} | 里程：${item['里程']}</p>
+                        </div>
+                        <div class="mt-6 flex gap-2">
+                            <a href="${item['Google地圖']}" target="_blank" class="flex-1 text-center py-2 bg-indigo-600/20 hover:bg-indigo-600/40 text-indigo-300 rounded-xl text-sm font-medium transition-all">地圖導航</a>
+                            <button onclick="zoomToMarker('${item['平交道名稱']}')" class="px-3 py-2 bg-gray-700/50 hover:bg-gray-700 text-white rounded-xl text-sm">定位</button>
+                        </div>
+                    `;
+                    resultsGrid.appendChild(card);
+                });
+            }
+        }
+
+        // 定位按鈕功能
+        window.zoomToMarker = (name) => {
+            const item = fullData.find(i => i['平交道名稱'] === name);
+            const latlng = parseLatLngFromUrl(item['Google地圖']);
+            if (latlng) {
+                map.setView(latlng, 18);
+                window.scrollTo({ top: document.getElementById('map').offsetTop - 20, behavior: 'smooth' });
+            }
+        };
+
+        // 事件監聽
+        [searchInput, cityFilter, electricFilter, lineFilter, typeFilter].forEach(el => {
+            el.addEventListener(el.tagName === 'INPUT' ? 'input' : 'change', filterData);
         });
 
-        clearFiltersBtn.addEventListener('click', () => {
-            [searchInput, electricSectionFilter, cityFilter, stationFilter, sectionFilter, lineFilter].forEach(el => el.value = '');
-            filterAndRender();
+        document.getElementById('reset-btn').addEventListener('click', () => {
+            searchInput.value = '';
+            cityFilter.value = '';
+            electricFilter.value = '';
+            lineFilter.value = '';
+            typeFilter.value = '';
+            filterData();
         });
 
+        // 頁面載入
         window.addEventListener('load', () => {
             initMap();
             fetch('evelcrossing.json')
                 .then(res => res.json())
                 .then(data => {
-                    fullCrossingData = data;
-                    loadingMessage.classList.add('hidden');
-                    populateOptions();
-                    filterAndRender();
+                    fullData = data;
+                    populateSelects(data);
+                    renderGrid(data);
+                    updateMapMarkers(data);
                 })
-                .catch(() => {
-                    loadingMessage.innerHTML = '<p class="text-red-400">無法讀取 evelcrossing.json 資料檔</p>';
+                .catch(err => {
+                    resultsCountText.textContent = '資料載入失敗';
+                    console.error(err);
                 });
         });
 
-        // 滾動頂端
-        const scrollBtn = document.getElementById('scroll-to-top-btn');
-        window.onscroll = () => scrollBtn.classList.toggle('show', window.scrollY > 500);
+        // 滾動按鈕邏輯
+        const scrollBtn = document.getElementById('scroll-to-top');
+        window.onscroll = () => scrollBtn.classList.toggle('show', window.scrollY > 400);
         scrollBtn.onclick = () => window.scrollTo({ top: 0, behavior: 'smooth' });
     </script>
 </body>
 </html>
 
-  
