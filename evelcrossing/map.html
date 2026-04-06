@@ -409,19 +409,27 @@
                 if (coords) {
                     hasValidMarkers = true;
                     const stationDisplay = getDisplayValue(item['分駐所'], '分駐所');
+                    const electricSectionDisplay = getDisplayValue(item['電務段'], '電務段');
                     currentStations.add(stationDisplay);
                     
                     const markerColor = getStationColor(stationDisplay);
                     const isDeactivated = item['停用'] && item['停用'] !== '';
                     const deactivatedHTML = isDeactivated ? `<span class="bg-red-100 text-red-600 px-2 py-0.5 rounded text-xs font-bold mt-2 inline-block border border-red-200">停用: ${item['停用']}</span>` : '';
                     
+                    const oldName = item['舊名或別名'] ? `<span class="text-xs text-slate-500 font-normal ml-1">(${item['舊名或別名']})</span>` : '';
+
                     const popupContent = `
-                        <div class="min-w-[200px]">
-                            <h3 class="font-bold text-indigo-700 text-base mb-1 border-b pb-1">${item['平交道名稱']}</h3>
-                            <div class="text-sm text-slate-600 space-y-1 mt-2">
+                        <div class="min-w-[220px]">
+                            <h3 class="font-bold text-indigo-700 text-base mb-1 border-b pb-1 flex items-center flex-wrap">
+                                ${item['平交道名稱']}${oldName}
+                            </h3>
+                            <div class="text-sm text-slate-600 space-y-1.5 mt-2">
                                 <p><span class="font-semibold text-slate-500">編號：</span>${item['編號']}</p>
-                                <p><span class="font-semibold text-slate-500">單位：</span>${stationDisplay}分駐所</p>
-                                <p><span class="font-semibold text-slate-500">位置：</span>${item['所在縣市']} / ${item['區間']}間</p>
+                                <p><span class="font-semibold text-slate-500">路線：</span>${item['路線別']} (${item['平交道種類']})</p>
+                                <p><span class="font-semibold text-slate-500">里程：</span>${item['里程']}</p>
+                                <p><span class="font-semibold text-slate-500">區間：</span>${item['區間']} (${item['區間起']}－${item['區間迄']})</p>
+                                <p><span class="font-semibold text-slate-500">單位：</span>${electricSectionDisplay}段 / ${stationDisplay}分駐所</p>
+                                <p><span class="font-semibold text-slate-500">縣市：</span>${item['所在縣市']}</p>
                                 ${item.distance !== undefined ? `<p><span class="font-semibold text-slate-500">距離：</span><span class="text-green-600 font-bold">${item.distance.toFixed(1)} km</span></p>` : ''}
                             </div>
                             ${deactivatedHTML}
@@ -937,7 +945,7 @@
                         <div class="text-red-500 bg-red-50 p-6 rounded-2xl border border-red-100 max-w-sm mx-auto">
                             <div class="text-4xl mb-3">⚠️</div>
                             <p class="text-lg font-bold">載入資料失敗</p>
-                            <p class="text-sm text-red-400 mt-2">請檢查 evelcrossingmap.json 是否存在或網路連線狀態</p>
+                            <p class="text-sm text-red-400 mt-2">請檢查 evelcrossing.json 是否存在或網路連線狀態</p>
                         </div>
                     `;
                 });
