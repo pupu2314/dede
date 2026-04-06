@@ -808,7 +808,7 @@
 
         // 初始載入資料
         window.addEventListener('load', () => {
-            fetch('evelcrossing.json')
+            fetch('evelcrossingmap.json')
                 .then(response => {
                     if (!response.ok) throw new Error('網路錯誤');
                     return response.json();
@@ -825,7 +825,7 @@
                         <div class="text-red-500 bg-red-50 p-6 rounded-2xl border border-red-100 max-w-sm mx-auto">
                             <div class="text-4xl mb-3">⚠️</div>
                             <p class="text-lg font-bold">載入資料失敗</p>
-                            <p class="text-sm text-red-400 mt-2">請檢查 evelcrossing.json 是否存在或網路連線狀態</p>
+                            <p class="text-sm text-red-400 mt-2">請檢查 evelcrossingmap.json 是否存在或網路連線狀態</p>
                         </div>
                     `;
                 });
