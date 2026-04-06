@@ -14,9 +14,10 @@
     <style>
         body {
             font-family: 'Inter', sans-serif;
-            background-color: #f8fafc; /* Tailwind slate-50 */
-            color: #1e293b; /* Tailwind slate-800 */
+            background-color: #f8fafc; /* slate-50 - 適合戶外高對比的白色模式 */
+            color: #1e293b; /* slate-800 */
             min-height: 100vh;
+            overflow-y: scroll; /* 保持捲軸存在，避免抖動 */
         }
         
         .scroll-to-top {
@@ -68,8 +69,8 @@
                 45deg,
                 transparent,
                 transparent 10px,
-                rgba(0, 0, 0, 0.02) 10px,
-                rgba(0, 0, 0, 0.02) 20px
+                rgba(0, 0, 0, 0.03) 10px,
+                rgba(0, 0, 0, 0.03) 20px
             );
             pointer-events: none;
         }
@@ -114,25 +115,45 @@
             background-clip: text;
         }
 
-        /* 置頂篩選列樣式與縮小動畫 */
+        /* 置頂篩選列的平滑縮放動畫 */
         #filter-bar {
-            transition: all 0.3s ease;
+            transition: padding 0.3s ease, box-shadow 0.3s ease;
         }
         
-        /* 當滾動時套用的樣式 (縮小為兩列) */
-        #filter-bar.scrolled {
-            padding-top: 0.5rem;
-            padding-bottom: 0.5rem;
-            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
-        }
-        #filter-bar.scrolled #main-title-container {
-            display: none; /* 隱藏大標題 */
-        }
-        #filter-bar.scrolled #active-filters {
-            display: none; /* 隱藏過長的篩選標籤，保持緊湊 */
+        #main-title-container {
+            transition: max-height 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.2s ease, margin 0.3s ease;
+            max-height: 150px;
+            opacity: 1;
+            overflow: hidden;
         }
 
-        /* 隱藏捲軸但可滑動 (針對手機版下拉選單區) */
+        #active-filters-wrapper {
+            transition: max-height 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.2s ease, margin 0.3s ease;
+            max-height: 100px;
+            opacity: 1;
+            overflow: hidden;
+        }
+
+        /* 捲動後的狀態 */
+        #filter-bar.scrolled {
+            padding-top: 0.75rem;
+            padding-bottom: 0.75rem;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+        }
+        
+        #filter-bar.scrolled #main-title-container {
+            max-height: 0;
+            opacity: 0;
+            margin-bottom: 0;
+        }
+
+        #filter-bar.scrolled #active-filters-wrapper {
+            max-height: 0;
+            opacity: 0;
+            margin-top: 0;
+        }
+
+        /* 隱藏捲軸但保留水平滑動能力 */
         .hide-scrollbar::-webkit-scrollbar {
             display: none;
         }
@@ -141,32 +162,45 @@
             scrollbar-width: none;
         }
 
-        /* 地圖高度與層級 */
         #map-container {
-            height: calc(100vh - 200px); /* 動態高度 */
+            height: calc(100vh - 220px);
             min-height: 400px;
-            z-index: 10; /* 低於 sticky header */
+            z-index: 10;
+        }
+
+        /* 用於 IntersectionObserver 的定位錨點 */
+        #scroll-anchor {
+            position: absolute;
+            top: 80px;
+            left: 0;
+            width: 100%;
+            height: 1px;
+            visibility: hidden;
+            pointer-events: none;
         }
     </style>
 </head>
-<body class="text-slate-800 pb-16">
+<body class="text-slate-800 pb-16 relative">
+
+    <!-- 用於偵測捲動的絕對定位錨點 (解決抖動問題的核心) -->
+    <div id="scroll-anchor"></div>
 
     <!-- 置頂篩選列 (Sticky Header) -->
     <div id="filter-bar" class="sticky top-0 z-40 bg-white/95 backdrop-blur-md px-4 py-6 sm:px-8 border-b border-slate-200 shadow-sm">
         <div class="max-w-7xl mx-auto">
             
-            <!-- 標題區 (捲動後隱藏) -->
-            <div id="main-title-container" class="text-center mb-6 transition-all">
+            <!-- 標題區 (捲動後會平滑隱藏) -->
+            <div id="main-title-container" class="text-center mb-5">
                 <h1 class="text-3xl sm:text-4xl font-extrabold mb-2 header-gradient">
                     平交道資訊查詢
                 </h1>
                 <p class="text-slate-500 text-sm font-medium">快速搜尋全台灣平交道位置與詳細資訊</p>
             </div>
             
-            <!-- 篩選列 緊湊兩列配置 -->
+            <!-- 篩選列核心配置 -->
             <div class="flex flex-col gap-3">
                 
-                <!-- 第一列：搜尋與視角切換 -->
+                <!-- 搜尋與視角切換 -->
                 <div class="flex flex-col sm:flex-row gap-3 items-center w-full">
                     <div class="relative flex-grow w-full">
                         <span class="absolute inset-y-0 left-0 flex items-center pl-3">
@@ -181,7 +215,7 @@
                     
                     <div class="flex gap-2 w-full sm:w-auto">
                         <button id="toggle-view-btn" class="flex-1 sm:flex-none whitespace-nowrap px-4 py-2.5 bg-slate-800 hover:bg-slate-700 text-white rounded-lg font-medium shadow-sm transition-colors flex justify-center items-center gap-2">
-                            <span>🗺️</span> <span id="toggle-view-text">切換地圖</span>
+                            <span>🗺️</span> <span id="toggle-view-text">地圖模式</span>
                         </button>
                         <button id="clear-filters-btn" class="hidden whitespace-nowrap px-4 py-2.5 bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 rounded-lg font-medium transition-colors flex items-center justify-center">
                             清除篩選
@@ -189,7 +223,7 @@
                     </div>
                 </div>
 
-                <!-- 第二列：各項下拉式選單 (手機上可水平滑動) -->
+                <!-- 各項下拉式選單 (手機上可水平滑動) -->
                 <div class="flex flex-nowrap sm:grid sm:grid-cols-5 gap-3 overflow-x-auto hide-scrollbar pb-1 sm:pb-0">
                     <div class="min-w-[120px] sm:min-w-0">
                         <select id="electric-section-filter" class="w-full px-3 py-2 text-sm bg-slate-50 text-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 border border-slate-300 cursor-pointer shadow-sm">
@@ -218,10 +252,10 @@
                     </div>
                 </div>
 
-                <!-- 顯示已套用的標籤 (只在未捲動時顯示以節省空間) -->
-                <div class="flex items-center justify-between mt-1">
+                <!-- 顯示已套用的標籤 (捲動時隱藏以節省空間) -->
+                <div id="active-filters-wrapper" class="flex flex-col sm:flex-row sm:items-center justify-between mt-1 gap-2">
                     <div id="active-filters" class="flex flex-wrap gap-2"></div>
-                    <p id="results-count" class="text-xs font-semibold text-slate-500 whitespace-nowrap ml-auto"></p>
+                    <p id="results-count" class="text-xs font-semibold text-slate-500 whitespace-nowrap sm:ml-auto"></p>
                 </div>
 
             </div>
@@ -240,7 +274,7 @@
         <div id="map-wrapper" class="hidden w-full bg-white rounded-2xl shadow-md border border-slate-200 overflow-hidden relative">
             <div id="map-container" class="w-full"></div>
             <div class="absolute bottom-4 left-4 bg-white/90 backdrop-blur px-3 py-2 rounded-lg shadow-md border border-slate-200 text-xs text-slate-600 font-medium z-[1000] pointer-events-none">
-                📍 顯示目前篩選的平交道 (僅列出有座標資料者)
+                📍 顯示目前篩選的平交道 (僅顯示具備座標之資料)
             </div>
         </div>
 
@@ -252,14 +286,14 @@
                     <div class="w-3 h-3 bg-indigo-500 rounded-full animate-bounce" style="animation-delay: 0.2s"></div>
                     <div class="w-3 h-3 bg-indigo-500 rounded-full animate-bounce" style="animation-delay: 0.4s"></div>
                 </div>
-                <p class="text-slate-500 mt-4 font-medium">正在載入資料...</p>
+                <p class="text-slate-500 mt-4 font-medium">資料載入中...</p>
             </div>
         </div>
 
         <!-- 無結果訊息 -->
         <div id="no-results-message" class="hidden text-center mt-16 mb-20">
             <div class="text-5xl mb-4">🔍</div>
-            <p class="text-slate-700 text-lg font-bold">找不到符合條件的平交道資訊</p>
+            <p class="text-slate-700 text-lg font-bold">找不到符合條件的資訊</p>
             <p class="text-slate-500 text-sm mt-2">請嘗試放寬篩選條件或更改關鍵字</p>
         </div>
 
@@ -285,6 +319,7 @@
 
         // DOM 元素
         const filterBar = document.getElementById('filter-bar');
+        const scrollAnchor = document.getElementById('scroll-anchor');
         const searchInput = document.getElementById('search-input');
         const electricSectionFilter = document.getElementById('electric-section-filter');
         const cityFilter = document.getElementById('city-filter');
@@ -313,17 +348,6 @@
             return isUnknownValue(value, key) ? '不明' : value;
         }
 
-        // 輔助：從 Google Maps 網址中擷取經緯度
-        function extractLatLng(url) {
-            if (!url) return null;
-            // 尋找 query=緯度,經度 的格式
-            const match = url.match(/query=([-.\d]+),([-.\d]+)/);
-            if (match && match.length === 3) {
-                return [parseFloat(match[1]), parseFloat(match[2])];
-            }
-            return null;
-        }
-
         // 地圖初始化功能
         function initMapIfNeeded() {
             if (!map) {
@@ -334,11 +358,11 @@
                 }).addTo(map);
                 markersGroup = L.featureGroup().addTo(map);
             }
-            // 因為 div 原本可能為 hidden，顯示後需要重新調整大小
+            // 因為 div 原本可能為 hidden，顯示後需要重新計算大小
             setTimeout(() => { map.invalidateSize(); }, 100);
         }
 
-        // 更新地圖標記
+        // 更新地圖標記 (改用新的緯度、經度欄位)
         function updateMapMarkers() {
             if (!map || !markersGroup) return;
             
@@ -346,7 +370,27 @@
             let hasValidMarkers = false;
 
             filteredData.forEach(item => {
-                const coords = extractLatLng(item['Google地圖']);
+                // 優先使用新的經緯度欄位
+                let lat = item['緯度'];
+                let lng = item['經度'];
+                let coords = null;
+                let navUrl = '';
+
+                // 若有拆分的經緯度欄位
+                if (lat && lng && !isNaN(lat) && !isNaN(lng)) {
+                    coords = [lat, lng];
+                    // 組合成導航專用網址
+                    navUrl = `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`;
+                } 
+                // 為了相容尚未完全轉換的舊資料 (如果有保留舊欄位)
+                else if (item['Google地圖']) {
+                    const match = item['Google地圖'].match(/query=([-.\d]+),([-.\d]+)/);
+                    if (match && match.length === 3) {
+                        coords = [parseFloat(match[1]), parseFloat(match[2])];
+                        navUrl = item['Google地圖'];
+                    }
+                }
+
                 if (coords) {
                     hasValidMarkers = true;
                     const isDeactivated = item['停用'] && item['停用'] !== '';
@@ -364,23 +408,23 @@
                             </div>
                             ${deactivatedHTML}
                             <div class="mt-3 text-right">
-                                <a href="${item['Google地圖']}" target="_blank" class="text-xs text-indigo-600 hover:text-indigo-800 font-medium underline">在 Google 地圖開啟</a>
+                                <a href="${navUrl}" target="_blank" class="text-xs text-white bg-indigo-600 hover:bg-indigo-700 px-3 py-1.5 rounded-lg font-medium inline-block transition-colors shadow-sm">開始導航</a>
                             </div>
                         </div>
                     `;
 
-                    // 改變停用標記的顏色(可透過修改 marker 顏色，這裡用預設並加上透明度)
-                    const markerOptions = isDeactivated ? { opacity: 0.6 } : {};
+                    // 已停用平交道改用半透明顯示
+                    const markerOptions = isDeactivated ? { opacity: 0.5 } : {};
                     const marker = L.marker(coords, markerOptions).bindPopup(popupContent);
                     markersGroup.addLayer(marker);
                 }
             });
 
-            // 如果有標記，自動縮放以包含所有標記
+            // 自動縮放以包含所有符合篩選的標記
             if (hasValidMarkers) {
-                map.fitBounds(markersGroup.getBounds(), { padding: [30, 30], maxZoom: 14 });
+                map.fitBounds(markersGroup.getBounds(), { padding: [30, 30], maxZoom: 15 });
             } else {
-                map.setView([23.6978, 120.9605], 7); // 重設回台灣全區
+                map.setView([23.6978, 120.9605], 7); // 找不到座標時重設回台灣全區
             }
         }
 
@@ -388,13 +432,13 @@
         toggleViewBtn.addEventListener('click', () => {
             isMapView = !isMapView;
             if (isMapView) {
-                toggleViewText.textContent = "切換列表";
+                toggleViewText.textContent = "列表模式";
                 resultsContainer.classList.add('hidden');
                 mapWrapper.classList.remove('hidden');
                 initMapIfNeeded();
                 updateMapMarkers();
             } else {
-                toggleViewText.textContent = "切換地圖";
+                toggleViewText.textContent = "地圖模式";
                 resultsContainer.classList.remove('hidden');
                 mapWrapper.classList.add('hidden');
             }
@@ -403,7 +447,7 @@
         // 渲染平交道列表卡片
         function renderCrossings(data) {
             resultsContainer.innerHTML = '';
-            resultsCountElement.textContent = `顯示 ${data.length} 筆`;
+            resultsCountElement.textContent = `共 ${data.length} 筆資料`;
 
             if (data.length === 0) {
                 noResultsMessage.classList.remove('hidden');
@@ -420,14 +464,25 @@
                     const electricSectionDisplay = getDisplayValue(item['電務段'], '電務段');
                     const stationDisplay = getDisplayValue(item['分駐所'], '分駐所');
 
-                    const googleMapContent = item['Google地圖'] ? 
-                        `<a href="${item['Google地圖']}" target="_blank" class="inline-flex items-center space-x-1.5 text-indigo-600 hover:text-indigo-800 transition-colors bg-indigo-50 hover:bg-indigo-100 px-3 py-1.5 rounded-lg text-sm font-medium">
+                    // 取得導航網址
+                    let navUrl = '';
+                    let hasLocation = false;
+                    if (item['緯度'] && item['經度'] && !isNaN(item['緯度']) && !isNaN(item['經度'])) {
+                        navUrl = `https://www.google.com/maps/dir/?api=1&destination=${item['緯度']},${item['經度']}`;
+                        hasLocation = true;
+                    } else if (item['Google地圖']) {
+                        navUrl = item['Google地圖'];
+                        hasLocation = true;
+                    }
+
+                    const googleMapContent = hasLocation ? 
+                        `<a href="${navUrl}" target="_blank" class="inline-flex items-center space-x-1.5 text-indigo-600 hover:text-indigo-800 transition-colors bg-indigo-50 hover:bg-indigo-100 px-3 py-1.5 rounded-lg text-sm font-medium">
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
                                 <path fill-rule="evenodd" d="M5.057 5.057a7 7 0 119.886 9.886L10 18.886l-4.943-4.943a7 7 0 010-9.886zM10 11a2 2 1000-4 2 2 0 000 4z" clip-rule="evenodd" />
                             </svg>
-                            <span>地圖</span>
+                            <span>導航</span>
                         </a>` :
-                        `<span class="text-sm text-slate-400 bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-100">無位置資訊</span>`;
+                        `<span class="text-sm text-slate-400 bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-100">無座標資料</span>`;
 
                     const deactivatedBadge = isDeactivated ? 
                         `<span class="bg-red-100 text-red-600 border border-red-200 text-xs font-bold px-2.5 py-0.5 rounded-md ml-2 inline-flex items-center" title="${item['停用']}">停用</span>` : '';
@@ -445,7 +500,7 @@
                         <div class="space-y-2 text-sm text-slate-600 bg-slate-50 rounded-lg p-3 border border-slate-100">
                             <div class="flex items-start">
                                 <span class="font-semibold text-slate-400 min-w-[3.5rem]">位置</span>
-                                <span class="text-slate-800 font-medium">${item['所在縣市']} <span class="text-slate-400 mx-1">/</span> ${item['區間']}</span>
+                                <span class="text-slate-800 font-medium">${item['所在縣市']} <span class="text-slate-400 mx-1">/</span> ${item['區間']}間</span>
                             </div>
                             <div class="flex items-start">
                                 <span class="font-semibold text-slate-400 min-w-[3.5rem]">路線</span>
@@ -483,7 +538,7 @@
                 let value = item[key];
                 if (isUnknownValue(value, key)) {
                     hasUnknown = true;
-                } else if (value !== '' && value !== 0) {
+                } else if (value !== '' && value !== 0 && value !== undefined) {
                     uniqueValues.add(value);
                 }
             });
@@ -540,7 +595,7 @@
             }
         }
 
-        // 供單獨移除某個過濾標籤的函數
+        // 單獨移除某個過濾標籤的函數
         window.removeFilter = function(type) {
             if (type === 'search') searchInput.value = '';
             else if (type === 'electric') electricSectionFilter.value = '';
@@ -581,7 +636,7 @@
                 renderCrossings(filteredData);
             } else {
                 updateMapMarkers();
-                resultsCountElement.textContent = `顯示 ${filteredData.length} 筆`;
+                resultsCountElement.textContent = `共 ${filteredData.length} 筆資料`;
                 if(filteredData.length === 0) {
                     noResultsMessage.classList.remove('hidden');
                 } else {
@@ -620,13 +675,11 @@
             }), '路線別', '路線');
         }
 
-        // Debounce 搜尋
         function debounceSearch() {
             clearTimeout(debounceTimer);
             debounceTimer = setTimeout(filterAndRender, 300);
         }
 
-        // 清除所有篩選
         function clearAllFilters() {
             searchInput.value = '';
             electricSectionFilter.value = '';
@@ -637,7 +690,6 @@
             filterAndRender();
         }
 
-        // 事件監聽器
         searchInput.addEventListener('input', debounceSearch);
         electricSectionFilter.addEventListener('change', filterAndRender);
         cityFilter.addEventListener('change', filterAndRender);
@@ -646,20 +698,27 @@
         lineFilter.addEventListener('change', filterAndRender);
         clearFiltersBtn.addEventListener('click', clearAllFilters);
 
-        // 滾動與縮小 Header 的效果
+        // --- 核心抖動修復：使用 IntersectionObserver 代替 scrollY 判定 ---
+        // 觀察絕對定位的 scrollAnchor，一旦它離開視窗頂部，就縮小 Header，返回視窗就放大
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (!entry.isIntersecting) {
+                    // 錨點已經被往上捲出螢幕，縮小 Header
+                    filterBar.classList.add('scrolled');
+                } else {
+                    // 錨點回到螢幕內，放大 Header
+                    filterBar.classList.remove('scrolled');
+                }
+            });
+        }, { threshold: 0 }); // threshold: 0 代表一碰到邊界就觸發
+        observer.observe(scrollAnchor);
+
+        // 僅保留 Top 按鈕的捲動事件
         window.addEventListener('scroll', () => {
-            // 控制 Go to top 按鈕
             if (window.scrollY > 300) {
                 scrollToTopBtn.classList.add('show');
             } else {
                 scrollToTopBtn.classList.remove('show');
-            }
-
-            // 控制標頭縮小
-            if (window.scrollY > 80) {
-                filterBar.classList.add('scrolled');
-            } else {
-                filterBar.classList.remove('scrolled');
             }
         });
 
@@ -673,12 +732,19 @@
                 const btn = e.target.closest('.share-btn');
                 const item = JSON.parse(btn.getAttribute('data-item'));
                 
+                let navUrl = '';
+                if (item['緯度'] && item['經度'] && !isNaN(item['緯度']) && !isNaN(item['經度'])) {
+                    navUrl = `https://www.google.com/maps/dir/?api=1&destination=${item['緯度']},${item['經度']}`;
+                } else if (item['Google地圖']) {
+                    navUrl = item['Google地圖'];
+                }
+
                 const shareText = `🚂 平交道：${item['平交道名稱']}\n` +
                     `📍 位置：${item['所在縣市']} / ${item['區間']}間\n` +
                     `🛤️ 路線：${item['路線別']} (${item['平交道種類']})\n` +
                     `🏢 單位：${getDisplayValue(item['電務段'], '電務段')}段 ${getDisplayValue(item['分駐所'], '分駐所')}分駐所\n` +
                     `📝 編號：${item['編號']} (${item['里程']})` +
-                    (item['Google地圖'] ? `\n🗺️ 地圖：${item['Google地圖']}` : '');
+                    (navUrl ? `\n🗺️ 導航：${navUrl}` : '');
 
                 if (navigator.share) {
                     navigator.share({
@@ -742,7 +808,7 @@
 
         // 初始載入資料
         window.addEventListener('load', () => {
-            fetch('evelcrossing.json')
+            fetch('evelcrossing_map.json')
                 .then(response => {
                     if (!response.ok) throw new Error('網路錯誤');
                     return response.json();
@@ -759,7 +825,7 @@
                         <div class="text-red-500 bg-red-50 p-6 rounded-2xl border border-red-100 max-w-sm mx-auto">
                             <div class="text-4xl mb-3">⚠️</div>
                             <p class="text-lg font-bold">載入資料失敗</p>
-                            <p class="text-sm text-red-400 mt-2">請檢查 evelcrossing.json 是否存在或網路連線狀態</p>
+                            <p class="text-sm text-red-400 mt-2">請檢查 evelcrossing_map.json 是否存在或網路連線狀態</p>
                         </div>
                     `;
                 });
