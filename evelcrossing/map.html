@@ -478,7 +478,7 @@
                             <div class="text-sm text-slate-600 space-y-1 mt-2">
                                 <p><span class="font-semibold text-slate-400">路線：</span>${getDisplayValue(item['路線別'])} (${item['平交道種類']})</p>
                                 <p><span class="font-semibold text-slate-400">區間：</span>${getDisplayValue(item['區間'])}</p>
-                                <p><span class="font-semibold text-slate-400">單位：</span>${electricSectionDisplay}段 / ${stationDisplay}分駐所</p>
+                                <p><span class="font-semibold text-slate-400">單位：</span>${electricSectionDisplay}電務段 / ${stationDisplay}分駐所</p>
                                 ${item.distance !== undefined && item.distance !== 9999 ? `<p><span class="font-semibold text-slate-400">距離：</span><span class="text-green-600 font-bold">${item.distance.toFixed(1)} km</span></p>` : ''}
                             </div>
                             ${deactivatedHTML}
@@ -513,7 +513,7 @@
                     
                     // 點擊標記自動縮放置適當距離
                     marker.on('click', function(e) {
-                        map.setView(e.latlng, 10, { animate: true });
+                        map.setView(e.latlng, 12, { animate: true });
                     });
                 }
             });
@@ -696,7 +696,7 @@
                             </div>
                             <div class="flex items-start">
                                 <span class="font-semibold text-slate-400 min-w-[3.5rem]">單位</span>
-                                <span class="text-slate-700">${electricSectionDisplay}段 / ${stationDisplay}分駐所</span>
+                                <span class="text-slate-700">${electricSectionDisplay}電務段 / ${stationDisplay}分駐所</span>
                             </div>
                         </div>
                         <div class="mt-4 flex items-center justify-between">
