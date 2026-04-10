@@ -206,11 +206,14 @@
                         class="w-full pl-10 pr-4 py-2 bg-slate-50 text-slate-800 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 border border-slate-300 transition-all font-medium placeholder-slate-400 shadow-sm">
                 </div>
                 
-                <div class="flex flex-row gap-2 w-full md:w-auto flex-shrink-0">
-                    <button id="nearby-btn" class="flex-1 md:flex-none whitespace-nowrap px-4 py-2 bg-green-50 hover:bg-green-100 text-green-700 border border-green-200 rounded-lg font-medium transition-colors flex items-center justify-center gap-1">
+                <div class="flex flex-row flex-wrap sm:flex-nowrap gap-2 w-full md:w-auto flex-shrink-0">
+                    <button id="construction-btn" class="flex-1 sm:flex-none whitespace-nowrap px-3 py-2 bg-yellow-50 hover:bg-yellow-100 text-yellow-700 border border-yellow-200 rounded-lg font-medium transition-colors flex items-center justify-center gap-1">
+                        🚧 施工專案
+                    </button>
+                    <button id="nearby-btn" class="flex-1 sm:flex-none whitespace-nowrap px-3 py-2 bg-green-50 hover:bg-green-100 text-green-700 border border-green-200 rounded-lg font-medium transition-colors flex items-center justify-center gap-1">
                         📍 附近平交道
                     </button>
-                    <button id="toggle-view-btn" class="flex-1 md:flex-none whitespace-nowrap px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white rounded-lg font-medium shadow-sm transition-colors flex justify-center items-center gap-2">
+                    <button id="toggle-view-btn" class="flex-1 sm:flex-none whitespace-nowrap px-3 py-2 bg-slate-800 hover:bg-slate-700 text-white rounded-lg font-medium shadow-sm transition-colors flex justify-center items-center gap-2">
                         <span>🗺️</span> <span id="toggle-view-text">地圖模式</span>
                     </button>
                 </div>
@@ -305,6 +308,7 @@
         let isMapView = false;
         let userLocation = null;
         let isNearbyActive = false;
+        let isConstructionActive = false;
         const NEARBY_RADIUS_KM = 15;
 
         // 監控 filter-bar 高度，即時更新給 CSS 使用，以完美適應地圖填滿螢幕
@@ -376,6 +380,7 @@
         const toggleViewBtn = document.getElementById('toggle-view-btn');
         const toggleViewText = document.getElementById('toggle-view-text');
         const nearbyBtn = document.getElementById('nearby-btn');
+        const constructionBtn = document.getElementById('construction-btn');
         const activeFiltersContainer = document.getElementById('active-filters');
         const recenterBtn = document.getElementById('recenter-btn');
 
@@ -463,14 +468,31 @@
             // 判斷是否超過 8 個分駐所，若超過則以「電務段」區分顏色
             const groupByElectric = currentStations.size > 8;
 
+            // 定義施工專案的電務段專屬配色 (深色: 已施工, 淺色: 未施工)
+            const sectionColorPairs = {
+                '臺北': { dark: '#1e3a8a', light: '#bfdbfe' }, // 藍
+                '彰化': { dark: '#ea580c', light: '#fed7aa' }, // 橘
+                '嘉義': { dark: '#15803d', light: '#bbf7d0' }, // 綠
+                '高雄': { dark: '#7e22ce', light: '#e9d5ff' }, // 紫
+                '花蓮': { dark: '#b91c1c', light: '#fecaca' }, // 紅
+                '臺東': { dark: '#0f766e', light: '#99f6e4' }, // 青
+                '預設': { dark: '#334155', light: '#e2e8f0' }  // 灰
+            };
+
             // 第二次迴圈：依據判斷結果加上圖標
             validItems.forEach(({ item, coords, navUrl, streetViewUrl, stationDisplay, electricDisplay }) => {
                 hasValidMarkers = true;
                 const isDeactivated = item['停用'] && item['停用'] !== '';
                 
-                // 依據群組類型指派顏色
-                const displayGroup = groupByElectric ? electricDisplay : stationDisplay;
-                const markerColor = groupByElectric ? getElectricSectionColor(displayGroup) : getStationColor(displayGroup);
+                let markerColor = '';
+                if (isConstructionActive) {
+                    const pair = sectionColorPairs[electricDisplay] || sectionColorPairs['預設'];
+                    markerColor = (item['施工狀態'] === '已施工') ? pair.dark : pair.light;
+                } else {
+                    // 依據群組類型指派顏色
+                    const displayGroup = groupByElectric ? electricDisplay : stationDisplay;
+                    markerColor = groupByElectric ? getElectricSectionColor(displayGroup) : getStationColor(displayGroup);
+                }
                 
                 const oldName = item['舊名或別名'] ? `<span class="text-xs text-slate-500 font-normal ml-1">(${item['舊名或別名']})</span>` : '';
                 
@@ -486,6 +508,7 @@
                             ${item.distance !== undefined && item.distance !== 9999 ? `<p><span class="font-semibold text-slate-400">距離：</span><span class="text-green-600 font-bold">${item.distance.toFixed(1)} km</span></p>` : ''}
                         </div>
                         ${isDeactivated ? `<span class="bg-red-100 text-red-600 px-2 py-0.5 rounded text-xs font-bold mt-2 inline-block border border-red-200">停用: ${item['停用']}</span>` : ''}
+                        ${item['施工狀態'] ? `<span class="${item['施工狀態'] === '已施工' ? 'bg-indigo-100 text-indigo-700 border-indigo-200' : 'bg-yellow-100 text-yellow-700 border-yellow-200'} px-2 py-0.5 rounded text-xs font-bold mt-2 inline-block border">施工: ${item['施工狀態']}</span>` : ''}
                         <div class="mt-4 flex justify-end gap-2">
                         <a href="${streetViewUrl}" target="_blank" class="inline-flex items-center space-x-1 text-slate-600 hover:text-slate-800 transition-colors bg-slate-100 hover:bg-slate-200 border border-slate-200 px-3 py-1.5 rounded-lg text-sm font-medium">
                             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4"><path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 0 1 0-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178Z" /><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" /></svg><span>街景</span>
@@ -509,7 +532,19 @@
             // 渲染地圖圖例
             const legendDiv = document.getElementById('map-legend-content');
             if (legendDiv) {
-                if (groupByElectric ? currentElectricSections.size > 0 : currentStations.size > 0) {
+                if (isConstructionActive && currentElectricSections.size > 0) {
+                    let legendHtml = `<div class="font-bold mb-1 border-b pb-1 text-slate-700">施工進度 (依電務段)</div>`;
+                    Array.from(currentElectricSections).sort().forEach(sec => {
+                        const pair = sectionColorPairs[sec] || sectionColorPairs['預設'];
+                        legendHtml += `
+                            <div class="legend-item mt-1.5 font-semibold text-[13px]">${sec}</div>
+                            <div class="legend-item pl-2 mb-0"><div class="legend-color" style="background-color: ${pair.dark}"></div><span>已施工</span></div>
+                            <div class="legend-item pl-2 mb-0"><div class="legend-color" style="background-color: ${pair.light}"></div><span>未施工</span></div>
+                        `;
+                    });
+                    legendDiv.innerHTML = legendHtml;
+                    legendDiv.style.display = 'block';
+                } else if (groupByElectric ? currentElectricSections.size > 0 : currentStations.size > 0) {
                     let legendHtml = `<div class="font-bold mb-1 border-b pb-1 text-slate-700">${groupByElectric ? '電務段' : '分駐所'}圖例</div>`;
                     const groups = groupByElectric ? Array.from(currentElectricSections).sort() : Array.from(currentStations).sort();
                     groups.forEach(group => {
@@ -562,35 +597,19 @@
                 nearbyBtn.classList.remove('bg-green-600', 'text-white', 'hover:bg-green-700');
                 nearbyBtn.classList.add('bg-green-50', 'text-green-700', 'hover:bg-green-100');
                 filterAndRender(true);
-            } else {
-                if (!userLocation && "geolocation" in navigator) {
-                    nearbyBtn.innerHTML = '⏳ 定位中...';
-                    navigator.geolocation.getCurrentPosition(
-                        (position) => {
-                            userLocation = { lat: position.coords.latitude, lng: position.coords.longitude };
-                            isNearbyActive = true;
-                            showToast(`✅ 定位成功！顯示 ${NEARBY_RADIUS_KM}km 內的平交道`);
-                            nearbyBtn.innerHTML = '❌ 取消定位篩選';
-                            nearbyBtn.classList.remove('bg-green-50', 'text-green-700', 'hover:bg-green-100');
-                            nearbyBtn.classList.add('bg-green-600', 'text-white', 'hover:bg-green-700');
-                            filterAndRender(true);
-                            navigator.geolocation.watchPosition((pos) => {
-                                userLocation = { lat: pos.coords.latitude, lng: pos.coords.longitude };
-                                if (isMapView) updateMapMarkers(); 
-                            }, null, { enableHighAccuracy: true });
-                        },
-                        () => { nearbyBtn.innerHTML = '📍 附近平交道'; showToast('❌ 定位失敗'); },
-                        { timeout: 10000, enableHighAccuracy: true }
-                    );
-                } else if (userLocation) {
-                    isNearbyActive = true;
-                    showToast(`✅ 已套用！顯示 ${NEARBY_RADIUS_KM}km 內的平交道`);
-                    nearbyBtn.innerHTML = '❌ 取消定位篩選';
-                    nearbyBtn.classList.remove('bg-green-50', 'text-green-700', 'hover:bg-green-100');
-                    nearbyBtn.classList.add('bg-green-600', 'text-white', 'hover:bg-green-700');
-                    filterAndRender(true);
-                }
             }
+        });
+
+        constructionBtn.addEventListener('click', () => {
+            isConstructionActive = !isConstructionActive;
+            if (isConstructionActive) {
+                constructionBtn.classList.remove('bg-yellow-50', 'text-yellow-700', 'hover:bg-yellow-100');
+                constructionBtn.classList.add('bg-yellow-600', 'text-white', 'hover:bg-yellow-700');
+            } else {
+                constructionBtn.classList.remove('bg-yellow-600', 'text-white', 'hover:bg-yellow-700');
+                constructionBtn.classList.add('bg-yellow-50', 'text-yellow-700', 'hover:bg-yellow-100');
+            }
+            filterAndRender(true);
         });
 
         function renderCrossings(data) {
@@ -609,12 +628,16 @@
                     hasLoc = true;
                 }
 
+                const constructionBadge = item['施工狀態'] ?
+                    `<span class="${item['施工狀態'] === '已施工' ? 'bg-indigo-100 text-indigo-700 border-indigo-200' : 'bg-yellow-100 text-yellow-700 border-yellow-200'} border text-xs font-bold px-2.5 py-0.5 rounded-md ml-2">施工: ${item['施工狀態']}</span>` : '';
+
                 card.innerHTML = `
                     <div class="flex justify-between items-start mb-3">
                         <div>
                             <div class="flex items-center flex-wrap gap-y-1">
                                 <h2 class="text-lg sm:text-xl font-bold text-indigo-600 leading-tight">${item['平交道名稱']}${item['舊名或別名'] ? `<span class="text-slate-500 text-sm font-normal ml-1">(${item['舊名或別名']})</span>` : ''}</h2>
                                 ${item.distance !== undefined && item.distance !== 9999 ? `<span class="bg-green-100 text-green-700 border border-green-200 text-xs font-bold px-2.5 py-0.5 rounded-md ml-2">距 ${item.distance.toFixed(1)} km</span>` : ''}
+                                ${constructionBadge}
                                 ${isDeactivated ? `<span class="bg-red-100 text-red-600 border border-red-200 text-xs font-bold px-2.5 py-0.5 rounded-md ml-2">停用</span>` : ''}
                             </div>
                             <p class="text-xs text-slate-400 mt-1 font-mono">ID: ${item['編號']} | ${item['里程']}</p>
@@ -692,6 +715,7 @@
         function updateActiveFilters() {
             const fs = [];
             if (isNearbyActive) fs.push({ label: `📍 附近 ${NEARBY_RADIUS_KM} km`, type: 'location' });
+            if (isConstructionActive) fs.push({ label: `🚧 僅顯示施工專案`, type: 'construction' });
             if (searchInput.value) fs.push({ label: searchInput.value, type: 'search' });
             if (electricSectionFilter.value) fs.push({ label: electricSectionFilter.value, type: 'electric' });
             if (stationFilter.value) fs.push({ label: stationFilter.value, type: 'station' });
@@ -713,6 +737,11 @@
 
         window.removeFilter = (type) => {
             if (type === 'location') { isNearbyActive = false; nearbyBtn.innerHTML = '📍 附近平交道'; nearbyBtn.classList.replace('bg-green-600', 'bg-green-50'); }
+            else if (type === 'construction') { 
+                isConstructionActive = false; 
+                constructionBtn.classList.remove('bg-yellow-600', 'text-white', 'hover:bg-yellow-700');
+                constructionBtn.classList.add('bg-yellow-50', 'text-yellow-700', 'hover:bg-yellow-100');
+            }
             else if (type === 'search') searchInput.value = '';
             else if (type === 'electric') electricSectionFilter.value = '';
             else if (type === 'station') stationFilter.value = '';
@@ -727,7 +756,9 @@
 
             let temp = fullCrossingData.filter(i => {
                 const nm = i['平交道名稱'].toLowerCase().includes(s) || (i['舊名或別名'] && i['舊名或別名'].toLowerCase().includes(s));
-                return nm && (!es || getDisplayValue(i['電務段']) === es) && (!st || getDisplayValue(i['分駐所']) === st) && (!ci || getDisplayValue(i['所在縣市']) === ci) && (!se || getDisplayValue(i['區間']) === se) && (!li || getDisplayValue(i['路線別']) === li);
+                let match = nm && (!es || getDisplayValue(i['電務段']) === es) && (!st || getDisplayValue(i['分駐所']) === st) && (!ci || getDisplayValue(i['所在縣市']) === ci) && (!se || getDisplayValue(i['區間']) === se) && (!li || getDisplayValue(i['路線別']) === li);
+                if (isConstructionActive && !i['施工狀態']) match = false;
+                return match;
             });
 
             if (userLocation) {
