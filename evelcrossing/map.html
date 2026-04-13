@@ -516,7 +516,14 @@
                     className: 'custom-div-icon', iconSize: [18, 18], iconAnchor: [9, 9], popupAnchor: [0, -11]
                 });
 
-                L.marker(coords, { icon: icon }).bindPopup(popupContent).addTo(markersGroup);
+                const marker = L.marker(coords, { icon: icon }).bindPopup(popupContent);
+                
+                // 新增點擊事件：自動定位並放大到級距 12，避免 autoPan 碰到 maxBounds 導致彈回
+                marker.on('click', () => {
+                    map.setView(coords, 12);
+                });
+                
+                marker.addTo(markersGroup);
             });
 
             // 統一圖例邏輯
