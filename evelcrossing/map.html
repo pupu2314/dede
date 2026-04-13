@@ -141,8 +141,8 @@
             border: none;
         }
         .marker-pin {
-            width: 22px;
-            height: 22px;
+            width: 18px;
+            height: 18px;
             border-radius: 50%;
             border: 2px solid white;
             box-shadow: 0 2px 5px rgba(0,0,0,0.5);
@@ -443,7 +443,7 @@
             if (userLocation) {
                 const userIcon = L.divIcon({
                     html: `<div class="relative flex h-5 w-5"><span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span><span class="relative inline-flex rounded-full h-5 w-5 bg-blue-500 border-2 border-white shadow"></span></div>`,
-                    className: '', iconSize: [20, 20], iconAnchor: [10, 10]
+                    className: '', iconSize: [18, 18], iconAnchor: [9, 9]
                 });
                 L.marker([userLocation.lat, userLocation.lng], {icon: userIcon, zIndexOffset: 1000})
                     .bindPopup('<div class="font-bold text-blue-600 text-center text-sm">您的目前位置</div>')
@@ -520,7 +520,7 @@
 
                 const icon = L.divIcon({
                     html: `<div class="marker-pin" style="background-color: ${markerColor}; opacity: ${isDeactivated ? 0.4 : 1};">${innerHtml}</div>`,
-                    className: 'custom-div-icon', iconSize: [18, 18], iconAnchor: [11, 11], popupAnchor: [0, -11]
+                    className: 'custom-div-icon', iconSize: [18, 18], iconAnchor: [9, 9], popupAnchor: [0, -11]
                 });
 
                 L.marker(coords, { icon: icon }).bindPopup(popupContent).addTo(markersGroup);
