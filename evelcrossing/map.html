@@ -468,31 +468,17 @@
                 }
             });
 
+            // 無論是否為施工專案，皆根據分駐所數量來判斷要用「分駐所」還是「電務段」進行分群上色
             const groupByElectric = currentStations.size > 8;
-
-            const sectionColorPairs = {
-                '臺北': { dark: '#1e3a8a', light: '#bfdbfe' },
-                '彰化': { dark: '#ea580c', light: '#fed7aa' },
-                '嘉義': { dark: '#15803d', light: '#bbf7d0' },
-                '高雄': { dark: '#7e22ce', light: '#e9d5ff' },
-                '花蓮': { dark: '#b91c1c', light: '#fecaca' },
-                '臺東': { dark: '#0f766e', light: '#99f6e4' },
-                '預設': { dark: '#334155', light: '#e2e8f0' }
-            };
 
             validItems.forEach(({ item, coords, stationDisplay, electricDisplay }) => {
                 hasValidMarkers = true;
                 const isDeactivated = item['停用'] && item['停用'] !== '';
                 const isDone = item['施工狀態'] === '已施工';
                 
-                let markerColor = '';
-                if (isConstructionActive) {
-                    const pair = sectionColorPairs[electricDisplay] || sectionColorPairs['預設'];
-                    markerColor = isDone ? pair.dark : pair.light;
-                } else {
-                    const displayGroup = groupByElectric ? electricDisplay : stationDisplay;
-                    markerColor = groupByElectric ? getElectricSectionColor(displayGroup) : getStationColor(displayGroup);
-                }
+                // 統一顏色邏輯
+                const displayGroup = groupByElectric ? electricDisplay : stationDisplay;
+                const markerColor = groupByElectric ? getElectricSectionColor(displayGroup) : getStationColor(displayGroup);
                 
                 const oldName = item['舊名或別名'] ? `<span class="text-xs text-slate-500 font-normal ml-1">(${item['舊名或別名']})</span>` : '';
                 const navUrl = `https://www.google.com/maps/dir/?api=1&destination=${coords[0]},${coords[1]}`;
@@ -526,27 +512,24 @@
                 L.marker(coords, { icon: icon }).bindPopup(popupContent).addTo(markersGroup);
             });
 
+            // 統一圖例邏輯
             const legendDiv = document.getElementById('map-legend-content');
             if (legendDiv) {
-                if (isConstructionActive && currentElectricSections.size > 0) {
-                    let legendHtml = `<div class="font-bold mb-1 border-b pb-1 text-slate-700">施工進度 (依電務段)</div>`;
-                    Array.from(currentElectricSections).sort().forEach(sec => {
-                        const pair = sectionColorPairs[sec] || sectionColorPairs['預設'];
-                        legendHtml += `
-                            <div class="legend-item mt-1.5 font-semibold text-[13px]">${sec}</div>
-                            <div class="legend-item pl-2 mb-0"><div class="legend-color" style="background-color: ${pair.dark}">✓</div><span>已施工</span></div>
-                            <div class="legend-item pl-2 mb-0"><div class="legend-color" style="background-color: ${pair.light}"></div><span>未施工</span></div>
-                        `;
-                    });
-                    legendDiv.innerHTML = legendHtml;
-                    legendDiv.style.display = 'block';
-                } else if (groupByElectric ? currentElectricSections.size > 0 : currentStations.size > 0) {
+                if (groupByElectric ? currentElectricSections.size > 0 : currentStations.size > 0) {
                     let legendHtml = `<div class="font-bold mb-1 border-b pb-1 text-slate-700">${groupByElectric ? '電務段' : '分駐所'}圖例</div>`;
                     const groups = groupByElectric ? Array.from(currentElectricSections).sort() : Array.from(currentStations).sort();
                     groups.forEach(group => {
                         const color = groupByElectric ? getElectricSectionColor(group) : getStationColor(group);
                         legendHtml += `<div class="legend-item"><div class="legend-color" style="background-color: ${color}"></div><span>${group}</span></div>`;
                     });
+                    
+                    // 若在施工專案下，額外加上施工狀態的說明
+                    if (isConstructionActive) {
+                        legendHtml += `<div class="font-bold mt-2 mb-1 border-b pb-1 text-slate-700">施工狀態</div>`;
+                        legendHtml += `<div class="legend-item"><div class="legend-color" style="background-color: #94a3b8">✓</div><span>已施工</span></div>`;
+                        legendHtml += `<div class="legend-item"><div class="legend-color" style="background-color: #94a3b8"></div><span>未施工</span></div>`;
+                    }
+
                     legendDiv.innerHTML = legendHtml;
                     legendDiv.style.display = 'block';
                 } else {
@@ -633,23 +616,31 @@
                     <div class="flex justify-between items-start mb-3">
                         <div>
                             <div class="flex items-center flex-wrap gap-y-1">
-                                <h2 class="text-lg sm:text-xl font-bold text-indigo-600 leading-tight">${item['平交道名稱']}</h2>
+                                <h2 class="text-lg sm:text-xl font-bold text-indigo-600 leading-tight">${item['平交道名稱']}${item['舊名或別名'] ? `<span class="text-slate-500 text-sm font-normal ml-1">(${item['舊名或別名']})</span>` : ''}</h2>
                                 ${item.distance !== undefined && item.distance !== 9999 ? `<span class="bg-green-100 text-green-700 border border-green-200 text-xs font-bold px-2.5 py-0.5 rounded-md ml-2">距 ${item.distance.toFixed(1)} km</span>` : ''}
+                                ${isDeactivated ? `<span class="bg-red-100 text-red-600 border border-red-200 text-xs font-bold px-2.5 py-0.5 rounded-md ml-2">停用</span>` : ''}
                                 ${constructionBadge}
                             </div>
                             <p class="text-xs text-slate-400 mt-1 font-mono">ID: ${item['編號']} | ${item['里程']}</p>
                         </div>
                     </div>
                     <div class="space-y-2 text-sm text-slate-600 bg-slate-50 rounded-lg p-3 border border-slate-100">
-                        <div class="flex items-start"><span class="font-semibold text-slate-400 min-w-[3.5rem]">位置</span><span class="text-slate-800 font-medium">${getDisplayValue(item['所在縣市'])} / ${getDisplayValue(item['區間'])}</span></div>
+                        <div class="flex items-start"><span class="font-semibold text-slate-400 min-w-[3.5rem]">位置</span><span class="text-slate-800 font-medium">${getDisplayValue(item['所在縣市'])} / ${getDisplayValue(item['區間'])}間</span></div>
+                        <div class="flex items-start"><span class="font-semibold text-slate-400 min-w-[3.5rem]">路線</span><span class="text-slate-800">${getDisplayValue(item['路線別'])} <span class="text-xs text-slate-500 bg-slate-200 px-1.5 py-0.5 rounded ml-1">${item['平交道種類']}</span></span></div>
                         <div class="flex items-start"><span class="font-semibold text-slate-400 min-w-[3.5rem]">單位</span><span class="text-slate-700">${getDisplayValue(item['電務段'])}電務段 / ${getDisplayValue(item['分駐所'])}分駐所</span></div>
                     </div>
                     <div class="mt-4 flex items-center justify-between">
                         ${hasLoc ? `<div class="flex items-center gap-2">
-                            <a href="https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}" target="_blank" class="bg-indigo-600 text-white px-3 py-1.5 rounded-lg text-sm font-medium">導航</a>
-                            <a href="https://www.google.com/maps/@?api=1&map_action=pano&viewpoint=${lat},${lng}" target="_blank" class="bg-slate-100 text-slate-600 border px-3 py-1.5 rounded-lg text-sm font-medium">街景</a>
-                        </div>` : `<span class="text-sm text-slate-400">無座標資料</span>`}
-                        <button class="share-btn text-slate-500 hover:text-slate-800 px-3 py-1.5 rounded-lg text-sm font-medium" data-item='${JSON.stringify(item).replace(/'/g, "&#39;")}'>分享</button>
+                            <a href="${navUrl}" target="_blank" class="inline-flex items-center space-x-1 text-white bg-indigo-600 hover:bg-indigo-700 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors">
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4"><path stroke-linecap="round" stroke-linejoin="round" d="M15 10.5a3 3 0 1 1-6 0 3 3 0 0 1 6 0z" /><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1 1 15 0z" /></svg><span>導航</span>
+                            </a>
+                            <a href="${streetViewUrl}" target="_blank" class="inline-flex items-center space-x-1 text-slate-600 hover:text-slate-800 transition-colors bg-slate-100 hover:bg-slate-200 border border-slate-200 px-3 py-1.5 rounded-lg text-sm font-medium">
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4"><path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 0 1 0-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178Z" /><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" /></svg><span>街景</span>
+                            </a>
+                        </div>` : `<span class="text-sm text-slate-400 bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-100">無座標資料</span>`}
+                        <button class="share-btn inline-flex items-center space-x-1.5 text-slate-500 hover:text-slate-800 hover:bg-slate-100 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors" data-item='${JSON.stringify(item).replace(/'/g, "&#39;")}'>
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4"><path stroke-linecap="round" stroke-linejoin="round" d="M7.217 10.907a2.25 2.25 0 1 0 0 2.186m0-2.186c.18.324.283.696.283 1.093s-.103.77-.283 1.093m0-2.186 9.566-5.314m-9.566 7.5 9.566 5.314m0 0a2.25 2.25 0 1 0 3.935 2.186 2.25 2.25 0 0 0-3.935-2.186zm0-12.814a2.25 2.25 0 1 0 3.933-2.185 2.25 2.25 0 0 0-3.933 2.185z" /></svg><span>分享</span>
+                        </button>
                     </div>
                 `;
                 resultsContainer.appendChild(card);
