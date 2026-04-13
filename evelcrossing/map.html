@@ -520,7 +520,7 @@
 
                 const icon = L.divIcon({
                     html: `<div class="marker-pin" style="background-color: ${markerColor}; opacity: ${isDeactivated ? 0.4 : 1};">${innerHtml}</div>`,
-                    className: 'custom-div-icon', iconSize: [22, 22], iconAnchor: [11, 11], popupAnchor: [0, -11]
+                    className: 'custom-div-icon', iconSize: [18, 18], iconAnchor: [11, 11], popupAnchor: [0, -11]
                 });
 
                 L.marker(coords, { icon: icon }).bindPopup(popupContent).addTo(markersGroup);
