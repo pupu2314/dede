@@ -193,7 +193,7 @@
         <div class="max-w-7xl mx-auto flex flex-col gap-2">
             
             <div class="flex flex-col md:flex-row gap-3 items-center justify-between w-full">
-                <div class="relative w-full md:flex-1 md:w-full">
+                <div class="relative w-full md:flex-1 md:max-w-lg">
                     <span class="absolute inset-y-0 left-0 flex items-center pl-3">
                         <svg class="w-5 h-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 1 1-14 0 7 7 0 0 1 14 0z"></path>
@@ -323,36 +323,61 @@
         });
         resizeObserver.observe(filterBarElement);
 
-        // 顏色對應表
-        const colorPalette = [
-            '#e6194b', '#3cb44b', '#4363d8', '#f58231', '#911eb4', 
-            '#46f0f0', '#f032e6', '#bcf60c', '#fabebe', '#008080', 
-            '#e6beff', '#9a6324', '#fffac8', '#800000', '#aaffc3', 
-            '#808000', '#ffd8b1', '#000075', '#808080', '#000000'
-        ];
+        // 電務段的基準色相與飽和度 (Hue, Saturation)
+        const sectionBases = {
+            '臺北': { h: 0, s: 75 },    // 紅色
+            '彰化': { h: 142, s: 70 },  // 綠色
+            '花蓮': { h: 24, s: 90 },   // 橘色
+            '高雄': { h: 221, s: 80 },  // 藍色
+            '臺東': { h: 280, s: 70 },  // 紫色 (若有擴充資料)
+            '預設': { h: 210, s: 20 }   // 灰藍色
+        };
 
-        // 分駐所顏色對應表
-        const stationColors = {};
-        let colorIndex = 0;
-        function getStationColor(station) {
-            if (isUnknownValue(station)) return '#94a3b8';
-            if (!stationColors[station]) {
-                stationColors[station] = colorPalette[colorIndex % colorPalette.length];
-                colorIndex++;
+        // 儲存各分駐所的專屬 Lightness 與 Hue 偏移，確保同色系但能區分
+        const stationLightnessMap = {};
+        const sectionStationCount = {};
+
+        function getStationColorHSL(station, electricSection) {
+            if (isUnknownValue(station)) return 'hsl(210, 20%, 50%)'; // 灰色
+            
+            const base = sectionBases[electricSection] || sectionBases['預設'];
+            
+            if (!stationLightnessMap[station]) {
+                if (!sectionStationCount[electricSection]) sectionStationCount[electricSection] = 0;
+                
+                const count = sectionStationCount[electricSection];
+                // 亮度變化序列，製造同色系但不同亮度的層次感
+                const lightnessVariations = [50, 40, 60, 35, 65, 30, 70, 45, 55];
+                const l = lightnessVariations[count % lightnessVariations.length];
+                
+                // 為了更明顯區分相近亮度的分駐所，色相也稍微微調交替 (+10, -10)
+                const hueShift = (count % 3 === 1) ? 10 : (count % 3 === 2) ? -10 : 0;
+                let h = base.h + hueShift;
+                if (h < 0) h += 360;
+                if (h > 360) h -= 360;
+
+                stationLightnessMap[station] = { h: h, s: base.s, l: l };
+                sectionStationCount[electricSection]++;
             }
-            return stationColors[station];
+            
+            const color = stationLightnessMap[station];
+            return `hsl(${color.h}, ${color.s}%, ${color.l}%)`;
         }
 
-        // 電務段顏色對應表
-        const sectionColors = {};
-        let sectionColorIndex = 0;
-        function getElectricSectionColor(section) {
-            if (isUnknownValue(section)) return '#94a3b8';
-            if (!sectionColors[section]) {
-                sectionColors[section] = colorPalette[sectionColorIndex % colorPalette.length];
-                sectionColorIndex++;
-            }
-            return sectionColors[section];
+        // 取得電務段的基準顏色 (用於超過8個分駐所的群組模式)
+        function getElectricSectionColorHSL(electricSection) {
+            if (isUnknownValue(electricSection)) return 'hsl(210, 20%, 50%)';
+            const base = sectionBases[electricSection] || sectionBases['預設'];
+            return `hsl(${base.h}, ${base.s}%, 50%)`;
+        }
+
+        // 取得施工狀態顏色 (完成 -10% 亮度，未完成 +10% 亮度)
+        function getConstructionColorHSL(electricSection, status) {
+            const base = sectionBases[electricSection] || sectionBases['預設'];
+            const baseL = 50; // 基準亮度 50%
+            const isCompleted = (status === '已施工');
+            const l = isCompleted ? (baseL - 10) : (baseL + 10);
+            return `hsl(${base.h}, ${base.s}%, ${l}%)`;
         }
 
         // 區域邏輯：以中央山脈為界區分東西部
@@ -432,6 +457,7 @@
             const validItems = [];
             const currentStations = new Set();
             const currentElectricSections = new Set();
+            const stationToElectricMap = new Map();
 
             if (userLocation) {
                 const userIcon = L.divIcon({
@@ -461,23 +487,13 @@
                     const electricDisplay = getDisplayValue(item['電務段']);
                     currentStations.add(stationDisplay);
                     currentElectricSections.add(electricDisplay);
+                    stationToElectricMap.set(stationDisplay, electricDisplay);
                     validItems.push({ item, coords, navUrl, streetViewUrl, stationDisplay, electricDisplay });
                 }
             });
 
             // 判斷是否超過 8 個分駐所，若超過則以「電務段」區分顏色
             const groupByElectric = currentStations.size > 8;
-
-            // 定義施工專案的電務段專屬配色 (深色: 已施工, 淺色: 未施工)
-            const sectionColorPairs = {
-                '臺北': { dark: '#1e3a8a', light: '#bfdbfe' }, // 藍
-                '彰化': { dark: '#ea580c', light: '#fed7aa' }, // 橘
-                '嘉義': { dark: '#15803d', light: '#bbf7d0' }, // 綠
-                '高雄': { dark: '#7e22ce', light: '#e9d5ff' }, // 紫
-                '花蓮': { dark: '#b91c1c', light: '#fecaca' }, // 紅
-                '臺東': { dark: '#0f766e', light: '#99f6e4' }, // 青
-                '預設': { dark: '#334155', light: '#e2e8f0' }  // 灰
-            };
 
             // 第二次迴圈：依據判斷結果加上圖標
             validItems.forEach(({ item, coords, navUrl, streetViewUrl, stationDisplay, electricDisplay }) => {
@@ -486,12 +502,10 @@
                 
                 let markerColor = '';
                 if (isConstructionActive) {
-                    const pair = sectionColorPairs[electricDisplay] || sectionColorPairs['預設'];
-                    markerColor = (item['施工狀態'] === '已施工') ? pair.dark : pair.light;
+                    markerColor = getConstructionColorHSL(electricDisplay, item['施工狀態']);
                 } else {
                     // 依據群組類型指派顏色
-                    const displayGroup = groupByElectric ? electricDisplay : stationDisplay;
-                    markerColor = groupByElectric ? getElectricSectionColor(displayGroup) : getStationColor(displayGroup);
+                    markerColor = groupByElectric ? getElectricSectionColorHSL(electricDisplay) : getStationColorHSL(stationDisplay, electricDisplay);
                 }
                 
                 const oldName = item['舊名或別名'] ? `<span class="text-xs text-slate-500 font-normal ml-1">(${item['舊名或別名']})</span>` : '';
@@ -535,11 +549,12 @@
                 if (isConstructionActive && currentElectricSections.size > 0) {
                     let legendHtml = `<div class="font-bold mb-1 border-b pb-1 text-slate-700">施工進度 (依電務段)</div>`;
                     Array.from(currentElectricSections).sort().forEach(sec => {
-                        const pair = sectionColorPairs[sec] || sectionColorPairs['預設'];
+                        const darkColor = getConstructionColorHSL(sec, '已施工');
+                        const lightColor = getConstructionColorHSL(sec, '未施工');
                         legendHtml += `
                             <div class="legend-item mt-1.5 font-semibold text-[13px]">${sec}</div>
-                            <div class="legend-item pl-2 mb-0"><div class="legend-color" style="background-color: ${pair.dark}"></div><span>已施工</span></div>
-                            <div class="legend-item pl-2 mb-0"><div class="legend-color" style="background-color: ${pair.light}"></div><span>未施工</span></div>
+                            <div class="legend-item pl-2 mb-0"><div class="legend-color" style="background-color: ${darkColor}"></div><span>已完成 (亮度-10%)</span></div>
+                            <div class="legend-item pl-2 mb-0"><div class="legend-color" style="background-color: ${lightColor}"></div><span>未完成 (亮度+10%)</span></div>
                         `;
                     });
                     legendDiv.innerHTML = legendHtml;
@@ -548,7 +563,7 @@
                     let legendHtml = `<div class="font-bold mb-1 border-b pb-1 text-slate-700">${groupByElectric ? '電務段' : '分駐所'}圖例</div>`;
                     const groups = groupByElectric ? Array.from(currentElectricSections).sort() : Array.from(currentStations).sort();
                     groups.forEach(group => {
-                        const color = groupByElectric ? getElectricSectionColor(group) : getStationColor(group);
+                        const color = groupByElectric ? getElectricSectionColorHSL(group) : getStationColorHSL(group, stationToElectricMap.get(group));
                         legendHtml += `<div class="legend-item"><div class="legend-color" style="background-color: ${color}"></div><span>${group}</span></div>`;
                     });
                     legendDiv.innerHTML = legendHtml;
