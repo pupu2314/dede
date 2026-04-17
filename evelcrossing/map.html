@@ -7,754 +7,262 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
     
-    <!-- 引入 Leaflet 地圖的 CSS 與 JS -->
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+    <!-- Leaflet Maps -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
     <style>
-        :root {
-            /* 預設篩選列高度，會透過 JS 動態更新 */
-            --filter-height: 160px;
-        }
-
-        body {
-            font-family: 'Inter', sans-serif;
-            background-color: #f8fafc;
-            color: #1e293b;
-            min-height: 100vh;
-        }
-        
-        .scroll-to-top {
-            position: fixed;
-            bottom: 2rem;
-            right: 2rem;
-            width: 3.5rem;
-            height: 3.5rem;
-            background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
-            color: white;
-            border-radius: 9999px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            box-shadow: 0 10px 25px rgba(79, 70, 229, 0.4);
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            transform: translateY(100px);
-            opacity: 0;
-            cursor: pointer;
-            z-index: 1000;
-        }
-        
-        .scroll-to-top.show {
-            transform: translateY(0);
-            opacity: 1;
-        }
-        
-        .scroll-to-top:hover {
-            transform: translateY(0) scale(1.1);
-            box-shadow: 0 15px 35px rgba(79, 70, 229, 0.5);
-        }
-        
-        .deactivated-card {
-            background-color: #f1f5f9 !important;
-            border-color: #cbd5e1 !important;
-            position: relative;
-            overflow: hidden;
-        }
-        
-        .deactivated-card::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: repeating-linear-gradient(
-                45deg,
-                transparent,
-                transparent 10px,
-                rgba(0, 0, 0, 0.03) 10px,
-                rgba(0, 0, 0, 0.03) 20px
-            );
-            pointer-events: none;
-        }
-        
-        .deactivated-card h2, 
-        .deactivated-card .text-indigo-600 {
-            color: #64748b !important;
-        }
-        
-        .card-enter {
-            animation: cardEnter 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-        }
-        
-        @keyframes cardEnter {
-            from { opacity: 0; transform: translateY(20px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
+        :root { --filter-height: 160px; }
+        body { font-family: 'Inter', sans-serif; background-color: #f8fafc; color: #1e293b; min-height: 100vh; }
         
         .header-gradient {
             background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 50%, #db2777 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
         }
 
-        /* 根據篩選列高度動態調整地圖區塊剩餘高度 */
-        #map-wrapper {
-            height: calc(100vh - var(--filter-height) - 1.5rem);
-            min-height: 400px;
-        }
+        #map-wrapper { height: calc(100vh - var(--filter-height) - 1.5rem); min-height: 400px; }
+        #map-container { height: 100%; width: 100%; z-index: 10; }
 
-        #map-container {
-            height: 100%;
-            width: 100%;
-            z-index: 10;
-        }
-
-        .custom-div-icon {
-            background: transparent;
-            border: none;
-        }
         .marker-pin {
-            width: 18px;
-            height: 18px;
-            border-radius: 50%;
-            border: 2px solid white;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.5);
-            transition: transform 0.2s;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: white;
-            font-size: 14px;
-            font-weight: bold;
+            width: 24px; height: 24px; border-radius: 50%; border: 2px solid white;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.4); display: flex; align-items: center; justify-content: center;
+            color: white; font-size: 14px; font-weight: bold; transition: transform 0.2s;
         }
-        .marker-pin:hover {
-            transform: scale(1.3);
-            z-index: 1000;
-        }
+        .marker-pin:hover { transform: scale(1.3); z-index: 1000; }
 
         .map-legend {
-            background: rgba(255, 255, 255, 0.95);
-            padding: 8px 12px;
-            border-radius: 8px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-            border: 1px solid #e2e8f0;
-            font-size: 0.75rem;
-            line-height: 1.5;
-            color: #334155;
-            max-height: 240px;
-            overflow-y: auto;
-        }
-        .legend-item {
-            display: flex;
-            align-items: center;
-            margin-bottom: 4px;
-        }
-        .legend-color {
-            width: 12px;
-            height: 12px;
-            border-radius: 50%;
-            margin-right: 8px;
-            border: 1px solid rgba(0,0,0,0.1);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: white;
-            font-size: 8px;
+            background: rgba(255, 255, 255, 0.95); padding: 10px; border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1); border: 1px solid #e2e8f0; font-size: 0.75rem;
         }
     </style>
 </head>
-<body class="text-slate-800 pb-16">
+<body>
 
-    <!-- 主標題區 -->
-    <div id="main-title-container" class="max-w-7xl mx-auto text-center pt-8 pb-4 px-4">
-        <h1 class="text-3xl sm:text-4xl font-extrabold mb-2 header-gradient">
-            平交道資訊查詢
-        </h1>
-        <p id="project-subtitle" class="text-sm text-slate-500 font-medium hidden">目前載入專案資料</p>
+    <div class="max-w-7xl mx-auto text-center pt-8 pb-4 px-4">
+        <h1 class="text-3xl sm:text-4xl font-extrabold mb-2 header-gradient">平交道資訊查詢</h1>
+        <p id="project-subtitle" class="text-sm text-slate-500 font-medium hidden">載入中...</p>
     </div>
 
-    <!-- 篩選列 -->
-    <div id="filter-bar" class="sticky top-0 z-40 bg-white/95 backdrop-blur-md px-4 py-2.5 sm:py-3 sm:px-8 border-b border-slate-200 shadow-sm">
+    <div id="filter-bar" class="sticky top-0 z-40 bg-white/95 backdrop-blur-md px-4 py-3 sm:px-8 border-b border-slate-200 shadow-sm">
         <div class="max-w-7xl mx-auto flex flex-col gap-2">
-            
-            <div class="flex flex-col md:flex-row gap-3 items-center justify-between w-full">
-                <div class="relative w-full md:flex-1 md:w-full">
+            <div class="flex flex-col md:flex-row gap-3 items-center justify-between">
+                <div class="relative w-full md:flex-1">
                     <span class="absolute inset-y-0 left-0 flex items-center pl-3">
-                        <svg class="w-5 h-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 1 1-14 0 7 7 0 0 1 14 0z"></path>
-                        </svg>
+                        <svg class="w-5 h-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M21 21l-6-6m2-5a7 7 0 1 1-14 0 7 7 0 0 1 14 0z"></path></svg>
                     </span>
-                    <input 
-                        type="text" 
-                        id="search-input" 
-                        placeholder="輸入名稱... 例: 成功路" 
-                        class="w-full pl-10 pr-4 py-2 bg-slate-50 text-slate-800 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 border border-slate-300 transition-all font-medium placeholder-slate-400 shadow-sm">
+                    <input type="text" id="search-input" placeholder="搜尋名稱或編號..." class="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none transition-all">
                 </div>
                 
-                <div class="flex flex-row flex-wrap sm:flex-nowrap gap-2 w-full md:w-auto flex-shrink-0">
-                    <!-- 施工按鈕預設為 hidden，若載入附加資料才會顯示 -->
-                    <button id="construction-btn" class="hidden flex-1 sm:flex-none whitespace-nowrap px-3 py-2 bg-yellow-50 hover:bg-yellow-100 text-yellow-700 border border-yellow-200 rounded-lg font-medium transition-colors flex items-center justify-center gap-1">
-                        🚧 施工專案
-                    </button>
-                    <button id="nearby-btn" class="flex-1 sm:flex-none whitespace-nowrap px-3 py-2 bg-green-50 hover:bg-green-100 text-green-700 border border-green-200 rounded-lg font-medium transition-colors flex items-center justify-center gap-1">
-                        📍 附近平交道
-                    </button>
-                    <button id="toggle-view-btn" class="flex-1 sm:flex-none whitespace-nowrap px-3 py-2 bg-slate-800 hover:bg-slate-700 text-white rounded-lg font-medium shadow-sm transition-colors flex justify-center items-center gap-2">
-                        <span>🗺️</span> <span id="toggle-view-text">地圖模式</span>
-                    </button>
+                <div class="flex gap-2 w-full md:w-auto">
+                    <button id="construction-btn" class="hidden flex-1 md:flex-none px-4 py-2 bg-amber-50 text-amber-700 border border-amber-200 rounded-lg font-bold hover:bg-amber-100 transition-colors">🚧 施工專案</button>
+                    <button id="toggle-view-btn" class="flex-1 md:flex-none px-4 py-2 bg-slate-800 text-white rounded-lg font-bold hover:bg-slate-700 transition-colors">🗺️ 地圖模式</button>
                 </div>
             </div>
 
-            <!-- 下拉選單 -->
-            <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 mt-1">
-                <select id="electric-section-filter" class="w-full px-2 py-1.5 text-xs sm:text-sm bg-slate-50 text-slate-700 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 border border-slate-300 cursor-pointer shadow-sm">
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-2 mt-1">
+                <select id="electric-section-filter" class="px-2 py-1.5 text-sm bg-slate-50 border border-slate-300 rounded-md">
                     <option value="">電務段 (全部)</option>
                 </select>
-                <select id="station-filter" class="w-full px-2 py-1.5 text-xs sm:text-sm bg-slate-50 text-slate-700 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 border border-slate-300 cursor-pointer shadow-sm">
+                <select id="station-filter" class="px-2 py-1.5 text-sm bg-slate-50 border border-slate-300 rounded-md">
                     <option value="">分駐所 (全部)</option>
                 </select>
-                <select id="city-filter" class="w-full px-2 py-1.5 text-xs sm:text-sm bg-slate-50 text-slate-700 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 border border-slate-300 cursor-pointer shadow-sm">
-                    <option value="">縣市 (全部)</option>
+                <select id="status-filter" class="px-2 py-1.5 text-sm bg-slate-50 border border-slate-300 rounded-md">
+                    <option value="">施工狀態 (全部)</option>
+                    <option value="已施工">已施工</option>
+                    <option value="未施工">未施工</option>
                 </select>
-                <select id="section-filter" class="w-full px-2 py-1.5 text-xs sm:text-sm bg-slate-50 text-slate-700 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 border border-slate-300 cursor-pointer shadow-sm">
-                    <option value="">區間 (全部)</option>
-                </select>
-                <select id="line-filter" class="w-full px-2 py-1.5 text-xs sm:text-sm bg-slate-50 text-slate-700 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 border border-slate-300 cursor-pointer shadow-sm">
-                    <option value="">路線 (全部)</option>
-                </select>
+                <div id="results-count" class="flex items-center justify-end text-xs font-bold text-slate-500 px-2"></div>
             </div>
-
-            <div class="flex flex-wrap items-center justify-between gap-2 mt-1 min-h-[24px]">
-                <div id="active-filters" class="flex flex-wrap gap-2"></div>
-                <div class="flex items-center gap-3 ml-auto">
-                    <p id="results-count" class="text-xs font-semibold text-slate-500 whitespace-nowrap"></p>
-                    <button id="clear-filters-btn" class="hidden text-xs font-medium text-red-500 hover:text-red-700 underline underline-offset-2">
-                        清除全部
-                    </button>
-                </div>
-            </div>
-
         </div>
     </div>
 
-    <!-- 主內容區塊 -->
     <div class="max-w-7xl mx-auto px-4 sm:px-8 mt-4">
         <div id="results-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5"></div>
-
-        <div id="map-wrapper" class="hidden w-full bg-white rounded-xl sm:rounded-2xl shadow-md border border-slate-200 overflow-hidden relative">
-            <div id="map-container" class="w-full"></div>
-            <div class="absolute top-4 left-1/2 transform -translate-x-1/2 bg-white/90 backdrop-blur px-4 py-2 rounded-full shadow-md border border-slate-200 text-xs text-slate-700 font-medium z-[1000] pointer-events-none">
-                📍 顯示目前篩選的平交道 (僅含座標資料)
-            </div>
-            <div id="map-no-results" class="hidden absolute inset-0 z-[2000] bg-white/90 backdrop-blur-sm flex flex-col items-center justify-center">
-                <div class="text-5xl mb-4">🔍</div>
-                <p class="text-slate-700 text-xl font-bold">地圖上找不到符合條件的資訊</p>
-                <p class="text-slate-500 text-sm mt-2">請嘗試放寬篩選條件或更改關鍵字</p>
-            </div>
-            <button id="recenter-btn" class="hidden absolute bottom-8 left-4 bg-white/90 backdrop-blur p-3 rounded-full shadow-lg border border-slate-200 text-indigo-600 hover:text-indigo-800 hover:bg-slate-50 z-[1000] transition-colors" title="重新置中於我的位置">
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-6 h-6">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M15 10.5a3 3 0 1 1-6 0 3 3 0 0 1 6 0z" />
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1 1 15 0z" />
-                </svg>
-            </button>
+        <div id="map-wrapper" class="hidden w-full bg-white rounded-xl shadow-md border border-slate-200 overflow-hidden relative">
+            <div id="map-container"></div>
         </div>
-
-        <div id="loading-message" class="text-center mt-16 mb-20">
-            <div class="inline-block">
-                <div class="flex space-x-2">
-                    <div class="w-3 h-3 bg-indigo-500 rounded-full animate-bounce" style="animation-delay: 0s"></div>
-                    <div class="w-3 h-3 bg-indigo-500 rounded-full animate-bounce" style="animation-delay: 0.2s"></div>
-                    <div class="w-3 h-3 bg-indigo-500 rounded-full animate-bounce" style="animation-delay: 0.4s"></div>
-                </div>
-                <p class="text-slate-500 mt-4 font-medium">資料載入中...</p>
-            </div>
-        </div>
-
-        <div id="no-results-message" class="hidden text-center mt-16 mb-20">
-            <div class="text-5xl mb-4">🔍</div>
-            <p class="text-slate-700 text-lg font-bold">找不到符合條件的資訊</p>
-            <p class="text-slate-500 text-sm mt-2">請嘗試放寬篩選條件或更改關鍵字</p>
-        </div>
-    </div>
-
-    <div id="scroll-to-top-btn" class="scroll-to-top">
-        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 10l7-7m0 0l7 7m-7-7v18" />
-        </svg>
+        <div id="loading-message" class="text-center mt-20 font-medium text-slate-500">資料載入中...</div>
+        <div id="no-results-message" class="hidden text-center mt-20 text-slate-500 font-bold">找不到符合條件的資訊</div>
     </div>
 
     <script>
-        // 全域變數
         let fullCrossingData = [];
         let filteredData = [];
-        let debounceTimer;
         let map = null;
         let markersGroup = null;
-        let legendControl = null;
         let isMapView = false;
-        let userLocation = null;
-        let isNearbyActive = false;
         let isConstructionActive = false;
-        const NEARBY_RADIUS_KM = 15;
 
-        // 取得 URL 參數判斷是否載入施工檔
         const urlParams = new URLSearchParams(window.location.search);
         const constructionDataFile = urlParams.get('data');
 
-        // 監控 filter-bar 高度
-        const filterBarElement = document.getElementById('filter-bar');
-        const resizeObserver = new ResizeObserver(entries => {
-            for (let entry of entries) {
-                document.documentElement.style.setProperty('--filter-height', `${entry.borderBoxSize[0].blockSize}px`);
-                if (map && isMapView) {
-                    setTimeout(() => map.invalidateSize(), 50);
-                }
-            }
-        });
-        resizeObserver.observe(filterBarElement);
-
-        const colorPalette = [
-            '#e6194b', '#3cb44b', '#4363d8', '#f58231', '#911eb4', 
-            '#46f0f0', '#f032e6', '#bcf60c', '#fabebe', '#008080', 
-            '#e6beff', '#9a6324', '#fffac8', '#800000', '#aaffc3', 
-            '#808000', '#ffd8b1', '#000075', '#808080', '#000000'
-        ];
-
-        const stationColors = {};
-        let colorIndex = 0;
-        function getStationColor(station) {
-            if (isUnknownValue(station)) return '#94a3b8';
-            if (!stationColors[station]) {
-                stationColors[station] = colorPalette[colorIndex % colorPalette.length];
-                colorIndex++;
-            }
-            return stationColors[station];
-        }
-
-        const sectionColors = {};
-        let sectionColorIndex = 0;
-        function getElectricSectionColor(section) {
-            if (isUnknownValue(section)) return '#94a3b8';
-            if (!sectionColors[section]) {
-                sectionColors[section] = colorPalette[sectionColorIndex % colorPalette.length];
-                sectionColorIndex++;
-            }
-            return sectionColors[section];
-        }
-
         const searchInput = document.getElementById('search-input');
         const electricSectionFilter = document.getElementById('electric-section-filter');
-        const cityFilter = document.getElementById('city-filter');
         const stationFilter = document.getElementById('station-filter');
-        const sectionFilter = document.getElementById('section-filter');
-        const lineFilter = document.getElementById('line-filter');
+        const statusFilter = document.getElementById('status-filter');
         const resultsContainer = document.getElementById('results-container');
         const mapWrapper = document.getElementById('map-wrapper');
-        const mapNoResults = document.getElementById('map-no-results');
         const loadingMessage = document.getElementById('loading-message');
         const noResultsMessage = document.getElementById('no-results-message');
         const resultsCountElement = document.getElementById('results-count');
-        const scrollToTopBtn = document.getElementById('scroll-to-top-btn');
         const toggleViewBtn = document.getElementById('toggle-view-btn');
-        const toggleViewText = document.getElementById('toggle-view-text');
-        const nearbyBtn = document.getElementById('nearby-btn');
         const constructionBtn = document.getElementById('construction-btn');
-        const recenterBtn = document.getElementById('recenter-btn');
 
-        function getDistanceFromLatLonInKm(lat1, lon1, lat2, lon2) {
-            const R = 6371;
-            const dLat = (lat2 - lat1) * Math.PI / 180;
-            const dLon = (lon2 - lon1) * Math.PI / 180;
-            const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
-                Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLon/2) * Math.sin(dLon/2);
-            return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-        }
-
-        function isUnknownValue(value) {
-            return value === '' || value === 0 || value === '0' || value === undefined || value === null || value === '不明';
-        }
-
-        function getDisplayValue(value) {
-            return isUnknownValue(value) ? '不明' : value;
-        }
-
-        function initMapIfNeeded() {
-            if (!map) {
-                const taiwanBounds = L.latLngBounds(L.latLng(21.5, 119.0), L.latLng(25.5, 122.5));
-                map = L.map('map-container', {
-                    maxBounds: taiwanBounds,
-                    maxBoundsViscosity: 1.0,
-                    minZoom: 7
-                }).setView([23.6978, 120.9605], 7);
-                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                    attribution: '&copy; OpenStreetMap'
-                }).addTo(map);
-                markersGroup = L.featureGroup().addTo(map);
-                legendControl = L.control({position: 'bottomright'});
-                legendControl.onAdd = function (map) {
-                    const div = L.DomUtil.create('div', 'map-legend');
-                    div.id = 'map-legend-content';
-                    return div;
-                };
-                legendControl.addTo(map);
-            }
-            setTimeout(() => { map.invalidateSize(); }, 100);
-        }
-
-        function updateMapMarkers() {
-            if (!map || !markersGroup) return;
-            markersGroup.clearLayers();
-            let hasValidMarkers = false;
-
-            const validItems = [];
-            const currentStations = new Set();
-            const currentElectricSections = new Set();
-
-            if (userLocation) {
-                const userIcon = L.divIcon({
-                    html: `<div class="relative flex h-5 w-5"><span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span><span class="relative inline-flex rounded-full h-5 w-5 bg-blue-500 border-2 border-white shadow"></span></div>`,
-                    className: '', iconSize: [18, 18], iconAnchor: [9, 9]
-                });
-                L.marker([userLocation.lat, userLocation.lng], {icon: userIcon, zIndexOffset: 1000})
-                    .bindPopup('<div class="font-bold text-blue-600 text-center text-sm">您的目前位置</div>')
-                    .addTo(markersGroup);
-                hasValidMarkers = true;
-                recenterBtn.classList.remove('hidden');
-            } else {
-                recenterBtn.classList.add('hidden');
-            }
-
-            filteredData.forEach(item => {
-                let lat = item['緯度'], lng = item['經度'], coords = null;
-                if (lat && lng && !isNaN(lat) && !isNaN(lng)) {
-                    coords = [lat, lng];
-                }
-                if (coords) {
-                    const stationDisplay = getDisplayValue(item['分駐所']);
-                    const electricDisplay = getDisplayValue(item['電務段']);
-                    currentStations.add(stationDisplay);
-                    currentElectricSections.add(electricDisplay);
-                    validItems.push({ item, coords, stationDisplay, electricDisplay });
-                }
-            });
-
-            const groupByElectric = currentStations.size > 8;
-
-            validItems.forEach(({ item, coords, stationDisplay, electricDisplay }) => {
-                hasValidMarkers = true;
-                const isDeactivated = item['停用'] && item['停用'] !== '';
-                const isDone = item['施工狀態'] === '已施工';
-                
-                const displayGroup = groupByElectric ? electricDisplay : stationDisplay;
-                const markerColor = groupByElectric ? getElectricSectionColor(displayGroup) : getStationColor(displayGroup);
-                
-                const oldName = item['舊名或別名'] ? `<span class="text-xs text-slate-500 font-normal ml-1">(${item['舊名或別名']})</span>` : '';
-                const navUrl = `https://www.google.com/maps/dir/?api=1&destination=${coords[0]},${coords[1]}`;
-                const streetViewUrl = `https://www.google.com/maps/@?api=1&map_action=pano&viewpoint=${coords[0]},${coords[1]}`;
-
-                const popupContent = `
-                    <div class="min-w-[240px]">
-                        <h3 class="font-bold text-indigo-600 text-base mb-1 border-b pb-1 flex items-center flex-wrap">
-                            ${item['平交道名稱']}${oldName}
-                        </h3>
-                        <div class="text-sm text-slate-600 space-y-1 mt-2">
-                            <p><span class="font-semibold text-slate-400">路線：</span>${getDisplayValue(item['路線別'])} (${getDisplayValue(item['平交道種類'])})</p>
-                            <p><span class="font-semibold text-slate-400">區間：</span>${getDisplayValue(item['區間'])}</p>
-                            <p><span class="font-semibold text-slate-400">單位：</span>${getDisplayValue(item['電務段'])}電務段 / ${stationDisplay}分駐所</p>
-                            ${item.isProjectSite && item['施工日期'] ? `<p><span class="font-semibold text-slate-400">施工日：</span>${item['施工日期']}</p>` : ''}
-                            ${item.isProjectSite && item['施工數量'] ? `<p><span class="font-semibold text-slate-400">施工數量：</span>${item['施工數量']}</p>` : ''}
-                            ${item.distance !== undefined && item.distance !== 9999 ? `<p><span class="font-semibold text-slate-400">距離：</span><span class="text-green-600 font-bold">${item.distance.toFixed(1)} km</span></p>` : ''}
-                        </div>
-                        ${isDeactivated ? `<span class="bg-red-100 text-red-600 px-2 py-0.5 rounded text-xs font-bold mt-2 inline-block border border-red-200">停用: ${item['停用']}</span>` : ''}
-                        ${item.isProjectSite && item['施工狀態'] ? `<span class="${isDone ? 'bg-indigo-100 text-indigo-700 border-indigo-200' : 'bg-yellow-100 text-yellow-700 border-yellow-200'} px-2 py-0.5 rounded text-xs font-bold mt-2 inline-block border">狀態: ${item['施工狀態']}</span>` : ''}
-                        <div class="mt-4 flex justify-end gap-2">
-                        <a href="${streetViewUrl}" target="_blank" class="inline-flex items-center space-x-1 text-slate-600 hover:text-slate-800 transition-colors bg-slate-100 hover:bg-slate-200 border border-slate-200 px-3 py-1.5 rounded-lg text-sm font-medium">
-                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4"><path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 0 1 0-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178Z" /><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" /></svg><span>街景</span>
-                        </a>
-                        <a href="${navUrl}" target="_blank" class="inline-flex items-center space-x-1 text-slate-600 hover:text-slate-800 transition-colors bg-slate-100 hover:bg-slate-200 border border-slate-200 px-3 py-1.5 rounded-lg text-sm font-medium">
-                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4"><path stroke-linecap="round" stroke-linejoin="round" d="M15 10.5a3 3 0 1 1-6 0 3 3 0 0 1 6 0z" /><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1 1 15 0z" /></svg><span>導航</span>
-                        </a>
-                        </div>
-                    </div>
+        function initMap() {
+            if (map) return;
+            map = L.map('map-container').setView([23.6978, 120.9605], 7);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+            markersGroup = L.featureGroup().addTo(map);
+            
+            const legend = L.control({position: 'bottomright'});
+            legend.onAdd = function() {
+                const div = L.DomUtil.create('div', 'map-legend');
+                div.innerHTML = `
+                    <div class="font-bold mb-2 border-b pb-1">施工圖例</div>
+                    <div class="flex items-center mb-1"><div class="w-3 h-3 rounded-full mr-2" style="background-color: #4f46e5"></div><span>已施工 (✓)</span></div>
+                    <div class="flex items-center mb-1"><div class="w-3 h-3 rounded-full mr-2" style="background-color: #f59e0b"></div><span>未施工</span></div>
+                    <div class="flex items-center"><div class="w-3 h-3 rounded-full mr-2" style="background-color: #94a3b8"></div><span>非專案</span></div>
                 `;
-
-                const innerHtml = (isConstructionActive && isDone) ? '✓' : '';
-
-                const icon = L.divIcon({
-                    html: `<div class="marker-pin" style="background-color: ${markerColor}; opacity: ${isDeactivated ? 0.4 : 1};">${innerHtml}</div>`,
-                    className: 'custom-div-icon', iconSize: [18, 18], iconAnchor: [9, 9], popupAnchor: [0, -11]
-                });
-
-                const marker = L.marker(coords, { icon: icon }).bindPopup(popupContent);
-                marker.on('click', () => { map.setView(coords, 12); });
-                marker.addTo(markersGroup);
-            });
-
-            const legendDiv = document.getElementById('map-legend-content');
-            if (legendDiv) {
-                if (groupByElectric ? currentElectricSections.size > 0 : currentStations.size > 0) {
-                    let legendHtml = `<div class="font-bold mb-1 border-b pb-1 text-slate-700">${groupByElectric ? '電務段' : '分駐所'}圖例</div>`;
-                    const groups = groupByElectric ? Array.from(currentElectricSections).sort() : Array.from(currentStations).sort();
-                    groups.forEach(group => {
-                        const color = groupByElectric ? getElectricSectionColor(group) : getStationColor(group);
-                        legendHtml += `<div class="legend-item"><div class="legend-color" style="background-color: ${color}"></div><span>${group}</span></div>`;
-                    });
-                    
-                    if (isConstructionActive) {
-                        legendHtml += `<div class="font-bold mt-2 mb-1 border-b pb-1 text-slate-700">狀態</div>`;
-                        legendHtml += `<div class="legend-item"><div class="legend-color" style="background-color: #94a3b8">✓</div><span>已施工</span></div>`;
-                        legendHtml += `<div class="legend-item"><div class="legend-color" style="background-color: #94a3b8"></div><span>未施工</span></div>`;
-                    }
-
-                    legendDiv.innerHTML = legendHtml;
-                    legendDiv.style.display = 'block';
-                } else {
-                    legendDiv.style.display = 'none';
-                }
-            }
-
-            if (hasValidMarkers) {
-                map.fitBounds(markersGroup.getBounds(), { padding: [40, 40], maxZoom: 15 });
-            } else {
-                map.setView([23.6978, 120.9605], 7);
-            }
+                return div;
+            };
+            legend.addTo(map);
         }
 
-        toggleViewBtn.addEventListener('click', () => {
-            isMapView = !isMapView;
-            if (isMapView) {
-                toggleViewText.textContent = "列表模式";
-                resultsContainer.classList.add('hidden');
-                mapWrapper.classList.remove('hidden');
-                initMapIfNeeded();
-                filterAndRender(false);
-                setTimeout(() => {
-                    const filterBarTop = document.getElementById('filter-bar').offsetTop;
-                    window.scrollTo({ top: filterBarTop, behavior: 'smooth' });
-                }, 50);
-            } else {
-                toggleViewText.textContent = "地圖模式";
-                resultsContainer.classList.remove('hidden');
-                mapWrapper.classList.add('hidden');
-                filterAndRender(false);
-                scrollToTop();
-            }
-        });
+        function updateMarkers() {
+            if (!markersGroup) return;
+            markersGroup.clearLayers();
+            
+            filteredData.forEach(item => {
+                if (item['緯度'] && item['經度']) {
+                    const status = String(item['施工狀態'] || '').trim();
+                    const isDone = status === '已施工';
+                    const isProject = item.isProjectSite;
+                    const color = isProject ? (isDone ? '#4f46e5' : '#f59e0b') : '#94a3b8';
+                    const iconText = isDone ? '✓' : '';
 
-        nearbyBtn.addEventListener('click', () => {
-            isNearbyActive = !isNearbyActive;
-            if (isNearbyActive) {
-                nearbyBtn.classList.replace('bg-green-50', 'bg-green-600');
-                nearbyBtn.classList.replace('text-green-700', 'text-white');
-                if (navigator.geolocation) {
-                    navigator.geolocation.getCurrentPosition(p => {
-                        userLocation = { lat: p.coords.latitude, lng: p.coords.longitude };
-                        filterAndRender(true);
+                    const icon = L.divIcon({
+                        html: `<div class="marker-pin" style="background-color: ${color}">${iconText}</div>`,
+                        className: '', iconSize: [24, 24], iconAnchor: [12, 12]
                     });
-                }
-            } else {
-                nearbyBtn.classList.replace('bg-green-600', 'bg-green-50');
-                nearbyBtn.classList.replace('text-white', 'text-green-700');
-                userLocation = null;
-                filterAndRender(true);
-            }
-        });
 
-        constructionBtn.addEventListener('click', () => {
-            isConstructionActive = !isConstructionActive;
-            if (isConstructionActive) {
-                constructionBtn.classList.remove('bg-yellow-50', 'text-yellow-700');
-                constructionBtn.classList.add('bg-yellow-600', 'text-white');
-            } else {
-                constructionBtn.classList.remove('bg-yellow-600', 'text-white');
-                constructionBtn.classList.add('bg-yellow-50', 'text-yellow-700');
-            }
-            filterAndRender(true);
-        });
-
-        function renderCrossings(data) {
-            resultsContainer.innerHTML = '';
-            resultsCountElement.textContent = `共 ${data.length} 筆資料`;
-            data.forEach((item, index) => {
-                const isDeactivated = item['停用'] && item['停用'] !== '';
-                const card = document.createElement('div');
-                card.className = `bg-white p-5 sm:p-6 rounded-2xl shadow-sm border border-slate-200 transition-all hover:-translate-y-1 hover:shadow-md card-enter ${isDeactivated ? 'deactivated-card' : ''}`;
-                card.style.animationDelay = `${(index % 10) * 0.05}s`;
-
-                let lat = item['緯度'], lng = item['經度'], hasLoc = (lat && lng && !isNaN(lat) && !isNaN(lng));
-                const navUrl = hasLoc ? `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}` : '#';
-                const streetViewUrl = hasLoc ? `https://www.google.com/maps/@?api=1&map_action=pano&viewpoint=${lat},${lng}` : '#';
-
-                const constructionBadge = item.isProjectSite && item['施工狀態'] ?
-                    `<span class="${item['施工狀態'] === '已施工' ? 'bg-indigo-100 text-indigo-700 border-indigo-200' : 'bg-yellow-100 text-yellow-700 border-yellow-200'} border text-xs font-bold px-2.5 py-0.5 rounded-md ml-2">狀態: ${item['施工狀態']}</span>` : '';
-
-                let constructInfoHtml = '';
-                if (item.isProjectSite) {
-                    if(item['施工日期']) constructInfoHtml += `<div class="flex items-start"><span class="font-semibold text-slate-400 min-w-[3.5rem]">施工日</span><span class="text-slate-800 font-medium">${item['施工日期']}</span></div>`;
-                    if(item['施工數量']) constructInfoHtml += `<div class="flex items-start"><span class="font-semibold text-slate-400 min-w-[3.5rem]">數量</span><span class="text-slate-800">${item['施工數量']}</span></div>`;
-                }
-
-                card.innerHTML = `
-                    <div class="flex justify-between items-start mb-3">
-                        <div>
-                            <div class="flex items-center flex-wrap gap-y-1">
-                                <h2 class="text-lg sm:text-xl font-bold text-indigo-600 leading-tight">${item['平交道名稱']}${item['舊名或別名'] ? `<span class="text-slate-500 text-sm font-normal ml-1">(${item['舊名或別名']})</span>` : ''}</h2>
-                                ${item.distance !== undefined && item.distance !== 9999 ? `<span class="bg-green-100 text-green-700 border border-green-200 text-xs font-bold px-2.5 py-0.5 rounded-md ml-2">距 ${item.distance.toFixed(1)} km</span>` : ''}
-                                ${constructionBadge}
-                                ${isDeactivated ? `<span class="bg-red-100 text-red-600 border border-red-200 text-xs font-bold px-2.5 py-0.5 rounded-md ml-2">停用</span>` : ''}
-                            </div>
-                            <p class="text-xs text-slate-400 mt-1 font-mono">ID: ${item['編號']} | ${item['里程']}</p>
+                    const popup = `
+                        <div class="text-sm">
+                            <b class="text-indigo-600">${item['平交道名稱']}</b><br>
+                            ${isProject ? `<span class="font-bold ${isDone?'text-indigo-600':'text-amber-600'}">狀態: ${status}</span><br>` : ''}
+                            編號: ${item['編號']}<br>
+                            日期: ${item['施工日期'] || '---'}
                         </div>
+                    `;
+                    L.marker([item['緯度'], item['經度']], {icon}).bindPopup(popup).addTo(markersGroup);
+                }
+            });
+            if (markersGroup.getLayers().length > 0) map.fitBounds(markersGroup.getBounds(), {padding: [50, 50]});
+        }
+
+        function renderList() {
+            resultsContainer.innerHTML = '';
+            filteredData.forEach(item => {
+                const status = String(item['施工狀態'] || '').trim();
+                const isDone = status === '已施工';
+                const card = document.createElement('div');
+                card.className = "bg-white p-5 rounded-xl border border-slate-200 shadow-sm hover:shadow-md transition-all";
+                
+                card.innerHTML = `
+                    <div class="flex justify-between items-start mb-2">
+                        <h2 class="text-lg font-bold text-slate-800">${item['平交道名稱']}</h2>
+                        ${item.isProjectSite ? `<span class="px-2 py-0.5 rounded text-xs font-bold border ${isDone ? 'bg-indigo-100 text-indigo-700 border-indigo-200' : 'bg-amber-100 text-amber-700 border-amber-200'}">${status}</span>` : ''}
                     </div>
-                    <div class="space-y-2 text-sm text-slate-600 bg-slate-50 rounded-lg p-3 border border-slate-100">
-                        <div class="flex items-start"><span class="font-semibold text-slate-400 min-w-[3.5rem]">位置</span><span class="text-slate-800 font-medium">${getDisplayValue(item['所在縣市'])} / ${getDisplayValue(item['區間'])}</span></div>
-                        <div class="flex items-start"><span class="font-semibold text-slate-400 min-w-[3.5rem]">路線</span><span class="text-slate-800">${getDisplayValue(item['路線別'])} <span class="text-xs text-slate-500 bg-slate-200 px-1.5 py-0.5 rounded ml-1">${getDisplayValue(item['平交道種類'])}</span></span></div>
-                        <div class="flex items-start"><span class="font-semibold text-slate-400 min-w-[3.5rem]">單位</span><span class="text-slate-700">${getDisplayValue(item['電務段'])}電務段 / ${getDisplayValue(item['分駐所'])}分駐所</span></div>
-                        ${constructInfoHtml}
-                    </div>
-                    <div class="mt-4 flex items-center justify-between">
-                        ${hasLoc ? `<div class="flex items-center gap-2">
-                            <a href="${navUrl}" target="_blank" class="inline-flex items-center space-x-1 text-white bg-indigo-600 hover:bg-indigo-700 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors">
-                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4"><path stroke-linecap="round" stroke-linejoin="round" d="M15 10.5a3 3 0 1 1-6 0 3 3 0 0 1 6 0z" /><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1 1 15 0z" /></svg><span>導航</span>
-                            </a>
-                            <a href="${streetViewUrl}" target="_blank" class="inline-flex items-center space-x-1 text-slate-600 hover:text-slate-800 transition-colors bg-slate-100 hover:bg-slate-200 border border-slate-200 px-3 py-1.5 rounded-lg text-sm font-medium">
-                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4"><path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 0 1 0-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178Z" /><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" /></svg><span>街景</span>
-                            </a>
-                        </div>` : `<span class="text-sm text-slate-400 bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-100">無座標資料</span>`}
-                        <button class="share-btn inline-flex items-center space-x-1.5 text-slate-500 hover:text-slate-800 hover:bg-slate-100 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors" data-item='${JSON.stringify(item).replace(/'/g, "&#39;")}' onclick="alert('請自行複製連結！')">
-                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4"><path stroke-linecap="round" stroke-linejoin="round" d="M7.217 10.907a2.25 2.25 0 1 0 0 2.186m0-2.186c.18.324.283.696.283 1.093s-.103.77-.283 1.093m0-2.186-9.566-5.314m-9.566 7.5 9.566 5.314m0 0a2.25 2.25 0 1 0 3.935 2.186 2.25 2.25 0 0 0-3.935-2.186zm0-12.814a2.25 2.25 0 1 0 3.933-2.185 2.25 2.25 0 0 0-3.933 2.185z" /></svg><span>分享</span>
-                        </button>
+                    <div class="text-xs text-slate-500 mb-3 font-mono">編號: ${item['編號']} | ${item['里程']}</div>
+                    <div class="text-sm text-slate-600 space-y-1">
+                        <div class="flex"><span class="w-16 text-slate-400">分駐所</span>${item['分駐所'] || '---'}</div>
+                        ${item.isProjectSite ? `<div class="flex"><span class="w-16 text-slate-400">施工日</span><span class="font-bold text-slate-800">${item['施工日期']}</span></div>` : ''}
+                        ${item.isProjectSite ? `<div class="flex"><span class="w-16 text-slate-400">數量</span>${item['施工數量']}</div>` : ''}
                     </div>
                 `;
                 resultsContainer.appendChild(card);
             });
+            resultsCountElement.textContent = `共 ${filteredData.length} 筆`;
         }
 
-        function populateFilter(selectElement, data, key, defaultLabel) {
-            const currentValue = selectElement.value;
-            selectElement.innerHTML = `<option value="">${defaultLabel} (全部)</option>`;
-            const uniqueValues = new Set();
-            data.forEach(item => { if (!isUnknownValue(item[key])) uniqueValues.add(item[key]); });
+        function filterData() {
+            const query = searchInput.value.toLowerCase();
+            const es = electricSectionFilter.value;
+            const st = stationFilter.value;
+            const sts = statusFilter.value;
 
-            Array.from(uniqueValues).sort().forEach(v => {
-                const opt = document.createElement('option'); opt.value = v; opt.textContent = v;
-                selectElement.appendChild(opt);
-            });
-            if (currentValue) selectElement.value = currentValue;
-        }
-
-        function filterAndRender(autoScroll = false) {
-            const s = searchInput.value.toLowerCase(), es = electricSectionFilter.value, ci = cityFilter.value, st = stationFilter.value, se = sectionFilter.value, li = lineFilter.value;
-
-            let temp = fullCrossingData.filter(i => {
-                const nm = i['平交道名稱'].toLowerCase().includes(s) || (i['舊名或別名'] && i['舊名或別名'].toLowerCase().includes(s));
-                let match = nm && (!es || getDisplayValue(i['電務段']) === es) && (!st || getDisplayValue(i['分駐所']) === st) && (!ci || getDisplayValue(i['所在縣市']) === ci) && (!se || getDisplayValue(i['區間']) === se) && (!li || getDisplayValue(i['路線別']) === li);
-                
-                // 若開啟「施工專案」篩選，只顯示有涵蓋在施工JSON中的專案
-                if (isConstructionActive && !i.isProjectSite) match = false;
-                
-                return match;
+            filteredData = fullCrossingData.filter(i => {
+                const itemStatus = String(i['施工狀態'] || '').trim();
+                const matchSearch = i['平交道名稱'].toLowerCase().includes(query) || String(i['編號']).includes(query);
+                const matchES = !es || i['電務段'] === es;
+                const matchST = !st || i['分駐所'] === st;
+                const matchSTS = !sts || itemStatus === sts;
+                const matchConstruction = !isConstructionActive || i.isProjectSite;
+                return matchSearch && matchES && matchST && matchConstruction && matchSTS;
             });
 
-            if (userLocation) {
-                temp.forEach(i => {
-                    let lt = i['緯度'], lg = i['經度'];
-                    i.distance = (lt && !isNaN(lt)) ? getDistanceFromLatLonInKm(userLocation.lat, userLocation.lng, parseFloat(lt), parseFloat(lg)) : 9999;
-                });
-                if (isNearbyActive) temp = temp.filter(i => i.distance <= NEARBY_RADIUS_KM);
-                temp.sort((a, b) => a.distance - b.distance);
-            }
-            filteredData = temp;
-            renderCrossings(filteredData);
-            if (map) updateMapMarkers();
-            
-            if(filteredData.length === 0) {
-                if (isMapView) mapNoResults.classList.remove('hidden'); else noResultsMessage.classList.remove('hidden');
-            } else {
-                noResultsMessage.classList.add('hidden'); mapNoResults.classList.add('hidden');
-            }
-
-            const cond = (i) => ({ electric: !es || getDisplayValue(i['電務段']) === es, station: !st || getDisplayValue(i['分駐所']) === st, city: !ci || getDisplayValue(i['所在縣市']) === ci, section: !se || getDisplayValue(i['區間']) === se, line: !li || getDisplayValue(i['路線別']) === li });
-            populateFilter(electricSectionFilter, fullCrossingData.filter(i => { const c = cond(i); return c.city && c.station && c.section && c.line; }), '電務段', '電務段');
-            populateFilter(stationFilter, fullCrossingData.filter(i => { const c = cond(i); return c.electric && c.city && c.section && c.line; }), '分駐所', '分駐所');
-            populateFilter(cityFilter, fullCrossingData.filter(i => { const c = cond(i); return c.electric && c.station && c.section && c.line; }), '所在縣市', '縣市');
-
-            if (autoScroll && !isMapView) scrollToTop();
+            if (isMapView) updateMarkers(); else renderList();
+            noResultsMessage.classList.toggle('hidden', filteredData.length > 0);
         }
 
-        function scrollToTop() { window.scrollTo({ top: 0, behavior: 'smooth' }); }
-        
-        searchInput.addEventListener('input', () => { clearTimeout(debounceTimer); debounceTimer = setTimeout(() => filterAndRender(true), 400); });
-        [electricSectionFilter, cityFilter, stationFilter].forEach(el => el.addEventListener('change', () => filterAndRender(true)));
-        
-        window.addEventListener('scroll', () => {
-            if (window.scrollY > 300) {
-                scrollToTopBtn.classList.add('show');
-            } else {
-                scrollToTopBtn.classList.remove('show');
-            }
+        toggleViewBtn.addEventListener('click', () => {
+            isMapView = !isMapView;
+            toggleViewBtn.textContent = isMapView ? "📋 列表模式" : "🗺️ 地圖模式";
+            resultsContainer.classList.toggle('hidden', isMapView);
+            mapWrapper.classList.toggle('hidden', !isMapView);
+            if (isMapView) { initMap(); updateMarkers(); } else { renderList(); }
         });
 
-        scrollToTopBtn.addEventListener('click', scrollToTop);
+        constructionBtn.addEventListener('click', () => {
+            isConstructionActive = !isConstructionActive;
+            constructionBtn.classList.toggle('bg-amber-600', isConstructionActive);
+            constructionBtn.classList.toggle('text-white', isConstructionActive);
+            filterData();
+        });
+
+        [searchInput, electricSectionFilter, stationFilter, statusFilter].forEach(el => {
+            el.addEventListener('input', filterData);
+            el.addEventListener('change', filterData);
+        });
 
         window.addEventListener('load', () => {
-            // 定義取得資料的 Promise
-            const fetchMainData = fetch('evelcrossing.json').then(r => r.json());
-            
-            // 若有指定附屬資料則載入，否則回傳 null
-            const fetchConstructData = constructionDataFile 
-                ? fetch(constructionDataFile).then(r => r.json()).catch(e => {
-                    console.error('附屬資料載入失敗', e);
-                    return null;
-                })
-                : Promise.resolve(null);
+            const p1 = fetch('evelcrossing.json').then(r => r.json());
+            const p2 = constructionDataFile ? fetch(constructionDataFile).then(r => r.json()).catch(() => null) : Promise.resolve(null);
 
-            // 等待資料皆載入完畢
-            Promise.all([fetchMainData, fetchConstructData])
-                .then(([mainData, constructData]) => {
+            Promise.all([p1, p2]).then(([main, construct]) => {
+                loadingMessage.classList.add('hidden');
+                
+                if (construct) {
+                    const cMap = new Map();
+                    construct.forEach(c => cMap.set(String(c['編號']), c));
                     
-                    if (constructData) {
-                        // 1. 顯示施工專案按鈕 & 標題提示
-                        document.getElementById('construction-btn').classList.remove('hidden');
-                        const subtitle = document.getElementById('project-subtitle');
-                        subtitle.textContent = `載入專案資料：${constructionDataFile}`;
-                        subtitle.classList.remove('hidden');
-
-                        // 2. 建立施工對照表 (透過編號)
-                        const constructMap = {};
-                        constructData.forEach(item => { 
-                            constructMap[item['編號']] = item; 
-                        });
-
-                        // 3. 合併資料
-                        mainData.forEach(item => {
-                            const constructItem = constructMap[item['編號']];
-                            if (constructItem) {
-                                item.isProjectSite = true;
-                                Object.assign(item, constructItem); // 匯入 施工日期, 施工數量, 施工狀態等
-                            } else {
-                                // 不在附屬檔內的，視為非專案，清除原始殘留的施工狀態
-                                item.isProjectSite = false;
-                                delete item['施工狀態'];
-                            }
-                        });
-                    } else {
-                        // 如果沒有提供附屬檔，將所有平交道視為無施工狀態 (單純基本地圖)
-                        mainData.forEach(item => {
+                    main.forEach(item => {
+                        const cid = String(item['編號']);
+                        if (cMap.has(cid)) {
+                            const cData = cMap.get(cid);
+                            item.isProjectSite = true;
+                            // 關鍵修正：確保讀取欄位時不受空格影響，且強制寫入
+                            item['施工狀態'] = String(cData['施工狀態'] || '未施工').trim();
+                            item['施工日期'] = cData['施工日期'];
+                            item['施工數量'] = cData['施工數量'];
+                        } else {
                             item.isProjectSite = false;
-                            delete item['施工狀態'];
-                        });
-                    }
+                            item['施工狀態'] = ''; // 初始化空值
+                        }
+                    });
+                    
+                    constructionBtn.classList.remove('hidden');
+                    document.getElementById('project-subtitle').textContent = `施工專案：${constructionDataFile}`;
+                    document.getElementById('project-subtitle').classList.remove('hidden');
+                }
 
-                    fullCrossingData = mainData;
-                    loadingMessage.classList.add('hidden'); 
-                    filterAndRender(false); 
-                })
-                .catch(() => { 
-                    loadingMessage.innerHTML = '<p class="text-red-500">主資料載入失敗，請檢查 evelcrossing.json 是否存在。</p>'; 
-                });
+                fullCrossingData = main;
+                const esSet = new Set(), stSet = new Set();
+                main.forEach(i => { if(i['電務段']) esSet.add(i['電務段']); if(i['分駐所']) stSet.add(i['分駐所']); });
+                Array.from(esSet).sort().forEach(v => { const o = document.createElement('option'); o.value=v; o.textContent=v; electricSectionFilter.appendChild(o); });
+                Array.from(stSet).sort().forEach(v => { const o = document.createElement('option'); o.value=v; o.textContent=v; stationFilter.appendChild(o); });
+                
+                filterData();
+            });
         });
     </script>
 </body>
