@@ -445,7 +445,10 @@
             validItems.forEach(({ item, coords, stationDisplay, electricDisplay }) => {
                 hasValidMarkers = true;
                 const isDeactivated = item['停用'] && item['停用'] !== '';
-                const isDone = item['施工狀態'] === '已施工';
+                
+                // 修正狀態讀取：移除不可見空白字元以確保邏輯判斷正確
+                const status = item['施工狀態'] ? String(item['施工狀態']).trim() : '';
+                const isDone = status === '已施工';
                 
                 const displayGroup = groupByElectric ? electricDisplay : stationDisplay;
                 const markerColor = groupByElectric ? getElectricSectionColor(displayGroup) : getStationColor(displayGroup);
@@ -468,7 +471,7 @@
                             ${item.distance !== undefined && item.distance !== 9999 ? `<p><span class="font-semibold text-slate-400">距離：</span><span class="text-green-600 font-bold">${item.distance.toFixed(1)} km</span></p>` : ''}
                         </div>
                         ${isDeactivated ? `<span class="bg-red-100 text-red-600 px-2 py-0.5 rounded text-xs font-bold mt-2 inline-block border border-red-200">停用: ${item['停用']}</span>` : ''}
-                        ${item.isProjectSite && item['施工狀態'] ? `<span class="${isDone ? 'bg-indigo-100 text-indigo-700 border-indigo-200' : 'bg-yellow-100 text-yellow-700 border-yellow-200'} px-2 py-0.5 rounded text-xs font-bold mt-2 inline-block border">狀態: ${item['施工狀態']}</span>` : ''}
+                        ${item.isProjectSite && status ? `<span class="${isDone ? 'bg-indigo-100 text-indigo-700 border-indigo-200' : 'bg-yellow-100 text-yellow-700 border-yellow-200'} px-2 py-0.5 rounded text-xs font-bold mt-2 inline-block border">狀態: ${status}</span>` : ''}
                         <div class="mt-4 flex justify-end gap-2">
                         <a href="${streetViewUrl}" target="_blank" class="inline-flex items-center space-x-1 text-slate-600 hover:text-slate-800 transition-colors bg-slate-100 hover:bg-slate-200 border border-slate-200 px-3 py-1.5 rounded-lg text-sm font-medium">
                             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4"><path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 0 1 0-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178Z" /><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" /></svg><span>街景</span>
@@ -587,13 +590,19 @@
                 const navUrl = hasLoc ? `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}` : '#';
                 const streetViewUrl = hasLoc ? `https://www.google.com/maps/@?api=1&map_action=pano&viewpoint=${lat},${lng}` : '#';
 
-                const constructionBadge = item.isProjectSite && item['施工狀態'] ?
-                    `<span class="${item['施工狀態'] === '已施工' ? 'bg-indigo-100 text-indigo-700 border-indigo-200' : 'bg-yellow-100 text-yellow-700 border-yellow-200'} border text-xs font-bold px-2.5 py-0.5 rounded-md ml-2">狀態: ${item['施工狀態']}</span>` : '';
+                // 修正狀態讀取與判斷邏輯，預防不可見空白字元
+                const status = item['施工狀態'] ? String(item['施工狀態']).trim() : '';
+                const isDone = status === '已施工';
+
+                const constructionBadge = item.isProjectSite && status ?
+                    `<span class="${isDone ? 'bg-indigo-100 text-indigo-700 border-indigo-200' : 'bg-yellow-100 text-yellow-700 border-yellow-200'} border text-xs font-bold px-2.5 py-0.5 rounded-md ml-2 whitespace-nowrap">狀態: ${status}</span>` : '';
 
                 let constructInfoHtml = '';
                 if (item.isProjectSite) {
                     if(item['施工日期']) constructInfoHtml += `<div class="flex items-start"><span class="font-semibold text-slate-400 min-w-[3.5rem]">施工日</span><span class="text-slate-800 font-medium">${item['施工日期']}</span></div>`;
                     if(item['施工數量']) constructInfoHtml += `<div class="flex items-start"><span class="font-semibold text-slate-400 min-w-[3.5rem]">數量</span><span class="text-slate-800">${item['施工數量']}</span></div>`;
+                    // 雙重顯示：將施工狀態也加到下方資訊清單中
+                    if(status) constructInfoHtml += `<div class="flex items-start"><span class="font-semibold text-slate-400 min-w-[3.5rem]">狀態</span><span class="${isDone ? 'text-indigo-600 font-bold' : 'text-yellow-600 font-bold'}">${status}</span></div>`;
                 }
 
                 card.innerHTML = `
