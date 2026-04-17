@@ -92,31 +92,6 @@
             to { opacity: 1; transform: translateY(0); }
         }
         
-        .filter-badge {
-            display: inline-flex;
-            align-items: center;
-            gap: 0.25rem;
-            padding: 0.35rem 0.75rem;
-            background: #e0e7ff;
-            color: #4338ca;
-            border: 1px solid #c7d2fe;
-            border-radius: 9999px;
-            font-size: 0.8rem;
-            font-weight: 500;
-            transition: all 0.2s;
-        }
-        
-        .filter-badge:hover {
-            background: #c7d2fe;
-            border-color: #a5b4fc;
-        }
-
-        .filter-badge.location-badge {
-            background: #dcfce7;
-            color: #166534;
-            border-color: #bbf7d0;
-        }
-        
         .header-gradient {
             background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 50%, #db2777 100%);
             -webkit-background-clip: text;
@@ -197,6 +172,7 @@
         <h1 class="text-3xl sm:text-4xl font-extrabold mb-2 header-gradient">
             平交道資訊查詢
         </h1>
+        <p id="project-subtitle" class="text-sm text-slate-500 font-medium hidden">目前載入專案資料</p>
     </div>
 
     <!-- 篩選列 -->
@@ -218,7 +194,8 @@
                 </div>
                 
                 <div class="flex flex-row flex-wrap sm:flex-nowrap gap-2 w-full md:w-auto flex-shrink-0">
-                    <button id="construction-btn" class="flex-1 sm:flex-none whitespace-nowrap px-3 py-2 bg-yellow-50 hover:bg-yellow-100 text-yellow-700 border border-yellow-200 rounded-lg font-medium transition-colors flex items-center justify-center gap-1">
+                    <!-- 施工按鈕預設為 hidden，若載入附加資料才會顯示 -->
+                    <button id="construction-btn" class="hidden flex-1 sm:flex-none whitespace-nowrap px-3 py-2 bg-yellow-50 hover:bg-yellow-100 text-yellow-700 border border-yellow-200 rounded-lg font-medium transition-colors flex items-center justify-center gap-1">
                         🚧 施工專案
                     </button>
                     <button id="nearby-btn" class="flex-1 sm:flex-none whitespace-nowrap px-3 py-2 bg-green-50 hover:bg-green-100 text-green-700 border border-green-200 rounded-lg font-medium transition-colors flex items-center justify-center gap-1">
@@ -322,6 +299,10 @@
         let isConstructionActive = false;
         const NEARBY_RADIUS_KM = 15;
 
+        // 取得 URL 參數判斷是否載入施工檔
+        const urlParams = new URLSearchParams(window.location.search);
+        const constructionDataFile = urlParams.get('data');
+
         // 監控 filter-bar 高度
         const filterBarElement = document.getElementById('filter-bar');
         const resizeObserver = new ResizeObserver(entries => {
@@ -363,13 +344,6 @@
             return sectionColors[section];
         }
 
-        const REGION_ORDER = {
-            '基隆市': 1, '臺北市': 1, '新北市': 1, '桃園市': 1, '新竹市': 1, '新竹縣': 1, 
-            '苗栗縣': 1, '臺中市': 1, '彰化縣': 1, '南投縣': 1, '雲林縣': 1, '嘉義市': 1, 
-            '嘉義縣': 1, '臺南市': 1, '高雄市': 1, '屏東縣': 1,
-            '宜蘭縣': 2, '花蓮縣': 2, '臺東縣': 2
-        };
-
         const searchInput = document.getElementById('search-input');
         const electricSectionFilter = document.getElementById('electric-section-filter');
         const cityFilter = document.getElementById('city-filter');
@@ -383,12 +357,10 @@
         const noResultsMessage = document.getElementById('no-results-message');
         const resultsCountElement = document.getElementById('results-count');
         const scrollToTopBtn = document.getElementById('scroll-to-top-btn');
-        const clearFiltersBtn = document.getElementById('clear-filters-btn');
         const toggleViewBtn = document.getElementById('toggle-view-btn');
         const toggleViewText = document.getElementById('toggle-view-text');
         const nearbyBtn = document.getElementById('nearby-btn');
         const constructionBtn = document.getElementById('construction-btn');
-        const activeFiltersContainer = document.getElementById('active-filters');
         const recenterBtn = document.getElementById('recenter-btn');
 
         function getDistanceFromLatLonInKm(lat1, lon1, lat2, lon2) {
@@ -468,7 +440,6 @@
                 }
             });
 
-            // 無論是否為施工專案，皆根據分駐所數量來判斷要用「分駐所」還是「電務段」進行分群上色
             const groupByElectric = currentStations.size > 8;
 
             validItems.forEach(({ item, coords, stationDisplay, electricDisplay }) => {
@@ -476,7 +447,6 @@
                 const isDeactivated = item['停用'] && item['停用'] !== '';
                 const isDone = item['施工狀態'] === '已施工';
                 
-                // 統一顏色邏輯
                 const displayGroup = groupByElectric ? electricDisplay : stationDisplay;
                 const markerColor = groupByElectric ? getElectricSectionColor(displayGroup) : getStationColor(displayGroup);
                 
@@ -493,10 +463,12 @@
                             <p><span class="font-semibold text-slate-400">路線：</span>${getDisplayValue(item['路線別'])} (${getDisplayValue(item['平交道種類'])})</p>
                             <p><span class="font-semibold text-slate-400">區間：</span>${getDisplayValue(item['區間'])}</p>
                             <p><span class="font-semibold text-slate-400">單位：</span>${getDisplayValue(item['電務段'])}電務段 / ${stationDisplay}分駐所</p>
+                            ${item.isProjectSite && item['施工日期'] ? `<p><span class="font-semibold text-slate-400">施工日：</span>${item['施工日期']}</p>` : ''}
+                            ${item.isProjectSite && item['施工數量'] ? `<p><span class="font-semibold text-slate-400">施工數量：</span>${item['施工數量']}</p>` : ''}
                             ${item.distance !== undefined && item.distance !== 9999 ? `<p><span class="font-semibold text-slate-400">距離：</span><span class="text-green-600 font-bold">${item.distance.toFixed(1)} km</span></p>` : ''}
                         </div>
                         ${isDeactivated ? `<span class="bg-red-100 text-red-600 px-2 py-0.5 rounded text-xs font-bold mt-2 inline-block border border-red-200">停用: ${item['停用']}</span>` : ''}
-                        ${item['施工狀態'] ? `<span class="${isDone ? 'bg-indigo-100 text-indigo-700 border-indigo-200' : 'bg-yellow-100 text-yellow-700 border-yellow-200'} px-2 py-0.5 rounded text-xs font-bold mt-2 inline-block border">施工: ${item['施工狀態']}</span>` : ''}
+                        ${item.isProjectSite && item['施工狀態'] ? `<span class="${isDone ? 'bg-indigo-100 text-indigo-700 border-indigo-200' : 'bg-yellow-100 text-yellow-700 border-yellow-200'} px-2 py-0.5 rounded text-xs font-bold mt-2 inline-block border">狀態: ${item['施工狀態']}</span>` : ''}
                         <div class="mt-4 flex justify-end gap-2">
                         <a href="${streetViewUrl}" target="_blank" class="inline-flex items-center space-x-1 text-slate-600 hover:text-slate-800 transition-colors bg-slate-100 hover:bg-slate-200 border border-slate-200 px-3 py-1.5 rounded-lg text-sm font-medium">
                             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4"><path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 0 1 0-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178Z" /><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" /></svg><span>街景</span>
@@ -508,7 +480,6 @@
                     </div>
                 `;
 
-                // 在施工模式下，完工的加上打勾圖示
                 const innerHtml = (isConstructionActive && isDone) ? '✓' : '';
 
                 const icon = L.divIcon({
@@ -517,16 +488,10 @@
                 });
 
                 const marker = L.marker(coords, { icon: icon }).bindPopup(popupContent);
-                
-                // 新增點擊事件：自動定位並放大到級距 12，避免 autoPan 碰到 maxBounds 導致彈回
-                marker.on('click', () => {
-                    map.setView(coords, 12);
-                });
-                
+                marker.on('click', () => { map.setView(coords, 12); });
                 marker.addTo(markersGroup);
             });
 
-            // 統一圖例邏輯
             const legendDiv = document.getElementById('map-legend-content');
             if (legendDiv) {
                 if (groupByElectric ? currentElectricSections.size > 0 : currentStations.size > 0) {
@@ -537,9 +502,8 @@
                         legendHtml += `<div class="legend-item"><div class="legend-color" style="background-color: ${color}"></div><span>${group}</span></div>`;
                     });
                     
-                    // 若在施工專案下，額外加上施工狀態的說明
                     if (isConstructionActive) {
-                        legendHtml += `<div class="font-bold mt-2 mb-1 border-b pb-1 text-slate-700">施工狀態</div>`;
+                        legendHtml += `<div class="font-bold mt-2 mb-1 border-b pb-1 text-slate-700">狀態</div>`;
                         legendHtml += `<div class="legend-item"><div class="legend-color" style="background-color: #94a3b8">✓</div><span>已施工</span></div>`;
                         legendHtml += `<div class="legend-item"><div class="legend-color" style="background-color: #94a3b8"></div><span>未施工</span></div>`;
                     }
@@ -557,8 +521,6 @@
                 map.setView([23.6978, 120.9605], 7);
             }
         }
-
-        recenterBtn.addEventListener('click', () => { if (userLocation && map) map.setView([userLocation.lat, userLocation.lng], 13); });
 
         toggleViewBtn.addEventListener('click', () => {
             isMapView = !isMapView;
@@ -625,8 +587,14 @@
                 const navUrl = hasLoc ? `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}` : '#';
                 const streetViewUrl = hasLoc ? `https://www.google.com/maps/@?api=1&map_action=pano&viewpoint=${lat},${lng}` : '#';
 
-                const constructionBadge = item['施工狀態'] ?
-                    `<span class="${item['施工狀態'] === '已施工' ? 'bg-indigo-100 text-indigo-700 border-indigo-200' : 'bg-yellow-100 text-yellow-700 border-yellow-200'} border text-xs font-bold px-2.5 py-0.5 rounded-md ml-2">施工: ${item['施工狀態']}</span>` : '';
+                const constructionBadge = item.isProjectSite && item['施工狀態'] ?
+                    `<span class="${item['施工狀態'] === '已施工' ? 'bg-indigo-100 text-indigo-700 border-indigo-200' : 'bg-yellow-100 text-yellow-700 border-yellow-200'} border text-xs font-bold px-2.5 py-0.5 rounded-md ml-2">狀態: ${item['施工狀態']}</span>` : '';
+
+                let constructInfoHtml = '';
+                if (item.isProjectSite) {
+                    if(item['施工日期']) constructInfoHtml += `<div class="flex items-start"><span class="font-semibold text-slate-400 min-w-[3.5rem]">施工日</span><span class="text-slate-800 font-medium">${item['施工日期']}</span></div>`;
+                    if(item['施工數量']) constructInfoHtml += `<div class="flex items-start"><span class="font-semibold text-slate-400 min-w-[3.5rem]">數量</span><span class="text-slate-800">${item['施工數量']}</span></div>`;
+                }
 
                 card.innerHTML = `
                     <div class="flex justify-between items-start mb-3">
@@ -644,6 +612,7 @@
                         <div class="flex items-start"><span class="font-semibold text-slate-400 min-w-[3.5rem]">位置</span><span class="text-slate-800 font-medium">${getDisplayValue(item['所在縣市'])} / ${getDisplayValue(item['區間'])}</span></div>
                         <div class="flex items-start"><span class="font-semibold text-slate-400 min-w-[3.5rem]">路線</span><span class="text-slate-800">${getDisplayValue(item['路線別'])} <span class="text-xs text-slate-500 bg-slate-200 px-1.5 py-0.5 rounded ml-1">${getDisplayValue(item['平交道種類'])}</span></span></div>
                         <div class="flex items-start"><span class="font-semibold text-slate-400 min-w-[3.5rem]">單位</span><span class="text-slate-700">${getDisplayValue(item['電務段'])}電務段 / ${getDisplayValue(item['分駐所'])}分駐所</span></div>
+                        ${constructInfoHtml}
                     </div>
                     <div class="mt-4 flex items-center justify-between">
                         ${hasLoc ? `<div class="flex items-center gap-2">
@@ -654,8 +623,8 @@
                                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4"><path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 0 1 0-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178Z" /><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" /></svg><span>街景</span>
                             </a>
                         </div>` : `<span class="text-sm text-slate-400 bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-100">無座標資料</span>`}
-                        <button class="share-btn inline-flex items-center space-x-1.5 text-slate-500 hover:text-slate-800 hover:bg-slate-100 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors" data-item='${JSON.stringify(item).replace(/'/g, "&#39;")}'>
-                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4"><path stroke-linecap="round" stroke-linejoin="round" d="M7.217 10.907a2.25 2.25 0 1 0 0 2.186m0-2.186c.18.324.283.696.283 1.093s-.103.77-.283 1.093m0-2.186 9.566-5.314m-9.566 7.5 9.566 5.314m0 0a2.25 2.25 0 1 0 3.935 2.186 2.25 2.25 0 0 0-3.935-2.186zm0-12.814a2.25 2.25 0 1 0 3.933-2.185 2.25 2.25 0 0 0-3.933 2.185z" /></svg><span>分享</span>
+                        <button class="share-btn inline-flex items-center space-x-1.5 text-slate-500 hover:text-slate-800 hover:bg-slate-100 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors" data-item='${JSON.stringify(item).replace(/'/g, "&#39;")}' onclick="alert('請自行複製連結！')">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4"><path stroke-linecap="round" stroke-linejoin="round" d="M7.217 10.907a2.25 2.25 0 1 0 0 2.186m0-2.186c.18.324.283.696.283 1.093s-.103.77-.283 1.093m0-2.186-9.566-5.314m-9.566 7.5 9.566 5.314m0 0a2.25 2.25 0 1 0 3.935 2.186 2.25 2.25 0 0 0-3.935-2.186zm0-12.814a2.25 2.25 0 1 0 3.933-2.185 2.25 2.25 0 0 0-3.933 2.185z" /></svg><span>分享</span>
                         </button>
                     </div>
                 `;
@@ -682,7 +651,10 @@
             let temp = fullCrossingData.filter(i => {
                 const nm = i['平交道名稱'].toLowerCase().includes(s) || (i['舊名或別名'] && i['舊名或別名'].toLowerCase().includes(s));
                 let match = nm && (!es || getDisplayValue(i['電務段']) === es) && (!st || getDisplayValue(i['分駐所']) === st) && (!ci || getDisplayValue(i['所在縣市']) === ci) && (!se || getDisplayValue(i['區間']) === se) && (!li || getDisplayValue(i['路線別']) === li);
-                if (isConstructionActive && !i['施工狀態']) match = false;
+                
+                // 若開啟「施工專案」篩選，只顯示有涵蓋在施工JSON中的專案
+                if (isConstructionActive && !i.isProjectSite) match = false;
+                
                 return match;
             });
 
@@ -717,11 +689,72 @@
         searchInput.addEventListener('input', () => { clearTimeout(debounceTimer); debounceTimer = setTimeout(() => filterAndRender(true), 400); });
         [electricSectionFilter, cityFilter, stationFilter].forEach(el => el.addEventListener('change', () => filterAndRender(true)));
         
+        window.addEventListener('scroll', () => {
+            if (window.scrollY > 300) {
+                scrollToTopBtn.classList.add('show');
+            } else {
+                scrollToTopBtn.classList.remove('show');
+            }
+        });
+
+        scrollToTopBtn.addEventListener('click', scrollToTop);
+
         window.addEventListener('load', () => {
-            fetch('evelcrossing.json')
-                .then(r => r.json())
-                .then(d => { fullCrossingData = d; loadingMessage.classList.add('hidden'); filterAndRender(false); })
-                .catch(() => { loadingMessage.innerHTML = '<p class="text-red-500">載入失敗</p>'; });
+            // 定義取得資料的 Promise
+            const fetchMainData = fetch('evelcrossing.json').then(r => r.json());
+            
+            // 若有指定附屬資料則載入，否則回傳 null
+            const fetchConstructData = constructionDataFile 
+                ? fetch(constructionDataFile).then(r => r.json()).catch(e => {
+                    console.error('附屬資料載入失敗', e);
+                    return null;
+                })
+                : Promise.resolve(null);
+
+            // 等待資料皆載入完畢
+            Promise.all([fetchMainData, fetchConstructData])
+                .then(([mainData, constructData]) => {
+                    
+                    if (constructData) {
+                        // 1. 顯示施工專案按鈕 & 標題提示
+                        document.getElementById('construction-btn').classList.remove('hidden');
+                        const subtitle = document.getElementById('project-subtitle');
+                        subtitle.textContent = `載入專案資料：${constructionDataFile}`;
+                        subtitle.classList.remove('hidden');
+
+                        // 2. 建立施工對照表 (透過編號)
+                        const constructMap = {};
+                        constructData.forEach(item => { 
+                            constructMap[item['編號']] = item; 
+                        });
+
+                        // 3. 合併資料
+                        mainData.forEach(item => {
+                            const constructItem = constructMap[item['編號']];
+                            if (constructItem) {
+                                item.isProjectSite = true;
+                                Object.assign(item, constructItem); // 匯入 施工日期, 施工數量, 施工狀態等
+                            } else {
+                                // 不在附屬檔內的，視為非專案，清除原始殘留的施工狀態
+                                item.isProjectSite = false;
+                                delete item['施工狀態'];
+                            }
+                        });
+                    } else {
+                        // 如果沒有提供附屬檔，將所有平交道視為無施工狀態 (單純基本地圖)
+                        mainData.forEach(item => {
+                            item.isProjectSite = false;
+                            delete item['施工狀態'];
+                        });
+                    }
+
+                    fullCrossingData = mainData;
+                    loadingMessage.classList.add('hidden'); 
+                    filterAndRender(false); 
+                })
+                .catch(() => { 
+                    loadingMessage.innerHTML = '<p class="text-red-500">主資料載入失敗，請檢查 evelcrossing.json 是否存在。</p>'; 
+                });
         });
     </script>
 </body>
