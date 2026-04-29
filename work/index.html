@@ -468,7 +468,7 @@
 </head>
 <body>
     <div class="container main-layout">
-        <h1 class="app-title">加班費計算機 <small>v2.8.6</small></h1>
+        <h1 class="app-title">加班費計算機 <small>v2.8.7</small></h1>
         
         <!-- 未同步提醒條 (預設隱藏) -->
         <div id="unsynced-alert" class="sync-alert-bar" style="display: none;">
@@ -1529,7 +1529,12 @@
         const monthValue = monthFilter.value || new Date().toISOString().substring(0, 7);
         const [year, month] = monthValue.split('-');
         const period = getPayPeriod(monthValue);
-        const dailyGroups = groupRecordsByDay(filterRecords(monthValue));
+        
+        // 過濾掉特休紀錄
+        const filteredRecords = filterRecords(monthValue);
+        const overtimeRecords = filteredRecords.filter(r => r.type !== 'special_leave');
+        const dailyGroups = groupRecordsByDay(overtimeRecords);
+        
         const totalPay = dailyGroups.reduce((sum, group) => sum + group.pay, 0);
         const exportContainer = document.createElement('div');
         exportContainer.id = 'export-container';
@@ -1569,7 +1574,12 @@
         const monthValue = monthFilter.value || new Date().toISOString().substring(0, 7);
         const [year, month] = monthValue.split('-');
         const period = getPayPeriod(monthValue);
-        const dailyGroups = groupRecordsByDay(filterRecords(monthValue));
+        
+        // 過濾掉特休紀錄
+        const filteredRecords = filterRecords(monthValue);
+        const overtimeRecords = filteredRecords.filter(r => r.type !== 'special_leave');
+        const dailyGroups = groupRecordsByDay(overtimeRecords);
+        
         let csv = '\uFEFF';
         csv += `${year}年${month}月發薪加班記錄,計薪週期: ${period.displayText}\n`;
         if (settings.userName) csv += `姓名:,${settings.userName}\n`;
