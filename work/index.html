@@ -14,11 +14,461 @@
     <!-- 截圖功能 -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     
-    <link rel="stylesheet" href="work.css">
+    <style>
+        :root {
+            --primary-color: #007bff;
+            --secondary-color: #6c757d;
+            --bg-color: #f8f9fa;
+            --text-color: #333;
+            --border-color: #dee2e6;
+            --success-color: #28a745;
+            --danger-color: #dc3545;
+            --warning-color: #ffc107;
+            --white-color: #fff;
+            --font-family: 'Segoe UI', 'Microsoft JhengHei', sans-serif;
+        }
+        body {
+            font-family: var(--font-family);
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 1rem;
+            line-height: 1.6;
+        }
+        .container {
+            max-width: 1000px;
+            margin: auto;
+            background: var(--white-color);
+            padding: 1.5rem;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+        h1.app-title {
+            color: var(--primary-color);
+            border-bottom: none;
+            text-align: center;
+            margin-top: 0;
+            margin-bottom: 1rem;
+        }
+        h1 small {
+            font-size: 0.5em; 
+            color: #666;
+        }
+        h2 {
+            color: var(--primary-color);
+            border-bottom: 2px solid var(--border-color);
+            padding-bottom: 0.5rem;
+            margin-top: 0;
+        }
+
+        /* Toast Notification */
+        .toast {
+            visibility: hidden;
+            min-width: 250px;
+            margin-left: -125px;
+            background-color: #333;
+            color: #fff;
+            text-align: center;
+            border-radius: 4px;
+            padding: 16px;
+            position: fixed;
+            z-index: 1001;
+            left: 50%;
+            bottom: 30px;
+            font-size: 17px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+            opacity: 0;
+            transition: opacity 0.3s, bottom 0.3s;
+        }
+        .toast.show {
+            visibility: visible;
+            opacity: 1;
+            bottom: 50px;
+        }
+        .toast.success { background-color: var(--success-color); }
+        .toast.error { background-color: var(--danger-color); }
+        .toast.info { background-color: #17a2b8; }
+
+        /* Sync Alert Bar */
+        .sync-alert-bar {
+            background-color: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeaa7;
+            padding: 0.75rem 1rem;
+            border-radius: 6px;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            animation: slideDown 0.3s ease-out;
+        }
+        @keyframes slideDown {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Tabs Navigation Styles */
+        .tabs-nav {
+            display: flex;
+            justify-content: space-around;
+            background: #e9ecef;
+            border-radius: 8px;
+            padding: 0.5rem;
+            margin-bottom: 1.5rem;
+            gap: 0.5rem;
+        }
+        .tab-btn {
+            flex: 1;
+            background: transparent;
+            border: none;
+            padding: 0.75rem;
+            color: var(--text-color);
+            font-weight: bold;
+            cursor: pointer;
+            border-radius: 6px;
+            transition: all 0.3s ease;
+        }
+        .tab-btn:hover {
+            background: rgba(0,0,0,0.05);
+        }
+        .tab-btn.active {
+            background: var(--primary-color);
+            color: white;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+        .tab-content {
+            display: none;
+            animation: fadeIn 0.3s ease-in-out;
+        }
+        .tab-content.active {
+            display: block;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(5px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Leave Stats */
+        .leave-stats-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+        .leave-stat-box {
+            background: #f8f9fa;
+            padding: 1rem;
+            border-radius: 8px;
+            text-align: center;
+            border: 1px solid #dee2e6;
+        }
+        .leave-stat-box h4 {
+            margin: 0 0 0.5rem 0;
+            font-size: 0.9rem;
+            color: #666;
+        }
+        .leave-stat-box .stat-value {
+            font-size: 1.8rem;
+            font-weight: bold;
+            color: #333;
+        }
+        .leave-stat-box .stat-value small {
+            font-size: 0.9rem;
+            color: #888;
+        }
+        .leave-stat-box .stat-desc {
+            font-size: 0.8rem;
+            color: #999;
+            margin-top: 0.25rem;
+        }
+        .leave-stat-box.remaining {
+            background: #e9f5ff;
+            border-color: #b3d7ff;
+        }
+        .leave-stat-box .stat-value.highlight {
+            color: var(--primary-color);
+        }
+
+        summary {
+            font-size: 1.5rem;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        .grid-container {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 2rem;
+        }
+        @media (min-width: 768px) {
+            .grid-container {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            .leave-stats-grid {
+                grid-template-columns: repeat(4, 1fr); 
+            }
+            .grid-container.single-column-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+        .card {
+            background: #fff;
+            padding: 0;
+            border: none;
+        }
+        .tab-content .card {
+            border: none;
+            padding: 0;
+        }
+
+        .form-group {
+            margin-bottom: 1rem;
+        }
+        .time-input-group {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 0.5rem;
+            align-items: center;
+        }
+        label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: bold;
+        }
+        input[type="number"], input[type="datetime-local"], input[type="text"], input[type="time"], textarea, input[type="month"], input[type="date"] {
+            width: 100%;
+            padding: 0.75rem;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            box-sizing: border-box;
+            font-size: 1rem;
+        }
+        .radio-group label, .checkbox-group label {
+            display: inline-flex;
+            align-items: center;
+            margin-right: 1rem;
+            font-weight: normal;
+            cursor: pointer;
+        }
+        .checkbox-group input {
+            margin-right: 0.5rem;
+        }
+        button {
+            background-color: var(--primary-color);
+            color: var(--white-color);
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: background-color 0.3s;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        button:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+        }
+        .btn-secondary { background-color: var(--secondary-color); }
+        .btn-secondary:hover { background-color: #545b62; }
+        .btn-danger { background-color: var(--danger-color); }
+        .btn-danger:hover { background-color: #c82333; }
+        .btn-warning { background-color: var(--warning-color); color: #212529; }
+        .btn-warning:hover { background-color: #e0a800; }
+        .btn-small { padding: 0.4rem 0.8rem; font-size: 0.9rem; }
+
+        .btn-sync {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+        }
+        .btn-sync.upload { background-color: #28a745; }
+        .btn-sync.upload:hover { background-color: #218838; }
+        .btn-sync.download { background-color: #17a2b8; }
+        .btn-sync.download:hover { background-color: #138496; }
+        
+        .sync-status-msg {
+            margin-top: 10px;
+            padding: 10px;
+            background: #fff;
+            border-radius: 4px;
+            border: 1px solid #ddd;
+            font-size: 0.9rem;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 1rem;
+        }
+        th, td {
+            border-bottom: 1px solid var(--border-color);
+            padding: 0.75rem;
+            text-align: left;
+            word-break: break-word;
+        }
+        th {
+            background-color: #f2f2f2;
+        }
+        .summary {
+            background: #e9f5ff;
+            border: 1px solid #b3d7ff;
+            padding: 1.5rem;
+            margin-top: 1rem;
+            border-radius: 8px;
+        }
+        .summary-value {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: var(--success-color);
+        }
+        .error-message, .info-message, .warning-message {
+            margin-top: 0.5rem;
+            font-weight: bold;
+            padding: 0.75rem;
+            border-radius: 4px;
+        }
+        .error-message {
+            color: var(--danger-color);
+            background-color: #f8d7da;
+            border: 1px solid #f5c6cb;
+            white-space: pre-line;
+        }
+        .info-message {
+            color: #0c5460;
+            background-color: #d1ecf1;
+            border: 1px solid #bee5eb;
+        }
+        .warning-message {
+            color: #856404;
+            background-color: #fff3cd;
+            border: 1px solid #ffeaa7;
+        }
+        
+        .mode-switcher {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 1rem;
+        }
+        .mode-switcher button { flex: 1; }
+        .mode-switcher button.active {
+            background-color: #0056b3;
+            font-weight: bold;
+        }
+        .daily-group-header {
+            background-color: #f2f2f2;
+            font-weight: bold;
+        }
+        .record-detail-row td, .formula-detail-row td {
+            padding-left: 2rem;
+            font-size: 0.9rem;
+            color: #555;
+            border-top: 1px dotted #ccc;
+        }
+        .formula-detail-row td {
+            background-color: #f9f9f9;
+            padding: 1rem;
+            font-family: monospace;
+            color: #0056b3;
+        }
+        .actions-container {
+            display: flex;
+            justify-content: flex-end;
+            align-items: center;
+            gap: 0.5rem;
+            min-width: 140px;
+        }
+        
+        #export-container {
+            position: absolute;
+            left: -9999px;
+            top: auto;
+            width: 1000px;
+            background: white;
+            padding: 2rem;
+            box-sizing: border-box;
+            font-family: var(--font-family);
+            color: var(--text-color);
+        }
+        #export-container table { width: 100%; border-collapse: collapse; }
+        #export-container th, #export-container td { border: 1px solid var(--border-color); padding: 0.75rem; text-align: left; }
+        #export-container th { background-color: #f2f2f2; }
+        
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+        }
+        .modal.show {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .modal-content {
+            background-color: white;
+            padding: 2rem;
+            border-radius: 8px;
+            max-width: 500px;
+            width: 90%;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+        }
+        .modal-buttons {
+            display: flex;
+            gap: 1rem;
+            margin-top: 1.5rem;
+            justify-content: flex-end;
+        }
+        
+        @media (max-width: 768px) {
+            thead { display: none; }
+            tr:not(.formula-detail-row) {
+                display: block;
+                border: 1px solid var(--border-color);
+                border-radius: 8px;
+                margin-bottom: 1rem;
+                padding: 1rem;
+                box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+            }
+            tr.daily-group-header {
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 0.5rem;
+                padding: 0.5rem;
+                margin-bottom: 0.5rem;
+                background-color: #e9f5ff;
+            }
+            td {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                padding: 0.5rem 0;
+                border-bottom: 1px dotted var(--border-color);
+                text-align: right;
+            }
+            td:last-child { border-bottom: none; }
+            td::before {
+                content: attr(data-label);
+                font-weight: bold;
+                text-align: left;
+                margin-right: 1rem;
+            }
+            .formula-detail-row { display: block; }
+            .formula-detail-row td { display: block; text-align: left; }
+        }
+    </style>
 </head>
 <body>
     <div class="container main-layout">
-        <h1 class="app-title">加班費計算機 <small>v2.8.5</small></h1>
+        <h1 class="app-title">加班費計算機 <small>v2.8.6</small></h1>
         
         <!-- 未同步提醒條 (預設隱藏) -->
         <div id="unsynced-alert" class="sync-alert-bar" style="display: none;">
@@ -30,7 +480,7 @@
         <nav class="tabs-nav">
             <button class="tab-btn" data-tab="settings">設定</button>
             <button class="tab-btn active" data-tab="punch">加班</button>
-            <button class="tab-btn" data-tab="leave">特休</button> <!-- 新增特休分頁按鈕 -->
+            <button class="tab-btn" data-tab="leave">特休</button>
             <button class="tab-btn" data-tab="records">紀錄</button>
             <button class="tab-btn" data-tab="backup">備份</button>
         </nav>
@@ -121,7 +571,7 @@
             </div>
         </div>
 
-        <!-- 分頁 3: 特休 (新功能) -->
+        <!-- 分頁 3: 特休 -->
         <div id="tab-leave" class="tab-content">
             <div class="card" id="leave-summary-card">
                 <h2>特休假管理 (曆年制)</h2>
@@ -132,7 +582,6 @@
                 </div>
 
                 <div id="leave-dashboard" style="display: none;">
-                    <!-- 年度概況卡片 -->
                     <div class="leave-stats-grid">
                         <div class="leave-stat-box current-year">
                             <h4>今年度 (<span id="leave-current-year"></span>)</h4>
@@ -144,7 +593,6 @@
                             <div class="stat-value"><span id="leave-last-remain">0</span> <small>天</small></div>
                             <div class="stat-desc">去年未休完時數</div>
                         </div>
-                        <!-- 新增: 已使用統計 -->
                         <div class="leave-stat-box used">
                             <h4>已使用</h4>
                             <div class="stat-value" style="color: #666;"><span id="leave-used-total">0</span> <small>天</small></div>
@@ -159,10 +607,9 @@
 
                     <hr style="margin: 1.5rem 0;">
 
-                    <!-- 請假操作區 -->
                     <h3>📋 登記/編輯請假</h3>
                     <div class="grid-container single-column-grid" style="gap: 1rem;">
-                        <input type="hidden" id="leave-edit-id"> <!-- 隱藏的 ID 欄位 -->
+                        <input type="hidden" id="leave-edit-id">
                         <div class="form-group">
                             <label>請假日期</label>
                             <input type="date" id="leave-date">
@@ -185,20 +632,10 @@
                         </div>
                     </div>
 
-                    <!-- 使用紀錄列表 -->
                     <h3 style="margin-top: 1.5rem;">📅 使用明細 (今年)</h3>
                     <table id="leave-history-table">
-                        <thead>
-                            <tr>
-                                <th>日期</th>
-                                <th>時數</th>
-                                <th>事由</th>
-                                <th>操作</th>
-                            </tr>
-                        </thead>
-                        <tbody id="leave-history-body">
-                            <!-- JS 填充 -->
-                        </tbody>
+                        <thead><tr><th>日期</th><th>時數</th><th>事由</th><th>操作</th></tr></thead>
+                        <tbody id="leave-history-body"></tbody>
                     </table>
                 </div>
             </div>
@@ -226,7 +663,7 @@
             </div>
         </div>
         
-        <!-- 分頁 5: 備份 (資料管理) -->
+        <!-- 分頁 5: 備份 -->
         <div id="tab-backup" class="tab-content">
             <div class="card">
                 <h2>資料管理</h2>
@@ -240,14 +677,12 @@
                     </div>
                 </div>
 
-                <!-- 雲端同步區塊 (GAS Version) -->
+                <!-- 雲端同步區塊 -->
                 <div id="cloud-sync-section" style="margin-bottom: 2rem; background: #f0f7ff; padding: 1rem; border-radius: 8px; border: 1px solid #cce5ff;">
-                    <h3 style="margin-top:0; color: #0056b3;">☁️ Google Sheets 雲端同步 (GAS版)</h3>
-                    
+                    <h3 style="margin-top:0; color: #0056b3;">☁️ Google Sheets 雲端同步</h3>
                     <div id="gas-config-container">
                         <p style="margin-bottom: 0.5rem; font-size: 0.95rem;">
                             請在 Google 試算表中建立 Apps Script，並將發布後的 <strong>Web App URL</strong> 貼在下方。
-                            <br><small style="color:#666;">(無須登入，僅需網址即可同步)</small>
                         </p>
                         <div style="display: flex; gap: 0.5rem; margin-bottom: 1rem;">
                             <input type="text" id="gas-url-input" placeholder="https://script.google.com/macros/s/..../exec" style="flex:1;">
@@ -261,17 +696,9 @@
                             <button id="reset-gas-url" class="btn-small btn-secondary">重設網址</button>
                         </div>
                         <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
-                            <button id="sync-upload-btn" class="btn-sync upload">
-                                ⬆️ 上傳覆蓋 (備份)
-                            </button>
-                            <button id="sync-download-btn" class="btn-sync download">
-                                ⬇️ 下載合併 (還原)
-                            </button>
+                            <button id="sync-upload-btn" class="btn-sync upload">⬆️ 上傳覆蓋 (備份)</button>
+                            <button id="sync-download-btn" class="btn-sync download">⬇️ 下載合併 (還原)</button>
                         </div>
-                        <small style="display: block; margin-top: 0.5rem; color: #666;">
-                            * 上傳：會完全覆蓋試算表內容<br>
-                            * 下載：將試算表資料合併至本機 (ID 相同更新，不同新增)
-                        </small>
                         <div id="sync-status" class="sync-status-msg" style="display: none;"></div>
                     </div>
                 </div>
@@ -287,9 +714,7 @@
                                 <button id="copy-json" class="btn-secondary btn-small">📋 一鍵複製</button>
                                 <button id="download-json" class="btn-secondary btn-small">💾 下載檔案</button>
                             </div>
-                            <div id="copy-success" class="info-message" style="display: none; margin-top: 0.5rem; padding: 0.5rem;">
-                                ✅ 已複製到剪貼簿！
-                            </div>
+                            <div id="copy-success" class="info-message" style="display: none; margin-top: 0.5rem; padding: 0.5rem;">✅ 已複製到剪貼簿！</div>
                         </div>
                     </div>
                     <div>
@@ -304,9 +729,21 @@
         </div>
     </div>
 
-    <!-- Toast Container -->
     <div id="toast" class="toast"></div>
 
+    <!-- 自訂互動 Modal (用來取代原生的 alert 與 confirm) -->
+    <div id="async-confirm-modal" class="modal" style="z-index: 9999;">
+        <div class="modal-content" style="max-width: 400px; text-align: center;">
+            <h3 id="async-confirm-title" style="margin-top: 0;">提示</h3>
+            <p id="async-confirm-text" style="margin-bottom: 2rem;"></p>
+            <div class="modal-buttons" style="justify-content: center;">
+                <button id="async-confirm-cancel" class="btn-secondary">取消</button>
+                <button id="async-confirm-ok">確定</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 備份提醒 Modal -->
     <div id="backup-modal" class="modal" role="dialog" aria-labelledby="backup-modal-title">
         <div class="modal-content">
             <h3 id="backup-modal-title">🔔 每日備份/同步提醒</h3>
@@ -319,6 +756,1132 @@
         </div>
     </div>
 
-<script src="work.js"></script>
+<script>
+/**
+ * 加班費計算機 v2.8.6 - 整合修正版
+ */
+(function() {
+    'use strict';
+
+    // --- 自訂 Alert 與 Confirm (非同步) ---
+    function asyncConfirm(message) {
+        return new Promise((resolve) => {
+            const modal = document.getElementById('async-confirm-modal');
+            const text = document.getElementById('async-confirm-text');
+            const btnOk = document.getElementById('async-confirm-ok');
+            const btnCancel = document.getElementById('async-confirm-cancel');
+            
+            text.textContent = message;
+            btnCancel.style.display = 'inline-block';
+            modal.classList.add('show');
+            
+            const cleanup = () => {
+                modal.classList.remove('show');
+                btnOk.onclick = null;
+                btnCancel.onclick = null;
+            };
+            
+            btnOk.onclick = () => { cleanup(); resolve(true); };
+            btnCancel.onclick = () => { cleanup(); resolve(false); };
+        });
+    }
+
+    function asyncAlert(message) {
+        return new Promise((resolve) => {
+            const modal = document.getElementById('async-confirm-modal');
+            const text = document.getElementById('async-confirm-text');
+            const btnOk = document.getElementById('async-confirm-ok');
+            const btnCancel = document.getElementById('async-confirm-cancel');
+            
+            text.textContent = message;
+            btnCancel.style.display = 'none'; // 隱藏取消按鈕
+            modal.classList.add('show');
+            
+            const cleanup = () => {
+                modal.classList.remove('show');
+                btnCancel.style.display = 'inline-block'; 
+                btnOk.onclick = null;
+            };
+            
+            btnOk.onclick = () => { cleanup(); resolve(); };
+        });
+    }
+
+    const LABOR_STANDARDS = {
+        MONTHLY_WORK_HOURS: 240, WEEKDAY_RATE_1: 1.34, WEEKDAY_RATE_2: 1.67,
+        RESTDAY_RATE_1: 1.34, RESTDAY_RATE_2: 1.67, RESTDAY_RATE_3: 2.67,
+        HOLIDAY_RATE: 1.0, RESTDAY_TIER_1: 2, RESTDAY_TIER_2: 8,
+    };
+
+    const STORAGE_KEYS = {
+        SETTINGS: 'overtimeSettingsV10', RECORDS: 'overtimeRecordsV10',
+        TEMP_RECORD: 'tempOvertimeRecordV10.2', LAST_BACKUP: 'lastBackupDateV10',
+        LAST_SYNC: 'lastSyncDateV10', LAST_MODIFIED: 'lastDataModifiedV1',
+        WELCOME_SHOWN: 'welcomeShownV10', GAS_APP_URL: 'gasAppUrlV1'
+    };
+
+    const BACKUP_REMINDER_DAYS = 1;
+
+    // DOM 元素
+    const salaryInput = document.getElementById('salary');
+    const hourlyRateInput = document.getElementById('hourly-rate');
+    const addRecordBtn = document.getElementById('add-record');
+    const recordsBody = document.getElementById('records-body');
+    const totalOvertimePayEl = document.getElementById('total-overtime-pay');
+    const summaryTitleEl = document.getElementById('summary-title');
+    const summaryPeriodEl = document.getElementById('summary-period');
+    const monthFilter = document.getElementById('month-filter');
+    const formError = document.getElementById('form-error');
+    const editIdInput = document.getElementById('edit-id');
+    const punchStartBtn = document.getElementById('punch-start');
+    const punchEndBtn = document.getElementById('punch-end');
+    const forceFullCalcToggle = document.getElementById('force-full-calc-toggle');
+    const onboardDateInput = document.getElementById('onboard-date');
+    const gasUrlInput = document.getElementById('gas-url-input');
+    const saveGasUrlBtn = document.getElementById('save-gas-url');
+    const resetGasUrlBtn = document.getElementById('reset-gas-url');
+    const gasConfigContainer = document.getElementById('gas-config-container');
+    const gasSyncActions = document.getElementById('gas-sync-actions');
+    const syncUploadBtn = document.getElementById('sync-upload-btn');
+    const syncDownloadBtn = document.getElementById('sync-download-btn');
+    const syncStatusEl = document.getElementById('sync-status');
+    const unsyncedAlert = document.getElementById('unsynced-alert');
+    const quickSyncBtn = document.getElementById('quick-sync-btn');
+    const toastEl = document.getElementById('toast');
+    const tabButtons = document.querySelectorAll('.tab-btn');
+    const tabContents = document.querySelectorAll('.tab-content');
+
+    let settings = {};
+    let records = [];
+    let punchTimerInterval = null;
+    let gasAppUrl = '';
+
+    const escapeHtml = (unsafe) => {
+        if (unsafe === null || unsafe === undefined) return '';
+        return String(unsafe).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+    };
+
+    const formatDateTimeLocal = (date) => {
+        return new Date(date.getTime() - (date.getTimezoneOffset() * 60000)).toISOString().slice(0, 16);
+    };
+
+    const formatTime = (date) => {
+        return new Intl.DateTimeFormat('zh-TW', { hour: '2-digit', minute: '2-digit', hour12: false }).format(date);
+    };
+
+    const showError = (message) => {
+        formError.textContent = message;
+        formError.style.display = 'block';
+        setTimeout(() => hideError(), 5000);
+    };
+    const hideError = () => { formError.style.display = 'none'; };
+    const isValidNumber = (value) => { return typeof value === 'number' && !isNaN(value) && isFinite(value) && value >= 0; };
+    const isValidDate = (dateString) => { const date = new Date(dateString); return date instanceof Date && !isNaN(date); };
+    
+    const throttle = (func, delay) => {
+        let lastCall = 0;
+        return function(...args) {
+            const now = Date.now();
+            if (now - lastCall >= delay) {
+                lastCall = now;
+                return func.apply(this, args);
+            }
+        };
+    };
+
+    function updateLastModified() {
+        localStorage.setItem(STORAGE_KEYS.LAST_MODIFIED, Date.now().toString());
+        checkSyncStatus();
+    }
+
+    function showToast(message, type = 'info') {
+        toastEl.textContent = message;
+        toastEl.className = 'toast show ' + type;
+        setTimeout(() => { toastEl.className = toastEl.className.replace('show', ''); }, 3000);
+    }
+
+    // --- 特休計算邏輯 ---
+    function getLeaveEntitlementByTenure(years) {
+        if (years < 0.5) return 0;
+        if (years < 1) return 3;
+        if (years < 2) return 7;
+        if (years < 3) return 10;
+        if (years < 5) return 14;
+        if (years < 10) return 15;      
+        return Math.min(16 + Math.floor(years - 10), 30);
+    }
+
+    function calculateCalendarYearLeave(onboardDateStr, targetYear) {
+        if (!onboardDateStr) return 0;
+        const onboard = new Date(onboardDateStr);
+        const yearStart = new Date(targetYear, 0, 1);
+        const yearEnd = new Date(targetYear, 11, 31);
+        
+        if (onboard > yearEnd) return 0;
+        
+        let anniversary = new Date(onboard);
+        anniversary.setFullYear(targetYear);
+    
+        let prop1 = 0;
+        if (anniversary > yearEnd) {
+            prop1 = 1;
+        } else if (anniversary <= yearStart) {
+            prop1 = 0;
+        } else {
+            prop1 = (onboard.getMonth() + ((onboard.getDate() - 1) / 30)) / 12;
+        }
+        const prop2 = 1 - prop1;
+        
+        const yearsServedAtAnniversary = targetYear - onboard.getFullYear();
+        const entitlement1 = getLeaveEntitlementByTenure(Math.max(0, yearsServedAtAnniversary - 1 + 0.01));
+        const entitlement2 = getLeaveEntitlementByTenure(yearsServedAtAnniversary);
+    
+        let total = (entitlement1 * prop1) + (entitlement2 * prop2);
+        return Math.round(total * 100) / 100;
+    }
+
+    function renderLeaveTab() {
+        const onboardDate = settings.onboardDate;
+        if (!onboardDate) {
+            document.getElementById('leave-setup-hint').style.display = 'block';
+            document.getElementById('leave-dashboard').style.display = 'none';
+            return;
+        }
+        
+        document.getElementById('leave-setup-hint').style.display = 'none';
+        document.getElementById('leave-dashboard').style.display = 'block';
+        
+        const currentYear = new Date().getFullYear();
+        const lastYear = currentYear - 1;
+        
+        const leaveThisYear = calculateCalendarYearLeave(onboardDate, currentYear);
+        const leaveLastYear = calculateCalendarYearLeave(onboardDate, lastYear);
+        
+        const usedThisYear = records.filter(r => r.type === 'special_leave' && new Date(r.start).getFullYear() === currentYear)
+            .reduce((sum, r) => sum + (parseFloat(r.reason.match(/(\d+(\.\d+)?)h/)?.[1] || 8) / 8), 0);
+        const usedLastYear = records.filter(r => r.type === 'special_leave' && new Date(r.start).getFullYear() === lastYear)
+            .reduce((sum, r) => sum + (parseFloat(r.reason.match(/(\d+(\.\d+)?)h/)?.[1] || 8) / 8), 0);
+            
+        let remainLastYear = Math.max(0, leaveLastYear - usedLastYear);
+        remainLastYear = Math.round(remainLastYear * 100) / 100;
+        
+        const balance = (leaveThisYear + remainLastYear) - usedThisYear;
+        
+        document.getElementById('leave-current-year').textContent = currentYear;
+        document.getElementById('leave-current-total').textContent = leaveThisYear.toFixed(2);
+        document.getElementById('leave-last-remain').textContent = remainLastYear.toFixed(2);
+        document.getElementById('leave-used-total').textContent = usedThisYear.toFixed(2);
+        document.getElementById('leave-balance').textContent = balance.toFixed(2);
+        document.getElementById('leave-balance').style.color = balance < 0 ? 'var(--danger-color)' : 'var(--success-color)';
+
+        const tbody = document.getElementById('leave-history-body');
+        tbody.innerHTML = '';
+        const leaveRecords = records.filter(r => r.type === 'special_leave' && new Date(r.start).getFullYear() === currentYear)
+                                    .sort((a, b) => new Date(b.start) - new Date(a.start));
+        
+        if (leaveRecords.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; color:#888;">今年尚無特休紀錄</td></tr>';
+        } else {
+            leaveRecords.forEach(rec => {
+                const row = tbody.insertRow();
+                const dateStr = new Date(rec.start).toLocaleDateString();
+                const hours = rec.reason.match(/(\d+(\.\d+)?)h/)?.[1] || '8';
+                const cleanReason = rec.reason.replace(/\(\d+(\.\d+)?h\)/, '').trim();
+                
+                row.innerHTML = `
+                    <td>${dateStr}</td>
+                    <td>${hours}h</td>
+                    <td>${escapeHtml(cleanReason)}</td>
+                    <td>
+                        <div style="display:flex; gap:0.25rem;">
+                            <button class="btn-small" onclick="app.editRecord('${rec.id}')">編輯</button>
+                            <button class="btn-small btn-danger" onclick="app.deleteRecord('${rec.id}')">刪除</button>
+                        </div>
+                    </td>
+                `;
+            });
+        }
+    }
+
+    async function addLeaveRecord() {
+        const dateVal = document.getElementById('leave-date').value;
+        const hoursVal = document.getElementById('leave-hours').value;
+        const reasonVal = document.getElementById('leave-reason').value;
+        const editId = document.getElementById('leave-edit-id').value;
+        
+        if (!dateVal) { await asyncAlert('請選擇日期'); return; }
+        if (!hoursVal || parseFloat(hoursVal) <= 0) { await asyncAlert('請輸入有效時數'); return; }
+        
+        const fullReason = `${reasonVal} (${hoursVal}h)`;
+        const newRecord = {
+            id: editId || `leave_${Date.now()}`,
+            start: `${dateVal}T09:00`,
+            end: `${dateVal}T18:00`,
+            type: 'special_leave',
+            reason: fullReason,
+            forceFullCalculation: false
+        };
+        
+        if (editId) {
+            const index = records.findIndex(r => r.id === editId);
+            if (index > -1) { records[index] = newRecord; showToast('特休紀錄已更新'); }
+            else { records.push(newRecord); showToast('特休紀錄已新增'); }
+        } else {
+            records.push(newRecord); showToast('特休紀錄已新增');
+        }
+        
+        saveRecords();
+        clearLeaveForm();
+        renderLeaveTab();
+        render();
+    }
+
+    function clearLeaveForm() {
+        document.getElementById('leave-date').valueAsDate = new Date();
+        document.getElementById('leave-hours').value = 8;
+        document.getElementById('leave-reason').value = '';
+        document.getElementById('leave-edit-id').value = '';
+        const addBtn = document.getElementById('add-leave-record');
+        addBtn.textContent = '新增特休紀錄';
+        addBtn.classList.remove('btn-warning');
+        document.getElementById('cancel-leave-edit').style.display = 'none';
+    }
+
+    function cancelLeaveEdit() {
+        clearLeaveForm();
+        showToast('已取消編輯');
+    }
+
+    function loadSettings() {
+        try {
+            const savedSettings = JSON.parse(localStorage.getItem(STORAGE_KEYS.SETTINGS));
+            settings = {
+                userName: '', salaryType: 'monthly', salary: 0, onboardDate: '',
+                workStart: "09:00", workEnd: "18:00", breakStart: "12:00", breakEnd: "13:00",
+                payday: 1, ...savedSettings
+            };
+            if (!isValidNumber(settings.salary)) settings.salary = 0;
+
+            document.getElementById('user-name').value = settings.userName || '';
+            salaryInput.value = settings.salary || '';
+            document.querySelector(`input[name="salaryType"][value="${settings.salaryType}"]`).checked = true;
+            document.getElementById('payday').value = settings.payday || 1;
+            document.getElementById('work-start').value = settings.workStart;
+            document.getElementById('work-end').value = settings.workEnd;
+            document.getElementById('break-start').value = settings.breakStart;
+            document.getElementById('break-end').value = settings.breakEnd;
+            if (settings.onboardDate) onboardDateInput.value = settings.onboardDate;
+            
+            calculateHourlyRate();
+        } catch (error) {
+            showError('載入設定時發生錯誤,已使用預設值。');
+        }
+    }
+
+    async function saveSettings() {
+        try {
+            const salary = parseFloat(salaryInput.value) || 0;
+            if (salary < 0) { showError('錯誤:薪資不能為負數。'); return; }
+            if (salary > 0 && salary < 1000) {
+                if (!(await asyncConfirm('您輸入的薪資似乎偏低,確定要儲存嗎?'))) return;
+            }
+
+            settings = {
+                userName: escapeHtml(document.getElementById('user-name').value.trim()),
+                salaryType: document.querySelector('input[name="salaryType"]:checked').value,
+                salary: salary, onboardDate: onboardDateInput.value,
+                payday: parseInt(document.getElementById('payday').value) || 1,
+                workStart: document.getElementById('work-start').value,
+                workEnd: document.getElementById('work-end').value,
+                breakStart: document.getElementById('break-start').value,
+                breakEnd: document.getElementById('break-end').value,
+            };
+            
+            localStorage.setItem(STORAGE_KEYS.SETTINGS, JSON.stringify(settings));
+            updateLastModified();
+            calculateHourlyRate();
+            
+            // 重要：發薪日可能改變，因此重新計算並連動更新月曆篩選器
+            monthFilter.value = getDefaultMonthValue();
+            updatePayPeriodHint();
+            
+            await asyncAlert('設定已儲存! 您現在可以開始記錄加班了。');
+            
+            if (settings.onboardDate) renderLeaveTab();
+            switchTab('punch');
+            render();
+            
+        } catch (error) {
+            showError('儲存設定時發生錯誤,請重試。');
+        }
+    }
+
+    function calculateHourlyRate() {
+        if (settings.salaryType === 'monthly') {
+            settings.hourlyRate = (!isValidNumber(settings.salary) || settings.salary <= 0) ? 0 : Math.round((settings.salary / LABOR_STANDARDS.MONTHLY_WORK_HOURS) * 100) / 100;
+        } else {
+            settings.hourlyRate = parseFloat(settings.salary) || 0;
+        }
+        hourlyRateInput.value = settings.hourlyRate || 0;
+    }
+
+    function loadRecords() {
+        try {
+            const savedRecords = JSON.parse(localStorage.getItem(STORAGE_KEYS.RECORDS)) || [];
+            records = savedRecords.filter(rec => rec.id && isValidDate(rec.start) && isValidDate(rec.end) && rec.type);
+            records.sort((a, b) => new Date(b.start) - new Date(a.start));
+        } catch (error) {
+            records = [];
+            showError('載入記錄時發生錯誤,已重置為空。');
+        }
+    }
+
+    const saveRecords = throttle(() => {
+        try {
+            localStorage.setItem(STORAGE_KEYS.RECORDS, JSON.stringify(records));
+            updateLastModified();
+        } catch (error) {
+            showError('儲存記錄時發生錯誤,可能是儲存空間不足。');
+        }
+    }, 500);
+
+    async function addRecord() {
+        hideError();
+        const startTime = document.getElementById('start-time').value;
+        const endTime = document.getElementById('end-time').value;
+        const type = document.querySelector('input[name="overtimeType"]:checked').value;
+        const reason = document.getElementById('overtime-reason').value;
+        const editId = editIdInput.value;
+
+        if (!startTime || !endTime) { showError('錯誤:請填寫開始與結束時間。'); return; }
+        if (!isValidDate(startTime) || !isValidDate(endTime)) { showError('錯誤:日期格式不正確。'); return; }
+        if (new Date(endTime) <= new Date(startTime)) { showError('錯誤:結束時間必須晚於開始時間。'); return; }
+        if (!settings.hourlyRate || settings.hourlyRate <= 0) { showError('錯誤:請先完成有效薪資設定。'); return; }
+        
+        const newRecord = {
+            id: editId || `rec_${Date.now()}`, start: startTime, end: endTime,
+            type, reason: escapeHtml(reason), forceFullCalculation: forceFullCalcToggle.checked
+        };
+        
+        const netHours = calculateNetOvertimeHours(newRecord);
+        if (netHours <= 0) {
+            if (!(await asyncConfirm("此筆紀錄計算出的加班時數為0,確定要新增嗎?"))) return;
+        }
+        if (isOverlapping(newRecord)) return;
+        
+        if (editId) {
+            const index = records.findIndex(rec => rec.id === editId);
+            if (index > -1) records[index] = newRecord;
+        } else { records.push(newRecord); }
+        
+        saveRecords();
+        localStorage.removeItem(STORAGE_KEYS.TEMP_RECORD);
+        loadRecords();
+        render();
+        clearForm();
+        
+        if (await asyncConfirm('紀錄已儲存！是否前往「紀錄」分頁查看？')) {
+            switchTab('records');
+        }
+    }
+
+    async function deleteRecord(id) {
+        if (await asyncConfirm('確定要刪除這筆紀錄嗎?')) {
+            records = records.filter(record => record.id !== id);
+            saveRecords();
+            render();
+            if (document.getElementById('tab-leave').classList.contains('active')) renderLeaveTab();
+        }
+    }
+
+    function editRecord(id) {
+        const record = records.find(rec => rec.id === id);
+        if (record) {
+            if (record.type === 'special_leave') {
+                switchTab('leave');
+                const datePart = record.start.split('T')[0];
+                const hoursMatch = record.reason.match(/(\d+(\.\d+)?)h/);
+                const hours = hoursMatch ? hoursMatch[1] : '8';
+                const reasonText = record.reason.replace(/\(\d+(\.\d+)?h\)/, '').trim();
+
+                document.getElementById('leave-date').value = datePart;
+                document.getElementById('leave-hours').value = hours;
+                document.getElementById('leave-reason').value = reasonText;
+                document.getElementById('leave-edit-id').value = record.id;
+                
+                const addBtn = document.getElementById('add-leave-record');
+                addBtn.textContent = '更新特休紀錄';
+                addBtn.classList.add('btn-warning');
+                document.getElementById('cancel-leave-edit').style.display = 'block';
+                
+                window.scrollTo(0, 0);
+                showToast('已載入特休紀錄供編輯');
+                return;
+            }
+
+            switchTab('punch');
+            switchMode('manual', false);
+            
+            document.getElementById('start-time').value = formatDateTimeLocal(new Date(record.start));
+            document.getElementById('end-time').value = formatDateTimeLocal(new Date(record.end));
+            document.getElementById('overtime-reason').value = record.reason || '';
+            document.querySelector(`input[name="overtimeType"][value="${record.type}"]`).checked = true;
+            editIdInput.value = record.id;
+            forceFullCalcToggle.checked = !!record.forceFullCalculation;
+            addRecordBtn.textContent = '更新紀錄';
+            window.scrollTo(0, 0);
+        }
+    }
+
+    function clearForm() {
+        ['start-time', 'end-time', 'overtime-reason', 'edit-id'].forEach(id => { document.getElementById(id).value = ''; });
+        document.querySelector('input[name="overtimeType"][value="weekday"]').checked = true;
+        forceFullCalcToggle.checked = false;
+        addRecordBtn.textContent = '新增紀錄';
+        hideError();
+        
+        if (!punchTimerInterval) {
+             localStorage.removeItem(STORAGE_KEYS.TEMP_RECORD);
+             updatePunchUI(false);
+        }
+        const restoreMsgEl = document.getElementById('restore-message');
+        restoreMsgEl.style.display = 'none';
+        restoreMsgEl.textContent = '';
+    }
+
+    function isOverlapping(newRecord) {
+        const newStart = new Date(newRecord.start).getTime();
+        const newEnd = new Date(newRecord.end).getTime();
+        
+        const conflicts = records.filter(rec => {
+            if (rec.id === newRecord.id || rec.type === 'special_leave') return false; 
+            const recStart = new Date(rec.start).getTime();
+            const recEnd = new Date(rec.end).getTime();
+            return newStart < recEnd && newEnd > recStart;
+        });
+        
+        if (conflicts.length > 0) {
+            const conflictInfo = conflicts.map(rec => `• ${new Date(rec.start).toLocaleDateString()} ${formatTime(new Date(rec.start))} - ${formatTime(new Date(rec.end))}`).join('\n');
+            showError(`錯誤:時間段與以下記錄重疊:\n${conflictInfo}`);
+            return true;
+        }
+        return false;
+    }
+    
+    function startTimer(startTime) {
+        if (punchTimerInterval) clearInterval(punchTimerInterval);
+        const startTimeDisplay = document.getElementById('punch-start-time-display');
+        const elapsedTimeDisplay = document.getElementById('punch-elapsed-time-display');
+        document.getElementById('punch-status').style.display = 'block';
+        startTimeDisplay.textContent = startTime.toLocaleString('zh-TW', { hour12: false });
+        punchTimerInterval = setInterval(() => {
+            const elapsedSeconds = Math.floor((new Date() - startTime) / 1000);
+            const hours = Math.floor(elapsedSeconds / 3600).toString().padStart(2, '0');
+            const minutes = Math.floor((elapsedSeconds % 3600) / 60).toString().padStart(2, '0');
+            const seconds = (elapsedSeconds % 60).toString().padStart(2, '0');
+            elapsedTimeDisplay.textContent = `${hours}:${minutes}:${seconds}`;
+        }, 1000);
+    }
+    
+    function stopTimer() {
+        if (punchTimerInterval) clearInterval(punchTimerInterval);
+        punchTimerInterval = null;
+        document.getElementById('punch-status').style.display = 'none';
+    }
+    
+    function switchMode(mode, fromUserInteraction) {
+        document.getElementById('punch-mode-content').style.display = mode === 'punch' ? 'block' : 'none';
+        document.getElementById('manual-mode-content').style.display = mode === 'manual' ? 'block' : 'none';
+        document.getElementById('mode-punch').classList.toggle('active', mode === 'punch');
+        document.getElementById('mode-manual').classList.toggle('active', mode === 'manual');
+        if (fromUserInteraction) clearForm();
+    }
+    
+    function startPunch() {
+        const tempRecord = {
+            start: new Date().toISOString(), end: null,
+            reason: document.getElementById('overtime-reason').value,
+            type: document.querySelector('input[name="overtimeType"]:checked').value,
+            forceFullCalculation: forceFullCalcToggle.checked
+        };
+        localStorage.setItem(STORAGE_KEYS.TEMP_RECORD, JSON.stringify(tempRecord));
+        updatePunchUI(true);
+        startTimer(new Date(tempRecord.start));
+    }
+    
+    function endPunch() {
+        const tempRecordJSON = localStorage.getItem(STORAGE_KEYS.TEMP_RECORD);
+        if (!tempRecordJSON) return;
+        const tempRecord = JSON.parse(tempRecordJSON);
+        if (tempRecord.start && !tempRecord.end) {
+            stopTimer();
+            tempRecord.end = new Date().toISOString();
+            tempRecord.reason = document.getElementById('overtime-reason').value || tempRecord.reason;
+            tempRecord.type = document.querySelector('input[name="overtimeType"]:checked').value || tempRecord.type;
+            localStorage.setItem(STORAGE_KEYS.TEMP_RECORD, JSON.stringify(tempRecord));
+            updatePunchUI(false);
+            restoreState(); 
+            const restoreMsgEl = document.getElementById('restore-message');
+            restoreMsgEl.textContent = '打卡已結束，時間已填入下方表單。請確認無誤後按下「新增紀錄」儲存。';
+            restoreMsgEl.style.display = 'block';
+            restoreMsgEl.style.backgroundColor = '#d4edda';
+            restoreMsgEl.style.borderColor = '#c3e6cb';
+            restoreMsgEl.style.color = '#155724';
+        }
+    }
+
+    function updatePunchUI(isPunchedIn) {
+        punchStartBtn.disabled = isPunchedIn;
+        punchEndBtn.disabled = !isPunchedIn;
+        document.getElementById('mode-manual').disabled = isPunchedIn;
+        document.getElementById('mode-punch').disabled = isPunchedIn;
+    }
+
+    function calculateNetOvertimeHours(record) {
+        let recordStart = new Date(record.start).getTime();
+        let recordEnd = new Date(record.end).getTime();
+        let totalMillis = recordEnd - recordStart;
+        if (record.type === 'weekday' && !record.forceFullCalculation) {
+            const d = new Date(record.start);
+            const [workStartH, workStartM] = settings.workStart.split(':').map(Number);
+            const [workEndH, workEndM] = settings.workEnd.split(':').map(Number);
+            const [breakStartH, breakStartM] = settings.breakStart.split(':').map(Number);
+            const [breakEndH, breakEndM] = settings.breakEnd.split(':').map(Number);
+            const workStart = new Date(d).setHours(workStartH, workStartM, 0, 0);
+            const workEnd = new Date(d).setHours(workEndH, workEndM, 0, 0);
+            const breakStart = new Date(d).setHours(breakStartH, breakStartM, 0, 0);
+            const breakEnd = new Date(d).setHours(breakEndH, breakEndM, 0, 0);
+            let workOverlap = Math.max(0, Math.min(recordEnd, workEnd) - Math.max(recordStart, workStart));
+            let breakOverlap = Math.max(0, Math.min(recordEnd, breakEnd) - Math.max(recordStart, breakStart));
+            totalMillis -= (workOverlap - breakOverlap);
+        }
+        return Math.max(0, totalMillis / 3600000);
+    }
+    
+    function getDailyPayAndFormula(totalHours, type) {
+        let pay = 0, formula = "";
+        const rate = settings.hourlyRate, h = (val) => val.toFixed(2), f_rate = (val) => val.toFixed(2);
+        const { WEEKDAY_RATE_1, WEEKDAY_RATE_2, RESTDAY_RATE_1, RESTDAY_RATE_2, RESTDAY_RATE_3, RESTDAY_TIER_1, RESTDAY_TIER_2, HOLIDAY_RATE } = LABOR_STANDARDS;
+        switch (type) {
+            case 'weekday':
+                if (totalHours <= RESTDAY_TIER_1) {
+                    pay = totalHours * rate * WEEKDAY_RATE_1;
+                    formula = `(${h(totalHours)}H × ${f_rate(rate)} × ${WEEKDAY_RATE_1})`;
+                } else {
+                    pay = (RESTDAY_TIER_1 * rate * WEEKDAY_RATE_1) + ((totalHours - RESTDAY_TIER_1) * rate * WEEKDAY_RATE_2);
+                    formula = `(${RESTDAY_TIER_1}H × ${f_rate(rate)} × ${WEEKDAY_RATE_1}) + (${h(totalHours - RESTDAY_TIER_1)}H × ${f_rate(rate)} × ${WEEKDAY_RATE_2})`;
+                }
+                break;
+            case 'restday':
+                if (totalHours <= RESTDAY_TIER_1) {
+                    pay = totalHours * rate * RESTDAY_RATE_1;
+                    formula = `(${h(totalHours)}H × ${f_rate(rate)} × ${RESTDAY_RATE_1})`;
+                } else if (totalHours <= RESTDAY_TIER_2) {
+                    pay = (RESTDAY_TIER_1 * rate * RESTDAY_RATE_1) + ((totalHours - RESTDAY_TIER_1) * rate * RESTDAY_RATE_2);
+                    formula = `(${RESTDAY_TIER_1}H × ${f_rate(rate)} × ${RESTDAY_RATE_1}) + (${h(totalHours - RESTDAY_TIER_1)}H × ${f_rate(rate)} × ${RESTDAY_RATE_2})`;
+                } else {
+                    pay = (RESTDAY_TIER_1 * rate * RESTDAY_RATE_1) + ((RESTDAY_TIER_2 - RESTDAY_TIER_1) * rate * RESTDAY_RATE_2) + ((totalHours - RESTDAY_TIER_2) * rate * RESTDAY_RATE_3);
+                    formula = `(${RESTDAY_TIER_1}H × ${f_rate(rate)} × ${RESTDAY_RATE_1}) + (${RESTDAY_TIER_2 - RESTDAY_TIER_1}H × ${f_rate(rate)} × ${RESTDAY_RATE_2}) + (${h(totalHours - RESTDAY_TIER_2)}H × ${f_rate(rate)} × ${RESTDAY_RATE_3})`;
+                }
+                break;
+            case 'holiday':
+                pay = totalHours * rate * HOLIDAY_RATE;
+                formula = `(${h(totalHours)}H × ${f_rate(rate)} × ${HOLIDAY_RATE})`;
+                break;
+        }
+        return { pay: Math.ceil(pay), formula: `${formula} = ${Math.ceil(pay)} 元` };
+    }
+    
+    const getPayPeriod = (monthValue) => {
+        const payday = settings.payday || 1;
+        const [year, month] = monthValue.split('-').map(Number);
+        let periodStart, periodEnd;
+        if (payday === 1) {
+            periodStart = new Date(year, month - 1, 1, 0, 0, 0);
+            periodEnd = new Date(year, month, 0, 23, 59, 59);
+        } else {
+            periodStart = new Date(year, month - 2, payday, 0, 0, 0);
+            periodEnd = new Date(year, month - 1, payday - 1, 23, 59, 59);
+        }
+        const formatDate = (date) => `${date.getFullYear()}/${(date.getMonth() + 1).toString().padStart(2, '0')}/${date.getDate().toString().padStart(2, '0')}`;
+        return { start: periodStart, end: periodEnd, displayText: `${formatDate(periodStart)} ~ ${formatDate(periodEnd)}` };
+    };
+
+    // --- 修正後的預設月份邏輯 ---
+    function getDefaultMonthValue() {
+        const today = new Date();
+        const currentYear = today.getFullYear();
+        const currentMonth = today.getMonth(); // 0-11
+        const currentDay = today.getDate();
+        const payday = settings.payday || 1;
+
+        let targetYear = currentYear;
+        let targetMonth = currentMonth;
+
+        // 若並非1號發薪，且今日已經達到或超過發薪日，則應該歸屬於「下一個月」的發薪週期
+        if (payday !== 1 && currentDay >= payday) {
+            targetMonth++;
+            if (targetMonth > 11) {
+                targetMonth = 0;
+                targetYear++;
+            }
+        }
+
+        // 手動組合字串，避開 toISOString() 的 UTC 時差干擾
+        const mm = String(targetMonth + 1).padStart(2, '0');
+        return `${targetYear}-${mm}`;
+    }
+
+    function checkSyncStatus() {
+        const lastSync = localStorage.getItem(STORAGE_KEYS.LAST_SYNC) || 0;
+        const lastMod = localStorage.getItem(STORAGE_KEYS.LAST_MODIFIED) || 0;
+        if (parseInt(lastMod) > parseInt(lastSync) && gasAppUrl) unsyncedAlert.style.display = 'flex';
+        else unsyncedAlert.style.display = 'none';
+    }
+
+    function render() {
+        const filteredRecords = filterRecords(monthFilter.value);
+        const overtimeRecords = filteredRecords.filter(r => r.type !== 'special_leave');
+        const dailyGroups = groupRecordsByDay(overtimeRecords);
+        renderTable(recordsBody, dailyGroups);
+        renderSummary(dailyGroups, monthFilter.value);
+        updatePayPeriodHint();
+        checkSyncStatus();
+        if (document.getElementById('tab-leave').classList.contains('active')) renderLeaveTab();
+    }
+    
+    function filterRecords(filterValue) {
+        if (!filterValue) return records;
+        const period = getPayPeriod(filterValue);
+        return records.filter(rec => {
+            const recDate = new Date(rec.start);
+            return recDate >= period.start && recDate <= period.end;
+        });
+    }
+    
+    function groupRecordsByDay(records) {
+        const groups = {};
+        records.forEach(rec => {
+            const dateKey = new Date(rec.start).toLocaleDateString();
+            if (!groups[dateKey]) groups[dateKey] = { date: new Date(rec.start), type: rec.type, records: [] };
+            groups[dateKey].records.push(rec);
+        });
+        return Object.values(groups).map(group => {
+            const totalHours = group.records.reduce((sum, rec) => sum + calculateNetOvertimeHours(rec), 0);
+            const { pay, formula } = getDailyPayAndFormula(totalHours, group.type);
+            return { ...group, totalHours, pay, formula };
+        }).sort((a, b) => b.date - a.date);
+    }
+    
+    function renderTable(tbody, dailyGroups) {
+        tbody.innerHTML = '';
+        if (dailyGroups.length === 0) { tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;">該期間尚無紀錄</td></tr>`; return; }
+        dailyGroups.forEach(group => {
+            const dateStr = group.date.toLocaleDateString();
+            const typeText = { weekday: '平日', restday: '休息日', holiday: '國定假日' }[group.type];
+            const headerRow = tbody.insertRow();
+            headerRow.className = 'daily-group-header';
+            headerRow.innerHTML = `<td data-label="日期">${escapeHtml(dateStr)}</td><td data-label="類型">${escapeHtml(typeText)}</td><td data-label="總時長(H)">${group.totalHours.toFixed(2)}</td><td data-label="加班費($)">${group.pay}</td><td data-label="操作"><div class="actions-container"><button class="btn-small btn-secondary" onclick="app.toggleDetails(this)">展開</button></div></td>`;
+            group.records.sort((a, b) => new Date(a.start) - new Date(b.start)).forEach(rec => {
+                const detailRow = tbody.insertRow();
+                detailRow.className = 'record-detail-row';
+                detailRow.style.display = 'none';
+                detailRow.setAttribute('data-group-date', dateStr);
+                let reasonText = `${escapeHtml(rec.reason) || '-'}`;
+                if (rec.forceFullCalculation) reasonText += ' <strong style="color:var(--danger-color);">(強制計算)</strong>';
+                detailRow.innerHTML = `<td data-label="時間" colspan="3">${formatTime(new Date(rec.start))} - ${formatTime(new Date(rec.end))} (${reasonText})</td><td data-label="時長">${calculateNetOvertimeHours(rec).toFixed(2)} H</td><td data-label="操作"><div class="actions-container"><button class="btn-small" onclick="app.editRecord('${rec.id}')">編輯</button> <button class="btn-small btn-danger" onclick="app.deleteRecord('${rec.id}')">刪除</button></div></td>`;
+            });
+            const formulaRow = tbody.insertRow();
+            formulaRow.className = 'formula-detail-row';
+            formulaRow.style.display = 'none';
+            formulaRow.setAttribute('data-group-date', dateStr);
+            formulaRow.innerHTML = `<td colspan="5"><strong>計算式:</strong> ${group.formula}</td>`;
+        });
+    }
+    
+    function renderSummary(dailyGroups, filterValue) {
+        const totalPay = dailyGroups.reduce((sum, group) => sum + group.pay, 0);
+        totalOvertimePayEl.textContent = totalPay;
+        if (filterValue) {
+            const [year, month] = filterValue.split('-');
+            summaryTitleEl.textContent = `${year}年${month}月發薪 - 加班費總計`;
+            summaryPeriodEl.textContent = `計薪週期: ${getPayPeriod(filterValue).displayText} | 共 ${dailyGroups.length} 個加班日`;
+        } else {
+            summaryTitleEl.textContent = '所有記錄總計';
+            summaryPeriodEl.textContent = `共 ${dailyGroups.length} 個加班日`;
+        }
+    }
+    
+    function updatePayPeriodHint() {
+        const monthValue = monthFilter.value;
+        if (!monthValue) return;
+        document.getElementById('pay-period-hint').textContent = `📅 計薪週期: ${getPayPeriod(monthValue).displayText}`;
+    }
+    
+    function toggleDetails(button) {
+        const date = button.closest('tr').querySelector('[data-label="日期"]').textContent;
+        const isExpanding = button.textContent === '展開';
+        button.textContent = isExpanding ? '收合' : '展開';
+        document.querySelectorAll(`tr[data-group-date="${date}"]`).forEach(row => { row.style.display = isExpanding ? '' : 'none'; });
+    }
+    
+    async function exportResultsAsImage() {
+        const monthValue = monthFilter.value || new Date().toISOString().substring(0, 7);
+        const [year, month] = monthValue.split('-');
+        const period = getPayPeriod(monthValue);
+        const dailyGroups = groupRecordsByDay(filterRecords(monthValue));
+        const totalPay = dailyGroups.reduce((sum, group) => sum + group.pay, 0);
+        const exportContainer = document.createElement('div');
+        exportContainer.id = 'export-container';
+        
+        const userName = settings.userName ? `<p><strong>姓名:</strong> ${escapeHtml(settings.userName)}</p>` : '';
+        let tableHTML = `<h2>${escapeHtml(`${year}年 ${month}月發薪 加班記錄 (${period.displayText})`)}</h2>${userName}<table><thead><tr><th>日期</th><th>類型</th><th>總時長(H)</th><th>加班費($)</th><th>詳細資料</th></tr></thead><tbody>`;
+        if (dailyGroups.length === 0) tableHTML += `<tr><td colspan="5" style="text-align:center;">該期間尚無紀錄</td></tr>`;
+        else {
+            dailyGroups.forEach(group => {
+                const typeText = { weekday: '平日', restday: '休息日', holiday: '國定假日' }[group.type];
+                const recordDetails = group.records.sort((a, b) => new Date(a.start) - new Date(b.start)).map(rec => {
+                    let rText = `${escapeHtml(rec.reason) || '-'}`;
+                    if (rec.forceFullCalculation) rText += ' (強制計算)';
+                    return `${formatTime(new Date(rec.start))} - ${formatTime(new Date(rec.end))}: ${calculateNetOvertimeHours(rec).toFixed(2)}H (${rText})`;
+                }).join('<br>');
+                tableHTML += `<tr><td>${escapeHtml(group.date.toLocaleDateString())}</td><td>${escapeHtml(typeText)}</td><td>${group.totalHours.toFixed(2)}</td><td>${group.pay}</td><td style="font-size: 0.9em;">${recordDetails}<br><hr style="border-top: 1px dotted #ccc; margin: 4px 0;"><strong>計算式:</strong> ${group.formula}</td></tr>`;
+            });
+        }
+        tableHTML += `</tbody></table>`;
+        exportContainer.innerHTML = tableHTML + `<div class="summary"><h3>總金額: <span class="summary-value">${totalPay}</span> 元</h3></div>`;
+        document.body.appendChild(exportContainer);
+        
+        try {
+            const canvas = await html2canvas(exportContainer, { scale: 2, useCORS: true, windowWidth: 1000 });
+            const link = document.createElement('a');
+            link.download = settings.userName ? `加班記錄-${settings.userName}-${year}-${month}.png` : `加班記錄-${year}-${month}.png`;
+            link.href = canvas.toDataURL("image/png");
+            link.click();
+        } catch (error) {
+            await asyncAlert('匯出圖片時發生錯誤。');
+        } finally {
+            document.body.removeChild(exportContainer);
+        }
+    }
+    
+    function exportCSV() {
+        const monthValue = monthFilter.value || new Date().toISOString().substring(0, 7);
+        const [year, month] = monthValue.split('-');
+        const period = getPayPeriod(monthValue);
+        const dailyGroups = groupRecordsByDay(filterRecords(monthValue));
+        let csv = '\uFEFF';
+        csv += `${year}年${month}月發薪加班記錄,計薪週期: ${period.displayText}\n`;
+        if (settings.userName) csv += `姓名:,${settings.userName}\n`;
+        csv += '\n日期,類型,開始時間,結束時間,加班事由,時長(小時),加班費(元)\n';
+        dailyGroups.forEach(group => {
+            const typeText = { weekday: '平日', restday: '休息日', holiday: '國定假日' }[group.type];
+            group.records.sort((a, b) => new Date(a.start) - new Date(b.start)).forEach(rec => {
+                csv += `${new Date(rec.start).toLocaleDateString()},${typeText},${formatTime(new Date(rec.start))},${formatTime(new Date(rec.end))},${(rec.reason || '-').replace(/,/g, '，')},${calculateNetOvertimeHours(rec).toFixed(2)},\n`;
+            });
+        });
+        csv += `\n總計,,,,,,${dailyGroups.reduce((sum, group) => sum + group.pay, 0)}\n`;
+        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = settings.userName ? `加班記錄-${settings.userName}-${year}-${month}.csv` : `加班記錄-${year}-${month}.csv`;
+        link.click();
+    }
+
+    // --- Google Apps Script ---
+    function loadGasUrl() {
+        gasAppUrl = localStorage.getItem(STORAGE_KEYS.GAS_APP_URL) || '';
+        gasUrlInput.value = gasAppUrl;
+        updateGasUiState();
+        checkSyncStatus();
+    }
+
+    async function saveGasUrl() {
+        const url = gasUrlInput.value.trim();
+        if (!url) { await asyncAlert('請輸入有效的 Google Apps Script URL'); return; }
+        if (!url.includes('script.google.com')) { await asyncAlert('這看起來不像是正確的 Google Apps Script 網址'); return; }
+        gasAppUrl = url;
+        localStorage.setItem(STORAGE_KEYS.GAS_APP_URL, gasAppUrl);
+        updateGasUiState();
+        checkSyncStatus();
+        await asyncAlert('網址已儲存！您可以開始同步資料了。');
+    }
+
+    async function resetGasUrl() {
+        if(await asyncConfirm('確定要移除連結嗎？')) {
+            gasAppUrl = '';
+            localStorage.removeItem(STORAGE_KEYS.GAS_APP_URL);
+            gasUrlInput.value = '';
+            updateGasUiState();
+            checkSyncStatus();
+        }
+    }
+
+    function updateGasUiState() {
+        gasConfigContainer.style.display = gasAppUrl ? 'none' : 'block';
+        gasSyncActions.style.display = gasAppUrl ? 'block' : 'none';
+    }
+
+    function updateSyncStatus(msg, type = 'info') {
+        syncStatusEl.style.display = 'block';
+        syncStatusEl.textContent = msg;
+        syncStatusEl.className = 'sync-status-msg ' + type;
+        syncStatusEl.style.color = type === 'success' ? 'var(--success-color)' : (type === 'error' ? 'var(--danger-color)' : 'var(--text-color)');
+        showToast(msg, type);
+    }
+
+    async function syncToCloud() {
+        if (!gasAppUrl) { switchTab('backup'); return; }
+        try {
+            updateSyncStatus('正在上傳資料至 Google Sheets...', 'info');
+            const response = await fetch(gasAppUrl, { method: 'POST', body: JSON.stringify({ action: 'save', data: { settings, records } }), headers: { 'Content-Type': 'text/plain;charset=utf-8' } });
+            if (!response.ok) throw new Error('Network response was not ok');
+            const result = await response.json();
+            if (result.status === 'success') {
+                localStorage.setItem(STORAGE_KEYS.LAST_SYNC, Date.now().toString());
+                document.getElementById('backup-reminder').style.display = 'none';
+                updateSyncStatus(`✅ 上傳成功！(時間: ${new Date().toLocaleTimeString()})`, 'success');
+                checkSyncStatus();
+            } else throw new Error(result.message || 'Unknown error from server');
+        } catch (e) {
+            updateSyncStatus('❌ 上傳失敗: ' + (e.message || '請檢查網址是否正確'), 'error');
+        }
+    }
+
+    async function syncFromCloud() {
+        if (!gasAppUrl) return;
+        if (!(await asyncConfirm('確定要從雲端下載資料嗎？\n這將會與您現有的本地資料合併。'))) return;
+        try {
+            updateSyncStatus('正在讀取雲端資料...', 'info');
+            const response = await fetch(`${gasAppUrl}?action=load`);
+            if (!response.ok) throw new Error('Network response was not ok');
+            const result = await response.json();
+            if (result.status !== 'success') throw new Error(result.message || 'Server error');
+            const cloudData = result.data;
+            if (!cloudData || !cloudData.records) throw new Error('雲端沒有有效資料');
+            
+            const newSettings = { ...settings, ...cloudData.settings };
+            let addedCount = 0, updatedCount = 0;
+            cloudData.records.forEach(remoteRec => {
+                if (!remoteRec.id) return;
+                const localIdx = records.findIndex(localRec => localRec.id === remoteRec.id);
+                if (localIdx > -1) { records[localIdx] = remoteRec; updatedCount++; }
+                else { records.push(remoteRec); addedCount++; }
+            });
+
+            settings = newSettings;
+            localStorage.setItem(STORAGE_KEYS.SETTINGS, JSON.stringify(settings));
+            saveRecords();
+            localStorage.setItem(STORAGE_KEYS.LAST_SYNC, Date.now().toString());
+
+            loadSettings(); loadRecords(); render(); checkSyncStatus();
+            updateSyncStatus(`✅ 下載完成！(新增: ${addedCount}, 更新: ${updatedCount})`, 'success');
+        } catch (e) {
+            updateSyncStatus('❌ 下載失敗: ' + (e.message || '請檢查網址是否正確'), 'error');
+        }
+    }
+
+    function switchTab(tabId) {
+        tabButtons.forEach(btn => btn.classList.toggle('active', btn.dataset.tab === tabId));
+        tabContents.forEach(content => {
+            content.classList.toggle('active', content.id === `tab-${tabId}`);
+            content.style.display = content.id === `tab-${tabId}` ? 'block' : 'none';
+        });
+        if (tabId === 'records') render();
+        else if (tabId === 'leave') renderLeaveTab();
+    }
+
+    function showWelcomeMessage() {
+        if (!localStorage.getItem(STORAGE_KEYS.WELCOME_SHOWN) && !localStorage.getItem(STORAGE_KEYS.SETTINGS)) {
+            const welcomeEl = document.getElementById('welcome-message');
+            welcomeEl.style.display = 'block';
+            setTimeout(() => { welcomeEl.scrollIntoView({ behavior: 'smooth', block: 'start' }); }, 300);
+        }
+    }
+
+    function checkBackupReminder() {
+        const lastBackup = localStorage.getItem(STORAGE_KEYS.LAST_BACKUP);
+        const lastSync = localStorage.getItem(STORAGE_KEYS.LAST_SYNC);
+        const lastActionTime = Math.max(lastBackup ? parseInt(lastBackup) : 0, lastSync ? parseInt(lastSync) : 0);
+        const now = Date.now();
+        
+        if (lastActionTime === 0) { localStorage.setItem(STORAGE_KEYS.LAST_BACKUP, now.toString()); return; }
+        const daysSince = Math.floor((now - lastActionTime) / (1000 * 60 * 60 * 24));
+        if (daysSince >= BACKUP_REMINDER_DAYS && records.length > 0) {
+            document.getElementById('backup-reminder-text').textContent = `您已經有 ${daysSince} 天沒有備份或同步資料了！為避免資料遺失，建議立即操作。`;
+            document.getElementById('backup-reminder').style.display = 'block';
+            if (daysSince >= 3) {
+                document.getElementById('backup-days-count').textContent = daysSince;
+                document.getElementById('backup-modal').classList.add('show');
+            }
+        }
+    }
+
+    function performSyncOrBackup() {
+        document.getElementById('backup-reminder').style.display = 'none';
+        document.getElementById('backup-modal').classList.remove('show');
+        switchTab('backup');
+    }
+
+    function remindLater() {
+        localStorage.setItem(STORAGE_KEYS.LAST_BACKUP, (Date.now() - ((BACKUP_REMINDER_DAYS - 0.5) * 24 * 60 * 60 * 1000)).toString());
+        document.getElementById('backup-reminder').style.display = 'none';
+        document.getElementById('backup-modal').classList.remove('show');
+    }
+
+    function restoreState() {
+        const tempRecordJSON = localStorage.getItem(STORAGE_KEYS.TEMP_RECORD);
+        if (!tempRecordJSON) { updatePunchUI(false); return; }
+        
+        const tempRecord = JSON.parse(tempRecordJSON);
+        const restoreMsgEl = document.getElementById('restore-message');
+        const restoreFormFields = () => {
+            document.getElementById('overtime-reason').value = tempRecord.reason || '';
+            document.querySelector(`input[name="overtimeType"][value="${tempRecord.type}"]`).checked = true;
+            forceFullCalcToggle.checked = !!tempRecord.forceFullCalculation;
+        };
+
+        if (tempRecord.start && !tempRecord.end) {
+            switchTab('punch'); switchMode('punch', false); updatePunchUI(true);
+            restoreFormFields(); startTimer(new Date(tempRecord.start));
+            restoreMsgEl.textContent = '已為您還原上次的打卡上班狀態。'; restoreMsgEl.style.display = 'block';
+        } else if (tempRecord.start && tempRecord.end) {
+            switchTab('punch'); switchMode('manual', false); updatePunchUI(false);
+            document.getElementById('start-time').value = formatDateTimeLocal(new Date(tempRecord.start));
+            document.getElementById('end-time').value = formatDateTimeLocal(new Date(tempRecord.end));
+            restoreFormFields();
+            restoreMsgEl.textContent = '您有已打卡但未儲存的紀錄，已自動填入表單。請確認後按下新增。';
+            restoreMsgEl.style.display = 'block';
+        }
+    }
+
+    async function importData(jsonString) {
+        if (!jsonString) { showError('請先提供要匯入的資料。'); return; }
+        if (!(await asyncConfirm('警告：匯入將會覆蓋所有現存資料，確定要繼續嗎？'))) return;
+        try {
+            const data = JSON.parse(jsonString);
+            if (!data.settings || !Array.isArray(data.records)) { showError('匯入失敗：資料格式不正確。'); return; }
+            if (!isValidNumber(data.settings.salary) || data.settings.salary < 0) { showError('匯入失敗：薪資設定無效。'); return; }
+            const validRecords = data.records.filter(rec => rec.id && isValidDate(rec.start) && isValidDate(rec.end) && rec.type);
+            
+            localStorage.setItem(STORAGE_KEYS.SETTINGS, JSON.stringify(data.settings));
+            localStorage.setItem(STORAGE_KEYS.RECORDS, JSON.stringify(validRecords));
+            localStorage.setItem(STORAGE_KEYS.LAST_BACKUP, Date.now().toString());
+            updateLastModified();
+            
+            loadSettings(); loadRecords(); render();
+            await asyncAlert(`資料匯入成功！共匯入 ${validRecords.length} 筆記錄。`);
+            document.getElementById('import-textarea').value = '';
+        } catch (error) {
+            showError('匯入失敗：無效的 JSON 格式。');
+        }
+    }
+
+    function setupEventListeners() {
+        document.getElementById('save-settings').addEventListener('click', saveSettings);
+        addRecordBtn.addEventListener('click', addRecord);
+        document.getElementById('clear-form').addEventListener('click', clearForm);
+        monthFilter.addEventListener('change', render);
+        
+        document.getElementById('mode-punch').addEventListener('click', () => switchMode('punch', true));
+        document.getElementById('mode-manual').addEventListener('click', () => switchMode('manual', true));
+        punchStartBtn.addEventListener('click', startPunch);
+        punchEndBtn.addEventListener('click', endPunch);
+        
+        document.getElementById('export-image').addEventListener('click', exportResultsAsImage);
+        document.getElementById('export-csv').addEventListener('click', exportCSV);
+        document.getElementById('close-welcome').addEventListener('click', () => {
+            document.getElementById('welcome-message').style.display = 'none';
+            localStorage.setItem(STORAGE_KEYS.WELCOME_SHOWN, 'true');
+        });
+        
+        document.getElementById('add-leave-record').addEventListener('click', addLeaveRecord);
+        document.getElementById('cancel-leave-edit').addEventListener('click', cancelLeaveEdit);
+        document.getElementById('leave-btn-4h').addEventListener('click', () => document.getElementById('leave-hours').value = 4);
+        document.getElementById('leave-btn-8h').addEventListener('click', () => document.getElementById('leave-hours').value = 8);
+        document.getElementById('leave-date').valueAsDate = new Date();
+        
+        tabButtons.forEach(btn => btn.addEventListener('click', () => switchTab(btn.dataset.tab)));
+        quickSyncBtn.addEventListener('click', () => { gasAppUrl ? syncToCloud() : switchTab('backup'); });
+
+        document.getElementById('export-text').addEventListener('click', () => {
+            document.getElementById('export-textarea').value = JSON.stringify({ settings, records }, null, 2);
+            document.getElementById('export-output').style.display = 'block';
+            localStorage.setItem(STORAGE_KEYS.LAST_BACKUP, Date.now().toString());
+        });
+        document.getElementById('copy-json').addEventListener('click', async () => {
+            const textarea = document.getElementById('export-textarea');
+            try {
+                await navigator.clipboard.writeText(textarea.value);
+                const successMsg = document.getElementById('copy-success');
+                successMsg.style.display = 'block';
+                setTimeout(() => { successMsg.style.display = 'none'; }, 2000);
+            } catch (err) {
+                textarea.select(); document.execCommand('copy'); await asyncAlert('已複製到剪貼簿！');
+            }
+        });
+        document.getElementById('download-json').addEventListener('click', () => {
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(new Blob([document.getElementById('export-textarea').value], { type: 'application/json' }));
+            link.download = settings.userName ? `加班記錄備份-${settings.userName}-${new Date().toISOString().slice(0, 10)}.json` : `加班記錄備份-${new Date().toISOString().slice(0, 10)}.json`;
+            link.click();
+        });
+        document.getElementById('import-text').addEventListener('click', () => importData(document.getElementById('import-textarea').value));
+        document.getElementById('import-file-btn').addEventListener('click', () => document.getElementById('import-file-input').click());
+        document.getElementById('import-file-input').addEventListener('change', (event) => {
+            const file = event.target.files[0];
+            if (!file || file.type !== 'application/json') { showError('錯誤：請選擇一個 .json 檔案。'); event.target.value = ''; return; }
+            const reader = new FileReader();
+            reader.onload = (e) => importData(e.target.result);
+            reader.readAsText(file);
+            event.target.value = '';
+        });
+        
+        document.getElementById('backup-reminder-action').addEventListener('click', performSyncOrBackup);
+        document.getElementById('backup-remind-later').addEventListener('click', remindLater);
+        document.getElementById('modal-backup-now').addEventListener('click', performSyncOrBackup);
+        document.getElementById('modal-remind-later').addEventListener('click', remindLater);
+        document.getElementById('backup-modal').addEventListener('click', (e) => { if (e.target.id === 'backup-modal') remindLater(); });
+
+        saveGasUrlBtn.addEventListener('click', saveGasUrl);
+        resetGasUrlBtn.addEventListener('click', resetGasUrl);
+        syncUploadBtn.addEventListener('click', syncToCloud);
+        syncDownloadBtn.addEventListener('click', syncFromCloud);
+    }
+
+    function init() {
+        loadSettings(); loadRecords(); loadGasUrl();
+        
+        // 設定預設月份
+        monthFilter.value = getDefaultMonthValue();
+        
+        render(); setupEventListeners(); restoreState(); showWelcomeMessage();
+        
+        if (settings && settings.salary > 0 && settings.hourlyRate > 0) switchTab('punch');
+        else switchTab('settings');
+        
+        setTimeout(() => checkBackupReminder(), 2000);
+        checkSyncStatus();
+        
+        const hash = window.location.hash;
+        if (['#punch', '#records', '#settings', '#leave'].includes(hash)) {
+            switchTab(hash.substring(1));
+            setTimeout(() => history.replaceState(null, null, ' '), 1000);
+        }
+    }
+
+    window.app = { deleteRecord, editRecord, toggleDetails };
+    init();
+})();
+
+// --- Service Worker 註冊 (保留給實體主機環境) ---
+if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+        navigator.serviceWorker.register('sw.js').catch(err => {
+            console.log('ServiceWorker registration failed (This is normal in preview environments): ', err);
+        });
+    });
+}
+</script>
 </body>
 </html>
