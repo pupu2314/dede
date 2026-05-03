@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>個人紀錄小幫手</title>
+  <title>個人紀錄小幫手 v3</title>
   
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
@@ -95,19 +95,52 @@
         setTimeout(() => setToasts(prev => prev.filter(t => t.id !== id)), duration);
       }, []);
 
+      // ── 用 ref 追蹤最新 records，避免 closure 讀到舊值 ──
+      const recordsRef = useRef([]);
+      useEffect(() => { recordsRef.current = records; }, [records]);
+
       useEffect(() => {
         const savedUrl = localStorage.getItem('tracker_api_url');
         const savedRecords = localStorage.getItem('tracker_records');
-        if (savedUrl) setApiUrl(savedUrl);
+        let initialRecords = [];
+
         if (savedRecords) {
           try { 
             const parsed = JSON.parse(savedRecords);
-            const clean = getUniqueRecords(parsed);
-            setRecords(clean); 
-            if (clean.length !== parsed.length) localStorage.setItem('tracker_records', JSON.stringify(clean));
+            initialRecords = getUniqueRecords(parsed);
+            setRecords(initialRecords);
+            recordsRef.current = initialRecords;
+            if (initialRecords.length !== parsed.length) localStorage.setItem('tracker_records', JSON.stringify(initialRecords));
           } catch (e) { console.error(e); }
         }
         setIsLoading(false);
+
+        // ── 開啟時若有 API 網址，自動執行雙向同步 ──
+        if (savedUrl) {
+          setApiUrl(savedUrl);
+          setSyncStatus('syncing');
+          // 用 setTimeout 確保 state 已設定完成才執行
+          setTimeout(async () => {
+            try {
+              const response = await fetch(savedUrl);
+              if (!response.ok) throw new Error(`HTTP ${response.status}`);
+              const cloudData = await response.json();
+              if (Array.isArray(cloudData)) {
+                const combined = [...recordsRef.current, ...cloudData];
+                const cleanRecords = getUniqueRecords(combined);
+                setRecords(cleanRecords);
+                recordsRef.current = cleanRecords;
+                localStorage.setItem('tracker_records', JSON.stringify(cleanRecords));
+                await fetch(savedUrl, { method: 'POST', body: JSON.stringify(cleanRecords), headers: { 'Content-Type': 'text/plain;charset=utf-8' } });
+              }
+              setSyncStatus('success');
+              setTimeout(() => setSyncStatus('idle'), 3000);
+            } catch (e) {
+              setSyncStatus('error');
+              setTimeout(() => setSyncStatus('idle'), 5000);
+            }
+          }, 300);
+        }
       }, []);
 
       // 🌟 核心防重複邏輯 (分鐘級別)
@@ -223,7 +256,7 @@
         }
       };
 
-      // ── 修正：新增紀錄時若雲端同步失敗，顯示警告 ──
+      // ── 新增紀錄：先存本地，再雙向合併雲端 ──
       const addRecordImplementation = async (timeMs) => {
         const ONE_HOUR = 60 * 60 * 1000;
         if (records.some(r => Math.abs(r.timestamp - timeMs) < ONE_HOUR) && !window.confirm('一小時內已有紀錄，確定新增？')) return;
@@ -233,10 +266,24 @@
         showToast('✅ 紀錄已儲存', 'success', 2000);
         
         if (apiUrl) {
+          setSyncStatus('syncing');
           try {
-            await uploadToCloud(apiUrl, newRecords);
+            // 雙向合併：先拉雲端，合併後再上傳
+            const response = await fetch(apiUrl);
+            if (!response.ok) throw new Error(`HTTP ${response.status}`);
+            const cloudData = await response.json();
+            let merged = newRecords;
+            if (Array.isArray(cloudData)) {
+              merged = getUniqueRecords([...newRecords, ...cloudData]);
+            }
+            saveLocally(merged);
+            await uploadToCloud(apiUrl, merged);
+            setSyncStatus('success');
+            setTimeout(() => setSyncStatus('idle'), 3000);
           } catch (e) {
+            setSyncStatus('error');
             showToast('⚠️ 本地已儲存，但雲端同步失敗', 'error', 4000);
+            setTimeout(() => setSyncStatus('idle'), 5000);
           }
         }
       };
