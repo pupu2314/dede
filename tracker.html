@@ -15,13 +15,20 @@
     body { background-color: #f8fafc; }
     .no-scrollbar::-webkit-scrollbar { display: none; }
     .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .animate-spin { animation: spin 1s linear infinite; }
+    .animate-fadein { animation: fadeIn 0.4s ease-out; }
+    /* Toast animation */
+    @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+    .toast-enter { animation: slideUp 0.3s ease-out; }
   </style>
 </head>
 <body>
   <div id="root"></div>
 
   <script type="text/babel">
-    const { useState, useEffect, useMemo } = React;
+    const { useState, useEffect, useMemo, useCallback, useRef } = React;
 
     // --- 圖示組件 ---
     const SvgIcon = ({ children, className }) => (
@@ -45,23 +52,48 @@
     const HelpCircle = (p) => <SvgIcon {...p}><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></SvgIcon>;
     const Copy = (p) => <SvgIcon {...p}><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></SvgIcon>;
     const Check = (p) => <SvgIcon {...p}><polyline points="20 6 9 17 4 12"/></SvgIcon>;
+    const ChevronDown = (p) => <SvgIcon {...p}><polyline points="6 9 12 15 18 9"/></SvgIcon>;
+    const CloudOff = (p) => <SvgIcon {...p}><path d="M22.61 16.95A5 5 0 0 0 18 10h-1.26a8 8 0 0 0-7.05-6M5 5a8 8 0 0 0 4 15h9a5 5 0 0 0 1.7-.3"/><line x1="1" y1="1" x2="23" y2="23"/></SvgIcon>;
+    const CloudCheck = (p) => <SvgIcon {...p}><path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"/><polyline points="9 16 11 18 15 14"/></SvgIcon>;
+
+    // ── Toast 通知組件 ──
+    function Toast({ toasts }) {
+      return (
+        <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50 flex flex-col gap-2 w-[calc(100%-2rem)] max-w-sm pointer-events-none">
+          {toasts.map(t => (
+            <div key={t.id} className={`toast-enter flex items-center gap-3 px-4 py-3 rounded-2xl shadow-lg text-sm font-medium
+              ${t.type === 'success' ? 'bg-emerald-600 text-white' : t.type === 'error' ? 'bg-red-600 text-white' : 'bg-slate-800 text-white'}`}>
+              {t.type === 'success' ? <Check className="w-4 h-4 shrink-0" /> : t.type === 'error' ? <AlertCircle className="w-4 h-4 shrink-0" /> : <RefreshCw className="w-4 h-4 shrink-0 animate-spin" />}
+              {t.message}
+            </div>
+          ))}
+        </div>
+      );
+    }
 
     function App() {
       const [activeTab, setActiveTab] = useState('home');
       const [records, setRecords] = useState([]);
       const [apiUrl, setApiUrl] = useState('');
-      const [syncStatus, setSyncStatus] = useState('idle');
-      const [syncMessage, setSyncMessage] = useState('');
+      const [syncStatus, setSyncStatus] = useState('idle'); // idle | syncing | success | error
       const [customDate, setCustomDate] = useState('');
       const [isLoading, setIsLoading] = useState(true);
+      const [showAllRecords, setShowAllRecords] = useState(false);
 
       const [importYear, setImportYear] = useState(new Date().getFullYear().toString());
       const [importData, setImportData] = useState('');
       const [selectedDeleteYear, setSelectedDeleteYear] = useState('');
       
-      // API 教學相關狀態
       const [showTutorial, setShowTutorial] = useState(false);
       const [copied, setCopied] = useState(false);
+
+      // ── Toast 系統 ──
+      const [toasts, setToasts] = useState([]);
+      const showToast = useCallback((message, type = 'info', duration = 3000) => {
+        const id = Date.now();
+        setToasts(prev => [...prev, { id, message, type }]);
+        setTimeout(() => setToasts(prev => prev.filter(t => t.id !== id)), duration);
+      }, []);
 
       useEffect(() => {
         const savedUrl = localStorage.getItem('tracker_api_url');
@@ -83,12 +115,9 @@
         const unique = [];
         const seenMinutes = new Set(); 
         const seenIds = new Set();
-
         const sorted = [...recordsArray].sort((a, b) => b.timestamp - a.timestamp);
-
         for (const r of sorted) {
           const minuteKey = Math.floor(r.timestamp / 60000); 
-          
           if (!seenIds.has(r.id) && !seenMinutes.has(minuteKey)) {
             seenIds.add(r.id);
             seenMinutes.add(minuteKey);
@@ -98,97 +127,137 @@
         return unique;
       };
 
-      const availableYears = useMemo(() => {
-        const years = new Set(records.map(r => new Date(r.timestamp).getFullYear()));
-        return Array.from(years).sort((a, b) => b - a);
-      }, [records]);
+      // ── 儲存到本地 ──
+      const saveLocally = (newRecords) => {
+        setRecords(newRecords);
+        localStorage.setItem('tracker_records', JSON.stringify(newRecords));
+      };
 
+      // ── 修正：上傳到雲端，並等待結果 ──
+      const uploadToCloud = async (url, data) => {
+        const response = await fetch(url, {
+          method: 'POST',
+          body: JSON.stringify(data),
+          headers: { 'Content-Type': 'text/plain;charset=utf-8' }
+        });
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        return response;
+      };
+
+      // ── 修正：雙向合併同步 ──
       const forceSyncImplementation = async () => {
-        if (!apiUrl) return alert('請先設定 API 網址');
-        setSyncStatus('syncing'); setSyncMessage('智能同步去重中...');
+        if (!apiUrl) { showToast('請先設定並儲存 API 網址', 'error'); return; }
+        setSyncStatus('syncing');
+        showToast('智能同步去重中...', 'info', 10000);
         try {
+          // Step 1: 從雲端 GET
           const response = await fetch(apiUrl);
+          if (!response.ok) throw new Error(`雲端回應 HTTP ${response.status}`);
           const cloudData = await response.json();
           
+          // Step 2: 合併去重
           let combined = [...records];
           if (Array.isArray(cloudData)) {
             combined = [...records, ...cloudData];
           }
-          
           const cleanRecords = getUniqueRecords(combined);
           
-          setRecords(cleanRecords);
-          localStorage.setItem('tracker_records', JSON.stringify(cleanRecords));
+          // Step 3: 存本地
+          saveLocally(cleanRecords);
           
-          await fetch(apiUrl, { method: 'POST', body: JSON.stringify(cleanRecords), headers: { 'Content-Type': 'text/plain;charset=utf-8' } });
+          // Step 4: 等待 POST 回雲端完成 ✅ (原本此步驟沒有 await)
+          await uploadToCloud(apiUrl, cleanRecords);
           
-          setSyncStatus('success'); setSyncMessage(`同步完成 (共 ${cleanRecords.length} 筆)`);
-          setTimeout(() => { setSyncStatus('idle'); setSyncMessage(''); }, 3000);
+          setSyncStatus('success');
+          showToast(`✅ 同步完成，共 ${cleanRecords.length} 筆`, 'success');
+          setTimeout(() => setSyncStatus('idle'), 3000);
         } catch (error) {
-          setSyncStatus('error'); setSyncMessage('同步失敗');
-          setTimeout(() => { setSyncStatus('idle'); setSyncMessage(''); }, 5000);
+          setSyncStatus('error');
+          showToast(`❌ 同步失敗：${error.message}`, 'error', 5000);
+          setTimeout(() => setSyncStatus('idle'), 5000);
         }
       };
 
       const overwriteLocalWithCloud = async () => {
-        if (!apiUrl) return alert('請先設定 API 網址');
+        if (!apiUrl) { showToast('請先設定 API 網址', 'error'); return; }
         if (!window.confirm('【警告】這將會清除設備上的所有本地紀錄，並完全替換為雲端資料。\n\n確定要繼續嗎？')) return;
         
-        setSyncStatus('syncing'); setSyncMessage('下載中...');
+        setSyncStatus('syncing');
+        showToast('從雲端下載中...', 'info', 10000);
         try {
           const response = await fetch(apiUrl);
+          if (!response.ok) throw new Error(`HTTP ${response.status}`);
           const data = await response.json();
           if (Array.isArray(data)) {
             const cleanData = getUniqueRecords(data);
-            setRecords(cleanData);
-            localStorage.setItem('tracker_records', JSON.stringify(cleanData));
-            setSyncStatus('success'); setSyncMessage('已成功覆蓋本地資料！');
-            alert('已成功用雲端資料覆蓋本地紀錄！');
+            saveLocally(cleanData);
+            setSyncStatus('success');
+            showToast(`✅ 已成功用雲端資料覆蓋本地 (${cleanData.length} 筆)`, 'success');
           } else {
             throw new Error('雲端資料格式錯誤');
           }
         } catch (error) {
-          setSyncStatus('error'); setSyncMessage('下載失敗');
-          alert('下載失敗，請檢查 API 網址或網路狀態。');
+          setSyncStatus('error');
+          showToast(`❌ 下載失敗：${error.message}`, 'error', 5000);
         } finally {
-          setTimeout(() => { setSyncStatus('idle'); setSyncMessage(''); }, 3000);
+          setTimeout(() => setSyncStatus('idle'), 3000);
         }
       };
 
       const overwriteCloudWithLocal = async () => {
-        if (!apiUrl) return alert('請先設定 API 網址');
+        if (!apiUrl) { showToast('請先設定 API 網址', 'error'); return; }
         if (!window.confirm('【警告】這將會覆蓋雲端上的所有紀錄，替換為您目前設備上的資料。\n\n確定要繼續嗎？')) return;
         
-        setSyncStatus('syncing'); setSyncMessage('上傳中...');
+        setSyncStatus('syncing');
+        showToast('上傳本地資料中...', 'info', 10000);
         try {
           const cleanData = getUniqueRecords(records);
-          await fetch(apiUrl, { method: 'POST', body: JSON.stringify(cleanData), headers: { 'Content-Type': 'text/plain;charset=utf-8' } });
-          setSyncStatus('success'); setSyncMessage('已成功覆蓋雲端資料！');
-          alert('已成功用本地資料覆蓋雲端紀錄！');
+          await uploadToCloud(apiUrl, cleanData);
+          setSyncStatus('success');
+          showToast(`✅ 已成功將本地資料上傳至雲端 (${cleanData.length} 筆)`, 'success');
         } catch (error) {
-          setSyncStatus('error'); setSyncMessage('上傳失敗');
-          alert('上傳失敗，請檢查 API 網址或網路狀態。');
+          setSyncStatus('error');
+          showToast(`❌ 上傳失敗：${error.message}`, 'error', 5000);
         } finally {
-          setTimeout(() => { setSyncStatus('idle'); setSyncMessage(''); }, 3000);
+          setTimeout(() => setSyncStatus('idle'), 3000);
         }
       };
 
-      const addRecordImplementation = (timeMs) => {
+      // ── 修正：新增紀錄時若雲端同步失敗，顯示警告 ──
+      const addRecordImplementation = async (timeMs) => {
         const ONE_HOUR = 60 * 60 * 1000;
         if (records.some(r => Math.abs(r.timestamp - timeMs) < ONE_HOUR) && !window.confirm('一小時內已有紀錄，確定新增？')) return;
         
         const newRecords = getUniqueRecords([...records, { id: crypto.randomUUID(), timestamp: timeMs }]);
-        setRecords(newRecords); 
-        localStorage.setItem('tracker_records', JSON.stringify(newRecords));
-        if (apiUrl) fetch(apiUrl, { method: 'POST', body: JSON.stringify(newRecords), headers: { 'Content-Type': 'text/plain;charset=utf-8' } });
+        saveLocally(newRecords);
+        showToast('✅ 紀錄已儲存', 'success', 2000);
+        
+        if (apiUrl) {
+          try {
+            await uploadToCloud(apiUrl, newRecords);
+          } catch (e) {
+            showToast('⚠️ 本地已儲存，但雲端同步失敗', 'error', 4000);
+          }
+        }
       };
 
-      const deleteRecordImplementation = (id) => {
+      const deleteRecordImplementation = async (id) => {
         if (!window.confirm('確定刪除？')) return;
         const newRecords = records.filter(r => r.id !== id);
-        setRecords(newRecords); localStorage.setItem('tracker_records', JSON.stringify(newRecords));
-        if (apiUrl) fetch(apiUrl, { method: 'POST', body: JSON.stringify(newRecords), headers: { 'Content-Type': 'text/plain;charset=utf-8' } });
+        saveLocally(newRecords);
+        if (apiUrl) {
+          try {
+            await uploadToCloud(apiUrl, newRecords);
+          } catch (e) {
+            showToast('⚠️ 本地已刪除，但雲端同步失敗', 'error', 4000);
+          }
+        }
       };
+
+      const availableYears = useMemo(() => {
+        const years = new Set(records.map(r => new Date(r.timestamp).getFullYear()));
+        return Array.from(years).sort((a, b) => b - a);
+      }, [records]);
 
       // 💡 數據統計邏輯
       const stats = useMemo(() => {
@@ -265,14 +334,19 @@
 
         return {
           total: records.length, thisYearCount, lastYearCount, last7DaysCount, last30DaysCount,
-          yearlyProjection, yearlyStats: yearlyStatsArray, currentStreakDays: timeSinceLast !== null ? (timeSinceLast / MS_PER_DAY).toFixed(1) : '0.0',
-          maxGapDays: (maxGapMs / MS_PER_DAY).toFixed(1), avgIntervalDays: avgIntervalDays.toFixed(1), healthAdvice,
-          timeOfDay: { counts: timeOfDayCounts, max: maxTimeOfDay }, dayOfWeek: { counts: dayOfWeekCounts, max: maxDayOfWeek },
+          yearlyProjection, yearlyStats: yearlyStatsArray,
+          currentStreakDays: timeSinceLast !== null ? (timeSinceLast / MS_PER_DAY).toFixed(1) : '0.0',
+          maxGapDays: (maxGapMs / MS_PER_DAY).toFixed(1),
+          avgIntervalDays: avgIntervalDays.toFixed(1),
+          healthAdvice,
+          timeOfDay: { counts: timeOfDayCounts, max: maxTimeOfDay },
+          dayOfWeek: { counts: dayOfWeekCounts, max: maxDayOfWeek },
           monthlyTrend: { labels: monthlyTrendLabels, counts: monthlyTrendCounts, max: maxMonthlyTrend }
         };
       }, [records]);
 
-      const copyGasCode = () => {
+      // ── 修正：使用現代 Clipboard API，附 fallback ──
+      const copyGasCode = async () => {
         const code = `function doGet(e) {
   var prop = PropertiesService.getScriptProperties();
   var data = prop.getProperty('tracker_data') || '[]';
@@ -284,79 +358,106 @@ function doPost(e) {
   prop.setProperty('tracker_data', e.postData.contents);
   return ContentService.createTextOutput('{"status":"success"}').setMimeType(ContentService.MimeType.JSON);
 }`;
-        // 使用 textarea 兼容更多設備的複製功能
-        const textarea = document.createElement('textarea');
-        textarea.value = code;
-        document.body.appendChild(textarea);
-        textarea.select();
         try {
-          document.execCommand('copy');
+          if (navigator.clipboard && navigator.clipboard.writeText) {
+            await navigator.clipboard.writeText(code);
+          } else {
+            // Fallback for older browsers / non-HTTPS
+            const textarea = document.createElement('textarea');
+            textarea.value = code;
+            textarea.style.position = 'fixed';
+            textarea.style.opacity = '0';
+            document.body.appendChild(textarea);
+            textarea.select();
+            document.execCommand('copy');
+            document.body.removeChild(textarea);
+          }
           setCopied(true);
           setTimeout(() => setCopied(false), 2000);
         } catch (err) {
-          alert('複製失敗，請手動選取複製');
+          showToast('複製失敗，請手動選取', 'error');
         }
-        document.body.removeChild(textarea);
       };
 
-      const renderHome = () => (
-        <div className="space-y-6 animate-[fadeIn_0.5s_ease-out]">
-          <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100">
-            <h2 className="text-lg font-bold text-slate-800 mb-4 flex items-center">
-              <Clock className="w-5 h-5 mr-2 text-indigo-500" />
-              新增紀錄
-            </h2>
-            <div className="grid grid-cols-2 gap-3 mb-4">
-              <button onClick={() => addRecordImplementation(Date.now())} className="bg-indigo-600 hover:bg-indigo-700 text-white py-4 rounded-2xl font-semibold shadow-md shadow-indigo-200 transition-all active:scale-95 flex flex-col items-center justify-center gap-1">
-                <Plus className="w-6 h-6" />現在 (Now)
-              </button>
-              <button onClick={() => addRecordImplementation(Date.now() - 5 * 60 * 1000)} className="bg-sky-500 hover:bg-sky-600 text-white py-4 rounded-2xl font-semibold shadow-md shadow-sky-200 transition-all active:scale-95 flex flex-col items-center justify-center gap-1">
-                <RotateCcw className="w-6 h-6" />5分鐘前
-              </button>
-            </div>
-            <div className="flex items-center gap-2 mt-4 pt-4 border-t border-slate-100">
-              <input type="datetime-local" value={customDate} onChange={(e) => setCustomDate(e.target.value)} className="flex-1 bg-slate-50 border border-slate-200 rounded-xl px-4 py-2 text-slate-700 outline-none focus:border-indigo-500" />
-              <button onClick={() => { if(!customDate) return alert('請先選擇時間'); addRecordImplementation(new Date(customDate).getTime()); setCustomDate(''); }} className="bg-slate-800 text-white px-5 py-2 rounded-xl font-medium hover:bg-slate-700">補登</button>
-            </div>
-          </div>
+      // ── 同步狀態圖示 ──
+      const SyncIndicator = () => {
+        if (syncStatus === 'syncing') return <RefreshCw className="w-5 h-5 text-indigo-400 animate-spin" />;
+        if (syncStatus === 'success') return <CloudCheck className="w-5 h-5 text-emerald-500" />;
+        if (syncStatus === 'error') return <CloudOff className="w-5 h-5 text-red-400" />;
+        return apiUrl ? <div className="w-2 h-2 rounded-full bg-emerald-300"></div> : <div className="w-2 h-2 rounded-full bg-slate-200"></div>;
+      };
 
-          <div className="grid grid-cols-2 gap-4">
-            <div className="bg-gradient-to-br from-indigo-500 to-indigo-600 p-5 rounded-3xl text-white shadow-md">
-              <p className="text-indigo-100 text-sm font-medium mb-1">距離上次</p>
-              <div className="text-3xl font-bold">{stats.currentStreakDays} <span className="text-lg font-normal">天</span></div>
-            </div>
-            <div className="bg-white p-5 rounded-3xl border border-slate-100 shadow-sm">
-              <p className="text-slate-500 text-sm font-medium mb-1">近 30 天累計</p>
-              <div className="text-3xl font-bold text-slate-800">{stats.last30DaysCount} <span className="text-lg font-normal text-slate-400">次</span></div>
-            </div>
-          </div>
-
-          <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100 mb-20">
-            <h2 className="text-lg font-bold text-slate-800 mb-4 flex items-center">
-              <Activity className="w-5 h-5 mr-2 text-teal-500" />最近紀錄
-            </h2>
-            {records.length === 0 ? <p className="text-slate-400 text-center py-6">尚無紀錄</p> : (
-              <div className="space-y-3">
-                {[...records].sort((a, b) => b.timestamp - a.timestamp).slice(0, 5).map(r => (
-                  <div key={r.id} className="flex justify-between items-center p-4 bg-slate-50 rounded-2xl">
-                    <div className="flex items-center gap-3">
-                      <div className="w-2 h-2 rounded-full bg-teal-400"></div>
-                      <div>
-                        <p className="text-slate-800 font-medium">{new Date(r.timestamp).toLocaleDateString('zh-TW', { month: 'short', day: 'numeric', weekday: 'short' })}</p>
-                        <p className="text-slate-500 text-sm">{new Date(r.timestamp).toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit' })}</p>
-                      </div>
-                    </div>
-                    <button onClick={() => deleteRecordImplementation(r.id)} className="p-2 text-slate-300 hover:text-red-500 transition-colors"><Trash2 className="w-5 h-5" /></button>
-                  </div>
-                ))}
+      const renderHome = () => {
+        const sortedRecords = [...records].sort((a, b) => b.timestamp - a.timestamp);
+        const displayRecords = showAllRecords ? sortedRecords : sortedRecords.slice(0, 5);
+        
+        return (
+          <div className="space-y-6 animate-fadein">
+            <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100">
+              <h2 className="text-lg font-bold text-slate-800 mb-4 flex items-center">
+                <Clock className="w-5 h-5 mr-2 text-indigo-500" />
+                新增紀錄
+              </h2>
+              <div className="grid grid-cols-2 gap-3 mb-4">
+                <button onClick={() => addRecordImplementation(Date.now())} className="bg-indigo-600 hover:bg-indigo-700 text-white py-4 rounded-2xl font-semibold shadow-md shadow-indigo-200 transition-all active:scale-95 flex flex-col items-center justify-center gap-1">
+                  <Plus className="w-6 h-6" />現在 (Now)
+                </button>
+                <button onClick={() => addRecordImplementation(Date.now() - 5 * 60 * 1000)} className="bg-sky-500 hover:bg-sky-600 text-white py-4 rounded-2xl font-semibold shadow-md shadow-sky-200 transition-all active:scale-95 flex flex-col items-center justify-center gap-1">
+                  <RotateCcw className="w-6 h-6" />5分鐘前
+                </button>
               </div>
-            )}
+              <div className="flex items-center gap-2 mt-4 pt-4 border-t border-slate-100">
+                <input type="datetime-local" value={customDate} onChange={(e) => setCustomDate(e.target.value)} className="flex-1 bg-slate-50 border border-slate-200 rounded-xl px-4 py-2 text-slate-700 outline-none focus:border-indigo-500" />
+                <button onClick={() => { if(!customDate) return showToast('請先選擇時間', 'error'); addRecordImplementation(new Date(customDate).getTime()); setCustomDate(''); }} className="bg-slate-800 text-white px-5 py-2 rounded-xl font-medium hover:bg-slate-700">補登</button>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="bg-gradient-to-br from-indigo-500 to-indigo-600 p-5 rounded-3xl text-white shadow-md">
+                <p className="text-indigo-100 text-sm font-medium mb-1">距離上次</p>
+                <div className="text-3xl font-bold">{stats.currentStreakDays} <span className="text-lg font-normal">天</span></div>
+              </div>
+              <div className="bg-white p-5 rounded-3xl border border-slate-100 shadow-sm">
+                <p className="text-slate-500 text-sm font-medium mb-1">近 30 天累計</p>
+                <div className="text-3xl font-bold text-slate-800">{stats.last30DaysCount} <span className="text-lg font-normal text-slate-400">次</span></div>
+              </div>
+            </div>
+
+            <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100 mb-20">
+              <h2 className="text-lg font-bold text-slate-800 mb-4 flex items-center">
+                <Activity className="w-5 h-5 mr-2 text-teal-500" />最近紀錄
+                <span className="ml-auto text-xs text-slate-400 font-normal">共 {records.length} 筆</span>
+              </h2>
+              {records.length === 0 ? <p className="text-slate-400 text-center py-6">尚無紀錄</p> : (
+                <div className="space-y-3">
+                  {displayRecords.map(r => (
+                    <div key={r.id} className="flex justify-between items-center p-4 bg-slate-50 rounded-2xl">
+                      <div className="flex items-center gap-3">
+                        <div className="w-2 h-2 rounded-full bg-teal-400 shrink-0"></div>
+                        <div>
+                          <p className="text-slate-800 font-medium">{new Date(r.timestamp).toLocaleDateString('zh-TW', { month: 'short', day: 'numeric', weekday: 'short' })}</p>
+                          <p className="text-slate-500 text-sm">{new Date(r.timestamp).toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit' })}</p>
+                        </div>
+                      </div>
+                      <button onClick={() => deleteRecordImplementation(r.id)} className="p-2 text-slate-300 hover:text-red-500 transition-colors"><Trash2 className="w-5 h-5" /></button>
+                    </div>
+                  ))}
+                  {/* ✅ 新增：查看更多 / 收起 */}
+                  {records.length > 5 && (
+                    <button onClick={() => setShowAllRecords(!showAllRecords)} className="w-full py-3 text-sm text-indigo-600 font-medium flex items-center justify-center gap-1 hover:text-indigo-800 transition-colors">
+                      <ChevronDown className={`w-4 h-4 transition-transform ${showAllRecords ? 'rotate-180' : ''}`} />
+                      {showAllRecords ? '收起' : `查看全部 ${records.length} 筆`}
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
           </div>
-        </div>
-      );
+        );
+      };
 
       const renderStats = () => (
-        <div className="space-y-6 animate-[fadeIn_0.5s_ease-out] pb-20">
+        <div className="space-y-6 animate-fadein pb-20">
           <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100">
             <h2 className="text-xl font-bold text-slate-800 mb-6 flex items-center">
               <BarChart3 className="w-6 h-6 mr-2 text-indigo-500" />數據分析中心
@@ -430,7 +531,8 @@ function doPost(e) {
                 return (
                   <div key={period.label} className="relative">
                     <div className="flex justify-between text-xs mb-1">
-                      <span className={`font-medium ${isMax ? 'text-slate-800 font-bold' : 'text-slate-500'}`}>{period.label}</span><span className="text-slate-600">{period.count} 次</span>
+                      <span className={`font-medium ${isMax ? 'text-slate-800 font-bold' : 'text-slate-500'}`}>{period.label}</span>
+                      <span className="text-slate-600">{period.count} 次</span>
                     </div>
                     <div className="w-full h-2.5 bg-slate-100 rounded-full overflow-hidden">
                       <div className={`h-full ${period.color} rounded-full transition-all duration-700 ease-out`} style={{ width: `${width}%` }}></div>
@@ -445,7 +547,8 @@ function doPost(e) {
               {stats.yearlyStats.length > 0 ? (
                 stats.yearlyStats.map(item => (
                   <div key={item.year} className="flex justify-between items-center p-3 bg-slate-50 rounded-xl">
-                    <span className="text-slate-700 font-medium">{item.year} 年</span><span className="text-indigo-600 font-bold">{item.count} <span className="text-sm font-normal text-slate-400">次</span></span>
+                    <span className="text-slate-700 font-medium">{item.year} 年</span>
+                    <span className="text-indigo-600 font-bold">{item.count} <span className="text-sm font-normal text-slate-400">次</span></span>
                   </div>
                 ))
               ) : <p className="text-slate-400 text-sm text-center py-2">尚無紀錄</p>}
@@ -455,11 +558,10 @@ function doPost(e) {
       );
 
       const renderSettings = () => (
-        <div className="space-y-6 animate-[fadeIn_0.5s_ease-out] pb-20">
+        <div className="space-y-6 animate-fadein pb-20">
           <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100">
             <h2 className="text-xl font-bold text-slate-800 mb-2 flex items-center"><Settings className="w-6 h-6 mr-2 text-slate-700" />雲端同步設定</h2>
             
-            {/* 💡 API 教學區塊 (可展開/收起) */}
             <div className="mb-5">
               <button 
                 onClick={() => setShowTutorial(!showTutorial)}
@@ -470,7 +572,7 @@ function doPost(e) {
               </button>
               
               {showTutorial && (
-                <div className="bg-indigo-50 p-4 rounded-2xl border border-indigo-100 text-sm text-indigo-900 space-y-3 mb-4 animate-[fadeIn_0.3s_ease-out]">
+                <div className="bg-indigo-50 p-4 rounded-2xl border border-indigo-100 text-sm text-indigo-900 space-y-3 mb-4 animate-fadein">
                   <p className="font-bold">請按照以下步驟建立您專屬且免費的資料庫：</p>
                   <ol className="list-decimal pl-5 space-y-2">
                     <li>前往 <a href="https://script.google.com/" target="_blank" className="text-blue-600 underline font-medium">Google Apps Script</a> 並登入。</li>
@@ -513,12 +615,13 @@ function doPost(e) {
 
             <div className="mb-4">
               <textarea value={apiUrl} onChange={(e) => setApiUrl(e.target.value)} placeholder="請貼上部署後取得的 Web App URL (https://script.google.com/macros/s/...)" className="w-full h-20 bg-slate-50 border border-slate-200 rounded-xl p-3 text-slate-700 outline-none focus:border-indigo-500 resize-none text-sm break-all"></textarea>
-              <button onClick={() => { localStorage.setItem('tracker_api_url', apiUrl); forceSyncImplementation(); }} className="mt-2 w-full bg-slate-800 text-white py-3 rounded-xl font-medium shadow-sm hover:bg-slate-700">儲存並連線</button>
+              <button onClick={() => { localStorage.setItem('tracker_api_url', apiUrl); showToast('✅ API 網址已儲存', 'success', 2000); forceSyncImplementation(); }} className="mt-2 w-full bg-slate-800 text-white py-3 rounded-xl font-medium shadow-sm hover:bg-slate-700">儲存並連線</button>
             </div>
             
             <div className="space-y-3">
-              <button onClick={forceSyncImplementation} className="w-full bg-indigo-50 text-indigo-700 border border-indigo-200 py-3 rounded-xl font-medium hover:bg-indigo-100 transition-colors flex items-center justify-center gap-2">
-                <ShieldCheck className="w-5 h-5"/>自動雙向合併 (含去重)
+              <button onClick={forceSyncImplementation} disabled={syncStatus === 'syncing'} className="w-full bg-indigo-50 text-indigo-700 border border-indigo-200 py-3 rounded-xl font-medium hover:bg-indigo-100 transition-colors flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed">
+                {syncStatus === 'syncing' ? <RefreshCw className="w-5 h-5 animate-spin"/> : <ShieldCheck className="w-5 h-5"/>}
+                {syncStatus === 'syncing' ? '同步中...' : '自動雙向合併 (含去重)'}
               </button>
             </div>
             <p className="text-[11px] text-slate-400 mt-2 text-center">💡 系統會自動比對時間，若發生在同一分鐘內的紀錄將被自動合併，不再產生重複項。</p>
@@ -528,10 +631,10 @@ function doPost(e) {
             <h2 className="text-xl font-bold text-slate-800 mb-2 flex items-center"><Upload className="w-6 h-6 mr-2 text-slate-700" />進階同步操作</h2>
             <p className="text-xs text-slate-500 mb-4 leading-relaxed">如果您換了新設備，或是需要重置資料，可以使用以下強制覆蓋功能。請注意，這些操作 <strong className="text-orange-500">無法復原</strong>。</p>
             <div className="space-y-3">
-              <button onClick={overwriteLocalWithCloud} className="w-full bg-orange-50 text-orange-700 border border-orange-200 py-3 rounded-xl font-medium flex items-center justify-center gap-2 hover:bg-orange-100 transition-colors">
+              <button onClick={overwriteLocalWithCloud} disabled={syncStatus === 'syncing'} className="w-full bg-orange-50 text-orange-700 border border-orange-200 py-3 rounded-xl font-medium flex items-center justify-center gap-2 hover:bg-orange-100 transition-colors disabled:opacity-60 disabled:cursor-not-allowed">
                 <AlertCircle className="w-5 h-5" /> 下載雲端，強制覆蓋本地
               </button>
-              <button onClick={overwriteCloudWithLocal} className="w-full bg-orange-50 text-orange-700 border border-orange-200 py-3 rounded-xl font-medium flex items-center justify-center gap-2 hover:bg-orange-100 transition-colors">
+              <button onClick={overwriteCloudWithLocal} disabled={syncStatus === 'syncing'} className="w-full bg-orange-50 text-orange-700 border border-orange-200 py-3 rounded-xl font-medium flex items-center justify-center gap-2 hover:bg-orange-100 transition-colors disabled:opacity-60 disabled:cursor-not-allowed">
                 <AlertCircle className="w-5 h-5" /> 上傳本地，強制覆蓋雲端
               </button>
             </div>
@@ -551,14 +654,15 @@ function doPost(e) {
                     if(!isNaN(d.getTime())) { nr.push({id:crypto.randomUUID(), timestamp:d.getTime()}); sc++; }
                   }
                 });
-                if(sc>0){
+                if(sc > 0) {
                   const combined = [...records, ...nr];
-                  const cleanRecords = getUniqueRecords(combined); // 匯入時也強制去重
-                  setRecords(cleanRecords); 
-                  localStorage.setItem('tracker_records', JSON.stringify(cleanRecords)); 
+                  const cleanRecords = getUniqueRecords(combined);
+                  saveLocally(cleanRecords); 
                   setImportData(''); 
-                  alert(`成功匯入 ${sc} 筆，已自動過濾重複。`);
-                  if (apiUrl) fetch(apiUrl, { method: 'POST', body: JSON.stringify(cleanRecords), headers: { 'Content-Type': 'text/plain;charset=utf-8' } });
+                  showToast(`✅ 成功匯入 ${sc} 筆，已自動過濾重複。`, 'success');
+                  if (apiUrl) uploadToCloud(apiUrl, cleanRecords).catch(() => showToast('⚠️ 本地已匯入，雲端同步失敗', 'error', 4000));
+                } else {
+                  showToast('未找到符合格式的資料', 'error');
                 }
               }} className="w-full bg-slate-800 text-white py-3 rounded-xl font-medium">執行匯入</button>
             </div>
@@ -575,8 +679,10 @@ function doPost(e) {
                 if(!selectedDeleteYear) return;
                 if(!window.confirm(`確定刪除 ${selectedDeleteYear} 年所有紀錄？`)) return;
                 const ur = records.filter(r => new Date(r.timestamp).getFullYear() !== parseInt(selectedDeleteYear));
-                setRecords(ur); localStorage.setItem('tracker_records', JSON.stringify(ur)); setSelectedDeleteYear('');
-                if (apiUrl) fetch(apiUrl, { method: 'POST', body: JSON.stringify(ur), headers: { 'Content-Type': 'text/plain;charset=utf-8' } });
+                saveLocally(ur);
+                setSelectedDeleteYear('');
+                showToast(`已刪除 ${selectedDeleteYear} 年全部紀錄`, 'success');
+                if (apiUrl) uploadToCloud(apiUrl, ur).catch(() => showToast('⚠️ 本地已刪除，雲端同步失敗', 'error', 4000));
               }} className="bg-red-600 text-white px-5 rounded-xl font-medium">刪除</button>
             </div>
           </div>
@@ -587,10 +693,12 @@ function doPost(e) {
 
       return (
         <div className="min-h-screen bg-slate-50 font-sans text-slate-900 max-w-md mx-auto relative shadow-2xl overflow-hidden">
+          <Toast toasts={toasts} />
+          
           <header className="bg-white px-6 py-5 sticky top-0 z-10 border-b border-slate-100 flex justify-between items-center">
             <div><h1 className="text-xl font-black text-slate-800 tracking-tight">個人紀錄小幫手</h1></div>
             <div className="flex items-center gap-2">
-               {syncStatus === 'syncing' ? <RefreshCw className="w-5 h-5 text-indigo-400 animate-spin" /> : <div className="w-2 h-2 rounded-full bg-slate-200"></div>}
+              <SyncIndicator />
             </div>
           </header>
 
