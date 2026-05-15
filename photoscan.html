@@ -13,6 +13,8 @@
         .corner-handle { position: absolute; width: 26px; height: 26px; background-color: rgba(59, 130, 246, 0.9); border: 3px solid white; border-radius: 50%; transform: translate(-50%, -50%); cursor: grab; box-shadow: 0 2px 5px rgba(0,0,0,0.4); z-index: 10; transition: background-color 0.2s; }
         .corner-handle:active { cursor: grabbing; background-color: #1d4ed8; transform: translate(-50%, -50%) scale(1.2); }
         input[type="file"] { display: none; }
+        /* 拖曳狀態樣式 */
+        .drag-over { background-color: #dbeafe !important; border: 2px dashed #2563eb !important; }
     </style>
 </head>
 <body class="text-gray-800 p-4 md:p-8">
@@ -37,7 +39,7 @@
                         旋轉 90°
                     </button>
                 </div>
-                <p id="file-info" class="text-xs text-gray-500 italic">支援多尺度邊緣強化偵測</p>
+                <p id="file-info" class="text-xs text-gray-500 italic">支援多尺度邊緣強化偵測，或直接將檔案拖入下方編輯區</p>
             </div>
 
             <div class="space-y-4">
@@ -79,8 +81,8 @@
 
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
             <div class="flex flex-col items-center border rounded-xl p-4 bg-white shadow-sm overflow-hidden">
-                <h3 class="text-sm font-bold text-gray-500 mb-3 uppercase tracking-tighter">編輯區：拖曳後將自動計算最佳參數</h3>
-                <div class="w-full overflow-auto flex justify-center items-center flex-1 bg-gray-200 rounded min-h-[400px]" id="canvas-area-wrapper">
+                <h3 id="edit-header" class="text-sm font-bold text-gray-500 mb-3 uppercase tracking-tighter">編輯區：拖曳後將自動計算最佳參數</h3>
+                <div class="w-full overflow-auto flex justify-center items-center flex-1 bg-gray-200 rounded min-h-[400px] transition-colors duration-200" id="canvas-area-wrapper">
                     <div class="canvas-container" id="canvas-container">
                         <canvas id="editor-canvas"></canvas>
                         <canvas id="overlay-canvas"></canvas>
@@ -122,6 +124,7 @@
         const overlayCanvas = document.getElementById('overlay-canvas');
         const resultCanvas = document.getElementById('result-canvas');
         const container = document.getElementById('canvas-container');
+        const canvasAreaWrapper = document.getElementById('canvas-area-wrapper');
         const btnProcess = document.getElementById('btn-process');
         const btnRotate = document.getElementById('btn-rotate');
         const btnDownload = document.getElementById('btn-download');
@@ -153,9 +156,9 @@
             cValueVal.textContent = recCValue + " (推薦)";
         });
 
-        uploadInput.addEventListener('change', (e) => {
-            const file = e.target.files[0];
-            if (!file) return;
+        // 核心檔案處理邏輯
+        function handleFile(file) {
+            if (!file || !file.type.startsWith('image/')) return;
             originalFileName = file.name.replace(/\.[^/.]+$/, "");
             statusText.textContent = "🔍 正在分析環境光感與邊緣特徵...";
 
@@ -189,6 +192,29 @@
                 img.src = event.target.result;
             };
             reader.readAsDataURL(file);
+        }
+
+        // 傳統點擊上傳
+        uploadInput.addEventListener('change', (e) => handleFile(e.target.files[0]));
+
+        // 拖曳功能實作
+        canvasAreaWrapper.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            if (uploadInput.disabled) return;
+            canvasAreaWrapper.classList.add('drag-over');
+        });
+
+        canvasAreaWrapper.addEventListener('dragleave', (e) => {
+            e.preventDefault();
+            canvasAreaWrapper.classList.remove('drag-over');
+        });
+
+        canvasAreaWrapper.addEventListener('drop', (e) => {
+            e.preventDefault();
+            canvasAreaWrapper.classList.remove('drag-over');
+            if (uploadInput.disabled) return;
+            const file = e.dataTransfer.files[0];
+            handleFile(file);
         });
 
         function autoUpdateParams() {
@@ -386,7 +412,6 @@
             const u = resultCanvas.toDataURL('image/jpeg', 1.0);
             const w = window.open('', '_blank');
             if(!w) return;
-            // 寫入包含防止頁首頁尾 CSS 的 HTML 結構
             w.document.write(`
                 <html>
                 <head>
