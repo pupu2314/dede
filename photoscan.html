@@ -3,10 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>智慧文件校正掃描器 Pro v2</title>
+    <title>智慧文件校正掃描器</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        body { background-color: #f3f4f6; font-family: system-ui, -apple-system, sans-serif; }
+        body {
+            background-color: #f3f4f6;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        }
         .canvas-container {
             position: relative;
             display: inline-block;
@@ -14,6 +17,7 @@
             padding: 60px;
             background-color: #e5e7eb;
             border-radius: 8px;
+            box-shadow: inset 0 2px 4px 0 rgba(0, 0, 0, 0.06);
             overflow: visible;
         }
         #editor-canvas {
@@ -40,151 +44,115 @@
             box-shadow: 0 2px 4px rgba(0,0,0,0.3);
             z-index: 10;
         }
-        .corner-handle:active { cursor: grabbing; transform: translate(-50%, -50%) scale(1.2); background-color: #1d4ed8; }
-        input[type="file"] { display: none; }
+        .corner-handle:active {
+            cursor: grabbing;
+            background-color: #1d4ed8;
+            transform: translate(-50%, -50%) scale(1.2);
+        }
+        input[type="file"] {
+            display: none;
+        }
     </style>
 </head>
 <body class="text-gray-800 p-4 md:p-8">
-    <div class="max-w-7xl mx-auto space-y-6">
+    <div class="max-w-6xl mx-auto space-y-6">
         
-        <!-- 標題 -->
+        <!-- 標題與狀態 -->
         <div class="text-center">
-            <h1 class="text-3xl font-bold text-gray-900 mb-2">📄 智慧文件校正掃描器 Pro v2</h1>
+            <h1 class="text-3xl font-bold text-gray-900 mb-2">📄 智慧文件校正掃描器 Pro</h1>
             <p id="status-text" class="text-sm text-blue-600 font-medium bg-blue-50 inline-block px-3 py-1 rounded-full">
                 載入 OpenCV.js 引擎中，請稍候...
             </p>
         </div>
 
-        <!-- 主要佈局：左控制與代辦 / 右畫布 -->
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <!-- 控制面板 -->
+        <div class="bg-white p-6 rounded-xl shadow-md grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
             
-            <!-- 左側控制面板與工作清單 -->
-            <div class="space-y-6 lg:col-span-1">
-                <!-- 檔案與基本控制 -->
-                <div class="bg-white p-5 rounded-xl shadow-sm border space-y-4">
-                    <h2 class="text-lg font-bold text-gray-700 border-b pb-2 flex items-center">
-                        <span class="mr-2">⚙️</span>基本操作
-                    </h2>
-                    <div class="flex gap-2">
-                        <label class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg cursor-pointer transition font-medium text-sm flex items-center shadow-sm">
-                            上傳照片
-                            <input type="file" id="image-upload" accept="image/*" disabled>
-                        </label>
-                        <button id="btn-rotate" class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2 rounded-lg transition text-sm font-medium border border-gray-300 disabled:opacity-50" disabled>
-                            旋轉 90°
-                        </button>
-                    </div>
-                    <p id="file-info" class="text-xs text-gray-500 italic">尚未選擇檔案</p>
+            <!-- 左側：操作區 -->
+            <div class="space-y-4">
+                <h2 class="text-lg font-semibold border-b pb-2">1. 選擇與操作</h2>
+                <div class="flex flex-wrap gap-3">
+                    <label class="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-lg cursor-pointer transition font-medium shadow-sm flex items-center">
+                        上傳照片
+                        <input type="file" id="image-upload" accept="image/*" disabled>
+                    </label>
+                    <button id="btn-rotate" class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2.5 rounded-lg transition font-medium flex items-center border border-gray-300 disabled:opacity-50" disabled>
+                        旋轉 90°
+                    </button>
                 </div>
-
-                <!-- 影像處理進階參數 -->
-                <div class="bg-white p-5 rounded-xl shadow-sm border space-y-4">
-                    <div class="flex justify-between items-center border-b pb-2">
-                        <h2 class="text-lg font-bold text-gray-700 flex items-center">
-                            <span class="mr-2">🎨</span>去陰影優化
-                        </h2>
-                        <label class="flex items-center space-x-1.5 text-xs font-normal cursor-pointer bg-gray-50 px-2 py-1 rounded border">
-                            <input type="checkbox" id="remove-shadow" class="w-3.5 h-3.5 text-blue-600 rounded" checked disabled>
-                            <span>啟用</span>
-                        </label>
-                    </div>
-                    
-                    <div id="advanced-settings" class="space-y-4">
-                        <div>
-                            <div class="flex justify-between text-xs mb-1">
-                                <span class="font-medium text-gray-600">感應範圍 (Block Size)</span>
-                                <span id="block-size-val" class="font-bold text-blue-600">自動</span>
-                            </div>
-                            <input type="range" id="block-size" min="3" max="99" step="2" value="21" class="w-full" disabled>
-                        </div>
-                        <div>
-                            <div class="flex justify-between text-xs mb-1">
-                                <span class="font-medium text-gray-600">亮度補償 (C Value)</span>
-                                <span id="c-value-val" class="font-bold text-blue-600">自動</span>
-                            </div>
-                            <input type="range" id="c-value" min="0" max="30" step="1" value="10" class="w-full" disabled>
-                        </div>
-                        
-                        <!-- 恢復推薦值按鈕 -->
-                        <button id="btn-reset-params" class="w-full text-xs bg-gray-50 hover:bg-gray-100 text-gray-600 font-medium py-2 rounded border border-dashed transition flex justify-center items-center gap-1 disabled:opacity-50" disabled>
-                            🔄 恢復系統推薦數值
-                        </button>
-                    </div>
-                </div>
-
-                <!-- 開發與代辦事項清單 -->
-                <div class="bg-white p-5 rounded-xl shadow-sm border space-y-3">
-                    <h2 class="text-sm font-bold text-gray-500 uppercase tracking-wider flex items-center">
-                        📋 工具優化進度清單
-                    </h2>
-                    <ul class="space-y-2 text-xs">
-                        <li class="flex items-start text-green-700 bg-green-50 p-2 rounded">
-                            <span class="mr-2">✓</span>
-                            <span>輸出解析度優化 (100% 原圖映射，拒絕模糊)</span>
-                        </li>
-                        <li class="flex items-start text-green-700 bg-green-50 p-2 rounded">
-                            <span class="mr-2">✓</span>
-                            <span>支援溢出邊界拖拉 (前後左右各留 60px 緩衝)</span>
-                        </li>
-                        <li class="flex items-start text-green-700 bg-green-50 p-2 rounded">
-                            <span class="mr-2">✓</span>
-                            <span>自動繼承原檔名 + 後綴「_校正」</span>
-                        </li>
-                        <li class="flex items-start text-green-700 bg-green-50 p-2 rounded">
-                            <span class="mr-2">✓</span>
-                            <span>新增一鍵高畫質列印、虛線引導範圍</span>
-                        </li>
-                        <li class="flex items-start text-green-700 bg-green-50 p-2 rounded animate-pulse font-medium">
-                            <span class="mr-2">✨</span>
-                            <span>核心升級：加入動態 C 值評估與邊界演算法強化</span>
-                        </li>
-                        <li class="flex items-start text-blue-700 bg-blue-50 p-2 rounded font-semibold">
-                            <span class="mr-2">📌</span>
-                            <span>已加入：二值化「恢復推薦值」功能</span>
-                        </li>
-                    </ul>
-                </div>
+                <p id="file-info" class="text-sm text-gray-500 italic mt-1">尚未選擇檔案</p>
             </div>
 
-            <!-- 右側：主要工作畫布區 -->
-            <div class="lg:col-span-2 space-y-6">
-                <!-- 魔法校正按鈕 -->
-                <button id="btn-process" class="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white py-3 rounded-xl text-md font-bold shadow-md transition disabled:opacity-50 flex justify-center items-center" disabled>
-                    執行魔法校正 ✨
-                </button>
-
-                <div class="grid grid-cols-1 gap-6">
-                    <!-- 編輯區 -->
-                    <div class="bg-white p-4 rounded-xl shadow-sm border flex flex-col items-center">
-                        <h3 class="text-sm font-semibold text-gray-500 mb-3">工作編輯區 (可將藍點拉至灰色緩衝區外)</h3>
-                        <div class="w-full bg-gray-50 rounded flex justify-center items-center p-2 border overflow-auto max-h-[500px]" id="canvas-area-wrapper">
-                            <div class="canvas-container" id="canvas-container">
-                                <canvas id="editor-canvas"></canvas>
-                                <canvas id="overlay-canvas"></canvas>
-                            </div>
+            <!-- 右側：去陰影設定 -->
+            <div class="space-y-4">
+                <h2 class="text-lg font-semibold border-b pb-2 flex justify-between items-center">
+                    2. 影像優化設定
+                    <label class="flex items-center space-x-2 text-sm font-normal cursor-pointer bg-gray-50 px-2 py-1 rounded">
+                        <input type="checkbox" id="remove-shadow" class="w-4 h-4 text-blue-600 rounded" checked disabled>
+                        <span>啟用去除陰影</span>
+                    </label>
+                </h2>
+                
+                <div id="advanced-settings" class="space-y-3 p-3 bg-gray-50 rounded-lg border">
+                    <div>
+                        <div class="flex justify-between text-sm mb-1">
+                            <span>感應範圍 (Block Size)</span>
+                            <span id="block-size-val" class="font-bold text-blue-600">自動</span>
                         </div>
+                        <input type="range" id="block-size" min="3" max="99" step="2" value="21" class="w-full" disabled>
                     </div>
+                    <div>
+                        <div class="flex justify-between text-sm mb-1">
+                            <span>亮度補償 (C Value)</span>
+                            <span id="c-value-val" class="font-bold text-blue-600">自動</span>
+                        </div>
+                        <input type="range" id="c-value" min="0" max="30" step="1" value="10" class="w-full" disabled>
+                    </div>
+                    <button id="btn-reset-params" class="w-full text-xs bg-white hover:bg-gray-100 text-gray-600 font-medium py-2 rounded border border-gray-300 transition disabled:opacity-50" disabled>
+                        🔄 恢復系統推薦數值
+                    </button>
+                </div>
+            </div>
+        </div>
 
-                    <!-- 結果區 -->
-                    <div class="bg-white p-4 rounded-xl shadow-sm border flex flex-col items-center min-h-[300px]">
-                        <div class="w-full flex justify-between items-center mb-3">
-                            <h3 class="text-sm font-semibold text-gray-500">高品質結果預覽</h3>
-                            <div class="space-x-2">
-                                <button id="btn-print" class="bg-gray-600 hover:bg-gray-700 text-white px-3 py-1.5 rounded text-xs font-medium transition hidden">🖨️ 列印</button>
-                                <button id="btn-download" class="bg-green-600 hover:bg-green-700 text-white px-3 py-1.5 rounded text-xs font-medium transition hidden">💾 下載</button>
-                            </div>
-                        </div>
-                        <div class="w-full bg-gray-50 rounded flex justify-center items-center p-4 border border-dashed relative overflow-auto">
-                            <p id="result-placeholder" class="text-xs text-gray-400 absolute">校正後的文件將顯示於此</p>
-                            <canvas id="result-canvas" class="max-w-full h-auto shadow-sm hidden"></canvas>
-                        </div>
+        <!-- 校正按鈕 -->
+        <div class="text-center">
+            <button id="btn-process" class="bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white px-10 py-3.5 rounded-full text-lg font-bold shadow-lg transform transition hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none flex items-center mx-auto" disabled>
+                執行魔法校正 ✨
+            </button>
+        </div>
+
+        <!-- 編輯預覽區 (左右佈局) -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            <!-- 編輯區 -->
+            <div class="flex flex-col items-center border rounded-xl p-4 bg-white shadow-sm overflow-hidden w-full">
+                <h3 class="text-md font-semibold text-gray-700 mb-3 w-full text-center">拖曳頂點對齊文件邊緣</h3>
+                <div class="w-full overflow-auto flex justify-center items-center flex-1 bg-gray-100 rounded" id="canvas-area-wrapper">
+                    <div class="canvas-container" id="canvas-container">
+                        <canvas id="editor-canvas"></canvas>
+                        <canvas id="overlay-canvas"></canvas>
                     </div>
                 </div>
             </div>
 
+            <!-- 結果區 -->
+            <div class="flex flex-col items-center border rounded-xl p-4 bg-white shadow-sm overflow-hidden w-full min-h-[400px]">
+                <div class="w-full flex justify-between items-center mb-3">
+                    <h3 class="text-md font-semibold text-gray-700">校正結果預覽</h3>
+                    <div class="space-x-2">
+                        <button id="btn-print" class="bg-gray-600 hover:bg-gray-700 text-white px-4 py-1.5 rounded text-sm font-medium transition hidden shadow-sm">🖨️ 列印</button>
+                        <button id="btn-download" class="bg-green-600 hover:bg-green-700 text-white px-4 py-1.5 rounded text-sm font-medium transition hidden shadow-sm">💾 下載</button>
+                    </div>
+                </div>
+                <div class="w-full flex-1 flex justify-center items-center bg-gray-100 rounded border border-dashed border-gray-300 relative overflow-auto p-4">
+                    <p id="result-placeholder" class="text-gray-400 absolute text-sm text-center">校正後的文件將顯示於此<br>(支援高解析度映射輸出)</p>
+                    <canvas id="result-canvas" class="max-w-full h-auto shadow-md hidden"></canvas>
+                </div>
+            </div>
         </div>
     </div>
 
+    <!-- OpenCV.js -->
     <script async src="https://docs.opencv.org/4.8.0/opencv.js" onload="onOpenCvReady()"></script>
 
     <script>
@@ -194,7 +162,6 @@
         let originalFileName = "document";
         const PADDING = 60;
 
-        // 系統推薦的暫存值
         let recommendedBlockSize = 21;
         let recommendedCValue = 10;
 
@@ -220,7 +187,7 @@
 
         function onOpenCvReady() {
             cv['onRuntimeInitialized'] = () => {
-                statusText.textContent = "✅ OpenCV.js 引擎初始化成功！";
+                statusText.textContent = "✅ OpenCV.js 載入完成";
                 statusText.className = "text-sm text-green-600 font-medium bg-green-50 inline-block px-3 py-1 rounded-full";
                 uploadInput.disabled = false;
             };
@@ -229,7 +196,6 @@
         blockSizeInput.addEventListener('input', (e) => { blockSizeVal.textContent = e.target.value; });
         cValueInput.addEventListener('input', (e) => { cValueVal.textContent = e.target.value; });
 
-        // 「恢復推薦值」按鈕事件
         btnResetParams.addEventListener('click', () => {
             blockSizeInput.value = recommendedBlockSize;
             blockSizeVal.textContent = recommendedBlockSize + " (推薦)";
@@ -238,11 +204,11 @@
         });
 
         removeShadowCheck.addEventListener('change', (e) => {
-            const isDeactivated = !e.target.checked;
-            blockSizeInput.disabled = isDeactivated;
-            cValueInput.disabled = isDeactivated;
-            btnResetParams.disabled = isDeactivated;
-            document.getElementById('advanced-settings').style.opacity = isDeactivated ? "0.5" : "1";
+            const isOff = !e.target.checked;
+            blockSizeInput.disabled = isOff;
+            cValueInput.disabled = isOff;
+            btnResetParams.disabled = isOff;
+            document.getElementById('advanced-settings').style.opacity = isOff ? "0.5" : "1";
         });
 
         uploadInput.addEventListener('change', (e) => {
@@ -250,8 +216,8 @@
             if (!file) return;
 
             originalFileName = file.name.replace(/\.[^/.]+$/, "");
-            fileInfo.textContent = `檔案: ${file.name} (${file.type})`;
-            statusText.textContent = "🔍 正在以高階對比演算法進行邊緣偵測與影像亮度評估...";
+            fileInfo.textContent = `檔案: ${file.name}`;
+            statusText.textContent = "🔍 正在進行邊緣偵測與影像評估...";
 
             const reader = new FileReader();
             reader.onload = (event) => {
@@ -260,34 +226,30 @@
                     if (srcMat) srcMat.delete();
                     srcMat = cv.imread(img);
 
-                    // 1. 動態計算 Block Size 推薦值
+                    // 自動推薦參數
                     recommendedBlockSize = Math.floor(Math.max(srcMat.cols, srcMat.rows) * 0.015);
                     recommendedBlockSize = recommendedBlockSize % 2 === 0 ? recommendedBlockSize + 1 : recommendedBlockSize;
                     recommendedBlockSize = Math.max(3, recommendedBlockSize);
+                    recommendedCValue = estimateCValue(srcMat);
 
-                    // 2. 新增：動態評估 C Value (利用影像灰階標準差)
-                    recommendedCValue = estimateOptimalCValue(srcMat);
-
-                    // 套用推薦值到 UI
                     blockSizeInput.value = recommendedBlockSize;
-                    blockSizeVal.textContent = recommendedBlockSize + " (自動推薦)";
+                    blockSizeVal.textContent = recommendedBlockSize + " (推薦)";
                     cValueInput.value = recommendedCValue;
-                    cValueVal.textContent = recommendedCValue + " (自動推薦)";
+                    cValueVal.textContent = recommendedCValue + " (推薦)";
 
-                    // 3. 執行強化型邊緣偵測
-                    let detectedCorners = advancedDetectCorners(srcMat);
-
-                    if (detectedCorners) {
-                        corners = detectedCorners;
-                        statusText.textContent = "✨ 已自動精準對齊文件邊緣！";
+                    // 偵測邊緣
+                    let detected = advancedDetect(srcMat);
+                    if (detected) {
+                        corners = detected;
+                        statusText.textContent = "✨ 已自動對齊邊緣";
                         statusText.className = "text-sm text-green-600 font-medium bg-green-50 inline-block px-3 py-1 rounded-full";
                     } else {
                         const w = srcMat.cols; const h = srcMat.rows;
                         corners = [
-                            { x: w*0.05, y: h*0.05, id: 0 }, { x: w*0.95, y: h*0.05, id: 1 },
-                            { x: w*0.95, y: h*0.95, id: 2 }, { x: w*0.05, y: h*0.95, id: 3 }
+                            { x: w*0.1, y: h*0.1, id: 0 }, { x: w*0.9, y: h*0.1, id: 1 },
+                            { x: w*0.9, y: h*0.9, id: 2 }, { x: w*0.1, y: h*0.9, id: 3 }
                         ];
-                        statusText.textContent = "⚠️ 未偵測到強烈對比邊緣，已放置預設範圍，請手動微調。";
+                        statusText.textContent = "⚠️ 未偵測到強烈邊緣，請手動調整";
                         statusText.className = "text-sm text-orange-600 font-medium bg-orange-50 inline-block px-3 py-1 rounded-full";
                     }
 
@@ -296,93 +258,68 @@
                     btnRotate.disabled = false;
                     btnResetParams.disabled = false;
                     removeShadowCheck.disabled = false;
-                    blockSizeInput.disabled = false;
-                    cValueInput.disabled = false;
+                    blockSizeInput.disabled = !removeShadowCheck.checked;
+                    cValueInput.disabled = !removeShadowCheck.checked;
                 };
                 img.src = event.target.result;
             };
             reader.readAsDataURL(file);
         });
 
-        // --- 智慧型 C Value 評估器 ---
-        function estimateOptimalCValue(src) {
+        function estimateCValue(src) {
             let gray = new cv.Mat();
             cv.cvtColor(src, gray, cv.COLOR_RGBA2GRAY, 0);
-            let mean = new cv.Mat();
-            let stddev = new cv.Mat();
-            cv.meanStdDev(gray, mean, stddev);
-            
-            let sd = stddev.data64F[0]; // 取得標準差
-            gray.delete(); mean.delete(); stddev.delete();
-
-            // 如果標準差很大（代表圖片內明暗極端、陰影複雜、或雜訊高），調高 C 值來強力壓制
-            if (sd > 50) return 14;
-            if (sd > 35) return 11;
-            return 8; // 畫面純淨時，使用較小的 C 值以保留淺色筆跡
+            let mean = new cv.Mat(); let std = new cv.Mat();
+            cv.meanStdDev(gray, mean, std);
+            let sd = std.data64F[0];
+            gray.delete(); mean.delete(); std.delete();
+            if (sd > 45) return 15;
+            if (sd > 30) return 11;
+            return 8;
         }
 
-        // --- 強化版邊緣偵測 (直線交點法) ---
-        function advancedDetectCorners(src) {
-            let gray = new cv.Mat();
-            let equalized = new cv.Mat();
-            let blurred = new cv.Mat();
-            let edged = new cv.Mat();
-            let contours = new cv.MatVector();
-            let hierarchy = new cv.Mat();
-
+        function advancedDetect(src) {
+            let gray = new cv.Mat(); let equal = new cv.Mat();
+            let blurred = new cv.Mat(); let edged = new cv.Mat();
+            let contours = new cv.MatVector(); let hierarchy = new cv.Mat();
             try {
                 cv.cvtColor(src, gray, cv.COLOR_RGBA2GRAY, 0);
-                // 核心優化：增加直方圖均衡化，強行拉開紙張與背景的陰影對比
-                cv.equalizeHist(gray, equalized);
-                cv.GaussianBlur(equalized, blurred, new cv.Size(9, 9), 0);
-                cv.Canny(blurred, edged, 50, 150, 3);
-
+                cv.equalizeHist(gray, equal);
+                cv.GaussianBlur(equal, blurred, new cv.Size(9, 9), 0);
+                cv.Canny(blurred, edged, 50, 150);
                 cv.findContours(edged, contours, hierarchy, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE);
-                let maxArea = 0; let bestApprox = null;
-
+                let maxA = 0; let best = null;
                 for (let i = 0; i < contours.size(); ++i) {
                     let cnt = contours.get(i);
                     let area = cv.contourArea(cnt);
-                    if (area > (src.cols * src.rows * 0.1)) {
+                    if (area > (src.cols * src.rows * 0.05)) {
                         let peri = cv.arcLength(cnt, true);
                         let approx = new cv.Mat();
                         cv.approxPolyDP(cnt, approx, 0.02 * peri, true);
-                        if (approx.rows === 4 && area > maxArea) {
-                            maxArea = area;
-                            if (bestApprox) bestApprox.delete();
-                            bestApprox = approx.clone();
+                        if (approx.rows === 4 && area > maxA) {
+                            maxA = area;
+                            if (best) best.delete();
+                            best = approx.clone();
                         }
                         approx.delete();
                     }
                 }
-
-                // 清理
-                gray.delete(); equalized.delete(); blurred.delete(); edged.delete(); hierarchy.delete(); contours.delete();
-
-                if (bestApprox) {
+                gray.delete(); equal.delete(); blurred.delete(); edged.delete(); hierarchy.delete(); contours.delete();
+                if (best) {
                     let pts = [];
-                    for (let i = 0; i < 4; i++) {
-                        pts.push({ x: bestApprox.data32S[i * 2], y: bestApprox.data32S[i * 2 + 1] });
-                    }
-                    bestApprox.delete();
-                    return orderPoints(pts);
+                    for (let i = 0; i < 4; i++) pts.push({ x: best.data32S[i * 2], y: best.data32S[i * 2 + 1] });
+                    best.delete();
+                    return orderPts(pts);
                 }
                 return null;
-            } catch (e) {
-                return null;
-            }
+            } catch (e) { return null; }
         }
 
-        function orderPoints(pts) {
-            let xSorted = pts.slice().sort((a, b) => a.x - b.x);
-            let leftMost = xSorted.slice(0, 2).sort((a, b) => a.y - b.y);
-            let rightMost = xSorted.slice(2, 4).sort((a, b) => a.y - b.y);
-            return [
-                { x: leftMost[0].x, y: leftMost[0].y, id: 0 }, // TL
-                { x: rightMost[0].x, y: rightMost[0].y, id: 1 }, // TR
-                { x: rightMost[1].x, y: rightMost[1].y, id: 2 }, // BR
-                { x: leftMost[1].x, y: leftMost[1].y, id: 3 }  // BL
-            ];
+        function orderPts(pts) {
+            let xS = pts.slice().sort((a, b) => a.x - b.x);
+            let L = xS.slice(0, 2).sort((a, b) => a.y - b.y);
+            let R = xS.slice(2, 4).sort((a, b) => a.y - b.y);
+            return [{ x: L[0].x, y: L[0].y, id: 0 }, { x: R[0].x, y: R[0].y, id: 1 }, { x: R[1].x, y: R[1].y, id: 2 }, { x: L[1].x, y: L[1].y, id: 3 }];
         }
 
         btnRotate.addEventListener('click', () => {
@@ -390,43 +327,31 @@
             let dst = new cv.Mat();
             cv.rotate(srcMat, dst, cv.ROTATE_90_CLOCKWISE);
             srcMat.delete(); srcMat = dst;
-
             const w = srcMat.cols; const h = srcMat.rows;
-            corners = [
-                { x: w*0.05, y: h*0.05, id: 0 }, { x: w*0.95, y: h*0.05, id: 1 },
-                { x: w*0.95, y: h*0.95, id: 2 }, { x: w*0.05, y: h*0.95, id: 3 }
-            ];
+            corners = [{ x: w*0.1, y: h*0.1, id: 0 }, { x: w*0.9, y: h*0.1, id: 1 }, { x: w*0.9, y: h*0.9, id: 2 }, { x: w*0.1, y: h*0.9, id: 3 }];
             renderEditor();
         });
 
         function renderEditor() {
             if (!srcMat) return;
-            const wrapper = document.getElementById('canvas-area-wrapper');
-            const availableWidth = wrapper.clientWidth - (PADDING * 2) - 20;
-            
-            scaleFactor = Math.min(1.0, availableWidth / srcMat.cols);
-            const displayW = srcMat.cols * scaleFactor;
-            const displayH = srcMat.rows * scaleFactor;
-            
-            editorCanvas.width = displayW; editorCanvas.height = displayH;
-            overlayCanvas.width = displayW; overlayCanvas.height = displayH;
-
-            let resized = new cv.Mat();
-            cv.resize(srcMat, resized, new cv.Size(displayW, displayH), 0, 0, cv.INTER_AREA);
-            cv.imshow('editor-canvas', resized);
-            resized.delete();
-
+            const wrap = document.getElementById('canvas-area-wrapper');
+            scaleFactor = Math.min(1.0, (wrap.clientWidth - PADDING * 2 - 20) / srcMat.cols);
+            const dW = srcMat.cols * scaleFactor; const dH = srcMat.rows * scaleFactor;
+            editorCanvas.width = dW; editorCanvas.height = dH;
+            overlayCanvas.width = dW; overlayCanvas.height = dH;
+            let rz = new cv.Mat();
+            cv.resize(srcMat, rz, new cv.Size(dW, dH), 0, 0, cv.INTER_AREA);
+            cv.imshow('editor-canvas', rz);
+            rz.delete();
             container.querySelectorAll('.corner-handle').forEach(h => h.remove());
-
-            corners.forEach((corner, index) => {
-                const handle = document.createElement('div');
-                handle.className = 'corner-handle';
-                handle.dataset.id = index;
-                handle.style.left = (corner.x * scaleFactor + PADDING) + 'px';
-                handle.style.top = (corner.y * scaleFactor + PADDING) + 'px';
-                handle.addEventListener('mousedown', startDrag);
-                handle.addEventListener('touchstart', startDrag, {passive: false});
-                container.appendChild(handle);
+            corners.forEach((c, i) => {
+                const h = document.createElement('div');
+                h.className = 'corner-handle'; h.dataset.id = i;
+                h.style.left = (c.x * scaleFactor + PADDING) + 'px';
+                h.style.top = (c.y * scaleFactor + PADDING) + 'px';
+                h.addEventListener('mousedown', startDrag);
+                h.addEventListener('touchstart', startDrag, {passive: false});
+                container.appendChild(h);
             });
             drawOverlay();
         }
@@ -434,33 +359,27 @@
         function drawOverlay() {
             const ctx = overlayCanvas.getContext('2d');
             ctx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
-            const pts = corners.map(c => ({ x: c.x * scaleFactor, y: c.y * scaleFactor }));
-
+            const p = corners.map(c => ({ x: c.x * scaleFactor, y: c.y * scaleFactor }));
             ctx.beginPath();
-            ctx.moveTo(pts[0].x, pts[0].y); ctx.lineTo(pts[1].x, pts[1].y);
-            ctx.lineTo(pts[2].x, pts[2].y); ctx.lineTo(pts[3].x, pts[3].y);
+            ctx.moveTo(p[0].x, p[0].y); ctx.lineTo(p[1].x, p[1].y);
+            ctx.lineTo(p[2].x, p[2].y); ctx.lineTo(p[3].x, p[3].y);
             ctx.closePath();
             ctx.fillStyle = 'rgba(59, 130, 246, 0.15)'; ctx.fill();
             ctx.lineWidth = 2; ctx.strokeStyle = 'rgba(37, 99, 235, 0.9)';
-            ctx.setLineDash([6, 4]); ctx.stroke(); ctx.setLineDash([]);
+            ctx.setLineDash([6, 4]); ctx.stroke();
         }
 
-        let activeHandle = null;
-        function startDrag(e) { e.preventDefault(); activeHandle = e.target; document.addEventListener('mousemove', drag); document.addEventListener('mouseup', stopDrag); document.addEventListener('touchmove', drag, {passive: false}); document.addEventListener('touchend', stopDrag); }
-        function stopDrag() { activeHandle = null; document.removeEventListener('mousemove', drag); document.removeEventListener('mouseup', stopDrag); document.removeEventListener('touchmove', drag); document.removeEventListener('touchend', stopDrag); }
-
+        let activeH = null;
+        function startDrag(e) { e.preventDefault(); activeH = e.target; document.addEventListener('mousemove', drag); document.addEventListener('mouseup', stopDrag); document.addEventListener('touchmove', drag, {passive: false}); document.addEventListener('touchend', stopDrag); }
+        function stopDrag() { activeH = null; document.removeEventListener('mousemove', drag); document.removeEventListener('mouseup', stopDrag); document.removeEventListener('touchmove', drag); document.removeEventListener('touchend', stopDrag); }
         function drag(e) {
-            if (!activeHandle) return;
-            e.preventDefault();
-            const clientX = e.clientX || (e.touches && e.touches[0].clientX);
-            const clientY = e.clientY || (e.touches && e.touches[0].clientY);
+            if (!activeH) return;
+            const cx = e.clientX || (e.touches && e.touches[0].clientX);
+            const cy = e.clientY || (e.touches && e.touches[0].clientY);
             const rect = container.getBoundingClientRect();
-            let x = clientX - rect.left; let y = clientY - rect.top;
-
-            activeHandle.style.left = x + 'px';
-            activeHandle.style.top = y + 'px';
-
-            const id = parseInt(activeHandle.dataset.id);
+            let x = cx - rect.left; let y = cy - rect.top;
+            activeH.style.left = x + 'px'; activeH.style.top = y + 'px';
+            const id = parseInt(activeH.dataset.id);
             corners[id].x = (x - PADDING) / scaleFactor;
             corners[id].y = (y - PADDING) / scaleFactor;
             drawOverlay();
@@ -468,65 +387,49 @@
 
         btnProcess.addEventListener('click', () => {
             if (!srcMat) return;
-            statusText.textContent = "⏳ 正在處理中 (最高畫質運算)...";
-
+            statusText.textContent = "⏳ 魔法計算中...";
             setTimeout(() => {
                 let tl = corners[0]; let tr = corners[1]; let br = corners[2]; let bl = corners[3];
-                let widthA = Math.hypot(br.x - bl.x, br.y - bl.y);
-                let widthB = Math.hypot(tr.x - tl.x, tr.y - tl.y);
-                let targetW = Math.max(widthA, widthB);
-
-                let heightA = Math.hypot(tr.x - br.x, tr.y - br.y);
-                let heightB = Math.hypot(tl.x - bl.x, tl.y - bl.y);
-                let targetH = Math.max(heightA, heightB);
-
-                let srcTri = cv.matFromArray(4, 1, cv.CV_32FC2, [tl.x, tl.y, tr.x, tr.y, br.x, br.y, bl.x, bl.y]);
-                let dstTri = cv.matFromArray(4, 1, cv.CV_32FC2, [0, 0, targetW, 0, targetW, targetH, 0, targetH]);
-
-                let transformMat = cv.getPerspectiveTransform(srcTri, dstTri);
-                let warpedMat = new cv.Mat();
-                cv.warpPerspective(srcMat, warpedMat, transformMat, new cv.Size(targetW, targetH));
-
-                let finalMat = warpedMat;
+                let w = Math.max(Math.hypot(br.x-bl.x, br.y-bl.y), Math.hypot(tr.x-tl.x, tr.y-tl.y));
+                let h = Math.max(Math.hypot(tr.x-br.x, tr.y-br.y), Math.hypot(tl.x-bl.x, tl.y-bl.y));
+                let sT = cv.matFromArray(4, 1, cv.CV_32FC2, [tl.x, tl.y, tr.x, tr.y, br.x, br.y, bl.x, bl.y]);
+                let dT = cv.matFromArray(4, 1, cv.CV_32FC2, [0, 0, w, 0, w, h, 0, h]);
+                let m = cv.getPerspectiveTransform(sT, dT);
+                let warped = new cv.Mat();
+                cv.warpPerspective(srcMat, warped, m, new cv.Size(w, h));
+                let res = warped;
                 if (removeShadowCheck.checked) {
-                    let grayMat = new cv.Mat();
-                    cv.cvtColor(warpedMat, grayMat, cv.COLOR_RGBA2GRAY, 0);
-                    let bwMat = new cv.Mat();
-                    let blockSize = parseInt(blockSizeInput.value);
-                    if (blockSize % 2 === 0) blockSize += 1;
-                    let cValue = parseInt(cValueInput.value);
-
-                    cv.adaptiveThreshold(grayMat, bwMat, 255, cv.ADAPTIVE_THRESH_GAUSSIAN_C, cv.THRESH_BINARY, blockSize, cValue);
-                    finalMat = bwMat;
-                    grayMat.delete();
+                    let g = new cv.Mat(); cv.cvtColor(warped, g, cv.COLOR_RGBA2GRAY, 0);
+                    let bw = new cv.Mat();
+                    let bS = parseInt(blockSizeInput.value); if (bS % 2 === 0) bS++;
+                    cv.adaptiveThreshold(g, bw, 255, cv.ADAPTIVE_THRESH_GAUSSIAN_C, cv.THRESH_BINARY, bS, parseInt(cValueInput.value));
+                    res = bw; g.delete();
                 }
-
-                cv.imshow('result-canvas', finalMat);
+                cv.imshow('result-canvas', res);
                 resultCanvas.classList.remove('hidden');
                 resultPlaceholder.classList.add('hidden');
                 btnDownload.classList.remove('hidden');
                 btnPrint.classList.remove('hidden');
-                statusText.textContent = "✅ 校正成功！";
-
-                srcTri.delete(); dstTri.delete(); transformMat.delete();
-                if (finalMat !== warpedMat) warpedMat.delete();
-                if (removeShadowCheck.checked) finalMat.delete();
+                statusText.textContent = "✅ 校正完成";
+                sT.delete(); dT.delete(); m.delete();
+                if (res !== warped) warped.delete();
+                if (removeShadowCheck.checked) res.delete();
             }, 50);
         });
 
         btnPrint.addEventListener('click', () => {
-            const dataUrl = resultCanvas.toDataURL('image/jpeg', 1.0);
-            const printWindow = window.open('', '_blank');
-            if (!printWindow) { alert("請允許彈出式視窗以進行列印。"); return; }
-            printWindow.document.write(`<html><head><title>Print</title><style>body{margin:0;display:flex;justify-content:center;}img{max-width:100%;max-height:100vh;object-fit:contain;}</style></head><body><img src="${dataUrl}" onload="window.print();window.close();"/></body></html>`);
-            printWindow.document.close();
+            const u = resultCanvas.toDataURL('image/jpeg', 1.0);
+            const w = window.open('', '_blank');
+            if(!w) return;
+            w.document.write(`<html><head><style>body{margin:0;display:flex;justify-content:center;}img{max-width:100%;max-height:100vh;object-fit:contain;}</style></head><body><img src="${u}" onload="window.print();window.close();"/></body></html>`);
+            w.document.close();
         });
 
         btnDownload.addEventListener('click', () => {
-            const link = document.createElement('a');
-            link.download = `${originalFileName}_校正.png`;
-            link.href = resultCanvas.toDataURL('image/png');
-            link.click();
+            const l = document.createElement('a');
+            l.download = `${originalFileName}_校正.png`;
+            l.href = resultCanvas.toDataURL('image/png');
+            l.click();
         });
     </script>
 </body>
