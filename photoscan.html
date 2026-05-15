@@ -108,7 +108,7 @@
 
     <script>
         let srcMat = null;
-        let corners = []; // [{x, y, id}]
+        let corners = []; 
         let scaleFactor = 1;
         let originalFileName = "document";
         const PADDING = 60;
@@ -385,7 +385,22 @@
         btnPrint.addEventListener('click', () => {
             const u = resultCanvas.toDataURL('image/jpeg', 1.0);
             const w = window.open('', '_blank');
-            w.document.write(`<html><body style="margin:0;display:flex;justify-content:center;"><img src="${u}" style="max-width:100%;max-height:100vh;" onload="window.print();window.close();"/></body></html>`);
+            if(!w) return;
+            // 寫入包含防止頁首頁尾 CSS 的 HTML 結構
+            w.document.write(`
+                <html>
+                <head>
+                    <style>
+                        @page { size: auto; margin: 0mm; }
+                        body { margin: 0; display: flex; justify-content: center; align-items: center; background-color: white; }
+                        img { max-width: 100%; max-height: 100vh; object-fit: contain; }
+                    </style>
+                </head>
+                <body>
+                    <img src="${u}" onload="window.print();window.close();"/>
+                </body>
+                </html>
+            `);
             w.document.close();
         });
 
