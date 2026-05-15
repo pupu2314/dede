@@ -13,7 +13,6 @@
         .corner-handle { position: absolute; width: 26px; height: 26px; background-color: rgba(59, 130, 246, 0.9); border: 3px solid white; border-radius: 50%; transform: translate(-50%, -50%); cursor: grab; box-shadow: 0 2px 5px rgba(0,0,0,0.4); z-index: 10; transition: background-color 0.2s; }
         .corner-handle:active { cursor: grabbing; background-color: #1d4ed8; transform: translate(-50%, -50%) scale(1.2); }
         input[type="file"] { display: none; }
-        /* 拖曳狀態樣式 */
         .drag-over { background-color: #dbeafe !important; border: 2px dashed #2563eb !important; }
     </style>
 </head>
@@ -27,6 +26,7 @@
             </p>
         </div>
 
+        <!-- 檔案與參數控制區 -->
         <div class="bg-white p-6 rounded-xl shadow-md grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
             <div class="space-y-4">
                 <h2 class="text-lg font-semibold border-b pb-2">1. 檔案操作</h2>
@@ -47,7 +47,7 @@
                     2. 自動參數
                     <label class="flex items-center space-x-2 text-sm font-normal cursor-pointer bg-gray-50 px-2 py-1 rounded">
                         <input type="checkbox" id="remove-shadow" class="w-4 h-4 text-blue-600 rounded" checked disabled>
-                        <span>啟用二值化</span>
+                        <span>啟用二值化 (去陰影)</span>
                     </label>
                 </h2>
                 
@@ -73,12 +73,14 @@
             </div>
         </div>
 
+        <!-- 執行按鈕 -->
         <div class="text-center">
             <button id="btn-process" class="bg-gradient-to-r from-blue-600 to-indigo-700 hover:from-blue-700 hover:to-indigo-800 text-white px-12 py-4 rounded-full text-lg font-bold shadow-xl transition transform hover:scale-105 disabled:opacity-50 flex items-center mx-auto" disabled>
                 執行校正輸出 ✨
             </button>
         </div>
 
+        <!-- 工作畫布區 -->
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
             <div class="flex flex-col items-center border rounded-xl p-4 bg-white shadow-sm overflow-hidden">
                 <h3 id="edit-header" class="text-sm font-bold text-gray-500 mb-3 uppercase tracking-tighter">編輯區：拖曳後將自動計算最佳參數</h3>
@@ -146,16 +148,6 @@
             };
         }
 
-        blockSizeInput.addEventListener('input', (e) => { blockSizeVal.textContent = e.target.value; });
-        cValueInput.addEventListener('input', (e) => { cValueVal.textContent = e.target.value; });
-
-        btnResetParams.addEventListener('click', () => {
-            blockSizeInput.value = recBlockSize;
-            blockSizeVal.textContent = recBlockSize + " (推薦)";
-            cValueInput.value = recCValue;
-            cValueVal.textContent = recCValue + " (推薦)";
-        });
-
         // 核心檔案處理邏輯
         function handleFile(file) {
             if (!file || !file.type.startsWith('image/')) return;
@@ -174,9 +166,10 @@
                         corners = detected;
                         statusText.textContent = "✨ 已鎖定文件範圍";
                     } else {
+                        // 若偵測失敗，預設四個點在中間
                         const w = srcMat.cols; const h = srcMat.rows;
                         corners = [{x: w*0.1, y: h*0.1, id: 0}, {x: w*0.9, y: h*0.1, id: 1}, {x: w*0.9, y: h*0.9, id: 2}, {x: w*0.1, y: h*0.9, id: 3}];
-                        statusText.textContent = "⚠️ 請手動微調藍色頂點";
+                        statusText.textContent = "⚠️ 未能自動識別，請手動調整藍色頂點";
                     }
 
                     autoUpdateParams(); 
@@ -194,80 +187,19 @@
             reader.readAsDataURL(file);
         }
 
-        // 傳統點擊上傳
         uploadInput.addEventListener('change', (e) => handleFile(e.target.files[0]));
+        canvasAreaWrapper.addEventListener('dragover', (e) => { e.preventDefault(); canvasAreaWrapper.classList.add('drag-over'); });
+        canvasAreaWrapper.addEventListener('dragleave', (e) => { e.preventDefault(); canvasAreaWrapper.classList.remove('drag-over'); });
+        canvasAreaWrapper.addEventListener('drop', (e) => { e.preventDefault(); canvasAreaWrapper.classList.remove('drag-over'); handleFile(e.dataTransfer.files[0]); });
 
-        // 拖曳功能實作
-        canvasAreaWrapper.addEventListener('dragover', (e) => {
-            e.preventDefault();
-            if (uploadInput.disabled) return;
-            canvasAreaWrapper.classList.add('drag-over');
-        });
-
-        canvasAreaWrapper.addEventListener('dragleave', (e) => {
-            e.preventDefault();
-            canvasAreaWrapper.classList.remove('drag-over');
-        });
-
-        canvasAreaWrapper.addEventListener('drop', (e) => {
-            e.preventDefault();
-            canvasAreaWrapper.classList.remove('drag-over');
-            if (uploadInput.disabled) return;
-            const file = e.dataTransfer.files[0];
-            handleFile(file);
-        });
-
-        function autoUpdateParams() {
-            if (!srcMat || corners.length < 4) return;
-            
-            let minX = Math.min(...corners.map(p => p.x));
-            let maxX = Math.max(...corners.map(p => p.x));
-            let minY = Math.min(...corners.map(p => p.y));
-            let maxY = Math.max(...corners.map(p => p.y));
-            
-            minX = Math.max(0, minX); minY = Math.max(0, minY);
-            maxX = Math.min(srcMat.cols - 1, maxX); maxY = Math.min(srcMat.rows - 1, maxY);
-
-            let roi = srcMat.roi(new cv.Rect(minX, minY, maxX - minX, maxY - minY));
-            let gray = new cv.Mat();
-            cv.cvtColor(roi, gray, cv.COLOR_RGBA2GRAY, 0);
-
-            let mean = new cv.Mat(); let std = new cv.Mat();
-            cv.meanStdDev(gray, mean, std);
-            let sd = std.data64F[0];
-            
-            recBlockSize = Math.floor(Math.max(roi.cols, roi.rows) * 0.02);
-            if (recBlockSize % 2 === 0) recBlockSize++;
-            recBlockSize = Math.max(21, recBlockSize);
-
-            if (sd > 45) recCValue = 16;
-            else if (sd > 30) recCValue = 12;
-            else recCValue = 8;
-
-            blockSizeInput.value = recBlockSize;
-            blockSizeVal.textContent = recBlockSize + " (自動)";
-            cValueInput.value = recCValue;
-            cValueVal.textContent = recCValue + " (自動)";
-
-            roi.delete(); gray.delete(); mean.delete(); std.delete();
-        }
-
-        btnRotate.addEventListener('click', () => {
-            if (!srcMat) return;
-            let dst = new cv.Mat();
-            cv.rotate(srcMat, dst, cv.ROTATE_90_CLOCKWISE);
-            srcMat.delete(); srcMat = dst;
-            
-            const newW = srcMat.cols;
-            corners = corners.map(p => ({
-                x: newW - p.y,
-                y: p.x,
-                id: p.id
-            }));
-            corners = orderPts(corners);
-            renderEditor();
-        });
-
+        /**
+         * 實作您提到的邊緣偵測演算法：
+         * 1. 灰階轉換
+         * 2. 高斯模糊 (雜訊抑制)
+         * 3. 形態學處理 (強化邊緣)
+         * 4. Canny 邊緣檢測
+         * 5. 輪廓查找與多邊形逼近
+         */
         function advancedDetect(src) {
             let gray = new cv.Mat();
             let morph = new cv.Mat();
@@ -277,22 +209,37 @@
             let hierarchy = new cv.Mat();
 
             try {
+                // Step 1: 灰階轉換
                 cv.cvtColor(src, gray, cv.COLOR_RGBA2GRAY, 0);
+
+                // Step 2: 形態學 Close 操作（閉運算），填補文字產生的細小縫隙，讓文件本體更像一塊實心矩形
                 let M = cv.getStructuringElement(cv.MORPH_RECT, new cv.Size(7, 7));
                 cv.morphologyEx(gray, morph, cv.MORPH_CLOSE, M);
                 M.delete();
+
+                // Step 3: 高斯模糊，去除影像中的微小噪點
                 cv.GaussianBlur(morph, blurred, new cv.Size(11, 11), 0);
-                cv.Canny(blurred, edged, 30, 100);
+
+                // Step 4: Canny 邊緣檢測
+                cv.Canny(blurred, edged, 50, 150);
+
+                // Step 5: 輪廓查找
                 cv.findContours(edged, contours, hierarchy, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE);
                 
                 let maxA = 0; let best = null;
                 for (let i = 0; i < contours.size(); ++i) {
                     let cnt = contours.get(i);
                     let area = cv.contourArea(cnt);
+                    
+                    // 過濾過小的雜訊輪廓（至少佔畫面 5% 以上）
                     if (area > (src.cols * src.rows * 0.05)) {
                         let peri = cv.arcLength(cnt, true);
                         let approx = new cv.Mat();
+                        
+                        // Step 6: 多邊形逼近 (取周長的 2% 作為容許誤差)
                         cv.approxPolyDP(cnt, approx, 0.02 * peri, true);
+                        
+                        // 如果逼近後的頂點是 4 個，代表可能是矩形文件
                         if (approx.rows === 4 && area > maxA) {
                             maxA = area;
                             if (best) best.delete();
@@ -301,7 +248,10 @@
                         approx.delete();
                     }
                 }
+
+                // 釋放記憶體
                 gray.delete(); morph.delete(); blurred.delete(); edged.delete(); hierarchy.delete(); contours.delete();
+
                 if (best) {
                     let pts = [];
                     for (let i = 0; i < 4; i++) pts.push({ x: best.data32S[i * 2], y: best.data32S[i * 2 + 1] });
@@ -309,9 +259,10 @@
                     return orderPts(pts);
                 }
                 return null;
-            } catch (e) { return null; }
+            } catch (e) { console.error("邊緣偵測發生錯誤:", e); return null; }
         }
 
+        // 點位排序 (左上、右上、右下、左下)
         function orderPts(pts) {
             let xS = pts.slice().sort((a, b) => a.x - b.x);
             let L = xS.slice(0, 2).sort((a, b) => a.y - b.y);
@@ -319,6 +270,34 @@
             return [{ x: L[0].x, y: L[0].y, id: 0 }, { x: R[0].x, y: R[0].y, id: 1 }, { x: R[1].x, y: R[1].y, id: 2 }, { x: L[1].x, y: L[1].y, id: 3 }];
         }
 
+        // 自動根據圈選範圍的影像特徵計算最佳二值化參數
+        function autoUpdateParams() {
+            if (!srcMat || corners.length < 4) return;
+            let minX = Math.max(0, Math.min(...corners.map(p => p.x)));
+            let maxX = Math.min(srcMat.cols - 1, Math.max(...corners.map(p => p.x)));
+            let minY = Math.max(0, Math.min(...corners.map(p => p.y)));
+            let maxY = Math.min(srcMat.rows - 1, Math.max(...corners.map(p => p.y)));
+
+            let roi = srcMat.roi(new cv.Rect(minX, minY, maxX - minX, maxY - minY));
+            let gray = new cv.Mat();
+            cv.cvtColor(roi, gray, cv.COLOR_RGBA2GRAY, 0);
+            let mean = new cv.Mat(); let std = new cv.Mat();
+            cv.meanStdDev(gray, mean, std);
+            let sd = std.data64F[0];
+            
+            recBlockSize = Math.floor(Math.max(roi.cols, roi.rows) * 0.02);
+            if (recBlockSize % 2 === 0) recBlockSize++;
+            recBlockSize = Math.max(21, recBlockSize);
+            recCValue = (sd > 40) ? 14 : (sd > 25) ? 10 : 7;
+
+            blockSizeInput.value = recBlockSize;
+            blockSizeVal.textContent = recBlockSize + " (自動)";
+            cValueInput.value = recCValue;
+            cValueVal.textContent = recCValue + " (自動)";
+            roi.delete(); gray.delete(); mean.delete(); std.delete();
+        }
+
+        // 渲染編輯畫布與拖動手柄
         function renderEditor() {
             if (!srcMat) return;
             const wrap = document.getElementById('canvas-area-wrapper');
@@ -327,7 +306,6 @@
             
             editorCanvas.width = dW; editorCanvas.height = dH;
             overlayCanvas.width = dW; overlayCanvas.height = dH;
-            
             let rz = new cv.Mat();
             cv.resize(srcMat, rz, new cv.Size(dW, dH), 0, 0, cv.INTER_AREA);
             cv.imshow('editor-canvas', rz);
@@ -362,7 +340,6 @@
         let activeH = null;
         function startDrag(e) { e.preventDefault(); activeH = e.target; document.addEventListener('mousemove', drag); document.addEventListener('mouseup', stopDrag); document.addEventListener('touchmove', drag, {passive: false}); document.addEventListener('touchend', stopDrag); }
         function stopDrag() { activeH = null; autoUpdateParams(); document.removeEventListener('mousemove', drag); document.removeEventListener('mouseup', stopDrag); document.removeEventListener('touchmove', drag); document.removeEventListener('touchend', stopDrag); }
-        
         function drag(e) {
             if (!activeH) return;
             const cx = e.clientX || (e.touches && e.touches[0].clientX);
@@ -376,6 +353,7 @@
             drawOverlay();
         }
 
+        // 執行透視變換與二值化
         btnProcess.addEventListener('click', () => {
             if (!srcMat) return;
             statusText.textContent = "⌛ 正在進行高解析度映射運算...";
@@ -388,6 +366,7 @@
                 let m = cv.getPerspectiveTransform(sT, dT);
                 let warped = new cv.Mat();
                 cv.warpPerspective(srcMat, warped, m, new cv.Size(w, h));
+                
                 let res = warped;
                 if (removeShadowCheck.checked) {
                     let g = new cv.Mat(); cv.cvtColor(warped, g, cv.COLOR_RGBA2GRAY, 0);
@@ -396,6 +375,7 @@
                     cv.adaptiveThreshold(g, bw, 255, cv.ADAPTIVE_THRESH_GAUSSIAN_C, cv.THRESH_BINARY, bS, parseInt(cValueInput.value));
                     res = bw; g.delete();
                 }
+                
                 cv.imshow('result-canvas', res);
                 resultCanvas.classList.remove('hidden');
                 resultPlaceholder.classList.add('hidden');
@@ -408,32 +388,25 @@
             }, 50);
         });
 
+        // 下載與列印功能
+        btnDownload.addEventListener('click', () => { const l = document.createElement('a'); l.download = `${originalFileName}_校正.png`; l.href = resultCanvas.toDataURL('image/png'); l.click(); });
         btnPrint.addEventListener('click', () => {
             const u = resultCanvas.toDataURL('image/jpeg', 1.0);
             const w = window.open('', '_blank');
             if(!w) return;
-            w.document.write(`
-                <html>
-                <head>
-                    <style>
-                        @page { size: auto; margin: 0mm; }
-                        body { margin: 0; display: flex; justify-content: center; align-items: center; background-color: white; }
-                        img { max-width: 100%; max-height: 100vh; object-fit: contain; }
-                    </style>
-                </head>
-                <body>
-                    <img src="${u}" onload="window.print();window.close();"/>
-                </body>
-                </html>
-            `);
+            w.document.write(`<html><head><style>@page{size:auto;margin:0mm;}body{margin:0;display:flex;justify-content:center;align-items:center;}img{max-width:100%;max-height:100vh;object-fit:contain;}</style></head><body><img src="${u}" onload="window.print();window.close();"/></body></html>`);
             w.document.close();
         });
 
-        btnDownload.addEventListener('click', () => {
-            const l = document.createElement('a');
-            l.download = `${originalFileName}_校正.png`;
-            l.href = resultCanvas.toDataURL('image/png');
-            l.click();
+        btnRotate.addEventListener('click', () => {
+            if (!srcMat) return;
+            let dst = new cv.Mat();
+            cv.rotate(srcMat, dst, cv.ROTATE_90_CLOCKWISE);
+            srcMat.delete(); srcMat = dst;
+            const newW = srcMat.cols;
+            corners = corners.map(p => ({ x: newW - p.y, y: p.x, id: p.id }));
+            corners = orderPts(corners);
+            renderEditor();
         });
     </script>
 </body>
