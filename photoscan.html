@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>智慧文件校正掃描器 Pro v2.1</title>
+    <title>智慧文件校正掃描器 Pro v3.0</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         body { background-color: #f3f4f6; font-family: system-ui, -apple-system, sans-serif; }
@@ -142,17 +142,27 @@
 
         function onOpenCvReady() {
             cv['onRuntimeInitialized'] = () => {
-                statusText.textContent = "✅ 影像引擎準備就緒";
+                statusText.textContent = "✅ 影像引擎準備就緒 (HSV-Box 演算法載入)";
                 statusText.className = "text-sm text-green-600 font-medium bg-green-50 inline-block px-3 py-1 rounded-full";
                 uploadInput.disabled = false;
             };
         }
 
+        blockSizeInput.addEventListener('input', (e) => { blockSizeVal.textContent = e.target.value; });
+        cValueInput.addEventListener('input', (e) => { cValueVal.textContent = e.target.value; });
+
+        btnResetParams.addEventListener('click', () => {
+            blockSizeInput.value = recBlockSize;
+            blockSizeVal.textContent = recBlockSize + " (推薦)";
+            cValueInput.value = recCValue;
+            cValueVal.textContent = recCValue + " (推薦)";
+        });
+
         // 核心檔案處理邏輯
         function handleFile(file) {
             if (!file || !file.type.startsWith('image/')) return;
             originalFileName = file.name.replace(/\.[^/.]+$/, "");
-            statusText.textContent = "🔍 正在分析環境光感與邊緣特徵...";
+            statusText.textContent = "🔍 正在進行 HSV 特徵分析與最小方框運算...";
 
             const reader = new FileReader();
             reader.onload = (event) => {
@@ -164,12 +174,18 @@
                     let detected = advancedDetect(srcMat);
                     if (detected) {
                         corners = detected;
-                        statusText.textContent = "✨ 已鎖定文件範圍";
+                        statusText.textContent = "✨ 已自動識別範圍";
                     } else {
-                        // 若偵測失敗，預設四個點在中間
-                        const w = srcMat.cols; const h = srcMat.rows;
-                        corners = [{x: w*0.1, y: h*0.1, id: 0}, {x: w*0.9, y: h*0.1, id: 1}, {x: w*0.9, y: h*0.9, id: 2}, {x: w*0.1, y: h*0.9, id: 3}];
-                        statusText.textContent = "⚠️ 未能自動識別，請手動調整藍色頂點";
+                        // 保底機制：若無法識別，則直接選取整張照片範圍
+                        const w = srcMat.cols; 
+                        const h = srcMat.rows;
+                        corners = [
+                            {x: 0, y: 0, id: 0}, 
+                            {x: w, y: 0, id: 1}, 
+                            {x: w, y: h, id: 2}, 
+                            {x: 0, y: h, id: 3}
+                        ];
+                        statusText.textContent = "⚠️ 無法識別邊界，已預設選取全圖範圍";
                     }
 
                     autoUpdateParams(); 
@@ -192,75 +208,89 @@
         canvasAreaWrapper.addEventListener('dragleave', (e) => { e.preventDefault(); canvasAreaWrapper.classList.remove('drag-over'); });
         canvasAreaWrapper.addEventListener('drop', (e) => { e.preventDefault(); canvasAreaWrapper.classList.remove('drag-over'); handleFile(e.dataTransfer.files[0]); });
 
-        /**
-         * 實作您提到的邊緣偵測演算法：
-         * 1. 灰階轉換
-         * 2. 高斯模糊 (雜訊抑制)
-         * 3. 形態學處理 (強化邊緣)
-         * 4. Canny 邊緣檢測
-         * 5. 輪廓查找與多邊形逼近
-         */
-        function advancedDetect(src) {
-            let gray = new cv.Mat();
-            let morph = new cv.Mat();
-            let blurred = new cv.Mat();
-            let edged = new cv.Mat();
-            let contours = new cv.MatVector();
-            let hierarchy = new cv.Mat();
+    /**
+     * 針對複雜背景優化的邊緣偵測：
+     * 1. 強化模糊濾波，消除背景泡棉紋理碎雜訊
+     * 2. 調整 HSV 權重，平衡明亮與飽和度
+     * 3. 增加形態學擴張 (Dilate)，確保邊緣閉合
+     */
+    function advancedDetect(src) {
+        let rgb = new cv.Mat();
+        let hsv = new cv.Mat();
+        let channels = new cv.MatVector();
+        let s = new cv.Mat();
+        let v = new cv.Mat();
+        let sv_value = new cv.Mat();
+        let blurred = new cv.Mat();
+        let edged = new cv.Mat();
+        let dilated = new cv.Mat();
+        let contours = new cv.MatVector();
+        let hierarchy = new cv.Mat();
 
-            try {
-                // Step 1: 灰階轉換
-                cv.cvtColor(src, gray, cv.COLOR_RGBA2GRAY, 0);
+        try {
+            cv.cvtColor(src, rgb, cv.COLOR_RGBA2RGB, 0);
+            cv.cvtColor(rgb, hsv, cv.COLOR_RGB2HSV, 0);
 
-                // Step 2: 形態學 Close 操作（閉運算），填補文字產生的細小縫隙，讓文件本體更像一塊實心矩形
-                let M = cv.getStructuringElement(cv.MORPH_RECT, new cv.Size(7, 7));
-                cv.morphologyEx(gray, morph, cv.MORPH_CLOSE, M);
-                M.delete();
+            cv.split(hsv, channels);
+            s = channels.get(1);
+            v = channels.get(2);
 
-                // Step 3: 高斯模糊，去除影像中的微小噪點
-                cv.GaussianBlur(morph, blurred, new cv.Size(11, 11), 0);
+            // 針對淺色紙張微調權重，避免綠色條干擾
+            cv.addWeighted(s, 0.5, v, 0.5, 0, sv_value);
 
-                // Step 4: Canny 邊緣檢測
-                cv.Canny(blurred, edged, 50, 150);
+            // 加大模糊半徑以過濾背景顆粒感
+            let kSize = Math.max(7, Math.floor(src.cols / 60));
+            if (kSize % 2 === 0) kSize++;
+            cv.GaussianBlur(sv_value, blurred, new cv.Size(kSize, kSize), 0);
 
-                // Step 5: 輪廓查找
-                cv.findContours(edged, contours, hierarchy, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE);
-                
-                let maxA = 0; let best = null;
-                for (let i = 0; i < contours.size(); ++i) {
-                    let cnt = contours.get(i);
-                    let area = cv.contourArea(cnt);
-                    
-                    // 過濾過小的雜訊輪廓（至少佔畫面 5% 以上）
-                    if (area > (src.cols * src.rows * 0.05)) {
-                        let peri = cv.arcLength(cnt, true);
-                        let approx = new cv.Mat();
-                        
-                        // Step 6: 多邊形逼近 (取周長的 2% 作為容許誤差)
-                        cv.approxPolyDP(cnt, approx, 0.02 * peri, true);
-                        
-                        // 如果逼近後的頂點是 4 個，代表可能是矩形文件
-                        if (approx.rows === 4 && area > maxA) {
-                            maxA = area;
-                            if (best) best.delete();
-                            best = approx.clone();
-                        }
-                        approx.delete();
+            // 使用較寬的閾值區間抓取邊緣
+            cv.Canny(blurred, edged, 50, 150);
+
+            // 核心改善：增加擴張，把背景雜訊連成小點，把大輪廓連成實線
+            let M = cv.getStructuringElement(cv.MORPH_RECT, new cv.Size(3, 3));
+            cv.dilate(edged, dilated, M);
+            M.delete();
+
+            cv.findContours(dilated, contours, hierarchy, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE);
+            
+            let maxA = 0; let bestCnt = null;
+            for (let i = 0; i < contours.size(); ++i) {
+                let cnt = contours.get(i);
+                let area = cv.contourArea(cnt);
+                if (area > (src.cols * src.rows * 0.03)) { // 降至 3% 以增加靈敏度
+                    if (area > maxA) {
+                        maxA = area;
+                        bestCnt = cnt;
                     }
                 }
+            }
 
-                // 釋放記憶體
-                gray.delete(); morph.delete(); blurred.delete(); edged.delete(); hierarchy.delete(); contours.delete();
+            if (bestCnt) {
+                let rect = cv.minAreaRect(bestCnt);
+                let angle = rect.angle * Math.PI / 180.0;
+                let b = Math.cos(angle) * 0.5;
+                let a = Math.sin(angle) * 0.5;
+                let pts = [];
+                pts.push({ x: rect.center.x - a * rect.size.height - b * rect.size.width, y: rect.center.y + b * rect.size.height - a * rect.size.width });
+                pts.push({ x: rect.center.x + a * rect.size.height - b * rect.size.width, y: rect.center.y - b * rect.size.height - a * rect.size.width });
+                pts.push({ x: 2 * rect.center.x - pts[0].x, y: 2 * rect.center.y - pts[0].y });
+                pts.push({ x: 2 * rect.center.x - pts[1].x, y: 2 * rect.center.y - pts[1].y });
 
-                if (best) {
-                    let pts = [];
-                    for (let i = 0; i < 4; i++) pts.push({ x: best.data32S[i * 2], y: best.data32S[i * 2 + 1] });
-                    best.delete();
-                    return orderPts(pts);
-                }
-                return null;
-            } catch (e) { console.error("邊緣偵測發生錯誤:", e); return null; }
+                // 清理記憶體
+                rgb.delete(); hsv.delete(); channels.delete(); s.delete(); v.delete(); sv_value.delete();
+                blurred.delete(); edged.delete(); dilated.delete(); contours.delete(); hierarchy.delete();
+                return orderPts(pts);
+            }
+
+            // 清理記憶體
+            rgb.delete(); hsv.delete(); channels.delete(); s.delete(); v.delete(); sv_value.delete();
+            blurred.delete(); edged.delete(); dilated.delete(); contours.delete(); hierarchy.delete();
+            return null;
+        } catch (e) {
+            console.error(e);
+            return null;
         }
+    }
 
         // 點位排序 (左上、右上、右下、左下)
         function orderPts(pts) {
@@ -278,7 +308,11 @@
             let minY = Math.max(0, Math.min(...corners.map(p => p.y)));
             let maxY = Math.min(srcMat.rows - 1, Math.max(...corners.map(p => p.y)));
 
-            let roi = srcMat.roi(new cv.Rect(minX, minY, maxX - minX, maxY - minY));
+            let roiW = maxX - minX;
+            let roiH = maxY - minY;
+            if (roiW <= 0 || roiH <= 0) return;
+
+            let roi = srcMat.roi(new cv.Rect(minX, minY, roiW, roiH));
             let gray = new cv.Mat();
             cv.cvtColor(roi, gray, cv.COLOR_RGBA2GRAY, 0);
             let mean = new cv.Mat(); let std = new cv.Mat();
@@ -394,7 +428,7 @@
             const u = resultCanvas.toDataURL('image/jpeg', 1.0);
             const w = window.open('', '_blank');
             if(!w) return;
-            w.document.write(`<html><head><style>@page{size:auto;margin:0mm;}body{margin:0;display:flex;justify-content:center;align-items:center;}img{max-width:100%;max-height:100vh;object-fit:contain;}</style></head><body><img src="${u}" onload="window.print();window.close();"/></body></html>`);
+            w.document.write(`<html><head><style>@page{size:auto;margin:0mm;}body{margin:0;display:flex;justify-content:center;align-items:center;background-color:white;}img{max-width:100%;max-height:100vh;object-fit:contain;}</style></head><body><img src="${u}" onload="window.print();window.close();"/></body></html>`);
             w.document.close();
         });
 
