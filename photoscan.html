@@ -34,7 +34,7 @@
                         <input type="file" id="image-upload" accept="image/*" disabled>
                     </label>
                     <button id="btn-rotate" class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2.5 rounded-lg transition font-medium flex items-center border border-gray-300 disabled:opacity-50" disabled>
-                        旋轉 90° (頂點同步)
+                        旋轉 90°
                     </button>
                 </div>
                 <p id="file-info" class="text-xs text-gray-500 italic">支援多尺度邊緣強化偵測</p>
@@ -42,7 +42,7 @@
 
             <div class="space-y-4">
                 <h2 class="text-lg font-semibold border-b pb-2 flex justify-between items-center">
-                    2. 自動參數 (隨拖曳即時判定)
+                    2. 自動參數
                     <label class="flex items-center space-x-2 text-sm font-normal cursor-pointer bg-gray-50 px-2 py-1 rounded">
                         <input type="checkbox" id="remove-shadow" class="w-4 h-4 text-blue-600 rounded" checked disabled>
                         <span>啟用二值化</span>
@@ -65,7 +65,7 @@
                         <input type="range" id="c-value" min="0" max="30" step="1" value="10" class="w-full" disabled>
                     </div>
                     <button id="btn-reset-params" class="w-full text-xs bg-white hover:bg-gray-100 text-blue-600 font-bold py-2 rounded border border-blue-200 transition disabled:opacity-50" disabled>
-                        🔄 恢復當前推薦數值
+                        🔄 恢復目前推薦數值
                     </button>
                 </div>
             </div>
@@ -91,9 +91,9 @@
             <div class="flex flex-col items-center border rounded-xl p-4 bg-white shadow-sm overflow-hidden min-h-[400px]">
                 <div class="w-full flex justify-between items-center mb-3">
                     <h3 class="text-sm font-bold text-gray-500 uppercase tracking-tighter">高品質結果</h3>
-                    <div class="space-x-2">
-                        <button id="btn-print" class="bg-gray-700 text-white px-4 py-1.5 rounded text-xs font-bold hidden">🖨️ 列印</button>
-                        <button id="btn-download" class="bg-green-600 text-white px-4 py-1.5 rounded text-xs font-bold hidden">💾 下載</button>
+                    <div class="flex space-x-2">
+                        <button id="btn-print" class="bg-gray-700 hover:bg-gray-800 text-white px-4 py-1.5 rounded text-xs font-bold hidden shadow-sm transition">🖨️ 列印</button>
+                        <button id="btn-download" class="bg-green-600 hover:bg-green-700 text-white px-4 py-1.5 rounded text-xs font-bold hidden shadow-sm transition">💾 下載</button>
                     </div>
                 </div>
                 <div class="w-full flex-1 flex justify-center items-center bg-gray-50 rounded border-2 border-dashed border-gray-200 relative overflow-auto p-4">
@@ -127,6 +127,7 @@
         const btnDownload = document.getElementById('btn-download');
         const btnPrint = document.getElementById('btn-print');
         const btnResetParams = document.getElementById('btn-reset-params');
+        const resultPlaceholder = document.getElementById('result-placeholder');
         
         const removeShadowCheck = document.getElementById('remove-shadow');
         const blockSizeInput = document.getElementById('block-size');
@@ -165,7 +166,6 @@
                     if (srcMat) srcMat.delete();
                     srcMat = cv.imread(img);
                     
-                    // 偵測與初始化
                     let detected = advancedDetect(srcMat);
                     if (detected) {
                         corners = detected;
@@ -191,17 +191,14 @@
             reader.readAsDataURL(file);
         });
 
-        // --- 核心改進 1: 拖曳後重新判定數值 ---
         function autoUpdateParams() {
             if (!srcMat || corners.length < 4) return;
             
-            // 抓取四邊形包圍盒區域進行局部採樣
             let minX = Math.min(...corners.map(p => p.x));
             let maxX = Math.max(...corners.map(p => p.x));
             let minY = Math.min(...corners.map(p => p.y));
             let maxY = Math.max(...corners.map(p => p.y));
             
-            // 防止越界
             minX = Math.max(0, minX); minY = Math.max(0, minY);
             maxX = Math.min(srcMat.cols - 1, maxX); maxY = Math.min(srcMat.rows - 1, maxY);
 
@@ -213,7 +210,6 @@
             cv.meanStdDev(gray, mean, std);
             let sd = std.data64F[0];
             
-            // 更新推薦值
             recBlockSize = Math.floor(Math.max(roi.cols, roi.rows) * 0.02);
             if (recBlockSize % 2 === 0) recBlockSize++;
             recBlockSize = Math.max(21, recBlockSize);
@@ -230,34 +226,22 @@
             roi.delete(); gray.delete(); mean.delete(); std.delete();
         }
 
-        // --- 核心改進 2: 旋轉不重設頂點 ---
         btnRotate.addEventListener('click', () => {
             if (!srcMat) return;
-            const oldW = srcMat.cols;
-            const oldH = srcMat.rows;
-
-            // 影像旋轉
             let dst = new cv.Mat();
             cv.rotate(srcMat, dst, cv.ROTATE_90_CLOCKWISE);
             srcMat.delete(); srcMat = dst;
             
             const newW = srcMat.cols;
-            const newH = srcMat.rows;
-
-            // 頂點座標變換: (x, y) -> (newW - y, x)
             corners = corners.map(p => ({
                 x: newW - p.y,
                 y: p.x,
                 id: p.id
             }));
-
-            // 旋轉後通常頂點順序會變 (TL -> TR -> BR -> BL)，重新排序以符合邏輯
             corners = orderPts(corners);
-            
             renderEditor();
         });
 
-        // --- 核心改進 3: 邊緣偵測強化 (處理黑色桌面+白色文件) ---
         function advancedDetect(src) {
             let gray = new cv.Mat();
             let morph = new cv.Mat();
@@ -268,17 +252,11 @@
 
             try {
                 cv.cvtColor(src, gray, cv.COLOR_RGBA2GRAY, 0);
-                
-                // 使用形態學運算 (Closing) 填補背景雜訊，強化白色塊狀感
                 let M = cv.getStructuringElement(cv.MORPH_RECT, new cv.Size(7, 7));
                 cv.morphologyEx(gray, morph, cv.MORPH_CLOSE, M);
                 M.delete();
-
                 cv.GaussianBlur(morph, blurred, new cv.Size(11, 11), 0);
-                
-                // 使用較大範圍的 Canny 算子
                 cv.Canny(blurred, edged, 30, 100);
-
                 cv.findContours(edged, contours, hierarchy, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE);
                 
                 let maxA = 0; let best = null;
@@ -297,9 +275,7 @@
                         approx.delete();
                     }
                 }
-
                 gray.delete(); morph.delete(); blurred.delete(); edged.delete(); hierarchy.delete(); contours.delete();
-
                 if (best) {
                     let pts = [];
                     for (let i = 0; i < 4; i++) pts.push({ x: best.data32S[i * 2], y: best.data32S[i * 2 + 1] });
@@ -314,12 +290,7 @@
             let xS = pts.slice().sort((a, b) => a.x - b.x);
             let L = xS.slice(0, 2).sort((a, b) => a.y - b.y);
             let R = xS.slice(2, 4).sort((a, b) => a.y - b.y);
-            return [
-                { x: L[0].x, y: L[0].y, id: 0 }, 
-                { x: R[0].x, y: R[0].y, id: 1 }, 
-                { x: R[1].x, y: R[1].y, id: 2 }, 
-                { x: L[1].x, y: L[1].y, id: 3 }
-            ];
+            return [{ x: L[0].x, y: L[0].y, id: 0 }, { x: R[0].x, y: R[0].y, id: 1 }, { x: R[1].x, y: R[1].y, id: 2 }, { x: L[1].x, y: L[1].y, id: 3 }];
         }
 
         function renderEditor() {
