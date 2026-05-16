@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>智慧文件校正掃描器 Pro v3.1</title>
+    <title>智慧文件校正掃描器 Pro v4.1</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         body { background-color: #f3f4f6; font-family: system-ui, -apple-system, sans-serif; }
@@ -20,7 +20,7 @@
     <div class="max-w-6xl mx-auto space-y-6">
         
         <div class="text-center">
-            <h1 class="text-3xl font-bold text-gray-900 mb-2">📄 智慧文件校正掃描器 Pro v3.1</h1>
+            <h1 class="text-3xl font-bold text-gray-900 mb-2">📄 智慧文件校正掃描器 Pro</h1>
             <p id="status-text" class="text-sm text-blue-600 font-medium bg-blue-50 inline-block px-3 py-1 rounded-full">
                 正在準備 OpenCV.js 影像引擎...
             </p>
@@ -44,31 +44,48 @@
 
             <div class="space-y-4">
                 <h2 class="text-lg font-semibold border-b pb-2 flex justify-between items-center">
-                    2. 自動參數
-                    <label class="flex items-center space-x-2 text-sm font-normal cursor-pointer bg-gray-50 px-2 py-1 rounded">
-                        <input type="checkbox" id="remove-shadow" class="w-4 h-4 text-blue-600 rounded" checked disabled>
-                        <span>啟用二值化 (去陰影)</span>
-                    </label>
+                    2. 影像優化設定
+                    <div class="flex items-center space-x-3 text-sm font-normal">
+                        <label class="flex items-center space-x-1.5 cursor-pointer bg-gray-50 px-2 py-1 rounded border hover:bg-gray-100 transition">
+                            <input type="checkbox" id="remove-shadow" class="w-4 h-4 text-blue-600 rounded" checked disabled>
+                            <span>啟用去陰影</span>
+                        </label>
+                    </div>
                 </h2>
                 
-                <div id="advanced-settings" class="space-y-3 p-3 bg-blue-50/30 rounded-lg border border-blue-100">
-                    <div>
-                        <div class="flex justify-between text-xs mb-1">
-                            <span class="text-gray-600">感應範圍 (Block Size)</span>
-                            <span id="block-size-val" class="font-bold text-blue-600">自動</span>
-                        </div>
-                        <input type="range" id="block-size" min="3" max="99" step="2" value="21" class="w-full" disabled>
+                <div id="advanced-settings" class="space-y-4 p-3 bg-blue-50/30 rounded-lg border border-blue-100 transition-opacity">
+                    <!-- 色彩模式切換 -->
+                    <div class="flex p-1 bg-gray-200 rounded-lg">
+                        <button id="mode-bw" class="flex-1 py-1.5 text-sm font-medium rounded-md bg-white shadow-sm text-gray-800 transition-all">黑白模式 (純淨高對比)</button>
+                        <button id="mode-color" class="flex-1 py-1.5 text-sm font-medium rounded-md text-gray-500 hover:text-gray-700 transition-all">彩色模式 (保留筆跡章印)</button>
                     </div>
-                    <div>
-                        <div class="flex justify-between text-xs mb-1">
-                            <span class="text-gray-600">亮度補償 (C Value)</span>
-                            <span id="c-value-val" class="font-bold text-blue-600">自動</span>
+
+                    <!-- 黑白模式專屬設定 -->
+                    <div id="bw-settings" class="space-y-3">
+                        <div>
+                            <div class="flex justify-between text-xs mb-1">
+                                <span class="text-gray-600">感應範圍 (Block Size)</span>
+                                <span id="block-size-val" class="font-bold text-blue-600">自動</span>
+                            </div>
+                            <input type="range" id="block-size" min="3" max="99" step="2" value="21" class="w-full" disabled>
                         </div>
-                        <input type="range" id="c-value" min="0" max="30" step="1" value="10" class="w-full" disabled>
+                        <div>
+                            <div class="flex justify-between text-xs mb-1">
+                                <span class="text-gray-600">亮度補償 (C Value)</span>
+                                <span id="c-value-val" class="font-bold text-blue-600">自動</span>
+                            </div>
+                            <input type="range" id="c-value" min="0" max="30" step="1" value="10" class="w-full" disabled>
+                        </div>
+                        <button id="btn-reset-params" class="w-full text-xs bg-white hover:bg-gray-100 text-blue-600 font-bold py-2 rounded border border-blue-200 transition disabled:opacity-50" disabled>
+                            🔄 恢復目前推薦數值
+                        </button>
                     </div>
-                    <button id="btn-reset-params" class="w-full text-xs bg-white hover:bg-gray-100 text-blue-600 font-bold py-2 rounded border border-blue-200 transition disabled:opacity-50" disabled>
-                        🔄 恢復目前推薦數值
-                    </button>
+
+                    <!-- 彩色模式專屬說明 -->
+                    <div id="color-settings" class="hidden text-xs text-gray-600 bg-yellow-50 p-3 rounded border border-yellow-200">
+                        <p>🎨 <strong>彩色去陰影模式已啟用</strong></p>
+                        <p class="mt-1">系統將使用「背景估計除法」來均勻化紙張亮度，同時保留原本的藍筆、紅章與印花色彩。此模式不需手動調整參數。</p>
+                    </div>
                 </div>
             </div>
         </div>
@@ -119,6 +136,9 @@
 
         let recBlockSize = 21;
         let recCValue = 10;
+        
+        // true: 黑白自適應二值化, false: 彩色去陰影
+        let isBwMode = true; 
 
         const statusText = document.getElementById('status-text');
         const uploadInput = document.getElementById('image-upload');
@@ -140,9 +160,38 @@
         const blockSizeVal = document.getElementById('block-size-val');
         const cValueVal = document.getElementById('c-value-val');
 
+        // 模式切換 UI 控制
+        const btnModeBw = document.getElementById('mode-bw');
+        const btnModeColor = document.getElementById('mode-color');
+        const bwSettings = document.getElementById('bw-settings');
+        const colorSettings = document.getElementById('color-settings');
+        const advancedSettingsBlock = document.getElementById('advanced-settings');
+
+        btnModeBw.addEventListener('click', () => {
+            isBwMode = true;
+            btnModeBw.className = "flex-1 py-1.5 text-sm font-medium rounded-md bg-white shadow-sm text-gray-800 transition-all";
+            btnModeColor.className = "flex-1 py-1.5 text-sm font-medium rounded-md text-gray-500 hover:text-gray-700 transition-all";
+            bwSettings.classList.remove('hidden');
+            colorSettings.classList.add('hidden');
+        });
+
+        btnModeColor.addEventListener('click', () => {
+            isBwMode = false;
+            btnModeColor.className = "flex-1 py-1.5 text-sm font-medium rounded-md bg-white shadow-sm text-gray-800 transition-all";
+            btnModeBw.className = "flex-1 py-1.5 text-sm font-medium rounded-md text-gray-500 hover:text-gray-700 transition-all";
+            colorSettings.classList.remove('hidden');
+            bwSettings.classList.add('hidden');
+        });
+
+        removeShadowCheck.addEventListener('change', (e) => {
+            const isOff = !e.target.checked;
+            advancedSettingsBlock.style.opacity = isOff ? "0.4" : "1";
+            advancedSettingsBlock.style.pointerEvents = isOff ? "none" : "auto";
+        });
+
         function onOpenCvReady() {
             cv['onRuntimeInitialized'] = () => {
-                statusText.textContent = "✅ 影像引擎準備就緒 (多邊形近似演算法)";
+                statusText.textContent = "✅ 影像引擎準備就緒";
                 statusText.className = "text-sm text-green-600 font-medium bg-green-50 inline-block px-3 py-1 rounded-full";
                 uploadInput.disabled = false;
             };
@@ -162,7 +211,7 @@
         function handleFile(file) {
             if (!file || !file.type.startsWith('image/')) return;
             originalFileName = file.name.replace(/\.[^/.]+$/, "");
-            statusText.textContent = "🔍 正在尋找文件四邊形邊界...";
+            statusText.textContent = "🔍 正在執行 Adobe Scan 級別的多通道掃描演算法...";
 
             const reader = new FileReader();
             reader.onload = (event) => {
@@ -171,21 +220,14 @@
                     if (srcMat) srcMat.delete();
                     srcMat = cv.imread(img);
                     
-                    let detected = advancedDetect(srcMat);
+                    let detected = adobeScanStyleDetect(srcMat);
                     if (detected) {
                         corners = detected;
-                        statusText.textContent = "✨ 已精確捕捉文件透視邊界";
+                        statusText.textContent = "✨ 已精準鎖定文件範圍";
                     } else {
-                        // 保底機制：若無法識別，則直接選取整張照片範圍
-                        const w = srcMat.cols; 
-                        const h = srcMat.rows;
-                        corners = [
-                            {x: 0, y: 0, id: 0}, 
-                            {x: w, y: 0, id: 1}, 
-                            {x: w, y: h, id: 2}, 
-                            {x: 0, y: h, id: 3}
-                        ];
-                        statusText.textContent = "⚠️ 無法識別四邊形邊界，已預設選取全圖範圍";
+                        const w = srcMat.cols; const h = srcMat.rows;
+                        corners = [{x: 0, y: 0, id: 0}, {x: w, y: 0, id: 1}, {x: w, y: h, id: 2}, {x: 0, y: h, id: 3}];
+                        statusText.textContent = "⚠️ 未能識別，已預設選取全圖範圍";
                     }
 
                     autoUpdateParams(); 
@@ -208,142 +250,86 @@
         canvasAreaWrapper.addEventListener('dragleave', (e) => { e.preventDefault(); canvasAreaWrapper.classList.remove('drag-over'); });
         canvasAreaWrapper.addEventListener('drop', (e) => { e.preventDefault(); canvasAreaWrapper.classList.remove('drag-over'); handleFile(e.dataTransfer.files[0]); });
 
-        /**
-         * 導入 OpenCV-Document-Scanner 標準流程：
-         * 縮小影像 -> 灰階 -> 模糊 -> Canny -> 閉合 -> 尋找輪廓 -> 多邊形近似 (approxPolyDP)
-         */
-        function advancedDetect(src) {
-            let processMat = new cv.Mat();
-            let maxDim = 800.0;
-            let scale = 1.0;
-
-            // 1. 影像降維：提升 Canny 邊緣檢測的穩定度與演算法速度
-            if (src.rows > maxDim || src.cols > maxDim) {
-                scale = Math.max(src.rows / maxDim, src.cols / maxDim);
-                let width = Math.round(src.cols / scale);
-                let height = Math.round(src.rows / scale);
-                cv.resize(src, processMat, new cv.Size(width, height), 0, 0, cv.INTER_AREA);
-            } else {
-                src.copyTo(processMat);
-            }
-
-            let gray = new cv.Mat();
-            let blurred = new cv.Mat();
-            let edged = new cv.Mat();
-            let closed = new cv.Mat();
-            let contours = new cv.MatVector();
-            let hierarchy = new cv.Mat();
-
+        function adobeScanStyleDetect(src) {
             try {
-                // 2. 灰階與模糊處理
-                cv.cvtColor(processMat, gray, cv.COLOR_RGBA2GRAY, 0);
-                cv.GaussianBlur(gray, blurred, new cv.Size(5, 5), 0, 0, cv.BORDER_DEFAULT);
+                let maxDim = 800;
+                let ratio = Math.max(1.0, Math.max(src.cols, src.rows) / maxDim);
+                let width = Math.round(src.cols / ratio);
+                let height = Math.round(src.rows / ratio);
+                
+                let small = new cv.Mat();
+                cv.resize(src, small, new cv.Size(width, height), 0, 0, cv.INTER_AREA);
+                
+                let gray = new cv.Mat();
+                cv.cvtColor(small, gray, cv.COLOR_RGBA2GRAY, 0);
 
-                // 3. 邊緣偵測 (採用文獻常見的 75, 200 閾值)
-                cv.Canny(blurred, edged, 75, 200);
+                let bestPts = null;
+                let maxArea = 0;
 
-                // 4. 形態學閉合：連接虛線與破裂邊緣
-                let M = cv.getStructuringElement(cv.MORPH_RECT, new cv.Size(5, 5));
-                cv.morphologyEx(edged, closed, cv.MORPH_CLOSE, M);
-                M.delete();
+                let blurs = [5, 9]; 
+                let cannyThresh = [[30, 100], [50, 150], [75, 200]];
 
-                // 5. 抓取所有輪廓
-                cv.findContours(closed, contours, hierarchy, cv.RETR_LIST, cv.CHAIN_APPROX_SIMPLE);
+                for (let b of blurs) {
+                    let blurred = new cv.Mat();
+                    cv.GaussianBlur(gray, blurred, new cv.Size(b, b), 0);
+                    let kernel = cv.getStructuringElement(cv.MORPH_RECT, new cv.Size(b, b));
+                    let morph = new cv.Mat();
+                    cv.morphologyEx(blurred, morph, cv.MORPH_CLOSE, kernel);
 
-                // 過濾並排序輪廓 (只保留大於畫面 2% 的面積)
-                let cnts = [];
-                for (let i = 0; i < contours.size(); ++i) {
-                    let cnt = contours.get(i);
-                    let area = cv.contourArea(cnt);
-                    if (area > (processMat.cols * processMat.rows * 0.02)) {
-                        cnts.push({ cnt: cnt, area: area });
-                    }
-                }
-                cnts.sort((a, b) => b.area - a.area);
+                    for (let th of cannyThresh) {
+                        let edged = new cv.Mat();
+                        cv.Canny(morph, edged, th[0], th[1]);
 
-                let approx = new cv.Mat();
-                let documentPts = null;
+                        let contours = new cv.MatVector();
+                        let hierarchy = new cv.Mat();
+                        cv.findContours(edged, contours, hierarchy, cv.RETR_LIST, cv.CHAIN_APPROX_SIMPLE);
 
-                // 6. 輪廓近似法 (核心優化)
-                // 尋找前 5 個最大輪廓中，能被完美近似為「四邊形」的輪廓
-                for (let i = 0; i < Math.min(cnts.length, 5); i++) {
-                    let cnt = cnts[i].cnt;
-                    let peri = cv.arcLength(cnt, true);
-                    // 2% 周長作為近似容差值
-                    cv.approxPolyDP(cnt, approx, 0.02 * peri, true); 
+                        for (let i = 0; i < contours.size(); ++i) {
+                            let cnt = contours.get(i);
+                            let area = cv.contourArea(cnt);
+                            
+                            if (area > (width * height * 0.05) && area > maxArea) {
+                                let peri = cv.arcLength(cnt, true);
+                                let approx = new cv.Mat();
+                                cv.approxPolyDP(cnt, approx, 0.02 * peri, true);
+                                if (approx.rows === 4 && cv.isContourConvex(approx)) {
+                                    maxArea = area;
+                                    bestPts = [];
+                                    for (let j = 0; j < 4; j++) {
+                                        bestPts.push({ x: approx.data32S[j*2] * ratio, y: approx.data32S[j*2+1] * ratio });
+                                    }
+                                }
 
-                    // 判斷是否為 4 個頂點的多邊形 (即為矩形紙張)
-                    if (approx.rows === 4) {
-                        documentPts = [];
-                        for (let j = 0; j < 4; j++) {
-                            documentPts.push({
-                                x: approx.data32S[j * 2] * scale, // 放大回原始解析度
-                                y: approx.data32S[j * 2 + 1] * scale
-                            });
+                                let approx2 = new cv.Mat();
+                                cv.approxPolyDP(cnt, approx2, 0.03 * peri, true);
+                                if (approx2.rows === 4 && cv.isContourConvex(approx2) && area > maxArea) {
+                                    maxArea = area;
+                                    bestPts = [];
+                                    for (let j = 0; j < 4; j++) {
+                                        bestPts.push({ x: approx2.data32S[j*2] * ratio, y: approx2.data32S[j*2+1] * ratio });
+                                    }
+                                }
+                                approx.delete(); approx2.delete();
+                            }
                         }
-                        break;
+                        edged.delete(); contours.delete(); hierarchy.delete();
                     }
-                }
-                approx.delete();
-
-                // 7. 第二重保底機制：若抓不到完美四邊形，退回到最大面積輪廓的最小包圍框 (minAreaRect)
-                if (!documentPts && cnts.length > 0) {
-                    let rect = cv.minAreaRect(cnts[0].cnt);
-                    let angle = rect.angle * Math.PI / 180.0;
-                    let b = Math.cos(angle) * 0.5;
-                    let a = Math.sin(angle) * 0.5;
-                    documentPts = [];
-                    let p0x = rect.center.x - a * rect.size.height - b * rect.size.width;
-                    let p0y = rect.center.y + b * rect.size.height - a * rect.size.width;
-                    let p1x = rect.center.x + a * rect.size.height - b * rect.size.width;
-                    let p1y = rect.center.y - b * rect.size.height - a * rect.size.width;
-                    
-                    documentPts.push({ x: p0x * scale, y: p0y * scale });
-                    documentPts.push({ x: p1x * scale, y: p1y * scale });
-                    documentPts.push({ x: (2 * rect.center.x - p0x) * scale, y: (2 * rect.center.y - p0y) * scale });
-                    documentPts.push({ x: (2 * rect.center.x - p1x) * scale, y: (2 * rect.center.y - p1y) * scale });
+                    blurred.delete(); kernel.delete(); morph.delete();
                 }
 
-                // 釋放所有 Mat，防止記憶體洩漏
-                processMat.delete(); gray.delete(); blurred.delete(); edged.delete(); closed.delete();
-                contours.delete(); hierarchy.delete();
-
-                if (documentPts && documentPts.length === 4) {
-                    return orderPts(documentPts);
-                }
+                small.delete(); gray.delete();
+                if (bestPts) return orderPts(bestPts);
                 return null;
-
-            } catch (e) {
-                console.error("邊界判斷發生例外: ", e);
-                try { processMat.delete(); gray.delete(); blurred.delete(); edged.delete(); closed.delete(); contours.delete(); hierarchy.delete(); } catch(err){}
-                return null;
-            }
+            } catch (e) { return null; }
         }
 
-        /**
-         * 頂點排序核心優化：
-         * 使用座標加減法，確保無論旋轉角度，順序永遠是：
-         * 0: 左上 (x+y 最小)
-         * 1: 右上 (y-x 最小)
-         * 2: 右下 (x+y 最大)
-         * 3: 左下 (y-x 最大)
-         */
         function orderPts(pts) {
-            let rect = new Array(4);
-            
-            let sum = pts.map(p => p.x + p.y);
-            rect[0] = pts[sum.indexOf(Math.min(...sum))]; // 左上
-            rect[2] = pts[sum.indexOf(Math.max(...sum))]; // 右下
-
-            let diff = pts.map(p => p.y - p.x);
-            rect[1] = pts[diff.indexOf(Math.min(...diff))]; // 右上
-            rect[3] = pts[diff.indexOf(Math.max(...diff))]; // 左下
-
-            rect.forEach((p, i) => p.id = i);
-            return rect;
+            let xS = pts.slice().sort((a, b) => a.x - b.x);
+            let L = xS.slice(0, 2).sort((a, b) => a.y - b.y);
+            let R = xS.slice(2, 4).sort((a, b) => a.y - b.y);
+            return [{ x: L[0].x, y: L[0].y, id: 0 }, { x: R[0].x, y: R[0].y, id: 1 }, { x: R[1].x, y: R[1].y, id: 2 }, { x: L[1].x, y: L[1].y, id: 3 }];
         }
 
-        // 自動根據圈選範圍的影像特徵計算最佳二值化參數
         function autoUpdateParams() {
             if (!srcMat || corners.length < 4) return;
             let minX = Math.max(0, Math.min(...corners.map(p => p.x)));
@@ -374,7 +360,6 @@
             roi.delete(); gray.delete(); mean.delete(); std.delete();
         }
 
-        // 渲染編輯畫布與拖動手柄
         function renderEditor() {
             if (!srcMat) return;
             const wrap = document.getElementById('canvas-area-wrapper');
@@ -430,42 +415,102 @@
             drawOverlay();
         }
 
-        // 執行透視變換與二值化
+        // --- 核心優化：增加「彩色去陰影」演算法 ---
+        function enhanceColorDocument(src) {
+            // 1. 背景估計：使用非常強烈的中值模糊來消除文字，只留下漸層陰影與紙張底色
+            let bg = new cv.Mat();
+            // kSize 必須是奇數，且依據圖片大小動態調整
+            let kSize = Math.floor(Math.max(src.cols, src.rows) / 40);
+            if (kSize % 2 === 0) kSize++;
+            if (kSize < 21) kSize = 21;
+            
+            // 使用均值模糊 (效能較中值模糊好，對大面積陰影估計足夠)
+            cv.blur(src, bg, new cv.Size(kSize, kSize));
+
+            // 2. 影像相除與還原： src / bg * 255
+            let dst = new cv.Mat(src.rows, src.cols, cv.CV_8UC3);
+            
+            // 手動遍歷像素進行相除運算 (確保色彩通道不會溢出)
+            for (let i = 0; i < src.rows; i++) {
+                for (let j = 0; j < src.cols; j++) {
+                    let srcPixel = src.ucharPtr(i, j);
+                    let bgPixel = bg.ucharPtr(i, j);
+                    let dstPixel = dst.ucharPtr(i, j);
+                    
+                    // R, G, B 通道分別處理
+                    for (let c = 0; c < 3; c++) {
+                        // 避免除以 0 的錯誤，並將結果投射回 0-255 區間
+                        let bgVal = bgPixel[c] === 0 ? 1 : bgPixel[c];
+                        let val = (srcPixel[c] / bgVal) * 255;
+                        dstPixel[c] = Math.min(255, Math.max(0, val));
+                    }
+                    // 保留 Alpha 通道
+                    if(src.channels() === 4) dstPixel[3] = srcPixel[3];
+                }
+            }
+            
+            bg.delete();
+            return dst;
+        }
+
         btnProcess.addEventListener('click', () => {
             if (!srcMat) return;
             statusText.textContent = "⌛ 正在進行高解析度映射運算...";
+            
+            // 使用 setTimeout 讓 UI 先更新文字，避免運算卡住畫面
             setTimeout(() => {
                 let tl = corners[0]; let tr = corners[1]; let br = corners[2]; let bl = corners[3];
                 let w = Math.max(Math.hypot(br.x-bl.x, br.y-bl.y), Math.hypot(tr.x-tl.x, tr.y-tl.y));
                 let h = Math.max(Math.hypot(tr.x-br.x, tr.y-br.y), Math.hypot(tl.x-bl.x, tl.y-bl.y));
+                
                 let sT = cv.matFromArray(4, 1, cv.CV_32FC2, [tl.x, tl.y, tr.x, tr.y, br.x, br.y, bl.x, bl.y]);
                 let dT = cv.matFromArray(4, 1, cv.CV_32FC2, [0, 0, w, 0, w, h, 0, h]);
                 let m = cv.getPerspectiveTransform(sT, dT);
+                
                 let warped = new cv.Mat();
                 cv.warpPerspective(srcMat, warped, m, new cv.Size(w, h));
                 
-                let res = warped;
+                let finalRes = warped;
+
+                // 檢查是否啟用去陰影處理
                 if (removeShadowCheck.checked) {
-                    let g = new cv.Mat(); cv.cvtColor(warped, g, cv.COLOR_RGBA2GRAY, 0);
-                    let bw = new cv.Mat();
-                    let bS = parseInt(blockSizeInput.value); if (bS % 2 === 0) bS++;
-                    cv.adaptiveThreshold(g, bw, 255, cv.ADAPTIVE_THRESH_GAUSSIAN_C, cv.THRESH_BINARY, bS, parseInt(cValueInput.value));
-                    res = bw; g.delete();
+                    if (isBwMode) {
+                        // 模式 1：傳統黑白自適應二值化
+                        let gray = new cv.Mat(); 
+                        cv.cvtColor(warped, gray, cv.COLOR_RGBA2GRAY, 0);
+                        let bw = new cv.Mat();
+                        let bS = parseInt(blockSizeInput.value); 
+                        if (bS % 2 === 0) bS++;
+                        let cVal = parseInt(cValueInput.value);
+                        
+                        cv.adaptiveThreshold(gray, bw, 255, cv.ADAPTIVE_THRESH_GAUSSIAN_C, cv.THRESH_BINARY, bS, cVal);
+                        finalRes = bw; 
+                        gray.delete();
+                    } else {
+                        // 模式 2：彩色去陰影 (色彩保留)
+                        let colorEnhanced = enhanceColorDocument(warped);
+                        finalRes = colorEnhanced;
+                    }
                 }
                 
-                cv.imshow('result-canvas', res);
+                cv.imshow('result-canvas', finalRes);
+                
                 resultCanvas.classList.remove('hidden');
                 resultPlaceholder.classList.add('hidden');
                 btnDownload.classList.remove('hidden');
                 btnPrint.classList.remove('hidden');
                 statusText.textContent = "✅ 校正輸出完成";
+                
                 sT.delete(); dT.delete(); m.delete();
-                if (res !== warped) warped.delete();
-                if (removeShadowCheck.checked) res.delete();
+                if (finalRes !== warped) {
+                    warped.delete();
+                    finalRes.delete();
+                } else {
+                    warped.delete();
+                }
             }, 50);
         });
 
-        // 下載與列印功能
         btnDownload.addEventListener('click', () => { const l = document.createElement('a'); l.download = `${originalFileName}_校正.png`; l.href = resultCanvas.toDataURL('image/png'); l.click(); });
         btnPrint.addEventListener('click', () => {
             const u = resultCanvas.toDataURL('image/jpeg', 1.0);
