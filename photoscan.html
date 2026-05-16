@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>智慧文件校正掃描器 Pro v3.0</title>
+    <title>智慧文件校正掃描器 Pro v3.1</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         body { background-color: #f3f4f6; font-family: system-ui, -apple-system, sans-serif; }
@@ -20,7 +20,7 @@
     <div class="max-w-6xl mx-auto space-y-6">
         
         <div class="text-center">
-            <h1 class="text-3xl font-bold text-gray-900 mb-2">📄 智慧文件校正掃描器 Pro</h1>
+            <h1 class="text-3xl font-bold text-gray-900 mb-2">📄 智慧文件校正掃描器 Pro v3.1</h1>
             <p id="status-text" class="text-sm text-blue-600 font-medium bg-blue-50 inline-block px-3 py-1 rounded-full">
                 正在準備 OpenCV.js 影像引擎...
             </p>
@@ -142,7 +142,7 @@
 
         function onOpenCvReady() {
             cv['onRuntimeInitialized'] = () => {
-                statusText.textContent = "✅ 影像引擎準備就緒 (HSV-Box 演算法載入)";
+                statusText.textContent = "✅ 影像引擎準備就緒 (多邊形近似演算法)";
                 statusText.className = "text-sm text-green-600 font-medium bg-green-50 inline-block px-3 py-1 rounded-full";
                 uploadInput.disabled = false;
             };
@@ -162,7 +162,7 @@
         function handleFile(file) {
             if (!file || !file.type.startsWith('image/')) return;
             originalFileName = file.name.replace(/\.[^/.]+$/, "");
-            statusText.textContent = "🔍 正在進行 HSV 特徵分析與最小方框運算...";
+            statusText.textContent = "🔍 正在尋找文件四邊形邊界...";
 
             const reader = new FileReader();
             reader.onload = (event) => {
@@ -174,7 +174,7 @@
                     let detected = advancedDetect(srcMat);
                     if (detected) {
                         corners = detected;
-                        statusText.textContent = "✨ 已自動識別範圍";
+                        statusText.textContent = "✨ 已精確捕捉文件透視邊界";
                     } else {
                         // 保底機制：若無法識別，則直接選取整張照片範圍
                         const w = srcMat.cols; 
@@ -185,7 +185,7 @@
                             {x: w, y: h, id: 2}, 
                             {x: 0, y: h, id: 3}
                         ];
-                        statusText.textContent = "⚠️ 無法識別邊界，已預設選取全圖範圍";
+                        statusText.textContent = "⚠️ 無法識別四邊形邊界，已預設選取全圖範圍";
                     }
 
                     autoUpdateParams(); 
@@ -208,96 +208,139 @@
         canvasAreaWrapper.addEventListener('dragleave', (e) => { e.preventDefault(); canvasAreaWrapper.classList.remove('drag-over'); });
         canvasAreaWrapper.addEventListener('drop', (e) => { e.preventDefault(); canvasAreaWrapper.classList.remove('drag-over'); handleFile(e.dataTransfer.files[0]); });
 
-    /**
-     * 針對複雜背景優化的邊緣偵測：
-     * 1. 強化模糊濾波，消除背景泡棉紋理碎雜訊
-     * 2. 調整 HSV 權重，平衡明亮與飽和度
-     * 3. 增加形態學擴張 (Dilate)，確保邊緣閉合
-     */
-    function advancedDetect(src) {
-        let rgb = new cv.Mat();
-        let hsv = new cv.Mat();
-        let channels = new cv.MatVector();
-        let s = new cv.Mat();
-        let v = new cv.Mat();
-        let sv_value = new cv.Mat();
-        let blurred = new cv.Mat();
-        let edged = new cv.Mat();
-        let dilated = new cv.Mat();
-        let contours = new cv.MatVector();
-        let hierarchy = new cv.Mat();
+        /**
+         * 導入 OpenCV-Document-Scanner 標準流程：
+         * 縮小影像 -> 灰階 -> 模糊 -> Canny -> 閉合 -> 尋找輪廓 -> 多邊形近似 (approxPolyDP)
+         */
+        function advancedDetect(src) {
+            let processMat = new cv.Mat();
+            let maxDim = 800.0;
+            let scale = 1.0;
 
-        try {
-            cv.cvtColor(src, rgb, cv.COLOR_RGBA2RGB, 0);
-            cv.cvtColor(rgb, hsv, cv.COLOR_RGB2HSV, 0);
+            // 1. 影像降維：提升 Canny 邊緣檢測的穩定度與演算法速度
+            if (src.rows > maxDim || src.cols > maxDim) {
+                scale = Math.max(src.rows / maxDim, src.cols / maxDim);
+                let width = Math.round(src.cols / scale);
+                let height = Math.round(src.rows / scale);
+                cv.resize(src, processMat, new cv.Size(width, height), 0, 0, cv.INTER_AREA);
+            } else {
+                src.copyTo(processMat);
+            }
 
-            cv.split(hsv, channels);
-            s = channels.get(1);
-            v = channels.get(2);
+            let gray = new cv.Mat();
+            let blurred = new cv.Mat();
+            let edged = new cv.Mat();
+            let closed = new cv.Mat();
+            let contours = new cv.MatVector();
+            let hierarchy = new cv.Mat();
 
-            // 針對淺色紙張微調權重，避免綠色條干擾
-            cv.addWeighted(s, 0.5, v, 0.5, 0, sv_value);
+            try {
+                // 2. 灰階與模糊處理
+                cv.cvtColor(processMat, gray, cv.COLOR_RGBA2GRAY, 0);
+                cv.GaussianBlur(gray, blurred, new cv.Size(5, 5), 0, 0, cv.BORDER_DEFAULT);
 
-            // 加大模糊半徑以過濾背景顆粒感
-            let kSize = Math.max(7, Math.floor(src.cols / 60));
-            if (kSize % 2 === 0) kSize++;
-            cv.GaussianBlur(sv_value, blurred, new cv.Size(kSize, kSize), 0);
+                // 3. 邊緣偵測 (採用文獻常見的 75, 200 閾值)
+                cv.Canny(blurred, edged, 75, 200);
 
-            // 使用較寬的閾值區間抓取邊緣
-            cv.Canny(blurred, edged, 50, 150);
+                // 4. 形態學閉合：連接虛線與破裂邊緣
+                let M = cv.getStructuringElement(cv.MORPH_RECT, new cv.Size(5, 5));
+                cv.morphologyEx(edged, closed, cv.MORPH_CLOSE, M);
+                M.delete();
 
-            // 核心改善：增加擴張，把背景雜訊連成小點，把大輪廓連成實線
-            let M = cv.getStructuringElement(cv.MORPH_RECT, new cv.Size(3, 3));
-            cv.dilate(edged, dilated, M);
-            M.delete();
+                // 5. 抓取所有輪廓
+                cv.findContours(closed, contours, hierarchy, cv.RETR_LIST, cv.CHAIN_APPROX_SIMPLE);
 
-            cv.findContours(dilated, contours, hierarchy, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE);
-            
-            let maxA = 0; let bestCnt = null;
-            for (let i = 0; i < contours.size(); ++i) {
-                let cnt = contours.get(i);
-                let area = cv.contourArea(cnt);
-                if (area > (src.cols * src.rows * 0.03)) { // 降至 3% 以增加靈敏度
-                    if (area > maxA) {
-                        maxA = area;
-                        bestCnt = cnt;
+                // 過濾並排序輪廓 (只保留大於畫面 2% 的面積)
+                let cnts = [];
+                for (let i = 0; i < contours.size(); ++i) {
+                    let cnt = contours.get(i);
+                    let area = cv.contourArea(cnt);
+                    if (area > (processMat.cols * processMat.rows * 0.02)) {
+                        cnts.push({ cnt: cnt, area: area });
                     }
                 }
+                cnts.sort((a, b) => b.area - a.area);
+
+                let approx = new cv.Mat();
+                let documentPts = null;
+
+                // 6. 輪廓近似法 (核心優化)
+                // 尋找前 5 個最大輪廓中，能被完美近似為「四邊形」的輪廓
+                for (let i = 0; i < Math.min(cnts.length, 5); i++) {
+                    let cnt = cnts[i].cnt;
+                    let peri = cv.arcLength(cnt, true);
+                    // 2% 周長作為近似容差值
+                    cv.approxPolyDP(cnt, approx, 0.02 * peri, true); 
+
+                    // 判斷是否為 4 個頂點的多邊形 (即為矩形紙張)
+                    if (approx.rows === 4) {
+                        documentPts = [];
+                        for (let j = 0; j < 4; j++) {
+                            documentPts.push({
+                                x: approx.data32S[j * 2] * scale, // 放大回原始解析度
+                                y: approx.data32S[j * 2 + 1] * scale
+                            });
+                        }
+                        break;
+                    }
+                }
+                approx.delete();
+
+                // 7. 第二重保底機制：若抓不到完美四邊形，退回到最大面積輪廓的最小包圍框 (minAreaRect)
+                if (!documentPts && cnts.length > 0) {
+                    let rect = cv.minAreaRect(cnts[0].cnt);
+                    let angle = rect.angle * Math.PI / 180.0;
+                    let b = Math.cos(angle) * 0.5;
+                    let a = Math.sin(angle) * 0.5;
+                    documentPts = [];
+                    let p0x = rect.center.x - a * rect.size.height - b * rect.size.width;
+                    let p0y = rect.center.y + b * rect.size.height - a * rect.size.width;
+                    let p1x = rect.center.x + a * rect.size.height - b * rect.size.width;
+                    let p1y = rect.center.y - b * rect.size.height - a * rect.size.width;
+                    
+                    documentPts.push({ x: p0x * scale, y: p0y * scale });
+                    documentPts.push({ x: p1x * scale, y: p1y * scale });
+                    documentPts.push({ x: (2 * rect.center.x - p0x) * scale, y: (2 * rect.center.y - p0y) * scale });
+                    documentPts.push({ x: (2 * rect.center.x - p1x) * scale, y: (2 * rect.center.y - p1y) * scale });
+                }
+
+                // 釋放所有 Mat，防止記憶體洩漏
+                processMat.delete(); gray.delete(); blurred.delete(); edged.delete(); closed.delete();
+                contours.delete(); hierarchy.delete();
+
+                if (documentPts && documentPts.length === 4) {
+                    return orderPts(documentPts);
+                }
+                return null;
+
+            } catch (e) {
+                console.error("邊界判斷發生例外: ", e);
+                try { processMat.delete(); gray.delete(); blurred.delete(); edged.delete(); closed.delete(); contours.delete(); hierarchy.delete(); } catch(err){}
+                return null;
             }
-
-            if (bestCnt) {
-                let rect = cv.minAreaRect(bestCnt);
-                let angle = rect.angle * Math.PI / 180.0;
-                let b = Math.cos(angle) * 0.5;
-                let a = Math.sin(angle) * 0.5;
-                let pts = [];
-                pts.push({ x: rect.center.x - a * rect.size.height - b * rect.size.width, y: rect.center.y + b * rect.size.height - a * rect.size.width });
-                pts.push({ x: rect.center.x + a * rect.size.height - b * rect.size.width, y: rect.center.y - b * rect.size.height - a * rect.size.width });
-                pts.push({ x: 2 * rect.center.x - pts[0].x, y: 2 * rect.center.y - pts[0].y });
-                pts.push({ x: 2 * rect.center.x - pts[1].x, y: 2 * rect.center.y - pts[1].y });
-
-                // 清理記憶體
-                rgb.delete(); hsv.delete(); channels.delete(); s.delete(); v.delete(); sv_value.delete();
-                blurred.delete(); edged.delete(); dilated.delete(); contours.delete(); hierarchy.delete();
-                return orderPts(pts);
-            }
-
-            // 清理記憶體
-            rgb.delete(); hsv.delete(); channels.delete(); s.delete(); v.delete(); sv_value.delete();
-            blurred.delete(); edged.delete(); dilated.delete(); contours.delete(); hierarchy.delete();
-            return null;
-        } catch (e) {
-            console.error(e);
-            return null;
         }
-    }
 
-        // 點位排序 (左上、右上、右下、左下)
+        /**
+         * 頂點排序核心優化：
+         * 使用座標加減法，確保無論旋轉角度，順序永遠是：
+         * 0: 左上 (x+y 最小)
+         * 1: 右上 (y-x 最小)
+         * 2: 右下 (x+y 最大)
+         * 3: 左下 (y-x 最大)
+         */
         function orderPts(pts) {
-            let xS = pts.slice().sort((a, b) => a.x - b.x);
-            let L = xS.slice(0, 2).sort((a, b) => a.y - b.y);
-            let R = xS.slice(2, 4).sort((a, b) => a.y - b.y);
-            return [{ x: L[0].x, y: L[0].y, id: 0 }, { x: R[0].x, y: R[0].y, id: 1 }, { x: R[1].x, y: R[1].y, id: 2 }, { x: L[1].x, y: L[1].y, id: 3 }];
+            let rect = new Array(4);
+            
+            let sum = pts.map(p => p.x + p.y);
+            rect[0] = pts[sum.indexOf(Math.min(...sum))]; // 左上
+            rect[2] = pts[sum.indexOf(Math.max(...sum))]; // 右下
+
+            let diff = pts.map(p => p.y - p.x);
+            rect[1] = pts[diff.indexOf(Math.min(...diff))]; // 右上
+            rect[3] = pts[diff.indexOf(Math.max(...diff))]; // 左下
+
+            rect.forEach((p, i) => p.id = i);
+            return rect;
         }
 
         // 自動根據圈選範圍的影像特徵計算最佳二值化參數
