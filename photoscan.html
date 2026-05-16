@@ -3,17 +3,20 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>智慧文件校正掃描器 Pro v4.1</title>
+    <title>智慧文件校正掃描器 Pro v4.6</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         body { background-color: #f3f4f6; font-family: system-ui, -apple-system, sans-serif; }
         .canvas-container { position: relative; display: inline-block; margin: 0 auto; padding: 60px; background-color: #e5e7eb; border-radius: 8px; overflow: visible; }
         #editor-canvas { display: block; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); background-image: linear-gradient(45deg, #ccc 25%, transparent 25%), linear-gradient(-45deg, #ccc 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #ccc 75%), linear-gradient(-45deg, transparent 75%, #ccc 75%); background-size: 20px 20px; }
         #overlay-canvas { position: absolute; top: 60px; left: 60px; pointer-events: none; }
-        .corner-handle { position: absolute; width: 26px; height: 26px; background-color: rgba(59, 130, 246, 0.9); border: 3px solid white; border-radius: 50%; transform: translate(-50%, -50%); cursor: grab; box-shadow: 0 2px 5px rgba(0,0,0,0.4); z-index: 10; transition: background-color 0.2s; }
-        .corner-handle:active { cursor: grabbing; background-color: #1d4ed8; transform: translate(-50%, -50%) scale(1.2); }
+        .corner-handle { position: absolute; width: 28px; height: 28px; background-color: rgba(59, 130, 246, 0.95); border: 3px solid white; border-radius: 50%; transform: translate(-50%, -50%); cursor: grab; box-shadow: 0 4px 8px rgba(0,0,0,0.3); z-index: 10; transition: background-color 0.2s, transform 0.1s; }
+        .corner-handle:active { cursor: grabbing; background-color: #1d4ed8; transform: translate(-50%, -50%) scale(1.15); }
         input[type="file"] { display: none; }
-        .drag-over { background-color: #dbeafe !important; border: 2px dashed #2563eb !important; }
+        
+        #toast-container { position: fixed; bottom: 24px; right: 24px; z-index: 100; }
+        .toast { background: #1f2937; color: white; padding: 14px 28px; border-radius: 99px; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.2); display: flex; align-items: center; gap: 12px; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
+        .toast-success { background: #059669; }
     </style>
 </head>
 <body class="text-gray-800 p-4 md:p-8">
@@ -21,25 +24,35 @@
         
         <div class="text-center">
             <h1 class="text-3xl font-bold text-gray-900 mb-2">📄 智慧文件校正掃描器 Pro</h1>
-            <p id="status-text" class="text-sm text-blue-600 font-medium bg-blue-50 inline-block px-3 py-1 rounded-full">
-                正在準備 OpenCV.js 影像引擎...
-            </p>
+            <p class="text-gray-500 text-sm">高效能、自動去黑邊數位化方案</p>
         </div>
 
-        <!-- 檔案與參數控制區 -->
+        <!-- 懸浮通知容器 -->
+        <div id="toast-container">
+            <div id="status-toast" class="toast">
+                <span id="status-icon">⏳</span>
+                <span id="status-text">正在準備影像引擎...</span>
+            </div>
+        </div>
+
         <div class="bg-white p-6 rounded-xl shadow-md grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
             <div class="space-y-4">
-                <h2 class="text-lg font-semibold border-b pb-2">1. 檔案操作</h2>
+                <h2 class="text-lg font-semibold border-b pb-2">1. 檔案與方向控制</h2>
                 <div class="flex flex-wrap gap-3">
                     <label class="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-lg cursor-pointer transition font-medium shadow-sm flex items-center">
                         上傳照片
                         <input type="file" id="image-upload" accept="image/*" disabled>
                     </label>
-                    <button id="btn-rotate" class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2.5 rounded-lg transition font-medium flex items-center border border-gray-300 disabled:opacity-50" disabled>
+                    <button id="btn-rotate-90" class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2.5 rounded-lg transition font-medium border border-gray-300 disabled:opacity-50" disabled>
                         旋轉 90°
                     </button>
+                    <button id="btn-rotate-180" class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2.5 rounded-lg transition font-medium border border-gray-300 disabled:opacity-50" disabled>
+                        旋轉 180°
+                    </button>
                 </div>
-                <p id="file-info" class="text-xs text-gray-500 italic">支援多尺度邊緣強化偵測，或直接將檔案拖入下方編輯區</p>
+                <div class="p-4 bg-gray-50 rounded-lg border border-gray-200 text-sm text-gray-600">
+                    <p>💡 提示：系統已自動啟用「邊緣黑邊消除」，確保校正成品乾淨利落。</p>
+                </div>
             </div>
 
             <div class="space-y-4">
@@ -53,14 +66,20 @@
                     </div>
                 </h2>
                 
-                <div id="advanced-settings" class="space-y-4 p-3 bg-blue-50/30 rounded-lg border border-blue-100 transition-opacity">
-                    <!-- 色彩模式切換 -->
-                    <div class="flex p-1 bg-gray-200 rounded-lg">
-                        <button id="mode-bw" class="flex-1 py-1.5 text-sm font-medium rounded-md bg-white shadow-sm text-gray-800 transition-all">黑白模式 (純淨高對比)</button>
-                        <button id="mode-color" class="flex-1 py-1.5 text-sm font-medium rounded-md text-gray-500 hover:text-gray-700 transition-all">彩色模式 (保留筆跡章印)</button>
+                <div id="advanced-settings" class="space-y-4 p-4 bg-blue-50/30 rounded-lg border border-blue-100">
+                    <div class="p-3 bg-white rounded-lg border border-blue-100 shadow-sm">
+                        <div class="flex justify-between items-center mb-1">
+                            <span class="text-xs font-bold text-indigo-700">文字清晰化 (修復手震)</span>
+                            <span id="sharpen-val" class="text-[10px] font-mono bg-gray-100 px-2 rounded border">關閉</span>
+                        </div>
+                        <input type="range" id="sharpen-level" min="0" max="2" step="1" value="0" class="w-full accent-indigo-600">
                     </div>
 
-                    <!-- 黑白模式專屬設定 -->
+                    <div class="flex p-1 bg-gray-200 rounded-lg">
+                        <button id="mode-bw" class="flex-1 py-1.5 text-sm font-medium rounded-md bg-white shadow-sm text-gray-800 transition-all">黑白模式</button>
+                        <button id="mode-color" class="flex-1 py-1.5 text-sm font-medium rounded-md text-gray-500 hover:text-gray-700 transition-all">彩色模式</button>
+                    </div>
+
                     <div id="bw-settings" class="space-y-3">
                         <div>
                             <div class="flex justify-between text-xs mb-1">
@@ -81,27 +100,23 @@
                         </button>
                     </div>
 
-                    <!-- 彩色模式專屬說明 -->
-                    <div id="color-settings" class="hidden text-xs text-gray-600 bg-yellow-50 p-3 rounded border border-yellow-200">
-                        <p>🎨 <strong>彩色去陰影模式已啟用</strong></p>
-                        <p class="mt-1">系統將使用「背景估計除法」來均勻化紙張亮度，同時保留原本的藍筆、紅章與印花色彩。此模式不需手動調整參數。</p>
+                    <div id="color-settings" class="hidden text-xs text-gray-600 bg-yellow-50 p-3 rounded border border-yellow-200 text-center">
+                        🎨 彩色去陰影模式已啟用
                     </div>
                 </div>
             </div>
         </div>
 
-        <!-- 執行按鈕 -->
         <div class="text-center">
             <button id="btn-process" class="bg-gradient-to-r from-blue-600 to-indigo-700 hover:from-blue-700 hover:to-indigo-800 text-white px-12 py-4 rounded-full text-lg font-bold shadow-xl transition transform hover:scale-105 disabled:opacity-50 flex items-center mx-auto" disabled>
                 執行校正輸出 ✨
             </button>
         </div>
 
-        <!-- 工作畫布區 -->
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
             <div class="flex flex-col items-center border rounded-xl p-4 bg-white shadow-sm overflow-hidden">
-                <h3 id="edit-header" class="text-sm font-bold text-gray-500 mb-3 uppercase tracking-tighter">編輯區：拖曳後將自動計算最佳參數</h3>
-                <div class="w-full overflow-auto flex justify-center items-center flex-1 bg-gray-200 rounded min-h-[400px] transition-colors duration-200" id="canvas-area-wrapper">
+                <h3 class="text-sm font-bold text-gray-500 mb-3 uppercase tracking-tighter">編輯區</h3>
+                <div class="w-full overflow-auto flex justify-center items-center flex-1 bg-gray-200 rounded min-h-[400px]" id="canvas-area-wrapper">
                     <div class="canvas-container" id="canvas-container">
                         <canvas id="editor-canvas"></canvas>
                         <canvas id="overlay-canvas"></canvas>
@@ -109,7 +124,7 @@
                 </div>
             </div>
 
-            <div class="flex flex-col items-center border rounded-xl p-4 bg-white shadow-sm overflow-hidden min-h-[400px]">
+            <div id="result-section" class="flex flex-col items-center border rounded-xl p-4 bg-white shadow-sm overflow-hidden min-h-[400px]">
                 <div class="w-full flex justify-between items-center mb-3">
                     <h3 class="text-sm font-bold text-gray-500 uppercase tracking-tighter">高品質結果</h3>
                     <div class="flex space-x-2">
@@ -133,14 +148,24 @@
         let scaleFactor = 1;
         let originalFileName = "document";
         const PADDING = 60;
-
-        let recBlockSize = 21;
-        let recCValue = 10;
-        
-        // true: 黑白自適應二值化, false: 彩色去陰影
         let isBwMode = true; 
 
+        const statusToast = document.getElementById('status-toast');
         const statusText = document.getElementById('status-text');
+        const statusIcon = document.getElementById('status-icon');
+
+        function updateStatus(text, icon = "⏳", type = "default") {
+            statusText.textContent = text;
+            statusIcon.textContent = icon;
+            if (type === "success") {
+                statusToast.classList.add('toast-success');
+            } else {
+                statusToast.classList.remove('toast-success');
+            }
+            statusToast.style.opacity = '0';
+            setTimeout(() => statusToast.style.opacity = '1', 10);
+        }
+
         const uploadInput = document.getElementById('image-upload');
         const editorCanvas = document.getElementById('editor-canvas');
         const overlayCanvas = document.getElementById('overlay-canvas');
@@ -148,51 +173,51 @@
         const container = document.getElementById('canvas-container');
         const canvasAreaWrapper = document.getElementById('canvas-area-wrapper');
         const btnProcess = document.getElementById('btn-process');
-        const btnRotate = document.getElementById('btn-rotate');
+        const btnRotate90 = document.getElementById('btn-rotate-90');
+        const btnRotate180 = document.getElementById('btn-rotate-180');
         const btnDownload = document.getElementById('btn-download');
         const btnPrint = document.getElementById('btn-print');
         const btnResetParams = document.getElementById('btn-reset-params');
         const resultPlaceholder = document.getElementById('result-placeholder');
+        const resultSection = document.getElementById('result-section');
         
         const removeShadowCheck = document.getElementById('remove-shadow');
         const blockSizeInput = document.getElementById('block-size');
         const cValueInput = document.getElementById('c-value');
         const blockSizeVal = document.getElementById('block-size-val');
         const cValueVal = document.getElementById('c-value-val');
+        const sharpenLevel = document.getElementById('sharpen-level');
+        const sharpenVal = document.getElementById('sharpen-val');
 
-        // 模式切換 UI 控制
+        sharpenLevel.addEventListener('input', (e) => {
+            const levels = ["關閉", "中等", "強力"];
+            sharpenVal.textContent = levels[e.target.value];
+        });
+
         const btnModeBw = document.getElementById('mode-bw');
         const btnModeColor = document.getElementById('mode-color');
         const bwSettings = document.getElementById('bw-settings');
         const colorSettings = document.getElementById('color-settings');
-        const advancedSettingsBlock = document.getElementById('advanced-settings');
 
         btnModeBw.addEventListener('click', () => {
             isBwMode = true;
-            btnModeBw.className = "flex-1 py-1.5 text-sm font-medium rounded-md bg-white shadow-sm text-gray-800 transition-all";
-            btnModeColor.className = "flex-1 py-1.5 text-sm font-medium rounded-md text-gray-500 hover:text-gray-700 transition-all";
+            btnModeBw.className = "flex-1 py-1.5 text-sm font-medium rounded-md bg-white shadow-sm text-gray-800";
+            btnModeColor.className = "flex-1 py-1.5 text-sm font-medium rounded-md text-gray-500 hover:text-gray-700";
             bwSettings.classList.remove('hidden');
             colorSettings.classList.add('hidden');
         });
 
         btnModeColor.addEventListener('click', () => {
             isBwMode = false;
-            btnModeColor.className = "flex-1 py-1.5 text-sm font-medium rounded-md bg-white shadow-sm text-gray-800 transition-all";
-            btnModeBw.className = "flex-1 py-1.5 text-sm font-medium rounded-md text-gray-500 hover:text-gray-700 transition-all";
+            btnModeColor.className = "flex-1 py-1.5 text-sm font-medium rounded-md bg-white shadow-sm text-gray-800";
+            btnModeBw.className = "flex-1 py-1.5 text-sm font-medium rounded-md text-gray-500 hover:text-gray-700";
             colorSettings.classList.remove('hidden');
             bwSettings.classList.add('hidden');
         });
 
-        removeShadowCheck.addEventListener('change', (e) => {
-            const isOff = !e.target.checked;
-            advancedSettingsBlock.style.opacity = isOff ? "0.4" : "1";
-            advancedSettingsBlock.style.pointerEvents = isOff ? "none" : "auto";
-        });
-
         function onOpenCvReady() {
             cv['onRuntimeInitialized'] = () => {
-                statusText.textContent = "✅ 影像引擎準備就緒";
-                statusText.className = "text-sm text-green-600 font-medium bg-green-50 inline-block px-3 py-1 rounded-full";
+                updateStatus("影像引擎準備就緒", "✅", "success");
                 uploadInput.disabled = false;
             };
         }
@@ -200,18 +225,10 @@
         blockSizeInput.addEventListener('input', (e) => { blockSizeVal.textContent = e.target.value; });
         cValueInput.addEventListener('input', (e) => { cValueVal.textContent = e.target.value; });
 
-        btnResetParams.addEventListener('click', () => {
-            blockSizeInput.value = recBlockSize;
-            blockSizeVal.textContent = recBlockSize + " (推薦)";
-            cValueInput.value = recCValue;
-            cValueVal.textContent = recCValue + " (推薦)";
-        });
-
-        // 核心檔案處理邏輯
         function handleFile(file) {
             if (!file || !file.type.startsWith('image/')) return;
             originalFileName = file.name.replace(/\.[^/.]+$/, "");
-            statusText.textContent = "🔍 正在執行 Adobe Scan 級別的多通道掃描演算法...";
+            updateStatus("正在辨識文件邊界...", "🔍");
 
             const reader = new FileReader();
             reader.onload = (event) => {
@@ -219,22 +236,20 @@
                 img.onload = () => {
                     if (srcMat) srcMat.delete();
                     srcMat = cv.imread(img);
-                    
                     let detected = adobeScanStyleDetect(srcMat);
                     if (detected) {
                         corners = detected;
-                        statusText.textContent = "✨ 已精準鎖定文件範圍";
+                        updateStatus("自動辨識成功", "✨", "success");
                     } else {
                         const w = srcMat.cols; const h = srcMat.rows;
                         corners = [{x: 0, y: 0, id: 0}, {x: w, y: 0, id: 1}, {x: w, y: h, id: 2}, {x: 0, y: h, id: 3}];
-                        statusText.textContent = "⚠️ 未能識別，已預設選取全圖範圍";
+                        updateStatus("請手動微調角落標籤", "📍");
                     }
-
                     autoUpdateParams(); 
                     renderEditor();
-                    
                     btnProcess.disabled = false;
-                    btnRotate.disabled = false;
+                    btnRotate90.disabled = false;
+                    btnRotate180.disabled = false;
                     btnResetParams.disabled = false;
                     removeShadowCheck.disabled = false;
                     blockSizeInput.disabled = false;
@@ -246,9 +261,6 @@
         }
 
         uploadInput.addEventListener('change', (e) => handleFile(e.target.files[0]));
-        canvasAreaWrapper.addEventListener('dragover', (e) => { e.preventDefault(); canvasAreaWrapper.classList.add('drag-over'); });
-        canvasAreaWrapper.addEventListener('dragleave', (e) => { e.preventDefault(); canvasAreaWrapper.classList.remove('drag-over'); });
-        canvasAreaWrapper.addEventListener('drop', (e) => { e.preventDefault(); canvasAreaWrapper.classList.remove('drag-over'); handleFile(e.dataTransfer.files[0]); });
 
         function adobeScanStyleDetect(src) {
             try {
@@ -256,30 +268,24 @@
                 let ratio = Math.max(1.0, Math.max(src.cols, src.rows) / maxDim);
                 let width = Math.round(src.cols / ratio);
                 let height = Math.round(src.rows / ratio);
-                
                 let small = new cv.Mat();
                 cv.resize(src, small, new cv.Size(width, height), 0, 0, cv.INTER_AREA);
-                
                 let gray = new cv.Mat();
                 cv.cvtColor(small, gray, cv.COLOR_RGBA2GRAY, 0);
 
                 let bestPts = null;
                 let maxArea = 0;
 
-                let blurs = [5, 9]; 
-                let cannyThresh = [[30, 100], [50, 150], [75, 200]];
-
-                for (let b of blurs) {
+                for (let b of [5, 9]) {
                     let blurred = new cv.Mat();
                     cv.GaussianBlur(gray, blurred, new cv.Size(b, b), 0);
                     let kernel = cv.getStructuringElement(cv.MORPH_RECT, new cv.Size(b, b));
                     let morph = new cv.Mat();
                     cv.morphologyEx(blurred, morph, cv.MORPH_CLOSE, kernel);
 
-                    for (let th of cannyThresh) {
+                    for (let th of [[30, 100], [50, 150]]) {
                         let edged = new cv.Mat();
                         cv.Canny(morph, edged, th[0], th[1]);
-
                         let contours = new cv.MatVector();
                         let hierarchy = new cv.Mat();
                         cv.findContours(edged, contours, hierarchy, cv.RETR_LIST, cv.CHAIN_APPROX_SIMPLE);
@@ -287,7 +293,6 @@
                         for (let i = 0; i < contours.size(); ++i) {
                             let cnt = contours.get(i);
                             let area = cv.contourArea(cnt);
-                            
                             if (area > (width * height * 0.05) && area > maxArea) {
                                 let peri = cv.arcLength(cnt, true);
                                 let approx = new cv.Mat();
@@ -299,24 +304,13 @@
                                         bestPts.push({ x: approx.data32S[j*2] * ratio, y: approx.data32S[j*2+1] * ratio });
                                     }
                                 }
-
-                                let approx2 = new cv.Mat();
-                                cv.approxPolyDP(cnt, approx2, 0.03 * peri, true);
-                                if (approx2.rows === 4 && cv.isContourConvex(approx2) && area > maxArea) {
-                                    maxArea = area;
-                                    bestPts = [];
-                                    for (let j = 0; j < 4; j++) {
-                                        bestPts.push({ x: approx2.data32S[j*2] * ratio, y: approx2.data32S[j*2+1] * ratio });
-                                    }
-                                }
-                                approx.delete(); approx2.delete();
+                                approx.delete();
                             }
                         }
                         edged.delete(); contours.delete(); hierarchy.delete();
                     }
                     blurred.delete(); kernel.delete(); morph.delete();
                 }
-
                 small.delete(); gray.delete();
                 if (bestPts) return orderPts(bestPts);
                 return null;
@@ -336,26 +330,19 @@
             let maxX = Math.min(srcMat.cols - 1, Math.max(...corners.map(p => p.x)));
             let minY = Math.max(0, Math.min(...corners.map(p => p.y)));
             let maxY = Math.min(srcMat.rows - 1, Math.max(...corners.map(p => p.y)));
-
-            let roiW = maxX - minX;
-            let roiH = maxY - minY;
+            let roiW = maxX - minX; let roiH = maxY - minY;
             if (roiW <= 0 || roiH <= 0) return;
-
             let roi = srcMat.roi(new cv.Rect(minX, minY, roiW, roiH));
             let gray = new cv.Mat();
             cv.cvtColor(roi, gray, cv.COLOR_RGBA2GRAY, 0);
-            let mean = new cv.Mat(); let std = new cv.Mat();
+            let std = new cv.Mat(); let mean = new cv.Mat();
             cv.meanStdDev(gray, mean, std);
-            let sd = std.data64F[0];
-            
-            recBlockSize = Math.floor(Math.max(roi.cols, roi.rows) * 0.02);
+            let recBlockSize = Math.max(21, Math.floor(Math.max(roi.cols, roi.rows) * 0.02));
             if (recBlockSize % 2 === 0) recBlockSize++;
-            recBlockSize = Math.max(21, recBlockSize);
-            recCValue = (sd > 40) ? 14 : (sd > 25) ? 10 : 7;
-
+            let recCValue = (std.data64F[0] > 30) ? 12 : 8;
             blockSizeInput.value = recBlockSize;
-            blockSizeVal.textContent = recBlockSize + " (自動)";
             cValueInput.value = recCValue;
+            blockSizeVal.textContent = recBlockSize + " (自動)";
             cValueVal.textContent = recCValue + " (自動)";
             roi.delete(); gray.delete(); mean.delete(); std.delete();
         }
@@ -365,14 +352,12 @@
             const wrap = document.getElementById('canvas-area-wrapper');
             scaleFactor = Math.min(1.0, (wrap.clientWidth - PADDING * 2 - 20) / srcMat.cols);
             const dW = srcMat.cols * scaleFactor; const dH = srcMat.rows * scaleFactor;
-            
             editorCanvas.width = dW; editorCanvas.height = dH;
             overlayCanvas.width = dW; overlayCanvas.height = dH;
             let rz = new cv.Mat();
             cv.resize(srcMat, rz, new cv.Size(dW, dH), 0, 0, cv.INTER_AREA);
             cv.imshow('editor-canvas', rz);
             rz.delete();
-            
             container.querySelectorAll('.corner-handle').forEach(h => h.remove());
             corners.forEach((c, i) => {
                 const h = document.createElement('div');
@@ -394,7 +379,7 @@
             ctx.moveTo(p[0].x, p[0].y); ctx.lineTo(p[1].x, p[1].y);
             ctx.lineTo(p[2].x, p[2].y); ctx.lineTo(p[3].x, p[3].y);
             ctx.closePath();
-            ctx.fillStyle = 'rgba(59, 130, 246, 0.15)'; ctx.fill();
+            ctx.fillStyle = 'rgba(59, 130, 246, 0.2)'; ctx.fill();
             ctx.lineWidth = 2; ctx.strokeStyle = '#2563eb';
             ctx.setLineDash([5, 5]); ctx.stroke();
         }
@@ -415,49 +400,44 @@
             drawOverlay();
         }
 
-        // --- 核心優化：增加「彩色去陰影」演算法 ---
+        function applySharpen(src, level) {
+            if (level === 0) return src.clone();
+            let dst = new cv.Mat();
+            let kernel;
+            if (level === 1) {
+                kernel = cv.matFromArray(3, 3, cv.CV_32F, [0, -1, 0, -1, 5, -1, 0, -1, 0]);
+            } else {
+                kernel = cv.matFromArray(3, 3, cv.CV_32F, [-1, -1, -1, -1, 9, -1, -1, -1, -1]);
+            }
+            cv.filter2D(src, dst, cv.CV_8U, kernel);
+            kernel.delete();
+            return dst;
+        }
+
         function enhanceColorDocument(src) {
-            // 1. 背景估計：使用非常強烈的中值模糊來消除文字，只留下漸層陰影與紙張底色
             let bg = new cv.Mat();
-            // kSize 必須是奇數，且依據圖片大小動態調整
-            let kSize = Math.floor(Math.max(src.cols, src.rows) / 40);
+            let kSize = Math.floor(Math.max(src.cols, src.rows) / 35);
             if (kSize % 2 === 0) kSize++;
             if (kSize < 21) kSize = 21;
-            
-            // 使用均值模糊 (效能較中值模糊好，對大面積陰影估計足夠)
             cv.blur(src, bg, new cv.Size(kSize, kSize));
-
-            // 2. 影像相除與還原： src / bg * 255
             let dst = new cv.Mat(src.rows, src.cols, cv.CV_8UC3);
-            
-            // 手動遍歷像素進行相除運算 (確保色彩通道不會溢出)
             for (let i = 0; i < src.rows; i++) {
                 for (let j = 0; j < src.cols; j++) {
-                    let srcPixel = src.ucharPtr(i, j);
-                    let bgPixel = bg.ucharPtr(i, j);
-                    let dstPixel = dst.ucharPtr(i, j);
-                    
-                    // R, G, B 通道分別處理
+                    let srcP = src.ucharPtr(i, j); let bgP = bg.ucharPtr(i, j); let dstP = dst.ucharPtr(i, j);
                     for (let c = 0; c < 3; c++) {
-                        // 避免除以 0 的錯誤，並將結果投射回 0-255 區間
-                        let bgVal = bgPixel[c] === 0 ? 1 : bgPixel[c];
-                        let val = (srcPixel[c] / bgVal) * 255;
-                        dstPixel[c] = Math.min(255, Math.max(0, val));
+                        let bgV = bgP[c] === 0 ? 1 : bgP[c];
+                        dstP[c] = Math.min(255, Math.max(0, (srcP[c] / bgV) * 255));
                     }
-                    // 保留 Alpha 通道
-                    if(src.channels() === 4) dstPixel[3] = srcPixel[3];
                 }
             }
-            
             bg.delete();
             return dst;
         }
 
         btnProcess.addEventListener('click', () => {
             if (!srcMat) return;
-            statusText.textContent = "⌛ 正在進行高解析度映射運算...";
+            updateStatus("正在進行去黑邊校正處理...", "⏳");
             
-            // 使用 setTimeout 讓 UI 先更新文字，避免運算卡住畫面
             setTimeout(() => {
                 let tl = corners[0]; let tr = corners[1]; let br = corners[2]; let bl = corners[3];
                 let w = Math.max(Math.hypot(br.x-bl.x, br.y-bl.y), Math.hypot(tr.x-tl.x, tr.y-tl.y));
@@ -466,48 +446,48 @@
                 let sT = cv.matFromArray(4, 1, cv.CV_32FC2, [tl.x, tl.y, tr.x, tr.y, br.x, br.y, bl.x, bl.y]);
                 let dT = cv.matFromArray(4, 1, cv.CV_32FC2, [0, 0, w, 0, w, h, 0, h]);
                 let m = cv.getPerspectiveTransform(sT, dT);
-                
                 let warped = new cv.Mat();
                 cv.warpPerspective(srcMat, warped, m, new cv.Size(w, h));
                 
-                let finalRes = warped;
-
-                // 檢查是否啟用去陰影處理
+                // --- 核心優化：邊緣修剪邏輯 ---
+                // 向內縮減 1% 或 12px (取較大值) 以徹底消除黑邊
+                let cropX = Math.max(12, Math.floor(w * 0.01));
+                let cropY = Math.max(12, Math.floor(h * 0.01));
+                let cropW = Math.max(10, Math.floor(w - 2 * cropX));
+                let cropH = Math.max(10, Math.floor(h - 2 * cropY));
+                
+                let rect = new cv.Rect(cropX, cropY, cropW, cropH);
+                let cropped = warped.roi(rect);
+                let finalCrop = cropped.clone(); // 為了釋放 roi 記憶體
+                
+                let sL = parseInt(sharpenLevel.value);
+                let sharpened = applySharpen(finalCrop, sL);
+                
+                let finalRes = sharpened;
                 if (removeShadowCheck.checked) {
                     if (isBwMode) {
-                        // 模式 1：傳統黑白自適應二值化
-                        let gray = new cv.Mat(); 
-                        cv.cvtColor(warped, gray, cv.COLOR_RGBA2GRAY, 0);
+                        let gray = new cv.Mat(); cv.cvtColor(sharpened, gray, cv.COLOR_RGBA2GRAY, 0);
                         let bw = new cv.Mat();
-                        let bS = parseInt(blockSizeInput.value); 
-                        if (bS % 2 === 0) bS++;
-                        let cVal = parseInt(cValueInput.value);
-                        
-                        cv.adaptiveThreshold(gray, bw, 255, cv.ADAPTIVE_THRESH_GAUSSIAN_C, cv.THRESH_BINARY, bS, cVal);
-                        finalRes = bw; 
-                        gray.delete();
+                        let bS = parseInt(blockSizeInput.value); if (bS % 2 === 0) bS++;
+                        cv.adaptiveThreshold(gray, bw, 255, cv.ADAPTIVE_THRESH_GAUSSIAN_C, cv.THRESH_BINARY, bS, parseInt(cValueInput.value));
+                        finalRes = bw; gray.delete();
                     } else {
-                        // 模式 2：彩色去陰影 (色彩保留)
-                        let colorEnhanced = enhanceColorDocument(warped);
-                        finalRes = colorEnhanced;
+                        finalRes = enhanceColorDocument(sharpened);
                     }
                 }
                 
                 cv.imshow('result-canvas', finalRes);
-                
                 resultCanvas.classList.remove('hidden');
                 resultPlaceholder.classList.add('hidden');
                 btnDownload.classList.remove('hidden');
                 btnPrint.classList.remove('hidden');
-                statusText.textContent = "✅ 校正輸出完成";
+                updateStatus("校正完成，邊緣已修整", "✅", "success");
+
+                resultSection.scrollIntoView({ behavior: 'smooth' });
                 
-                sT.delete(); dT.delete(); m.delete();
-                if (finalRes !== warped) {
-                    warped.delete();
-                    finalRes.delete();
-                } else {
-                    warped.delete();
-                }
+                sT.delete(); dT.delete(); m.delete(); warped.delete();
+                cropped.delete(); finalCrop.delete();
+                if (finalRes !== sharpened) { sharpened.delete(); finalRes.delete(); } else { sharpened.delete(); }
             }, 50);
         });
 
@@ -515,21 +495,26 @@
         btnPrint.addEventListener('click', () => {
             const u = resultCanvas.toDataURL('image/jpeg', 1.0);
             const w = window.open('', '_blank');
-            if(!w) return;
-            w.document.write(`<html><head><style>@page{size:auto;margin:0mm;}body{margin:0;display:flex;justify-content:center;align-items:center;background-color:white;}img{max-width:100%;max-height:100vh;object-fit:contain;}</style></head><body><img src="${u}" onload="window.print();window.close();"/></body></html>`);
+            w.document.write(`<html><body style="margin:0;display:flex;justify-content:center;align-items:center;"><img src="${u}" style="max-width:100%;" onload="window.print();window.close();"/></body></html>`);
             w.document.close();
         });
 
-        btnRotate.addEventListener('click', () => {
+        function rotateImage(mode) {
             if (!srcMat) return;
             let dst = new cv.Mat();
-            cv.rotate(srcMat, dst, cv.ROTATE_90_CLOCKWISE);
+            if (mode === 90) {
+                cv.rotate(srcMat, dst, cv.ROTATE_90_CLOCKWISE);
+                corners = orderPts(corners.map(p => ({ x: srcMat.cols - p.y, y: p.x, id: p.id })));
+            } else if (mode === 180) {
+                cv.rotate(srcMat, dst, cv.ROTATE_180);
+                corners = orderPts(corners.map(p => ({ x: srcMat.cols - p.x, y: srcMat.rows - p.y, id: p.id })));
+            }
             srcMat.delete(); srcMat = dst;
-            const newW = srcMat.cols;
-            corners = corners.map(p => ({ x: newW - p.y, y: p.x, id: p.id }));
-            corners = orderPts(corners);
             renderEditor();
-        });
+        }
+
+        btnRotate90.addEventListener('click', () => rotateImage(90));
+        btnRotate180.addEventListener('click', () => rotateImage(180));
     </script>
 </body>
 </html>
