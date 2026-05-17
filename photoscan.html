@@ -772,6 +772,13 @@
 
         btnRotate90.addEventListener('click', () => rotateImage(90));
         btnRotate180.addEventListener('click', () => rotateImage(180));
+
+        // --- 修正：修復點擊「恢復目前推薦數值」按鈕失效問題 ---
+        btnResetParams.addEventListener('click', () => {
+            if (!srcMat) return;
+            autoUpdateParams();
+            updateStatus("已恢復為此區域的最佳推薦參數", "🔄", "success");
+        });
     </script>
 </body>
 </html>
