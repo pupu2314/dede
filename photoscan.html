@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>智慧文件校正掃描器 Pro v5.0</title>
+    <title>智慧文件校正掃描器 Pro v5.2</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         body { background-color: #f3f4f6; font-family: system-ui, -apple-system, sans-serif; }
@@ -34,8 +34,8 @@
     <div class="max-w-6xl mx-auto space-y-6">
         
         <div class="text-center">
-            <h1 class="text-3xl font-bold text-gray-900 mb-2">📄 智慧文件校正掃描器 Pro v5.1</h1>
-            <p class="text-gray-500 text-sm">零死角編輯 / 純淨文字銳化引擎 / 滿版檢視</p>
+            <h1 class="text-3xl font-bold text-gray-900 mb-2">📄 智慧文件校正掃描器 Pro v5.2</h1>
+            <p class="text-gray-500 text-sm">零死角編輯 / 日報表強化偵測 / 純淨文字銳化引擎</p>
         </div>
 
         <!-- 懸浮通知容器 -->
@@ -347,66 +347,123 @@
             updateStatus("已重置為全圖範圍", "🔄");
         });
 
+        // ==========================================
+        // 核心升級：專門對付「施工日報表」的表格干擾
+        // ==========================================
         function adobeScanStyleDetect(src) {
             try {
                 let maxDim = 800;
                 let ratio = Math.max(1.0, Math.max(src.cols, src.rows) / maxDim);
                 let width = Math.round(src.cols / ratio);
                 let height = Math.round(src.rows / ratio);
+                
                 let small = new cv.Mat();
                 cv.resize(src, small, new cv.Size(width, height), 0, 0, cv.INTER_AREA);
+                
                 let gray = new cv.Mat();
                 cv.cvtColor(small, gray, cv.COLOR_RGBA2GRAY, 0);
 
-                let bestPts = null;
-                let maxArea = 0;
+                // 1. 雙邊濾波 (Bilateral Filter)：強力保留邊緣，同時抹平背景雜訊
+                let blurred = new cv.Mat();
+                cv.bilateralFilter(gray, blurred, 9, 75, 75);
 
-                for (let b of [5, 9]) {
-                    let blurred = new cv.Mat();
-                    cv.GaussianBlur(gray, blurred, new cv.Size(b, b), 0);
-                    let kernel = cv.getStructuringElement(cv.MORPH_RECT, new cv.Size(b, b));
-                    let morph = new cv.Mat();
-                    cv.morphologyEx(blurred, morph, cv.MORPH_CLOSE, kernel);
+                // 2. Canny 邊緣偵測：較寬容的閥值，應對陰影
+                let edged = new cv.Mat();
+                cv.Canny(blurred, edged, 50, 150);
 
-                    for (let th of [[30, 100], [50, 150]]) {
-                        let edged = new cv.Mat();
-                        cv.Canny(morph, edged, th[0], th[1]);
-                        let contours = new cv.MatVector();
-                        let hierarchy = new cv.Mat();
-                        cv.findContours(edged, contours, hierarchy, cv.RETR_LIST, cv.CHAIN_APPROX_SIMPLE);
+                // 3. 形態學閉合運算 (Morphological Closing)：把因為陰影斷開的紙張邊線連起來
+                let kernel = cv.getStructuringElement(cv.MORPH_RECT, new cv.Size(5, 5));
+                let morph = new cv.Mat();
+                cv.morphologyEx(edged, morph, cv.MORPH_CLOSE, kernel);
 
-                        for (let i = 0; i < contours.size(); ++i) {
-                            let cnt = contours.get(i);
-                            let area = cv.contourArea(cnt);
-                            if (area > (width * height * 0.05) && area > maxArea) {
-                                let peri = cv.arcLength(cnt, true);
-                                let approx = new cv.Mat();
-                                cv.approxPolyDP(cnt, approx, 0.02 * peri, true);
-                                if (approx.rows === 4 && cv.isContourConvex(approx)) {
-                                    maxArea = area;
-                                    bestPts = [];
-                                    for (let j = 0; j < 4; j++) {
-                                        bestPts.push({ x: approx.data32S[j*2] * ratio, y: approx.data32S[j*2+1] * ratio });
-                                    }
-                                }
-                                approx.delete();
-                            }
-                        }
-                        edged.delete(); contours.delete(); hierarchy.delete();
-                    }
-                    blurred.delete(); kernel.delete(); morph.delete();
+                // 4. 尋找輪廓：關鍵！改用 cv.RETR_EXTERNAL 完全無視紙張內部的表格與手寫字
+                let contours = new cv.MatVector();
+                let hierarchy = new cv.Mat();
+                cv.findContours(morph, contours, hierarchy, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE);
+
+                // 將輪廓存入陣列並依照面積從大到小排序
+                let cntsArray = [];
+                for (let i = 0; i < contours.size(); ++i) {
+                    let cnt = contours.get(i);
+                    let area = cv.contourArea(cnt);
+                    cntsArray.push({ cnt: cnt, area: area, index: i });
                 }
-                small.delete(); gray.delete();
+                cntsArray.sort((a, b) => b.area - a.area);
+
+                let bestPts = null;
+
+                // 5. 迭代找尋四個頂點的紙張
+                for (let i = 0; i < Math.min(5, cntsArray.length); i++) {
+                    let cnt = cntsArray[i].cnt;
+                    let area = cntsArray[i].area;
+                    
+                    // 若最大輪廓面積小於全畫面的 5%，通常是抓錯雜訊，跳過
+                    if (area < (width * height * 0.05)) continue;
+
+                    let peri = cv.arcLength(cnt, true);
+                    let approx = new cv.Mat();
+                    
+                    // 設定精細度 0.025，容忍紙張折痕造成的不完美直線
+                    cv.approxPolyDP(cnt, approx, 0.025 * peri, true);
+
+                    if (approx.rows === 4 && cv.isContourConvex(approx)) {
+                        bestPts = [];
+                        for (let j = 0; j < 4; j++) {
+                            bestPts.push({ 
+                                x: approx.data32S[j*2] * ratio, 
+                                y: approx.data32S[j*2+1] * ratio 
+                            });
+                        }
+                        approx.delete();
+                        break;
+                    }
+                    approx.delete();
+                }
+
+                // 記憶體釋放，防止瀏覽器當機
+                small.delete(); gray.delete(); blurred.delete(); edged.delete(); 
+                kernel.delete(); morph.delete(); contours.delete(); hierarchy.delete();
+
                 if (bestPts) return orderPts(bestPts);
                 return null;
-            } catch (e) { return null; }
+            } catch (e) { 
+                console.error("邊緣偵測發生錯誤:", e);
+                return null; 
+            }
         }
 
+        // 升級：參考 fixRectangle.js 的中心點角度排序法 (Center of Mass Angle Sorting)
+        // 這能 100% 避免紙張嚴重傾斜或旋轉時，頂點順序錯亂導致的「交叉漏斗變形」
         function orderPts(pts) {
-            let xS = pts.slice().sort((a, b) => a.x - b.x);
-            let L = xS.slice(0, 2).sort((a, b) => a.y - b.y);
-            let R = xS.slice(2, 4).sort((a, b) => a.y - b.y);
-            return [{ x: L[0].x, y: L[0].y, id: 0 }, { x: R[0].x, y: R[0].y, id: 1 }, { x: R[1].x, y: R[1].y, id: 2 }, { x: L[1].x, y: L[1].y, id: 3 }];
+            // 1. 計算四個點的中心座標 (cx, cy)
+            let cx = pts.reduce((sum, p) => sum + p.x, 0) / 4;
+            let cy = pts.reduce((sum, p) => sum + p.y, 0) / 4;
+
+            // 2. 計算每個點與中心點的 atan2 夾角，並轉換為度數
+            let sortedPts = pts.map(p => {
+                return {
+                    x: p.x,
+                    y: p.y,
+                    // atan2 算出的範圍是 -PI 到 PI
+                    angle: Math.atan2(p.y - cy, p.x - cx) * 180 / Math.PI
+                };
+            });
+
+            // 3. 依照角度從小到大排序
+            // 在瀏覽器 Canvas 的座標系中 (Y軸向下)：
+            // 左上 (-,-) -> 負角度約 -135度
+            // 右上 (+,-) -> 負角度約 -45度
+            // 右下 (+,+) -> 正角度約 45度
+            // 左下 (-,+) -> 正角度約 135度
+            sortedPts.sort((a, b) => a.angle - b.angle);
+
+            // 4. 對應回我們的 id (0:左上, 1:右上, 2:右下, 3:左下)
+            return [
+                { x: sortedPts[0].x, y: sortedPts[0].y, id: 0 },
+                { x: sortedPts[1].x, y: sortedPts[1].y, id: 1 },
+                { x: sortedPts[2].x, y: sortedPts[2].y, id: 2 },
+                { x: sortedPts[3].x, y: sortedPts[3].y, id: 3 }
+            ];
         }
 
         // --- 優化：更動態準確的 C Value 計算邏輯 ---
