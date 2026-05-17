@@ -45,7 +45,7 @@
     const BarChart3 = (p) => <SvgIcon {...p}><path d="M3 3v18h18"/><rect x="7" y="14" width="4" height="5" rx="1"/><rect x="15" y="7" width="4" height="12" rx="1"/></SvgIcon>;
     const Home = (p) => <SvgIcon {...p}><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></SvgIcon>;
     const Upload = (p) => <SvgIcon {...p}><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></SvgIcon>;
-    const AlertTriangle = (p) => <SvgIcon {...p}><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></SvgIcon>;
+    const Download = (p) => <SvgIcon {...p}><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></SvgIcon>;
     const TrendingUp = (p) => <SvgIcon {...p}><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></SvgIcon>;
     const Calendar = (p) => <SvgIcon {...p}><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></SvgIcon>;
     const ShieldCheck = (p) => <SvgIcon {...p}><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/></SvgIcon>;
@@ -75,14 +75,10 @@
       const [activeTab, setActiveTab] = useState('home');
       const [records, setRecords] = useState([]);
       const [apiUrl, setApiUrl] = useState('');
-      const [syncStatus, setSyncStatus] = useState('idle'); // idle | syncing | success | error
+      const [syncStatus, setSyncStatus] = useState('idle');
       const [customDate, setCustomDate] = useState('');
       const [isLoading, setIsLoading] = useState(true);
       const [showAllRecords, setShowAllRecords] = useState(false);
-
-      const [importYear, setImportYear] = useState(new Date().getFullYear().toString());
-      const [importData, setImportData] = useState('');
-      const [selectedDeleteYear, setSelectedDeleteYear] = useState('');
       
       const [showTutorial, setShowTutorial] = useState(false);
       const [copied, setCopied] = useState(false);
@@ -95,7 +91,7 @@
         setTimeout(() => setToasts(prev => prev.filter(t => t.id !== id)), duration);
       }, []);
 
-      // ── 用 ref 追蹤最新 records，避免 closure 讀到舊值 ──
+      // ── 用 ref 追蹤最新 records ──
       const recordsRef = useRef([]);
       useEffect(() => { recordsRef.current = records; }, [records]);
 
@@ -115,11 +111,10 @@
         }
         setIsLoading(false);
 
-        // ── 開啟時若有 API 網址，自動執行雙向同步 ──
+        // 自動雙向同步
         if (savedUrl) {
           setApiUrl(savedUrl);
           setSyncStatus('syncing');
-          // 用 setTimeout 確保 state 已設定完成才執行
           setTimeout(async () => {
             try {
               const response = await fetch(savedUrl);
@@ -143,7 +138,6 @@
         }
       }, []);
 
-      // 🌟 核心防重複邏輯 (分鐘級別)
       const getUniqueRecords = (recordsArray) => {
         const unique = [];
         const seenMinutes = new Set(); 
@@ -160,13 +154,11 @@
         return unique;
       };
 
-      // ── 儲存到本地 ──
       const saveLocally = (newRecords) => {
         setRecords(newRecords);
         localStorage.setItem('tracker_records', JSON.stringify(newRecords));
       };
 
-      // ── 修正：上傳到雲端，並等待結果 ──
       const uploadToCloud = async (url, data) => {
         const response = await fetch(url, {
           method: 'POST',
@@ -177,28 +169,19 @@
         return response;
       };
 
-      // ── 修正：雙向合併同步 ──
       const forceSyncImplementation = async () => {
         if (!apiUrl) { showToast('請先設定並儲存 API 網址', 'error'); return; }
         setSyncStatus('syncing');
         showToast('智能同步去重中...', 'info', 10000);
         try {
-          // Step 1: 從雲端 GET
           const response = await fetch(apiUrl);
           if (!response.ok) throw new Error(`雲端回應 HTTP ${response.status}`);
           const cloudData = await response.json();
-          
-          // Step 2: 合併去重
           let combined = [...records];
-          if (Array.isArray(cloudData)) {
-            combined = [...records, ...cloudData];
-          }
+          if (Array.isArray(cloudData)) combined = [...records, ...cloudData];
           const cleanRecords = getUniqueRecords(combined);
           
-          // Step 3: 存本地
           saveLocally(cleanRecords);
-          
-          // Step 4: 等待 POST 回雲端完成 ✅ (原本此步驟沒有 await)
           await uploadToCloud(apiUrl, cleanRecords);
           
           setSyncStatus('success');
@@ -256,7 +239,36 @@
         }
       };
 
-      // ── 新增紀錄：先存本地，再雙向合併雲端 ──
+      // 匯出為 TXT 檔
+      const exportToTxt = () => {
+        if (records.length === 0) {
+          showToast('目前沒有任何紀錄可匯出', 'error');
+          return;
+        }
+        const sorted = [...records].sort((a, b) => a.timestamp - b.timestamp);
+        const textContent = sorted.map(r => {
+          const d = new Date(r.timestamp);
+          const y = d.getFullYear();
+          const mo = String(d.getMonth() + 1).padStart(2, '0');
+          const day = String(d.getDate()).padStart(2, '0');
+          const h = String(d.getHours()).padStart(2, '0');
+          const mi = String(d.getMinutes()).padStart(2, '0');
+          return `${y}/${mo}/${day} ${h}:${mi}`;
+        }).join('\n');
+        
+        const blob = new Blob([textContent], { type: 'text/plain;charset=utf-8' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        const now = new Date();
+        a.download = `records_${now.getFullYear()}${String(now.getMonth()+1).padStart(2,'0')}${String(now.getDate()).padStart(2,'0')}.txt`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        showToast('✅ 紀錄已成功匯出', 'success');
+      };
+
       const addRecordImplementation = async (timeMs) => {
         const ONE_HOUR = 60 * 60 * 1000;
         if (records.some(r => Math.abs(r.timestamp - timeMs) < ONE_HOUR) && !window.confirm('一小時內已有紀錄，確定新增？')) return;
@@ -268,7 +280,6 @@
         if (apiUrl) {
           setSyncStatus('syncing');
           try {
-            // 雙向合併：先拉雲端，合併後再上傳
             const response = await fetch(apiUrl);
             if (!response.ok) throw new Error(`HTTP ${response.status}`);
             const cloudData = await response.json();
@@ -301,11 +312,6 @@
         }
       };
 
-      const availableYears = useMemo(() => {
-        const years = new Set(records.map(r => new Date(r.timestamp).getFullYear()));
-        return Array.from(years).sort((a, b) => b - a);
-      }, [records]);
-
       // 💡 數據統計邏輯
       const stats = useMemo(() => {
         const now = new Date();
@@ -316,7 +322,7 @@
         const sortedDesc = [...records].sort((a, b) => b.timestamp - a.timestamp);
         const sortedAsc = [...records].sort((a, b) => a.timestamp - b.timestamp);
         
-        let thisYearCount = 0, lastYearCount = 0, last7DaysCount = 0, last30DaysCount = 0, maxGapMs = 0;
+        let thisYearCount = 0, lastYearCount = 0, last30DaysCount = 0, prev30DaysCount = 0, maxGapMs = 0;
         const yearlyCounts = {};
         const timeOfDayCounts = [0, 0, 0, 0];
         const dayOfWeekCounts = [0, 0, 0, 0, 0, 0, 0];
@@ -330,6 +336,8 @@
 
         const nowMs = now.getTime();
         const MS_PER_DAY = 1000 * 60 * 60 * 24;
+        const thirtyDaysAgoMs = nowMs - (30 * MS_PER_DAY);
+        const sixtyDaysAgoMs = nowMs - (60 * MS_PER_DAY);
 
         sortedAsc.forEach((r, i) => {
           const d = new Date(r.timestamp);
@@ -342,9 +350,8 @@
           if (year === currentYear) thisYearCount++;
           if (year === currentYear - 1) lastYearCount++;
 
-          const daysAgo = (nowMs - r.timestamp) / MS_PER_DAY;
-          if (daysAgo <= 7) last7DaysCount++;
-          if (daysAgo <= 30) last30DaysCount++;
+          if (r.timestamp >= thirtyDaysAgoMs) last30DaysCount++;
+          if (r.timestamp >= sixtyDaysAgoMs && r.timestamp < thirtyDaysAgoMs) prev30DaysCount++;
 
           const monthDiff = (now.getFullYear() - year) * 12 + (now.getMonth() - month);
           if (monthDiff >= 0 && monthDiff < 12) monthlyTrendCounts[11 - monthDiff]++;
@@ -370,19 +377,38 @@
 
         const yearlyStatsArray = Object.keys(yearlyCounts).map(y => ({ year: y, count: yearlyCounts[y] })).sort((a, b) => b.year - a.year);
         const timeSinceLast = sortedDesc.length > 0 ? nowMs - sortedDesc[0].timestamp : null;
+        
+        let currentStreak = { days: 0, hours: 0 };
+        if (timeSinceLast !== null) {
+          currentStreak.days = Math.floor(timeSinceLast / MS_PER_DAY);
+          currentStreak.hours = Math.floor((timeSinceLast % MS_PER_DAY) / (1000 * 60 * 60));
+        }
+
         let avgIntervalDays = sortedAsc.length > 1 ? ((sortedAsc[sortedAsc.length - 1].timestamp - sortedAsc[0].timestamp) / (sortedAsc.length - 1)) / MS_PER_DAY : 0;
 
-        let healthAdvice = "資料累積中，保持紀錄好習慣！";
-        if (sortedAsc.length >= 2) {
-          if (avgIntervalDays < 2) healthAdvice = "近期頻率偏高，建議尋找其他興趣轉移注意力，給身體修復的時間喔！";
-          else if (avgIntervalDays <= 4) healthAdvice = "頻率適中，繼續保持規律的作息與健康生活。";
-          else healthAdvice = "間隔控制得非常棒！展現了良好的自律能力，繼續維持！";
+        // 進階健康建議邏輯 (近30天 vs 過去31-60天)
+        let healthAdvice = "";
+        if (records.length === 0) {
+          healthAdvice = "歡迎使用！目前還沒有任何紀錄，從現在開始建立您的專屬追蹤吧！";
+        } else if (last30DaysCount === 0) {
+          healthAdvice = "近一個月都沒有紀錄呢！這顯示了你極強的自制力與毅力。繼續保持這份專注，將多出來的精力投入在其他熱愛的事物上吧！";
+        } else {
+          const diff = last30DaysCount - prev30DaysCount;
+          if (prev30DaysCount === 0) {
+             healthAdvice = `近一個月有了 ${last30DaysCount} 次紀錄。不用給自己太大壓力，保持平常心，循序漸進地調整屬於你最舒適的節奏即可。`;
+          } else if (diff > 0) {
+             healthAdvice = `近一個月紀錄了 ${last30DaysCount} 次，比上個月多了 ${diff} 次。最近是不是壓力比較大或是比較疲憊？試著多出門走走散心、培養新興趣轉移注意力，給身體更多修復的時間喔！繼續加油！`;
+          } else if (diff < 0) {
+             healthAdvice = `太棒了！近一個月紀錄了 ${last30DaysCount} 次，比上個月少了 ${Math.abs(diff)} 次！這是一個非常棒的進步，代表你的調整已經有了顯著的成效。繼續維持這個好節奏，為自己喝采吧！`;
+          } else {
+             healthAdvice = `近一個月紀錄了 ${last30DaysCount} 次，與上個月持平。看來你已經找到了屬於自己的穩定節奏，繼續保持規律的作息與健康的生活模式，穩步向前！`;
+          }
         }
 
         return {
-          total: records.length, thisYearCount, lastYearCount, last7DaysCount, last30DaysCount,
+          total: records.length, thisYearCount, lastYearCount, last30DaysCount,
           yearlyProjection, yearlyStats: yearlyStatsArray,
-          currentStreakDays: timeSinceLast !== null ? (timeSinceLast / MS_PER_DAY).toFixed(1) : '0.0',
+          currentStreak,
           maxGapDays: (maxGapMs / MS_PER_DAY).toFixed(1),
           avgIntervalDays: avgIntervalDays.toFixed(1),
           healthAdvice,
@@ -392,7 +418,6 @@
         };
       }, [records]);
 
-      // ── 修正：使用現代 Clipboard API，附 fallback ──
       const copyGasCode = async () => {
         const code = `function doGet(e) {
   var prop = PropertiesService.getScriptProperties();
@@ -409,7 +434,6 @@ function doPost(e) {
           if (navigator.clipboard && navigator.clipboard.writeText) {
             await navigator.clipboard.writeText(code);
           } else {
-            // Fallback for older browsers / non-HTTPS
             const textarea = document.createElement('textarea');
             textarea.value = code;
             textarea.style.position = 'fixed';
@@ -426,7 +450,6 @@ function doPost(e) {
         }
       };
 
-      // ── 同步狀態圖示 ──
       const SyncIndicator = () => {
         if (syncStatus === 'syncing') return <RefreshCw className="w-5 h-5 text-indigo-400 animate-spin" />;
         if (syncStatus === 'success') return <CloudCheck className="w-5 h-5 text-emerald-500" />;
@@ -454,20 +477,27 @@ function doPost(e) {
                 </button>
               </div>
               <div className="flex items-center gap-2 mt-4 pt-4 border-t border-slate-100">
-                <input type="datetime-local" value={customDate} onChange={(e) => setCustomDate(e.target.value)} className="flex-1 bg-slate-50 border border-slate-200 rounded-xl px-4 py-2 text-slate-700 outline-none focus:border-indigo-500" />
-                <button onClick={() => { if(!customDate) return showToast('請先選擇時間', 'error'); addRecordImplementation(new Date(customDate).getTime()); setCustomDate(''); }} className="bg-slate-800 text-white px-5 py-2 rounded-xl font-medium hover:bg-slate-700">補登</button>
+                <input type="datetime-local" value={customDate} onChange={(e) => setCustomDate(e.target.value)} className="flex-1 bg-slate-50 border border-slate-200 rounded-xl px-4 py-2 text-slate-700 outline-none focus:border-indigo-500 text-sm" />
+                <button onClick={() => { if(!customDate) return showToast('請先選擇時間', 'error'); addRecordImplementation(new Date(customDate).getTime()); setCustomDate(''); }} className="bg-slate-800 text-white px-5 py-2 rounded-xl font-medium hover:bg-slate-700 whitespace-nowrap">補登</button>
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-2 gap-4 mb-6">
               <div className="bg-gradient-to-br from-indigo-500 to-indigo-600 p-5 rounded-3xl text-white shadow-md">
-                <p className="text-indigo-100 text-sm font-medium mb-1">距離上次</p>
-                <div className="text-3xl font-bold">{stats.currentStreakDays} <span className="text-lg font-normal">天</span></div>
+                <p className="text-indigo-100 text-xs font-medium mb-1">距離上次</p>
+                <div className="text-2xl font-bold flex items-baseline gap-1 flex-wrap">
+                  {stats.currentStreak.days} <span className="text-sm font-normal">天</span> {stats.currentStreak.hours} <span className="text-sm font-normal">小時</span>
+                </div>
               </div>
               <div className="bg-white p-5 rounded-3xl border border-slate-100 shadow-sm">
-                <p className="text-slate-500 text-sm font-medium mb-1">近 30 天累計</p>
+                <p className="text-slate-500 text-xs font-medium mb-1">近 30 天累計</p>
                 <div className="text-3xl font-bold text-slate-800">{stats.last30DaysCount} <span className="text-lg font-normal text-slate-400">次</span></div>
               </div>
+            </div>
+
+            <div className="bg-indigo-50 p-5 rounded-3xl border border-indigo-100 shadow-sm mb-6">
+              <h3 className="text-indigo-800 font-bold mb-2 flex items-center text-sm"><Activity className="w-5 h-5 mr-2" />專屬頻率建議</h3>
+              <p className="text-indigo-900/80 text-sm leading-relaxed">{stats.healthAdvice}</p>
             </div>
 
             <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100 mb-20">
@@ -489,7 +519,6 @@ function doPost(e) {
                       <button onClick={() => deleteRecordImplementation(r.id)} className="p-2 text-slate-300 hover:text-red-500 transition-colors"><Trash2 className="w-5 h-5" /></button>
                     </div>
                   ))}
-                  {/* ✅ 新增：查看更多 / 收起 */}
                   {records.length > 5 && (
                     <button onClick={() => setShowAllRecords(!showAllRecords)} className="w-full py-3 text-sm text-indigo-600 font-medium flex items-center justify-center gap-1 hover:text-indigo-800 transition-colors">
                       <ChevronDown className={`w-4 h-4 transition-transform ${showAllRecords ? 'rotate-180' : ''}`} />
@@ -509,11 +538,6 @@ function doPost(e) {
             <h2 className="text-xl font-bold text-slate-800 mb-6 flex items-center">
               <BarChart3 className="w-6 h-6 mr-2 text-indigo-500" />數據分析中心
             </h2>
-
-            <div className="bg-indigo-50 p-4 rounded-2xl border border-indigo-100 mb-6">
-              <h3 className="text-indigo-800 font-bold mb-2 flex items-center text-sm"><Activity className="w-4 h-4 mr-2" />專屬頻率建議</h3>
-              <p className="text-indigo-900/80 text-sm leading-relaxed">{stats.healthAdvice}</p>
-            </div>
             
             <div className="grid grid-cols-2 gap-4 mb-6">
               <div className="p-4 bg-slate-50 rounded-2xl relative overflow-hidden">
@@ -688,50 +712,13 @@ function doPost(e) {
           </div>
           
           <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100">
-            <h2 className="text-xl font-bold text-slate-800 mb-2">批次匯入舊紀錄</h2>
-            <div className="space-y-3">
-              <input type="number" value={importYear} onChange={(e) => setImportYear(e.target.value)} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2" placeholder="年份" />
-              <textarea value={importData} onChange={(e) => setImportData(e.target.value)} placeholder="格式範例：&#10;03/19 19:06&#10;11/02 08:30" className="w-full h-24 bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm"></textarea>
-              <button onClick={() => {
-                const lines = importData.split('\n'); let sc=0; const nr=[];
-                lines.forEach(l => {
-                  const m = l.trim().match(/(\d{1,2})\/(\d{1,2})\s+(\d{1,2}):(\d{1,2})/);
-                  if(m) {
-                    const d = new Date(importYear, m[1]-1, m[2], m[3], m[4]);
-                    if(!isNaN(d.getTime())) { nr.push({id:crypto.randomUUID(), timestamp:d.getTime()}); sc++; }
-                  }
-                });
-                if(sc > 0) {
-                  const combined = [...records, ...nr];
-                  const cleanRecords = getUniqueRecords(combined);
-                  saveLocally(cleanRecords); 
-                  setImportData(''); 
-                  showToast(`✅ 成功匯入 ${sc} 筆，已自動過濾重複。`, 'success');
-                  if (apiUrl) uploadToCloud(apiUrl, cleanRecords).catch(() => showToast('⚠️ 本地已匯入，雲端同步失敗', 'error', 4000));
-                } else {
-                  showToast('未找到符合格式的資料', 'error');
-                }
-              }} className="w-full bg-slate-800 text-white py-3 rounded-xl font-medium">執行匯入</button>
-            </div>
-          </div>
-
-          <div className="bg-red-50 p-6 rounded-3xl shadow-sm border border-red-100">
-            <h2 className="text-lg font-bold text-red-700 mb-2 flex items-center"><AlertTriangle className="w-5 h-5 mr-2" />危險操作區</h2>
-            <div className="flex gap-3 mt-4">
-              <select value={selectedDeleteYear} onChange={(e) => setSelectedDeleteYear(e.target.value)} className="flex-1 bg-white border border-red-200 rounded-xl px-4 py-2 text-sm">
-                <option value="">選擇刪除年份...</option>
-                {availableYears.map(y => <option key={y} value={y}>{y} 年</option>)}
-              </select>
-              <button onClick={() => {
-                if(!selectedDeleteYear) return;
-                if(!window.confirm(`確定刪除 ${selectedDeleteYear} 年所有紀錄？`)) return;
-                const ur = records.filter(r => new Date(r.timestamp).getFullYear() !== parseInt(selectedDeleteYear));
-                saveLocally(ur);
-                setSelectedDeleteYear('');
-                showToast(`已刪除 ${selectedDeleteYear} 年全部紀錄`, 'success');
-                if (apiUrl) uploadToCloud(apiUrl, ur).catch(() => showToast('⚠️ 本地已刪除，雲端同步失敗', 'error', 4000));
-              }} className="bg-red-600 text-white px-5 rounded-xl font-medium">刪除</button>
-            </div>
+            <h2 className="text-xl font-bold text-slate-800 mb-2 flex items-center">
+              <Download className="w-6 h-6 mr-2 text-slate-700" />匯出紀錄
+            </h2>
+            <p className="text-xs text-slate-500 mb-4 leading-relaxed">將您的所有紀錄匯出為純文字檔 (TXT)，以便您備份或於其他地方觀看。</p>
+            <button onClick={exportToTxt} className="w-full bg-slate-800 text-white py-3 rounded-xl font-medium shadow-sm hover:bg-slate-700 flex items-center justify-center gap-2">
+              <Download className="w-5 h-5" /> 匯出為 TXT
+            </button>
           </div>
         </div>
       );
