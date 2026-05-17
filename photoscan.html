@@ -3,15 +3,15 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>智慧文件校正掃描器 Pro v4.7</title>
+    <title>智慧文件校正掃描器 Pro v5.0</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         body { background-color: #f3f4f6; font-family: system-ui, -apple-system, sans-serif; }
-        /* 修改 PADDING：縮小至 10px */
-        .canvas-container { position: relative; display: inline-block; margin: 0 auto; padding: 10px; background-color: #e5e7eb; border-radius: 8px; overflow: visible; }
-        #editor-canvas { display: block; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); background-image: linear-gradient(45deg, #ccc 25%, transparent 25%), linear-gradient(-45deg, #ccc 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #ccc 75%), linear-gradient(-45deg, transparent 75%, #ccc 75%); background-size: 20px 20px; }
+        /* 移除 PADDING，空間完整還給照片 */
+        .canvas-container { position: relative; display: inline-block; margin: 0 auto; padding: 0px; overflow: visible; }
+        #editor-canvas { display: block; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); background-image: linear-gradient(45deg, #ccc 25%, transparent 25%), linear-gradient(-45deg, #ccc 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #ccc 75%), linear-gradient(-45deg, transparent 75%, #ccc 75%); background-size: 20px 20px; border-radius: 4px; }
         /* 同步調整 Overlay 位置 */
-        #overlay-canvas { position: absolute; top: 10px; left: 10px; pointer-events: none; }
+        #overlay-canvas { position: absolute; top: 0px; left: 0px; pointer-events: none; }
         .corner-handle { position: absolute; width: 28px; height: 28px; background-color: rgba(59, 130, 246, 0.95); border: 3px solid white; border-radius: 50%; transform: translate(-50%, -50%); cursor: grab; box-shadow: 0 4px 8px rgba(0,0,0,0.3); z-index: 10; transition: background-color 0.2s, transform 0.1s; }
         .corner-handle:active { cursor: grabbing; background-color: #1d4ed8; transform: translate(-50%, -50%) scale(1.15); }
         input[type="file"] { display: none; }
@@ -28,8 +28,8 @@
     <div class="max-w-6xl mx-auto space-y-6">
         
         <div class="text-center">
-            <h1 class="text-3xl font-bold text-gray-900 mb-2">📄 智慧文件校正掃描器 Pro v4.8</h1>
-            <p class="text-gray-500 text-sm">高效能邊緣運算</p>
+            <h1 class="text-3xl font-bold text-gray-900 mb-2">📄 智慧文件校正掃描器 Pro v5.0</h1>
+            <p class="text-gray-500 text-sm">零死角編輯 / 純淨文字銳化引擎</p>
         </div>
 
         <!-- 懸浮通知容器 -->
@@ -83,7 +83,7 @@
                             <span class="text-xs font-bold text-indigo-700">文字清晰化 (修復手震)</span>
                             <span id="sharpen-val" class="text-[10px] font-mono bg-gray-100 px-2 rounded border">關閉</span>
                         </div>
-                        <input type="range" id="sharpen-level" min="0" max="2" step="1" value="0" class="w-full accent-indigo-600">
+                        <input type="range" id="sharpen-level" min="0" max="4" step="1" value="0" class="w-full accent-indigo-600">
                     </div>
 
                     <div class="flex p-1 bg-gray-200 rounded-lg">
@@ -170,8 +170,8 @@
         let scaleFactor = 1;
         let originalFileName = "document";
         
-        // 修改 PADDING 為 10 (與 CSS 保持一致)
-        const PADDING = 10;
+        // 移除 PADDING，讓畫面最大化
+        const PADDING = 0;
         let isBwMode = true; 
 
         const statusToast = document.getElementById('status-toast');
@@ -215,7 +215,7 @@
         const sharpenVal = document.getElementById('sharpen-val');
 
         sharpenLevel.addEventListener('input', (e) => {
-            const levels = ["關閉", "中等", "強力"];
+            const levels = ["關閉", "微弱", "中等", "強烈", "極強"];
             sharpenVal.textContent = levels[e.target.value];
         });
 
@@ -425,7 +425,8 @@
         function renderEditor() {
             if (!srcMat) return;
             const wrap = document.getElementById('canvas-area-wrapper');
-            scaleFactor = Math.min(1.0, (wrap.clientWidth - PADDING * 2 - 20) / srcMat.cols);
+            // 保留40px外距避免標籤超出捲動軸，但Canvas本身無Padding
+            scaleFactor = Math.min(1.0, (wrap.clientWidth - 40) / srcMat.cols);
             const dW = srcMat.cols * scaleFactor; const dH = srcMat.rows * scaleFactor;
             editorCanvas.width = dW; editorCanvas.height = dH;
             overlayCanvas.width = dW; overlayCanvas.height = dH;
@@ -525,7 +526,12 @@
             if (level === 0) return src.clone();
             let dst = new cv.Mat();
             let kernel;
+            // 等級 1 到 4 的銳化矩陣，維持總和為 1 (保護原圖明暗度)
             if (level === 1) {
+                kernel = cv.matFromArray(3, 3, cv.CV_32F, [0, -0.25, 0, -0.25, 2, -0.25, 0, -0.25, 0]);
+            } else if (level === 2) {
+                kernel = cv.matFromArray(3, 3, cv.CV_32F, [0, -0.5, 0, -0.5, 3, -0.5, 0, -0.5, 0]);
+            } else if (level === 3) {
                 kernel = cv.matFromArray(3, 3, cv.CV_32F, [0, -1, 0, -1, 5, -1, 0, -1, 0]);
             } else {
                 kernel = cv.matFromArray(3, 3, cv.CV_32F, [-1, -1, -1, -1, 9, -1, -1, -1, -1]);
@@ -577,23 +583,26 @@
                 
                 let rect = new cv.Rect(cropX, cropY, cropW, cropH);
                 let cropped = warped.roi(rect);
-                let finalCrop = cropped.clone();
                 
-                let sL = parseInt(sharpenLevel.value);
-                let sharpened = applySharpen(finalCrop, sL);
-                
-                let finalRes = sharpened;
+                let enhancedTemp = null;
+                // 核心改動：先進行背景去陰影/白化，徹底消滅紙張雜訊
                 if (removeShadowCheck.checked) {
                     if (isBwMode) {
-                        let gray = new cv.Mat(); cv.cvtColor(sharpened, gray, cv.COLOR_RGBA2GRAY, 0);
-                        let bw = new cv.Mat();
+                        let gray = new cv.Mat(); cv.cvtColor(cropped, gray, cv.COLOR_RGBA2GRAY, 0);
+                        enhancedTemp = new cv.Mat();
                         let bS = parseInt(blockSizeInput.value); if (bS % 2 === 0) bS++;
-                        cv.adaptiveThreshold(gray, bw, 255, cv.ADAPTIVE_THRESH_GAUSSIAN_C, cv.THRESH_BINARY, bS, parseInt(cValueInput.value));
-                        finalRes = bw; gray.delete();
+                        cv.adaptiveThreshold(gray, enhancedTemp, 255, cv.ADAPTIVE_THRESH_GAUSSIAN_C, cv.THRESH_BINARY, bS, parseInt(cValueInput.value));
+                        gray.delete();
                     } else {
-                        finalRes = enhanceColorDocument(sharpened);
+                        enhancedTemp = enhanceColorDocument(cropped);
                     }
+                } else {
+                    enhancedTemp = cropped.clone();
                 }
+                
+                // 最後才進行文字邊緣銳化，此時已無背景雜訊可被放大
+                let sL = parseInt(sharpenLevel.value);
+                let finalRes = applySharpen(enhancedTemp, sL);
                 
                 cv.imshow('result-canvas', finalRes);
                 resultCanvas.classList.remove('hidden');
@@ -605,8 +614,7 @@
                 resultSection.scrollIntoView({ behavior: 'smooth' });
                 
                 sT.delete(); dT.delete(); m.delete(); warped.delete();
-                cropped.delete(); finalCrop.delete();
-                if (finalRes !== sharpened) { sharpened.delete(); finalRes.delete(); } else { sharpened.delete(); }
+                cropped.delete(); enhancedTemp.delete(); finalRes.delete();
             }, 50);
         });
 
