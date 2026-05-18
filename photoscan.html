@@ -3,7 +3,7 @@
 <head>
     <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>智慧文件校正掃描器 Pro v5.3</title>
+    <title>智慧文件校正掃描器 Pro v5.4</title>
     
     <style>
         body { background-color: #f3f4f6; font-family: system-ui, -apple-system, sans-serif; }
@@ -45,8 +45,7 @@
     <div class="w-full px-2 md:px-4 mx-auto space-y-6">
         
         <div class="text-center">
-            <h1 class="text-3xl font-bold text-gray-900 mb-2">📄 智慧文件校正掃描器 Pro v5.2</h1>
-            <p class="text-gray-500 text-sm">零死角編輯 / 日報表強化偵測 / 純淨文字銳化引擎</p>
+            <h1 class="text-3xl font-bold text-gray-900 mb-2">📄 智慧文件校正掃描器 Pro v5.4</h1>
         </div>
 
         <!-- 懸浮通知容器 -->
@@ -567,11 +566,12 @@
             let x = cx - rect.left; 
             let y = cy - rect.top;
 
-            // 修復 3: 限制端點拖曳範圍，防止移出畫面外導致選不到
-            // 允許最大超出邊緣 10px 緩衝
-            const buffer = 10;
-            x = Math.max(-buffer, Math.min(x, rect.width + buffer));
-            y = Math.max(-buffer, Math.min(y, rect.height + buffer));
+            // 修復 3 (再次優化): 放寬限制端點拖曳範圍，讓嚴重歪斜的原稿也能拉到畫布外圍
+            // 允許最大超出邊緣為畫布本身寬高的 100% 緩衝 (足以應付極端透視視角，又不會迷失)
+            const bufferX = rect.width * 1.0;
+            const bufferY = rect.height * 1.0;
+            x = Math.max(-bufferX, Math.min(x, rect.width + bufferX));
+            y = Math.max(-bufferY, Math.min(y, rect.height + bufferY));
 
             activeH.style.left = x + 'px'; 
             activeH.style.top = y + 'px';
