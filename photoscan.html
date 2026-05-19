@@ -3,34 +3,30 @@
 <head>
     <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>智慧文件校正掃描器 Pro v5.5</title>
+    <title>智慧文件校正掃描器 Pro v5.9</title>
     
     <style>
         body { background-color: #f3f4f6; font-family: system-ui, -apple-system, sans-serif; }
-        /* 移除 PADDING，空間完整還給照片 */
         .canvas-container { position: relative; display: inline-block; margin: 0 auto; padding: 0px; overflow: visible; }
         #editor-canvas { display: block; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); background-image: linear-gradient(45deg, #ccc 25%, transparent 25%), linear-gradient(-45deg, #ccc 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #ccc 75%), linear-gradient(-45deg, transparent 75%, #ccc 75%); background-size: 20px 20px; border-radius: 4px; }
-        /* 同步調整 Overlay 位置 */
         #overlay-canvas { position: absolute; top: 0px; left: 0px; pointer-events: none; }
         .corner-handle { position: absolute; width: 28px; height: 28px; background-color: rgba(59, 130, 246, 0.95); border: 3px solid white; border-radius: 50%; transform: translate(-50%, -50%); cursor: grab; box-shadow: 0 4px 8px rgba(0,0,0,0.3); z-index: 10; transition: background-color 0.2s, transform 0.1s; }
         .corner-handle:active { cursor: grabbing; background-color: #1d4ed8; transform: translate(-50%, -50%) scale(1.15); }
         input[type="file"] { display: none; }
-        
-        /* 拖曳視覺回饋 */
-        .drag-over { background-color: #dbeafe !important; border: 2px dashed #2563eb !important; }
 
         #toast-container { position: fixed; bottom: 24px; right: 24px; z-index: 100; }
         .toast { background: #1f2937; color: white; padding: 14px 28px; border-radius: 99px; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.2); display: flex; align-items: center; gap: 12px; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
         .toast-success { background: #059669; }
         
-        /* 滿版圖片檢視器動畫 */
         .modal-enter { opacity: 0; transform: scale(0.95); }
         .modal-enter-active { opacity: 1; transform: scale(1); transition: all 0.2s ease-out; }
         .modal-exit { opacity: 1; transform: scale(1); }
         .modal-exit-active { opacity: 0; transform: scale(0.95); transition: all 0.2s ease-in; }
 
-        /* --- 列印專用樣式修正 --- */
-        #print-area { display: none; } /* 螢幕顯示時絕對不顯示此區域，徹底解決底部殘留問題 */
+        /* 拖曳排序時的虛線外框樣式 */
+        .drag-over-slot { border-color: #4f46e5 !important; background-color: #e0e7ff !important; transform: scale(1.02); }
+
+        #print-area { display: none; }
         @media print {
             body > *:not(#print-area) { display: none !important; }
             #print-area { display: flex !important; position: absolute; left: 0; top: 0; width: 100%; justify-content: center; margin: 0; padding: 0; background: white; }
@@ -38,15 +34,23 @@
         }
     </style>
     <!-- Tailwind CSS 生成樣式 -->
-    <style>*, ::before, ::after{--tw-border-spacing-x:0;--tw-border-spacing-y:0;--tw-translate-x:0;--tw-translate-y:0;--tw-rotate:0;--tw-skew-x:0;--tw-skew-y:0;--tw-scale-x:1;--tw-scale-y:1;--tw-pan-x: ;--tw-pan-y: ;--tw-pinch-zoom: ;--tw-scroll-snap-strictness:proximity;--tw-gradient-from-position: ;--tw-gradient-via-position: ;--tw-gradient-to-position: ;--tw-ordinal: ;--tw-slashed-zero: ;--tw-numeric-figure: ;--tw-numeric-spacing: ;--tw-numeric-fraction: ;--tw-ring-inset: ;--tw-ring-offset-width:0px;--tw-ring-offset-color:#fff;--tw-ring-color:rgb(59 130 246 / 0.5);--tw-ring-offset-shadow:0 0 #0000;--tw-ring-shadow:0 0 #0000;--tw-shadow:0 0 #0000;--tw-shadow-colored:0 0 #0000;--tw-blur: ;--tw-brightness: ;--tw-contrast: ;--tw-grayscale: ;--tw-hue-rotate: ;--tw-invert: ;--tw-saturate: ;--tw-sepia: ;--tw-drop-shadow: ;--tw-backdrop-blur: ;--tw-backdrop-brightness: ;--tw-backdrop-contrast: ;--tw-backdrop-grayscale: ;--tw-backdrop-hue-rotate: ;--tw-backdrop-invert: ;--tw-backdrop-opacity: ;--tw-backdrop-saturate: ;--tw-backdrop-sepia: ;--tw-contain-size: ;--tw-contain-layout: ;--tw-contain-paint: ;--tw-contain-style: }::backdrop{--tw-border-spacing-x:0;--tw-border-spacing-y:0;--tw-translate-x:0;--tw-translate-y:0;--tw-rotate:0;--tw-skew-x:0;--tw-skew-y:0;--tw-scale-x:1;--tw-scale-y:1;--tw-pan-x: ;--tw-pan-y: ;--tw-pinch-zoom: ;--tw-scroll-snap-strictness:proximity;--tw-gradient-from-position: ;--tw-gradient-via-position: ;--tw-gradient-to-position: ;--tw-ordinal: ;--tw-slashed-zero: ;--tw-numeric-figure: ;--tw-numeric-spacing: ;--tw-numeric-fraction: ;--tw-ring-inset: ;--tw-ring-offset-width:0px;--tw-ring-offset-color:#fff;--tw-ring-color:rgb(59 130 246 / 0.5);--tw-ring-offset-shadow:0 0 #0000;--tw-ring-shadow:0 0 #0000;--tw-shadow:0 0 #0000;--tw-shadow-colored:0 0 #0000;--tw-blur: ;--tw-brightness: ;--tw-contrast: ;--tw-grayscale: ;--tw-hue-rotate: ;--tw-invert: ;--tw-saturate: ;--tw-sepia: ;--tw-drop-shadow: ;--tw-backdrop-blur: ;--tw-backdrop-brightness: ;--tw-backdrop-contrast: ;--tw-backdrop-grayscale: ;--tw-backdrop-hue-rotate: ;--tw-backdrop-invert: ;--tw-backdrop-opacity: ;--tw-backdrop-saturate: ;--tw-backdrop-sepia: ;--tw-contain-size: ;--tw-contain-layout: ;--tw-contain-paint: ;--tw-contain-style: }/* ! tailwindcss v3.4.17 | MIT License | https://tailwindcss.com */*,::after,::before{box-sizing:border-box;border-width:0;border-style:solid;border-color:#e5e7eb}::after,::before{--tw-content:''}:host,html{line-height:1.5;-webkit-text-size-adjust:100%;-moz-tab-size:4;tab-size:4;font-family:ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";font-feature-settings:normal;font-variation-settings:normal;-webkit-tap-highlight-color:transparent}body{margin:0;line-height:inherit}hr{height:0;color:inherit;border-top-width:1px}abbr:where([title]){-webkit-text-decoration:underline dotted;text-decoration:underline dotted}h1,h2,h3,h4,h5,h6{font-size:inherit;font-weight:inherit}a{color:inherit;text-decoration:inherit}b,strong{font-weight:bolder}code,kbd,pre,samp{font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;font-feature-settings:normal;font-variation-settings:normal;font-size:1em}small{font-size:80%}sub,sup{font-size:75%;line-height:0;position:relative;vertical-align:baseline}sub{bottom:-.25em}sup{top:-.5em}table{text-indent:0;border-color:inherit;border-collapse:collapse}button,input,optgroup,select,textarea{font-family:inherit;font-feature-settings:inherit;font-variation-settings:inherit;font-size:100%;font-weight:inherit;line-height:inherit;letter-spacing:inherit;color:inherit;margin:0;padding:0}button,select{text-transform:none}button,input:where([type=button]),input:where([type=reset]),input:where([type=submit]){-webkit-appearance:button;background-color:transparent;background-image:none}:-moz-focusring{outline:auto}:-moz-ui-invalid{box-shadow:none}progress{vertical-align:baseline}::-webkit-inner-spin-button,::-webkit-outer-spin-button{height:auto}[type=search]{-webkit-appearance:textfield;outline-offset:-2px}::-webkit-search-decoration{-webkit-appearance:none}::-webkit-file-upload-button{-webkit-appearance:button;font:inherit}summary{display:list-item}blockquote,dd,dl,figure,h1,h2,h3,h4,h5,h6,hr,p,pre{margin:0}fieldset{margin:0;padding:0}legend{padding:0}menu,ol,ul{list-style:none;margin:0;padding:0}dialog{padding:0}textarea{resize:vertical}input::placeholder,textarea::placeholder{opacity:1;color:#9ca3af}[role=button],button{cursor:pointer}:disabled{cursor:default}audio,canvas,embed,iframe,img,object,svg,video{display:block;vertical-align:middle}img,video{max-width:100%;height:auto}[hidden]:where(:not([hidden=until-found])){display:none}.pointer-events-none{pointer-events:none}.fixed{position:fixed}.absolute{position:absolute}.relative{position:relative}.inset-0{inset:0px}.left-0{left:0px}.left-1\/2{left:50%}.right-6{right:1.5rem}.top-0{top:0px}.top-1\/2{top:50%}.top-6{top:1.5rem}.z-\[150\]{z-index:150}.z-\[200\]{z-index:200}.z-\[201\]{z-index:201}.mx-auto{margin-left:auto;margin-right:auto}.mb-1{margin-bottom:0.25rem}.mb-2{margin-bottom:0.5rem}.mb-3{margin-bottom:0.75rem}.flex{display:flex}.grid{display:grid}.hidden{display:none}.h-1\.5{height:0.375rem}.h-4{height:1rem}.h-8{height:2rem}.h-\[1px\]{height:1px}.h-auto{height:auto}.h-full{height:100%}.max-h-full{max-height:100%}.min-h-\[400px\]{min-height:400px}.w-1\.5{width:0.375rem}.w-4{width:1rem}.w-8{width:2rem}.w-\[1px\]{width:1px}.w-full{width:100%}.max-w-6xl{max-width:72rem}.max-w-full{max-width:100%}.flex-1{flex:1 1 0%}.-translate-x-1\/2{--tw-translate-x:-50%;transform:translate(var(--tw-translate-x), var(--tw-translate-y)) rotate(var(--tw-rotate)) skewX(var(--tw-skew-x)) skewY(var(--tw-skew-y)) scaleX(var(--tw-scale-x)) scaleY(var(--tw-scale-y))}.-translate-y-1\/2{--tw-translate-y:-50%;transform:translate(var(--tw-translate-x), var(--tw-translate-y)) rotate(var(--tw-rotate)) skewX(var(--tw-skew-x)) skewY(var(--tw-skew-y)) scaleX(var(--tw-scale-x)) scaleY(var(--tw-scale-y))}.translate-y-4{--tw-translate-y:1rem;transform:translate(var(--tw-translate-x), var(--tw-translate-y)) rotate(var(--tw-rotate)) skewX(var(--tw-skew-x)) skewY(var(--tw-skew-y)) scaleX(var(--tw-scale-x)) scaleY(var(--tw-scale-y))}.transform{transform:translate(var(--tw-translate-x), var(--tw-translate-y)) rotate(var(--tw-rotate)) skewX(var(--tw-skew-x)) skewY(var(--tw-skew-y)) scaleX(var(--tw-scale-x)) scaleY(var(--tw-scale-y))}.cursor-pointer{cursor:pointer}.cursor-zoom-in{cursor:zoom-in}.cursor-zoom-out{cursor:zoom-out}.grid-cols-1{grid-template-columns:repeat(1, minmax(0, 1fr))}.flex-col{flex-direction:column}.flex-wrap{flex-wrap:wrap}.items-start{align-items:flex-start}.items-center{align-items:center}.justify-center{justify-content:center}.justify-between{justify-content:space-between}.gap-2{gap:0.5rem}.gap-3{gap:0.75rem}.gap-6{gap:1.5rem}.gap-8{gap:2rem}.space-x-1\.5 > :not([hidden]) ~ :not([hidden]){--tw-space-x-reverse:0;margin-right:calc(0.375rem * var(--tw-space-x-reverse));margin-left:calc(0.375rem * calc(1 - var(--tw-space-x-reverse)))}.space-x-2 > :not([hidden]) ~ :not([hidden]){--tw-space-x-reverse:0;margin-right:calc(0.5rem * var(--tw-space-x-reverse));margin-left:calc(0.5rem * calc(1 - var(--tw-space-x-reverse)))}.space-x-3 > :not([hidden]) ~ :not([hidden]){--tw-space-x-reverse:0;margin-right:calc(0.75rem * var(--tw-space-x-reverse));margin-left:calc(0.75rem * calc(1 - var(--tw-space-x-reverse)))}.space-y-3 > :not([hidden]) ~ :not([hidden]){--tw-space-y-reverse:0;margin-top:calc(0.75rem * calc(1 - var(--tw-space-y-reverse)));margin-bottom:calc(0.75rem * var(--tw-space-y-reverse))}.space-y-4 > :not([hidden]) ~ :not([hidden]){--tw-space-y-reverse:0;margin-top:calc(1rem * calc(1 - var(--tw-space-y-reverse)));margin-bottom:calc(1rem * var(--tw-space-y-reverse))}.space-y-6 > :not([hidden]) ~ :not([hidden]){--tw-space-y-reverse:0;margin-top:calc(1.5rem * calc(1 - var(--tw-space-y-reverse)));margin-bottom:calc(1.5rem * var(--tw-space-y-reverse))}.overflow-auto{overflow:auto}.overflow-hidden{overflow:hidden}.rounded{border-radius:0.25rem}.rounded-full{border-radius:9999px}.rounded-lg{border-radius:0.5rem}.rounded-md{border-radius:0.375rem}.rounded-xl{border-radius:0.75rem}.border{border-width:1px}.border-2{border-width:2px}.border-\[3px\]{border-width:3px}.border-b{border-bottom-width:1px}.border-dashed{border-style:dashed}.border-blue-100{--tw-border-opacity:1;border-color:rgb(219 234 254 / var(--tw-border-opacity, 1))}.border-blue-200{--tw-border-opacity:1;border-color:rgb(191 219 254 / var(--tw-border-opacity, 1))}.border-gray-200{--tw-border-opacity:1;border-color:rgb(229 231 235 / var(--tw-border-opacity, 1))}.border-gray-300{--tw-border-opacity:1;border-color:rgb(209 213 219 / var(--tw-border-opacity, 1))}.border-red-200{--tw-border-opacity:1;border-color:rgb(254 202 202 / var(--tw-border-opacity, 1))}.border-white{--tw-border-opacity:1;border-color:rgb(255 255 255 / var(--tw-border-opacity, 1))}.border-yellow-200{--tw-border-opacity:1;border-color:rgb(254 240 138 / var(--tw-border-opacity, 1))}.bg-black\/0{background-color:rgb(0 0 0 / 0)}.bg-black\/75{background-color:rgb(0 0 0 / 0.75)}.bg-black\/95{background-color:rgb(0 0 0 / 0.95)}.bg-blue-50\/30{background-color:rgb(239 246 255 / 0.3)}.bg-blue-600{--tw-bg-opacity:1;background-color:rgb(37 99 235 / var(--tw-bg-opacity, 1))}.bg-gray-100{--tw-bg-opacity:1;background-color:rgb(243 244 246 / var(--tw-bg-opacity, 1))}.bg-gray-200{--tw-bg-opacity:1;background-color:rgb(229 231 235 / var(--tw-bg-opacity, 1))}.bg-gray-50{--tw-bg-opacity:1;background-color:rgb(249 250 251 / var(--tw-bg-opacity, 1))}.bg-gray-700{--tw-bg-opacity:1;background-color:rgb(55 65 81 / var(--tw-bg-opacity, 1))}.bg-green-600{--tw-bg-opacity:1;background-color:rgb(22 163 74 / var(--tw-bg-opacity, 1))}.bg-red-50{--tw-bg-opacity:1;background-color:rgb(254 242 242 / var(--tw-bg-opacity, 1))}.bg-red-500{--tw-bg-opacity:1;background-color:rgb(239 68 68 / var(--tw-bg-opacity, 1))}.bg-red-500\/50{background-color:rgb(239 68 68 / 0.5)}.bg-white{--tw-bg-opacity:1;background-color:rgb(255 255 255 / var(--tw-bg-opacity, 1))}.bg-white\/20{background-color:rgb(255 255 255 / 0.2)}.bg-yellow-50{--tw-bg-opacity:1;background-color:rgb(254 252 232 / var(--tw-bg-opacity, 1))}.bg-gradient-to-r{background-image:linear-gradient(to right, var(--tw-gradient-stops))}.from-blue-600{--tw-gradient-from:#2563eb var(--tw-gradient-from-position);--tw-gradient-to:rgb(37 99 235 / 0) var(--tw-gradient-to-position);--tw-gradient-stops:var(--tw-gradient-from), var(--tw-gradient-to)}.to-indigo-700{--tw-gradient-to:#4338ca var(--tw-gradient-to-position)}.object-contain{object-fit:contain}.p-1{padding:0.25rem}.p-2{padding:0.5rem}.p-3{padding:0.75rem}.p-4{padding:1rem}.p-6{padding:1.5rem}.px-12{padding-left:3rem;padding-right:3rem}.px-2{padding-left:0.5rem;padding-right:0.5rem}.px-4{padding-left:1rem;padding-right:1rem}.px-5{padding-left:1.25rem;padding-right:1.25rem}.py-1{padding-top:0.25rem;padding-bottom:0.25rem}.py-1\.5{padding-top:0.375rem;padding-bottom:0.375rem}.py-2{padding-top:0.5rem;padding-bottom:0.5rem}.py-2\.5{padding-top:0.625rem;padding-bottom:0.625rem}.py-4{padding-top:1rem;padding-bottom:1rem}.pb-2{padding-bottom:0.5rem}.text-center{text-align:center}.font-mono{font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace}.text-3xl{font-size:1.875rem;line-height:2.25rem}.text-\[10px\]{font-size:10px}.text-lg{font-size:1.125rem;line-height:1.75rem}.text-sm{font-size:0.875rem;line-height:1.25rem}.text-xs{font-size:0.75rem;line-height:1rem}.font-bold{font-weight:700}.font-medium{font-weight:500}.font-normal{font-weight:400}.font-semibold{font-weight:600}.uppercase{text-transform:uppercase}.tracking-tighter{letter-spacing:-0.05em}.text-blue-600{--tw-text-opacity:1;color:rgb(37 99 235 / var(--tw-text-opacity, 1))}.text-gray-400{--tw-text-opacity:1;color:rgb(156 163 175 / var(--tw-text-opacity, 1))}.text-gray-500{--tw-text-opacity:1;color:rgb(107 114 128 / var(--tw-text-opacity, 1))}.text-gray-600{--tw-text-opacity:1;color:rgb(75 85 99 / var(--tw-text-opacity, 1))}.text-gray-700{--tw-text-opacity:1;color:rgb(55 65 81 / var(--tw-text-opacity, 1))}.text-gray-800{--tw-text-opacity:1;color:rgb(31 41 55 / var(--tw-text-opacity, 1))}.text-gray-900{--tw-text-opacity:1;color:rgb(17 24 39 / var(--tw-text-opacity, 1))}.text-indigo-700{--tw-text-opacity:1;color:rgb(67 56 202 / var(--tw-text-opacity, 1))}.text-red-600{--tw-text-opacity:1;color:rgb(220 38 38 / var(--tw-text-opacity, 1))}.text-white{--tw-text-opacity:1;color:rgb(255 255 255 / var(--tw-text-opacity, 1))}.accent-indigo-600{accent-color:#4f46e5}.opacity-0{opacity:0}.shadow-2xl{--tw-shadow:0 25px 50px -12px rgb(0 0 0 / 0.25);--tw-shadow-colored:0 25px 50px -12px var(--tw-shadow-color);box-shadow:var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000), var(--tw-shadow)}.shadow-\[0_10px_25px_rgba\(0\2c 0\2c 0\2c 0\.5\)\]{--tw-shadow:0 10px 25px rgba(0,0,0,0.5);--tw-shadow-colored:0 10px 25px var(--tw-shadow-color);box-shadow:var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000), var(--tw-shadow)}.shadow-lg{--tw-shadow:0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);--tw-shadow-colored:0 10px 15px -3px var(--tw-shadow-color), 0 4px 6px -4px var(--tw-shadow-color);box-shadow:var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000), var(--tw-shadow)}.shadow-md{--tw-shadow:0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);--tw-shadow-colored:0 4px 6px -1px var(--tw-shadow-color), 0 2px 4px -2px var(--tw-shadow-color);box-shadow:var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000), var(--tw-shadow)}.shadow-sm{--tw-shadow:0 1px 2px 0 rgb(0 0 0 / 0.05);--tw-shadow-colored:0 1px 2px 0 var(--tw-shadow-color);box-shadow:var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000), var(--tw-shadow)}.shadow-xl{--tw-shadow:0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);--tw-shadow-colored:0 20px 25px -5px var(--tw-shadow-color), 0 8px 10px -6px var(--tw-shadow-color);box-shadow:var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000), var(--tw-shadow)}.backdrop-blur-sm{--tw-backdrop-blur:blur(4px);-webkit-backdrop-filter:var(--tw-backdrop-blur) var(--tw-backdrop-brightness) var(--tw-backdrop-contrast) var(--tw-backdrop-grayscale) var(--tw-backdrop-hue-rotate) var(--tw-backdrop-invert) var(--tw-backdrop-opacity) var(--tw-backdrop-saturate) var(--tw-backdrop-sepia);backdrop-filter:var(--tw-backdrop-blur) var(--tw-backdrop-brightness) var(--tw-backdrop-contrast) var(--tw-backdrop-grayscale) var(--tw-backdrop-hue-rotate) var(--tw-backdrop-invert) var(--tw-backdrop-opacity) var(--tw-backdrop-saturate) var(--tw-backdrop-sepia)}.transition{transition-property:color, background-color, border-color, fill, stroke, opacity, box-shadow, transform, filter, -webkit-text-decoration-color, -webkit-backdrop-filter;transition-property:color, background-color, border-color, text-decoration-color, fill, stroke, opacity, box-shadow, transform, filter, backdrop-filter;transition-property:color, background-color, border-color, text-decoration-color, fill, stroke, opacity, box-shadow, transform, filter, backdrop-filter, -webkit-text-decoration-color, -webkit-backdrop-filter;transition-timing-function:cubic-bezier(0.4, 0, 0.2, 1);transition-duration:150ms}.transition-all{transition-property:all;transition-timing-function:cubic-bezier(0.4, 0, 0.2, 1);transition-duration:150ms}.transition-colors{transition-property:color, background-color, border-color, fill, stroke, -webkit-text-decoration-color;transition-property:color, background-color, border-color, text-decoration-color, fill, stroke;transition-property:color, background-color, border-color, text-decoration-color, fill, stroke, -webkit-text-decoration-color;transition-timing-function:cubic-bezier(0.4, 0, 0.2, 1);transition-duration:150ms}.transition-opacity{transition-property:opacity;transition-timing-function:cubic-bezier(0.4, 0, 0.2, 1);transition-duration:150ms}.transition-transform{transition-property:transform;transition-timing-function:cubic-bezier(0.4, 0, 0.2, 1);transition-duration:150ms}.duration-300{transition-duration:300ms}.hover\:scale-105:hover{--tw-scale-x:1.05;--tw-scale-y:1.05;transform:translate(var(--tw-translate-x), var(--tw-translate-y)) rotate(var(--tw-rotate)) skewX(var(--tw-skew-x)) skewY(var(--tw-skew-y)) scaleX(var(--tw-scale-x)) scaleY(var(--tw-scale-y))}.hover\:bg-blue-700:hover{--tw-bg-opacity:1;background-color:rgb(29 78 216 / var(--tw-bg-opacity, 1))}.hover\:bg-gray-100:hover{--tw-bg-opacity:1;background-color:rgb(243 244 246 / var(--tw-bg-opacity, 1))}.hover\:bg-gray-200:hover{--tw-bg-opacity:1;background-color:rgb(229 231 235 / var(--tw-bg-opacity, 1))}.hover\:bg-gray-800:hover{--tw-bg-opacity:1;background-color:rgb(31 41 55 / var(--tw-bg-opacity, 1))}.hover\:bg-green-700:hover{--tw-bg-opacity:1;background-color:rgb(21 128 61 / var(--tw-bg-opacity, 1))}.hover\:bg-red-100:hover{--tw-bg-opacity:1;background-color:rgb(254 226 226 / var(--tw-bg-opacity, 1))}.hover\:bg-white\/30:hover{background-color:rgb(255 255 255 / 0.3)}.hover\:from-blue-700:hover{--tw-gradient-from:#1d4ed8 var(--tw-gradient-from-position);--tw-gradient-to:rgb(29 78 216 / 0) var(--tw-gradient-to-position);--tw-gradient-stops:var(--tw-gradient-from), var(--tw-gradient-to)}.hover\:to-indigo-800:hover{--tw-gradient-to:#3730a3 var(--tw-gradient-to-position)}.hover\:text-gray-300:hover{--tw-text-opacity:1;color:rgb(209 213 219 / var(--tw-text-opacity, 1))}.hover\:text-gray-700:hover{--tw-text-opacity:1;color:rgb(55 65 81 / var(--tw-text-opacity, 1))}.disabled\:opacity-50:disabled{opacity:0.5}.group:hover .group-hover\:translate-y-0{--tw-translate-y:0px;transform:translate(var(--tw-translate-x), var(--tw-translate-y)) rotate(var(--tw-rotate)) skewX(var(--tw-skew-x)) skewY(var(--tw-skew-y)) scaleX(var(--tw-scale-x)) scaleY(var(--tw-scale-y))}.group:hover .group-hover\:scale-\[1\.01\]{--tw-scale-x:1.01;--tw-scale-y:1.01;transform:translate(var(--tw-translate-x), var(--tw-translate-y)) rotate(var(--tw-rotate)) skewX(var(--tw-skew-x)) skewY(var(--tw-skew-y)) scaleX(var(--tw-scale-x)) scaleY(var(--tw-scale-y))}.group:hover .group-hover\:bg-black\/5{background-color:rgb(0 0 0 / 0.05)}.group:hover .group-hover\:opacity-100{opacity:1}@media (min-width: 768px){.md\:grid-cols-2{grid-template-columns:repeat(2, minmax(0, 1fr))}.md\:p-8{padding:2rem}}@media (min-width: 1024px){.lg\:grid-cols-2{grid-template-columns:repeat(2, minmax(0, 1fr))}}</style>
+    <style>*, ::before, ::after{--tw-border-spacing-x:0;--tw-border-spacing-y:0;--tw-translate-x:0;--tw-translate-y:0;--tw-rotate:0;--tw-skew-x:0;--tw-skew-y:0;--tw-scale-x:1;--tw-scale-y:1;--tw-pan-x: ;--tw-pan-y: ;--tw-pinch-zoom: ;--tw-scroll-snap-strictness:proximity;--tw-gradient-from-position: ;--tw-gradient-via-position: ;--tw-gradient-to-position: ;--tw-ordinal: ;--tw-slashed-zero: ;--tw-numeric-figure: ;--tw-numeric-spacing: ;--tw-numeric-fraction: ;--tw-ring-inset: ;--tw-ring-offset-width:0px;--tw-ring-offset-color:#fff;--tw-ring-color:rgb(59 130 246 / 0.5);--tw-ring-offset-shadow:0 0 #0000;--tw-ring-shadow:0 0 #0000;--tw-shadow:0 0 #0000;--tw-shadow-colored:0 0 #0000;--tw-blur: ;--tw-brightness: ;--tw-contrast: ;--tw-grayscale: ;--tw-hue-rotate: ;--tw-invert: ;--tw-saturate: ;--tw-sepia: ;--tw-drop-shadow: ;--tw-backdrop-blur: ;--tw-backdrop-brightness: ;--tw-backdrop-contrast: ;--tw-backdrop-grayscale: ;--tw-backdrop-hue-rotate: ;--tw-backdrop-invert: ;--tw-backdrop-opacity: ;--tw-backdrop-saturate: ;--tw-backdrop-sepia: ;--tw-contain-size: ;--tw-contain-layout: ;--tw-contain-paint: ;--tw-contain-style: }::backdrop{--tw-border-spacing-x:0;--tw-border-spacing-y:0;--tw-translate-x:0;--tw-translate-y:0;--tw-rotate:0;--tw-skew-x:0;--tw-skew-y:0;--tw-scale-x:1;--tw-scale-y:1;--tw-pan-x: ;--tw-pan-y: ;--tw-pinch-zoom: ;--tw-scroll-snap-strictness:proximity;--tw-gradient-from-position: ;--tw-gradient-via-position: ;--tw-gradient-to-position: ;--tw-ordinal: ;--tw-slashed-zero: ;--tw-numeric-figure: ;--tw-numeric-spacing: ;--tw-numeric-fraction: ;--tw-ring-inset: ;--tw-ring-offset-width:0px;--tw-ring-offset-color:#fff;--tw-ring-color:rgb(59 130 246 / 0.5);--tw-ring-offset-shadow:0 0 #0000;--tw-ring-shadow:0 0 #0000;--tw-shadow:0 0 #0000;--tw-shadow-colored:0 0 #0000;--tw-blur: ;--tw-brightness: ;--tw-contrast: ;--tw-grayscale: ;--tw-hue-rotate: ;--tw-invert: ;--tw-saturate: ;--tw-sepia: ;--tw-drop-shadow: ;--tw-backdrop-blur: ;--tw-backdrop-brightness: ;--tw-backdrop-contrast: ;--tw-backdrop-grayscale: ;--tw-backdrop-hue-rotate: ;--tw-backdrop-invert: ;--tw-backdrop-opacity: ;--tw-backdrop-saturate: ;--tw-backdrop-sepia: ;--tw-contain-size: ;--tw-contain-layout: ;--tw-contain-paint: ;--tw-contain-style: }/* ! tailwindcss v3.4.17 | MIT License | https://tailwindcss.com */*,::after,::before{box-sizing:border-box;border-width:0;border-style:solid;border-color:#e5e7eb}::after,::before{--tw-content:''}:host,html{line-height:1.5;-webkit-text-size-adjust:100%;-moz-tab-size:4;tab-size:4;font-family:ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";font-feature-settings:normal;font-variation-settings:normal;-webkit-tap-highlight-color:transparent}body{margin:0;line-height:inherit}hr{height:0;color:inherit;border-top-width:1px}abbr:where([title]){-webkit-text-decoration:underline dotted;text-decoration:underline dotted}h1,h2,h3,h4,h5,h6{font-size:inherit;font-weight:inherit}a{color:inherit;text-decoration:inherit}b,strong{font-weight:bolder}code,kbd,pre,samp{font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;font-feature-settings:normal;font-variation-settings:normal;font-size:1em}small{font-size:80%}sub,sup{font-size:75%;line-height:0;position:relative;vertical-align:baseline}sub{bottom:-.25em}sup{top:-.5em}table{text-indent:0;border-color:inherit;border-collapse:collapse}button,input,optgroup,select,textarea{font-family:inherit;font-feature-settings:inherit;font-variation-settings:inherit;font-size:100%;font-weight:inherit;line-height:inherit;letter-spacing:inherit;color:inherit;margin:0;padding:0}button,select{text-transform:none}button,input:where([type=button]),input:where([type=reset]),input:where([type=submit]){-webkit-appearance:button;background-color:transparent;background-image:none}:-moz-focusring{outline:auto}:-moz-ui-invalid{box-shadow:none}progress{vertical-align:baseline}::-webkit-inner-spin-button,::-webkit-outer-spin-button{height:auto}[type=search]{-webkit-appearance:textfield;outline-offset:-2px}::-webkit-search-decoration{-webkit-appearance:none}::-webkit-file-upload-button{-webkit-appearance:button;font:inherit}summary{display:list-item}blockquote,dd,dl,figure,h1,h2,h3,h4,h5,h6,hr,p,pre{margin:0}fieldset{margin:0;padding:0}legend{padding:0}menu,ol,ul{list-style:none;margin:0;padding:0}dialog{padding:0}textarea{resize:vertical}input::placeholder,textarea::placeholder{opacity:1;color:#9ca3af}[role=button],button{cursor:pointer}:disabled{cursor:default}audio,canvas,embed,iframe,img,object,svg,video{display:block;vertical-align:middle}img,video{max-width:100%;height:auto}[hidden]:where(:not([hidden=until-found])){display:none}.pointer-events-none{pointer-events:none}.fixed{position:fixed}.absolute{position:absolute}.relative{position:relative}.inset-0{inset:0px}.left-0{left:0px}.left-1\/2{left:50%}.right-6{right:1.5rem}.top-0{top:0px}.top-1\/2{top:50%}.top-6{top:1.5rem}.z-\[150\]{z-index:150}.z-\[200\]{z-index:200}.z-\[201\]{z-index:201}.z-\[300\]{z-index:300}.mx-auto{margin-left:auto;margin-right:auto}.mb-1{margin-bottom:0.25rem}.mb-2{margin-bottom:0.5rem}.mb-3{margin-bottom:0.75rem}.flex{display:flex}.grid{display:grid}.hidden{display:none}.h-1\.5{height:0.375rem}.h-4{height:1rem}.h-8{height:2rem}.h-\[1px\]{height:1px}.h-auto{height:auto}.h-full{height:100%}.max-h-full{max-height:100%}.min-h-\[400px\]{min-height:400px}.w-1\.5{width:0.375rem}.w-4{width:1rem}.w-8{width:2rem}.w-\[1px\]{width:1px}.w-full{width:100%}.max-w-7xl{max-width:80rem}.max-w-full{max-width:100%}.flex-1{flex:1 1 0%}.-translate-x-1\/2{--tw-translate-x:-50%;transform:translate(var(--tw-translate-x), var(--tw-translate-y)) rotate(var(--tw-rotate)) skewX(var(--tw-skew-x)) skewY(var(--tw-skew-y)) scaleX(var(--tw-scale-x)) scaleY(var(--tw-scale-y))}.-translate-y-1\/2{--tw-translate-y:-50%;transform:translate(var(--tw-translate-x), var(--tw-translate-y)) rotate(var(--tw-rotate)) skewX(var(--tw-skew-x)) skewY(var(--tw-skew-y)) scaleX(var(--tw-scale-x)) scaleY(var(--tw-scale-y))}.translate-y-4{--tw-translate-y:1rem;transform:translate(var(--tw-translate-x), var(--tw-translate-y)) rotate(var(--tw-rotate)) skewX(var(--tw-skew-x)) skewY(var(--tw-skew-y)) scaleX(var(--tw-scale-x)) scaleY(var(--tw-scale-y))}.transform{transform:translate(var(--tw-translate-x), var(--tw-translate-y)) rotate(var(--tw-rotate)) skewX(var(--tw-skew-x)) skewY(var(--tw-skew-y)) scaleX(var(--tw-scale-x)) scaleY(var(--tw-scale-y))}.cursor-pointer{cursor:pointer}.cursor-zoom-in{cursor:zoom-in}.cursor-zoom-out{cursor:zoom-out}.grid-cols-1{grid-template-columns:repeat(1, minmax(0, 1fr))}.grid-cols-2{grid-template-columns:repeat(2, minmax(0, 1fr))}.grid-cols-3{grid-template-columns:repeat(3, minmax(0, 1fr))}.flex-col{flex-direction:column}.flex-wrap{flex-wrap:wrap}.items-start{align-items:flex-start}.items-center{align-items:center}.justify-center{justify-content:center}.justify-between{justify-content:space-between}.gap-1{gap:0.25rem}.gap-2{gap:0.5rem}.gap-3{gap:0.75rem}.gap-4{gap:1rem}.gap-6{gap:1.5rem}.gap-8{gap:2rem}.space-x-1\.5 > :not([hidden]) ~ :not([hidden]){--tw-space-x-reverse:0;margin-right:calc(0.375rem * var(--tw-space-x-reverse));margin-left:calc(0.375rem * calc(1 - var(--tw-space-x-reverse)))}.space-x-2 > :not([hidden]) ~ :not([hidden]){--tw-space-x-reverse:0;margin-right:calc(0.5rem * var(--tw-space-x-reverse));margin-left:calc(0.5rem * calc(1 - var(--tw-space-x-reverse)))}.space-x-3 > :not([hidden]) ~ :not([hidden]){--tw-space-x-reverse:0;margin-right:calc(0.75rem * var(--tw-space-x-reverse));margin-left:calc(0.75rem * calc(1 - var(--tw-space-x-reverse)))}.space-y-3 > :not([hidden]) ~ :not([hidden]){--tw-space-y-reverse:0;margin-top:calc(0.75rem * calc(1 - var(--tw-space-y-reverse)));margin-bottom:calc(0.75rem * var(--tw-space-y-reverse))}.space-y-4 > :not([hidden]) ~ :not([hidden]){--tw-space-y-reverse:0;margin-top:calc(1rem * calc(1 - var(--tw-space-y-reverse)));margin-bottom:calc(1rem * var(--tw-space-y-reverse))}.space-y-6 > :not([hidden]) ~ :not([hidden]){--tw-space-y-reverse:0;margin-top:calc(1.5rem * calc(1 - var(--tw-space-y-reverse)));margin-bottom:calc(1.5rem * var(--tw-space-y-reverse))}.overflow-auto{overflow:auto}.overflow-hidden{overflow:hidden}.rounded{border-radius:0.25rem}.rounded-full{border-radius:9999px}.rounded-lg{border-radius:0.5rem}.rounded-md{border-radius:0.375rem}.rounded-xl{border-radius:0.75rem}.rounded-2xl{border-radius:1rem}.border{border-width:1px}.border-2{border-width:2px}.border-4{border-width:4px}.border-\[3px\]{border-width:3px}.border-b{border-bottom-width:1px}.border-dashed{border-style:dashed}.border-blue-100{--tw-border-opacity:1;border-color:rgb(219 234 254 / var(--tw-border-opacity, 1))}.border-blue-200{--tw-border-opacity:1;border-color:rgb(191 219 254 / var(--tw-border-opacity, 1))}.border-gray-200{--tw-border-opacity:1;border-color:rgb(229 231 235 / var(--tw-border-opacity, 1))}.border-gray-300{--tw-border-opacity:1;border-color:rgb(209 213 219 / var(--tw-border-opacity, 1))}.border-red-200{--tw-border-opacity:1;border-color:rgb(254 202 202 / var(--tw-border-opacity, 1))}.border-white{--tw-border-opacity:1;border-color:rgb(255 255 255 / var(--tw-border-opacity, 1))}.border-yellow-200{--tw-border-opacity:1;border-color:rgb(254 240 138 / var(--tw-border-opacity, 1))}.border-indigo-100{--tw-border-opacity:1;border-color:rgb(224 231 255 / var(--tw-border-opacity, 1))}.border-indigo-200{--tw-border-opacity:1;border-color:rgb(199 210 254 / var(--tw-border-opacity, 1))}.border-indigo-500{--tw-border-opacity:1;border-color:rgb(99 102 241 / var(--tw-border-opacity, 1))}.bg-black\/0{background-color:rgb(0 0 0 / 0)}.bg-black\/75{background-color:rgb(0 0 0 / 0.75)}.bg-black\/95{background-color:rgb(0 0 0 / 0.95)}.bg-blue-600/90{background-color:rgb(37 99 235 / 0.9)}.bg-blue-50\/30{background-color:rgb(239 246 255 / 0.3)}.bg-blue-600{--tw-bg-opacity:1;background-color:rgb(37 99 235 / var(--tw-bg-opacity, 1))}.bg-gray-100{--tw-bg-opacity:1;background-color:rgb(243 244 246 / var(--tw-bg-opacity, 1))}.bg-gray-200{--tw-bg-opacity:1;background-color:rgb(229 231 235 / var(--tw-bg-opacity, 1))}.bg-gray-50{--tw-bg-opacity:1;background-color:rgb(249 250 251 / var(--tw-bg-opacity, 1))}.bg-gray-700{--tw-bg-opacity:1;background-color:rgb(55 65 81 / var(--tw-bg-opacity, 1))}.bg-green-600{--tw-bg-opacity:1;background-color:rgb(22 163 74 / var(--tw-bg-opacity, 1))}.bg-red-50{--tw-bg-opacity:1;background-color:rgb(254 242 242 / var(--tw-bg-opacity, 1))}.bg-red-500{--tw-bg-opacity:1;background-color:rgb(239 68 68 / var(--tw-bg-opacity, 1))}.bg-red-500\/50{background-color:rgb(239 68 68 / 0.5)}.bg-white{--tw-bg-opacity:1;background-color:rgb(255 255 255 / var(--tw-bg-opacity, 1))}.bg-white\/20{background-color:rgb(255 255 255 / 0.2)}.bg-yellow-50{--tw-bg-opacity:1;background-color:rgb(254 252 232 / var(--tw-bg-opacity, 1))}.bg-indigo-50\/50{background-color:rgb(245 247 255 / 0.5)}.bg-indigo-600{--tw-bg-opacity:1;background-color:rgb(79 70 229 / var(--tw-bg-opacity, 1))}.bg-gradient-to-r{background-image:linear-gradient(to right, var(--tw-gradient-stops))}.from-blue-600{--tw-gradient-from:#2563eb var(--tw-gradient-from-position);--tw-gradient-to:rgb(37 99 235 / 0) var(--tw-gradient-to-position);--tw-gradient-stops:var(--tw-gradient-from), var(--tw-gradient-to)}.to-indigo-700{--tw-gradient-to:#4338ca var(--tw-gradient-to-position)}.object-contain{object-fit:contain}.p-1{padding:0.25rem}.p-2{padding:0.5rem}.p-3{padding:0.75rem}.p-4{padding:1rem}.p-6{padding:1.5rem}.p-8{padding:2rem}.px-12{padding-left:3rem;padding-right:3rem}.px-2{padding-left:0.5rem;padding-right:0.5rem}.px-3{padding-left:0.75rem;padding-right:0.75rem}.px-4{padding-left:1rem;padding-right:1rem}.px-5{padding-left:1.25rem;padding-right:1.25rem}.py-1{padding-top:0.25rem;padding-bottom:0.25rem}.py-1\.5{padding-top:0.375rem;padding-bottom:0.375rem}.py-2{padding-top:0.5rem;padding-bottom:0.5rem}.py-2\.5{padding-top:0.625rem;padding-bottom:0.625rem}.py-4{padding-top:1rem;padding-bottom:1rem}.pb-2{padding-bottom:0.5rem}.pt-1{padding-top:0.25rem}.text-center{text-align:center}.font-mono{font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace}.text-2xl{font-size:1.5rem;line-height:2rem}.text-3xl{font-size:1.875rem;line-height:2.25rem}.text-\[10px\]{font-size:10px}.text-\[11px\]{font-size:11px}.text-lg{font-size:1.125rem;line-height:1.75rem}.text-sm{font-size:0.875rem;line-height:1.25rem}.text-xs{font-size:0.75rem;line-height:1rem}.font-bold{font-weight:700}.font-medium{font-weight:500}.font-normal{font-weight:400}.font-semibold{font-weight:600}.uppercase{text-transform:uppercase}.tracking-tighter{letter-spacing:-0.05em}.text-blue-600{--tw-text-opacity:1;color:rgb(37 99 235 / var(--tw-text-opacity, 1))}.text-gray-400{--tw-text-opacity:1;color:rgb(156 163 175 / var(--tw-text-opacity, 1))}.text-gray-500{--tw-text-opacity:1;color:rgb(107 114 128 / var(--tw-text-opacity, 1))}.text-gray-600{--tw-text-opacity:1;color:rgb(75 85 99 / var(--tw-text-opacity, 1))}.text-gray-700{--tw-text-opacity:1;color:rgb(55 65 81 / var(--tw-text-opacity, 1))}.text-gray-800{--tw-text-opacity:1;color:rgb(31 41 55 / var(--tw-text-opacity, 1))}.text-gray-900{--tw-text-opacity:1;color:rgb(17 24 39 / var(--tw-text-opacity, 1))}.text-indigo-700{--tw-text-opacity:1;color:rgb(67 56 202 / var(--tw-text-opacity, 1))}.text-indigo-800{--tw-text-opacity:1;color:rgb(55 48 163 / var(--tw-text-opacity, 1))}.text-red-600{--tw-text-opacity:1;color:rgb(220 38 38 / var(--tw-text-opacity, 1))}.text-white{--tw-text-opacity:1;color:rgb(255 255 255 / var(--tw-text-opacity, 1))}.accent-indigo-600{accent-color:#4f46e5}.opacity-0{opacity:0}.opacity-100{opacity:1}.shadow-2xl{--tw-shadow:0 25px 50px -12px rgb(0 0 0 / 0.25);--tw-shadow-colored:0 25px 50px -12px var(--tw-shadow-color);box-shadow:var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000), var(--tw-shadow)}.shadow-\[0_10px_25px_rgba\(0\2c 0\2c 0\2c 0\.5\)\]{--tw-shadow:0 10px 25px rgba(0,0,0,0.5);--tw-shadow-colored:0 10px 25px var(--tw-shadow-color);box-shadow:var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000), var(--tw-shadow)}.shadow-lg{--tw-shadow:0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);--tw-shadow-colored:0 10px 15px -3px var(--tw-shadow-color), 0 4px 6px -4px var(--tw-shadow-color);box-shadow:var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000), var(--tw-shadow)}.shadow-md{--tw-shadow:0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);--tw-shadow-colored:0 4px 6px -1px var(--tw-shadow-color), 0 2px 4px -2px var(--tw-shadow-color);box-shadow:var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000), var(--tw-shadow)}.shadow-sm{--tw-shadow:0 1px 2px 0 rgb(0 0 0 / 0.05);--tw-shadow-colored:0 1px 2px 0 var(--tw-shadow-color);box-shadow:var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000), var(--tw-shadow)}.shadow-xl{--tw-shadow:0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);--tw-shadow-colored:0 20px 25px -5px var(--tw-shadow-color), 0 8px 10px -6px var(--tw-shadow-color);box-shadow:var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000), var(--tw-shadow)}.backdrop-blur-sm{--tw-backdrop-blur:blur(4px);-webkit-backdrop-filter:var(--tw-backdrop-blur) var(--tw-backdrop-brightness) var(--tw-backdrop-contrast) var(--tw-backdrop-grayscale) var(--tw-backdrop-hue-rotate) var(--tw-backdrop-invert) var(--tw-backdrop-opacity) var(--tw-backdrop-saturate) var(--tw-backdrop-sepia);backdrop-filter:var(--tw-backdrop-blur) var(--tw-backdrop-brightness) var(--tw-backdrop-contrast) var(--tw-backdrop-grayscale) var(--tw-backdrop-hue-rotate) var(--tw-backdrop-invert) var(--tw-backdrop-opacity) var(--tw-backdrop-saturate) var(--tw-backdrop-sepia)}.transition{transition-property:color, background-color, border-color, fill, stroke, opacity, box-shadow, transform, filter, -webkit-text-decoration-color, -webkit-backdrop-filter;transition-property:color, background-color, border-color, text-decoration-color, fill, stroke, opacity, box-shadow, transform, filter, backdrop-filter;transition-property:color, background-color, border-color, text-decoration-color, fill, stroke, opacity, box-shadow, transform, filter, backdrop-filter, -webkit-text-decoration-color, -webkit-backdrop-filter;transition-timing-function:cubic-bezier(0.4, 0, 0.2, 1);transition-duration:150ms}.transition-all{transition-property:all;transition-timing-function:cubic-bezier(0.4, 0, 0.2, 1);transition-duration:150ms}.transition-colors{transition-property:color, background-color, border-color, fill, stroke, -webkit-text-decoration-color;transition-property:color, background-color, border-color, text-decoration-color, fill, stroke;transition-property:color, background-color, border-color, text-decoration-color, fill, stroke, -webkit-text-decoration-color;transition-timing-function:cubic-bezier(0.4, 0, 0.2, 1);transition-duration:150ms}.transition-opacity{transition-property:opacity;transition-timing-function:cubic-bezier(0.4, 0, 0.2, 1);transition-duration:150ms}.transition-transform{transition-property:transform;transition-timing-function:cubic-bezier(0.4, 0, 0.2, 1);transition-duration:150ms}.duration-300{transition-duration:300ms}.hover\:scale-105:hover{--tw-scale-x:1.05;--tw-scale-y:1.05;transform:translate(var(--tw-translate-x), var(--tw-translate-y)) rotate(var(--tw-rotate)) skewX(var(--tw-skew-x)) skewY(var(--tw-skew-y)) scaleX(var(--tw-scale-x)) scaleY(var(--tw-scale-y))}.hover\:bg-blue-700:hover{--tw-bg-opacity:1;background-color:rgb(29 78 216 / var(--tw-bg-opacity, 1))}.hover\:bg-gray-100:hover{--tw-bg-opacity:1;background-color:rgb(243 244 246 / var(--tw-bg-opacity, 1))}.hover\:bg-gray-200:hover{--tw-bg-opacity:1;background-color:rgb(229 231 235 / var(--tw-bg-opacity, 1))}.hover\:bg-gray-800:hover{--tw-bg-opacity:1;background-color:rgb(31 41 55 / var(--tw-bg-opacity, 1))}.hover\:bg-green-700:hover{--tw-bg-opacity:1;background-color:rgb(21 128 61 / var(--tw-bg-opacity, 1))}.hover\:bg-red-100:hover{--tw-bg-opacity:1;background-color:rgb(254 226 226 / var(--tw-bg-opacity, 1))}.hover\:bg-white\/30:hover{background-color:rgb(255 255 255 / 0.3)}.hover\:from-blue-700:hover{--tw-gradient-from:#1d4ed8 var(--tw-gradient-from-position);--tw-gradient-to:rgb(29 78 216 / 0) var(--tw-gradient-to-position);--tw-gradient-stops:var(--tw-gradient-from), var(--tw-gradient-to)}.hover\:to-indigo-800:hover{--tw-gradient-to:#3730a3 var(--tw-gradient-to-position)}.hover\:text-gray-300:hover{--tw-text-opacity:1;color:rgb(209 213 219 / var(--tw-text-opacity, 1))}.hover\:text-gray-700:hover{--tw-text-opacity:1;color:rgb(55 65 81 / var(--tw-text-opacity, 1))}.disabled\:bg-gray-200:disabled{background-color:rgb(229 231 235 / 1)}.disabled\:text-gray-400:disabled{color:rgb(156 163 175 / 1)}.disabled\:opacity-100:disabled{opacity:1}.disabled\:opacity-50:disabled{opacity:0.5}.disabled\:opacity-40:disabled{opacity:0.4}.group:hover .group-hover\:translate-y-0{--tw-translate-y:0px;transform:translate(var(--tw-translate-x), var(--tw-translate-y)) rotate(var(--tw-rotate)) skewX(var(--tw-skew-x)) skewY(var(--tw-skew-y)) scaleX(var(--tw-scale-x)) scaleY(var(--tw-scale-y))}.group:hover .group-hover\:scale-\[1\.01\]{--tw-scale-x:1.01;--tw-scale-y:1.01;transform:translate(var(--tw-translate-x), var(--tw-translate-y)) rotate(var(--tw-rotate)) skewX(var(--tw-skew-x)) skewY(var(--tw-skew-y)) scaleX(var(--tw-scale-x)) scaleY(var(--tw-scale-y))}.group:hover .group-hover\:bg-black\/5{background-color:rgb(0 0 0 / 0.05)}.group:hover .group-hover\:opacity-100{opacity:1}@media (min-width: 768px){.md\:p-8{padding:2rem}.md\:grid-cols-2{grid-template-columns:repeat(2, minmax(0, 1fr))}}@media (min-width: 1024px){.lg\:grid-cols-2{grid-template-columns:repeat(2, minmax(0, 1fr))}.lg\:grid-cols-3{grid-template-columns:repeat(3, minmax(0, 1fr))}}</style>
 </head>
 <body class="text-gray-800 p-4 md:p-8">
-    <!-- 修復 2: 移除 max-w-6xl 並改用 w-full 與大螢幕寬邊距，讓大寬度螢幕盡可能滿版顯示 -->
-    <div class="w-full px-2 md:px-6 lg:px-12 mx-auto space-y-6">
+    
+    <!-- 全網頁滿版拖曳視覺回饋遮罩 -->
+    <div id="drop-zone-overlay" class="hidden fixed inset-0 bg-blue-600/90 z-[300] flex flex-col justify-center items-center text-white text-2xl font-bold gap-4 pointer-events-none transition-opacity duration-200 opacity-0">
+        <div class="border-4 border-dashed border-white p-8 rounded-2xl flex flex-col items-center gap-2">
+            <span>📥 放開滑鼠即可上傳文件照片</span>
+            <span class="text-sm font-normal opacity-80">支援任意圖片格式，將自動啟動智慧校正</span>
+        </div>
+    </div>
+
+    <div class="w-full max-w-7xl mx-auto space-y-6">
         
         <div class="text-center">
-            <h1 class="text-3xl font-bold text-gray-900 mb-2">📄 智慧文件校正掃描器 Pro v5.5</h1>
-            <p class="text-gray-500 text-sm">寬螢幕最佳化顯示 / 雙圖文件拼貼助手 / 純淨文字銳化引擎</p>
+            <h1 class="text-3xl font-bold text-gray-900 mb-2">📄 智慧文件校正掃描器 Pro v5.9</h1>
+            <p class="text-gray-500 text-sm">混合邊緣偵測 (對抗黃色板夾) / 高速去陰影還原 / 智慧格狀拼貼</p>
         </div>
 
         <!-- 懸浮通知容器 -->
@@ -57,81 +61,85 @@
             </div>
         </div>
 
-        <div class="bg-white p-6 rounded-xl shadow-md grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
-            <div class="space-y-4">
-                <h2 class="text-lg font-semibold border-b pb-2">1. 檔案與方向控制</h2>
-                <div class="flex flex-wrap gap-3 items-center">
-                    <label class="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-lg cursor-pointer transition font-medium shadow-sm flex items-center">
-                        上傳照片
-                        <input type="file" id="image-upload" accept="image/*">
-                    </label>
-                </div>
-                
-                <div class="flex flex-wrap gap-3">
-                    <button id="btn-rotate-90" class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2 rounded-lg transition text-sm font-medium border border-gray-300 disabled:opacity-50" disabled="">
-                        旋轉 90°
-                    </button>
-                    <button id="btn-rotate-180" class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2 rounded-lg transition text-sm font-medium border border-gray-300 disabled:opacity-50" disabled="">
-                        旋轉 180°
-                    </button>
-                    <button id="btn-reset-corners" class="bg-red-50 hover:bg-red-100 text-red-600 px-4 py-2 rounded-lg transition text-sm font-medium border border-red-200 disabled:opacity-50" disabled="">
-                        全圖 (重置端點)
-                    </button>
+        <!-- 橫向大三欄面板配置 -->
+        <div class="bg-white p-6 rounded-xl shadow-md grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
+            
+            <!-- 第一欄：1. 檔案與方向控制 -->
+            <div class="space-y-4 h-full flex flex-col justify-between">
+                <div>
+                    <h2 class="text-lg font-semibold border-b pb-2 mb-3">1. 檔案與方向控制</h2>
+                    <div class="flex flex-wrap gap-3 items-center mb-4">
+                        <label class="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-lg cursor-pointer transition font-medium shadow-sm flex items-center">
+                            上傳照片
+                            <input type="file" id="image-upload" accept="image/*">
+                        </label>
+                    </div>
+                    
+                    <div class="flex flex-wrap gap-2 mb-4">
+                        <button id="btn-rotate-90" class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-3 py-2 rounded-lg transition text-xs font-medium border border-gray-300 disabled:opacity-50" disabled="">
+                            旋轉 90°
+                        </button>
+                        <button id="btn-rotate-180" class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-3 py-2 rounded-lg transition text-xs font-medium border border-gray-300 disabled:opacity-50" disabled="">
+                            旋轉 180°
+                        </button>
+                        <button id="btn-reset-corners" class="bg-red-50 hover:bg-red-100 text-red-600 px-3 py-2 rounded-lg transition text-xs font-medium border border-red-200 disabled:opacity-50" disabled="">
+                            全圖重置
+                        </button>
+                    </div>
                 </div>
                 <div class="p-3 bg-gray-50 rounded-lg border border-gray-200 text-xs text-gray-600">
-                    💡 提示：您可以直接將圖片拖曳至下方「編輯區」進行處理。
+                    💡 提示：您可以將圖片拖曳至**網頁任何地方**來快速上傳與校正。
                 </div>
+            </div>
 
-                <!-- 新增：2.5 雙圖拼貼助手 UI 區塊 -->
-                <div class="p-4 bg-indigo-50/50 rounded-lg border border-indigo-100 space-y-3">
-                    <h3 class="text-sm font-bold text-indigo-800 flex items-center gap-1.5">
-                        <span>📚 雙圖拼貼助手 (二合一拼圖)</span>
-                    </h3>
-                    <p class="text-[11px] text-gray-500">
-                        分別將兩張「高品質結果」存入插槽中，即可拼貼成一張大圖列印或儲存！
-                    </p>
-                    <div class="grid grid-cols-2 gap-3">
-                        <!-- 插槽一 -->
-                        <div id="slot-0" class="border border-dashed border-indigo-200 rounded-lg bg-white h-24 flex flex-col items-center justify-center relative overflow-hidden group">
-                            <span class="text-xs text-gray-400">插槽一 (空)</span>
-                        </div>
-                        <!-- 插槽二 -->
-                        <div id="slot-1" class="border border-dashed border-indigo-200 rounded-lg bg-white h-24 flex flex-col items-center justify-center relative overflow-hidden group">
-                            <span class="text-xs text-gray-400">插槽二 (空)</span>
-                        </div>
+            <!-- 第二欄：📚 雙圖拼貼助手 (升級 6 欄位 + 支援拖曳排序 + 智慧格狀排版) -->
+        <div class="p-4 bg-indigo-50/50 rounded-lg border border-indigo-100 space-y-3 h-full flex flex-col justify-between">
+            <div>
+                <h3 class="text-sm font-bold text-indigo-800 flex items-center gap-1.5 border-b border-indigo-100 pb-1.5 mb-2">
+                    <span>📚 多圖拼貼助手 (最大 6 張 / 拖曳排序)</span>
+                </h3>
+                <p class="text-xs text-gray-500 mb-2">
+                    將結果存入插槽。系統會依張數自動進行對稱格狀拼貼（例：4張為 2×2，6張為 2×3 或 3×2 排列）。可拖曳方塊調換順序！
+                </p>
+                <!-- 6 個插槽，3x2 配置 -->
+                <div id="collage-slots-container" class="grid grid-cols-3 gap-2 mb-3">
+                        <!-- 插槽由 JS 動態生成 -->
                     </div>
+                </div>
+                <div class="space-y-2">
                     <div class="flex gap-2">
-                        <button id="btn-add-collage" class="flex-1 text-xs bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2.5 px-3 rounded transition shadow-sm disabled:opacity-40" disabled>
+                        <button id="btn-add-collage" class="flex-1 text-xs bg-indigo-600 text-white hover:bg-indigo-700 font-bold py-2.5 px-3 rounded transition shadow-sm disabled:bg-gray-200 disabled:text-gray-400 disabled:opacity-100" disabled>
                             📥 存入當前結果
                         </button>
                         <button id="btn-clear-collage" class="text-xs bg-white hover:bg-gray-100 text-gray-600 font-semibold py-2.5 px-3 rounded border border-gray-200 transition">
-                            🧹 清空
+                            清空
                         </button>
                     </div>
                     <div class="grid grid-cols-2 gap-2 pt-1 border-t border-indigo-100">
                         <button id="btn-collage-h" class="text-xs bg-white hover:bg-indigo-100 text-indigo-700 font-bold py-2 rounded border border-indigo-200 transition disabled:opacity-40" disabled>
-                            ↔️ 左右水平拼貼
+                            ↔️ 水平拼貼
                         </button>
                         <button id="btn-collage-v" class="text-xs bg-white hover:bg-indigo-100 text-indigo-700 font-bold py-2 rounded border border-indigo-200 transition disabled:opacity-40" disabled>
-                            ↕️ 上下垂直拼貼
+                            ↕️ 垂直拼貼
                         </button>
                     </div>
                 </div>
             </div>
 
+            <!-- 第三欄：2. 影像優化設定 -->
             <div class="space-y-4">
                 <h2 class="text-lg font-semibold border-b pb-2 flex justify-between items-center">
                     2. 影像優化設定
                     <div class="flex items-center space-x-3 text-sm font-normal">
                         <label class="flex items-center space-x-1.5 cursor-pointer bg-gray-50 px-2 py-1 rounded border hover:bg-gray-100 transition">
                             <input type="checkbox" id="remove-shadow" class="w-4 h-4 text-blue-600 rounded" checked="" disabled="">
-                            <span>啟用去陰影</span>
+                            <span class="text-xs font-medium">啟用去陰影</span>
                         </label>
                     </div>
                 </h2>
                 
-                <div id="advanced-settings" class="space-y-4 p-4 bg-blue-50/30 rounded-lg border border-blue-100">
-                    <div class="p-3 bg-white rounded-lg border border-blue-100 shadow-sm">
+                <div id="advanced-settings" class="space-y-3 p-3 bg-blue-50/30 rounded-lg border border-blue-100">
+                    <div class="p-2.5 bg-white rounded-lg border border-blue-100 shadow-sm">
                         <div class="flex justify-between items-center mb-1">
                             <span class="text-xs font-bold text-indigo-700">文字清晰化 (修復手震)</span>
                             <span id="sharpen-val" class="text-[10px] font-mono bg-gray-100 px-2 rounded border">關閉</span>
@@ -140,47 +148,48 @@
                     </div>
 
                     <div class="flex p-1 bg-gray-200 rounded-lg">
-                        <button id="mode-bw" class="flex-1 py-1.5 text-sm font-medium rounded-md bg-white shadow-sm text-gray-800 transition-all">黑白模式</button>
-                        <button id="mode-color" class="flex-1 py-1.5 text-sm font-medium rounded-md text-gray-500 hover:text-gray-700 transition-all">彩色模式</button>
+                        <button id="mode-bw" class="flex-1 py-1 text-xs font-medium rounded-md bg-white shadow-sm text-gray-800 transition-all">黑白模式</button>
+                        <button id="mode-color" class="flex-1 py-1 text-xs font-medium rounded-md text-gray-500 hover:text-gray-700 transition-all">彩色模式</button>
                     </div>
 
-                    <div id="bw-settings" class="space-y-3">
+                    <div id="bw-settings" class="space-y-2">
                         <div>
-                            <div class="flex justify-between text-xs mb-1">
+                            <div class="flex justify-between text-[11px] mb-0.5">
                                 <span class="text-gray-600">感應範圍 (Block Size)</span>
                                 <span id="block-size-val" class="font-bold text-blue-600">自動</span>
                             </div>
                             <input type="range" id="block-size" min="3" max="99" step="2" value="21" class="w-full" disabled="">
                         </div>
                         <div>
-                            <div class="flex justify-between text-xs mb-1">
+                            <div class="flex justify-between text-[11px] mb-0.5">
                                 <span class="text-gray-600">亮度補償 (C Value)</span>
                                 <span id="c-value-val" class="font-bold text-blue-600">自動</span>
                             </div>
                             <input type="range" id="c-value" min="0" max="30" step="1" value="10" class="w-full" disabled="">
                         </div>
-                        <button id="btn-reset-params" class="w-full text-xs bg-white hover:bg-gray-100 text-blue-600 font-bold py-2 rounded border border-blue-200 transition disabled:opacity-50" disabled="">
+                        <button id="btn-reset-params" class="w-full text-[11px] bg-white hover:bg-gray-100 text-blue-600 font-bold py-1.5 rounded border border-blue-200 transition disabled:opacity-50" disabled="">
                             🔄 恢復目前推薦數值
                         </button>
                     </div>
 
-                    <div id="color-settings" class="hidden text-xs text-gray-600 bg-yellow-50 p-3 rounded border border-yellow-200 text-center">
-                        🎨 彩色去陰影模式已啟用
-                    </div>
+                    <div id="color-settings" class="hidden text-xs text-gray-600 bg-yellow-50 p-2 rounded border border-yellow-200 text-center">
+                    🎨 彩色去陰影模式已啟用
                 </div>
             </div>
         </div>
+    </div>
 
-        <div class="text-center">
-            <button id="btn-process" class="bg-gradient-to-r from-blue-600 to-indigo-700 hover:from-blue-700 hover:to-indigo-800 text-white px-12 py-4 rounded-full text-lg font-bold shadow-xl transition transform hover:scale-105 disabled:opacity-50 flex items-center mx-auto" disabled="">
-                執行校正輸出 ✨
-            </button>
-        </div>
+    <!-- 執行大按鈕區 -->
+    <div class="text-center py-2" style="margin: 1rem 0;">
+        <button id="btn-process" class="bg-gradient-to-r from-blue-600 to-indigo-700 hover:from-blue-700 hover:to-indigo-800 text-white rounded-full font-bold shadow-xl transition transform hover:scale-105 disabled:opacity-50 flex items-center mx-auto" style="padding: 1.25rem 4rem; font-size: 1.25rem;" disabled="">
+            執行校正輸出 ✨
+        </button>
+    </div>
 
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
-            <!-- 修復 3: 保持外層無 overflow-hidden 且可視 -->
+    <!-- 工作畫布區 -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
             <div class="flex flex-col items-center border rounded-xl p-4 bg-white shadow-sm overflow-visible">
-                <h3 class="text-sm font-bold text-gray-500 mb-3 uppercase tracking-tighter">編輯區</h3>
+                <h3 class="text-sm font-bold text-gray-500 mb-3 uppercase tracking-tighter">編輯區 (拖曳藍點進行微調)</h3>
                 <div class="w-full flex justify-center items-center flex-1 bg-gray-200 rounded min-h-[400px] transition-colors overflow-visible" id="canvas-area-wrapper">
                     <div class="canvas-container" id="canvas-container">
                         <canvas id="editor-canvas"></canvas>
@@ -197,7 +206,6 @@
                         <button id="btn-download" class="bg-green-600 hover:bg-green-700 text-white px-4 py-1.5 rounded text-xs font-bold hidden shadow-sm transition">💾 下載 JPG</button>
                     </div>
                 </div>
-                <!-- 加上 Hover 提示與點擊放大功能 -->
                 <div id="result-container" class="w-full flex-1 flex justify-center items-center bg-gray-50 rounded border-2 border-dashed border-gray-200 relative overflow-hidden p-4 group cursor-zoom-in">
                     <p id="result-placeholder" class="text-gray-400 absolute text-center text-xs">等待處理中...</p>
                     <canvas id="result-canvas" class="max-w-full h-auto shadow-lg hidden transition-transform duration-300 group-hover:scale-[1.01]"></canvas>
@@ -231,7 +239,6 @@
         </div>
     </div>
 
-    <!-- 將原本的相對路徑改為 OpenCV CDN -->
     <script async src="https://docs.opencv.org/4.8.0/opencv.js" onload="onOpenCvReady()"></script>
 
     <script>
@@ -239,13 +246,11 @@
         let corners = []; 
         let scaleFactor = 1;
         let originalFileName = "document";
-        
-        // 拼貼暫存資料結構 (最多儲存2張 Base64)
-        let collageImages = [];
-
-        // 移除 PADDING，讓畫面最大化
+        let collageImages = []; 
         const PADDING = 0;
         let isBwMode = true; 
+
+        let draggedIndex = null;
 
         const statusToast = document.getElementById('status-toast');
         const statusText = document.getElementById('status-text');
@@ -268,7 +273,6 @@
         const overlayCanvas = document.getElementById('overlay-canvas');
         const resultCanvas = document.getElementById('result-canvas');
         const container = document.getElementById('canvas-container');
-        const canvasAreaWrapper = document.getElementById('canvas-area-wrapper');
         const btnProcess = document.getElementById('btn-process');
         const btnRotate90 = document.getElementById('btn-rotate-90');
         const btnRotate180 = document.getElementById('btn-rotate-180');
@@ -280,13 +284,11 @@
         const resultSection = document.getElementById('result-section');
         const resultHoverOverlay = document.getElementById('result-hover-overlay');
         
-        // 拼貼元件聯動
         const btnAddCollage = document.getElementById('btn-add-collage');
         const btnClearCollage = document.getElementById('btn-clear-collage');
         const btnCollageH = document.getElementById('btn-collage-h');
         const btnCollageV = document.getElementById('btn-collage-v');
 
-        // 滿版檢視相關元素
         const fullscreenModal = document.getElementById('fullscreen-modal');
         const fullscreenImg = document.getElementById('fullscreen-img');
         const btnCloseModal = document.getElementById('btn-close-modal');
@@ -311,16 +313,16 @@
 
         btnModeBw.addEventListener('click', () => {
             isBwMode = true;
-            btnModeBw.className = "flex-1 py-1.5 text-sm font-medium rounded-md bg-white shadow-sm text-gray-800";
-            btnModeColor.className = "flex-1 py-1.5 text-sm font-medium rounded-md text-gray-500 hover:text-gray-700";
+            btnModeBw.className = "flex-1 py-1 text-xs font-medium rounded-md bg-white shadow-sm text-gray-800";
+            btnModeColor.className = "flex-1 py-1 text-xs font-medium rounded-md text-gray-500 hover:text-gray-700";
             bwSettings.classList.remove('hidden');
             colorSettings.classList.add('hidden');
         });
 
         btnModeColor.addEventListener('click', () => {
             isBwMode = false;
-            btnModeColor.className = "flex-1 py-1.5 text-sm font-medium rounded-md bg-white shadow-sm text-gray-800";
-            btnModeBw.className = "flex-1 py-1.5 text-sm font-medium rounded-md text-gray-500 hover:text-gray-700";
+            btnModeColor.className = "flex-1 py-1 text-xs font-medium rounded-md bg-white shadow-sm text-gray-800";
+            btnModeBw.className = "flex-1 py-1 text-xs font-medium rounded-md text-gray-500 hover:text-gray-700";
             colorSettings.classList.remove('hidden');
             bwSettings.classList.add('hidden');
         });
@@ -329,6 +331,7 @@
             cv['onRuntimeInitialized'] = () => {
                 updateStatus("影像引擎準備就緒", "✅", "success");
                 uploadInput.disabled = false;
+                updateCollageUI(); 
             };
         }
 
@@ -339,7 +342,7 @@
             if (!file || !file.type.startsWith('image/')) return;
             originalFileName = file.name.replace(/\.[^/.]+$/, "");
             
-            updateStatus(`正在辨識文件邊界...`, "🔍");
+            updateStatus(`正在進行高對比邊緣分析...`, "🔍");
 
             const reader = new FileReader();
             reader.onload = (event) => {
@@ -350,10 +353,10 @@
                     let detected = adobeScanStyleDetect(srcMat);
                     if (detected) {
                         corners = detected;
-                        updateStatus(`自動辨識成功`, "✨", "success");
+                        updateStatus(`自動邊界辨識成功！`, "✨", "success");
                     } else {
                         resetCornersToFullBoundary();
-                        updateStatus(`請手動微調角落標籤`, "📍");
+                        updateStatus(`對比不足，已啟動預設矩形框架`, "📍");
                     }
                     autoUpdateParams(); 
                     renderEditor();
@@ -374,38 +377,60 @@
 
         uploadInput.addEventListener('change', (e) => handleFile(e.target.files[0]));
 
-        // --- 拖曳上傳功能 ---
-        canvasAreaWrapper.addEventListener('dragover', (e) => { 
+        let dragCounter = 0;
+        window.addEventListener('dragenter', (e) => { 
             e.preventDefault(); 
-            canvasAreaWrapper.classList.add('drag-over'); 
+            dragCounter++;
+            const overlay = document.getElementById('drop-zone-overlay');
+            overlay.classList.remove('hidden');
+            setTimeout(() => overlay.classList.add('opacity-100'), 10);
         });
-        canvasAreaWrapper.addEventListener('dragleave', (e) => { 
+        window.addEventListener('dragover', (e) => { 
             e.preventDefault(); 
-            canvasAreaWrapper.classList.remove('drag-over'); 
         });
-        canvasAreaWrapper.addEventListener('drop', (e) => { 
+        window.addEventListener('dragleave', (e) => { 
             e.preventDefault(); 
-            canvasAreaWrapper.classList.remove('drag-over'); 
+            dragCounter--;
+            if (dragCounter === 0) {
+                const overlay = document.getElementById('drop-zone-overlay');
+                overlay.classList.remove('opacity-100');
+                setTimeout(() => overlay.classList.add('hidden'), 200);
+            }
+        });
+        window.addEventListener('drop', (e) => { 
+            e.preventDefault(); 
+            dragCounter = 0;
+            const overlay = document.getElementById('drop-zone-overlay');
+            overlay.classList.remove('opacity-100');
+            overlay.classList.add('hidden');
             if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
                 handleFile(e.dataTransfer.files[0]);
             }
         });
 
+        // 縮減 fallback 的矩形為內縮 5%，避免直接死鎖在 0 座標導致拖曳困難
         function resetCornersToFullBoundary() {
             if (!srcMat) return;
             const w = srcMat.cols; const h = srcMat.rows;
-            corners = [{x: 0, y: 0, id: 0}, {x: w, y: 0, id: 1}, {x: w, y: h, id: 2}, {x: 0, y: h, id: 3}];
+            const insetW = w * 0.05;
+            const insetH = h * 0.05;
+            corners = [
+                {x: insetW, y: insetH, id: 0}, 
+                {x: w - insetW, y: insetH, id: 1}, 
+                {x: w - insetW, y: h - insetH, id: 2}, 
+                {x: insetW, y: h - insetH, id: 3}
+            ];
         }
 
         btnResetCorners.addEventListener('click', () => {
             resetCornersToFullBoundary();
             autoUpdateParams();
             renderEditor();
-            updateStatus("已重置為全圖範圍", "🔄");
+            updateStatus("已將定位端點重置", "🔄");
         });
 
         // ==========================================
-        // 核心：專門對付「施工日報表」的表格干擾
+        // 核心進化：混合式邊緣偵測 (對抗低對比黃色板夾與複雜桌面)
         // ==========================================
         function adobeScanStyleDetect(src) {
             try {
@@ -420,20 +445,36 @@
                 let gray = new cv.Mat();
                 cv.cvtColor(small, gray, cv.COLOR_RGBA2GRAY, 0);
 
-                // 1. 雙邊濾波 (Bilateral Filter)
+                // 1. 高斯模糊降噪
                 let blurred = new cv.Mat();
-                cv.bilateralFilter(gray, blurred, 9, 75, 75);
+                cv.GaussianBlur(gray, blurred, new cv.Size(5, 5), 0, 0, cv.BORDER_DEFAULT);
 
-                // 2. Canny 邊緣偵測
-                let edged = new cv.Mat();
-                cv.Canny(blurred, edged, 50, 150);
+                // 2. 混合邊緣抓取法 A: 動態 Canny (針對普通紙張邊緣)
+                let meanMat = new cv.Mat(); let stdMat = new cv.Mat();
+                cv.meanStdDev(blurred, meanMat, stdMat);
+                let meanVal = meanMat.data64F[0];
+                let lower = Math.max(0, meanVal * 0.6);
+                let upper = Math.min(255, meanVal * 1.3);
+                meanMat.delete(); stdMat.delete();
 
-                // 3. 形態學閉合運算
-                let kernel = cv.getStructuringElement(cv.MORPH_RECT, new cv.Size(5, 5));
+                let cannyEdges = new cv.Mat();
+                cv.Canny(blurred, cannyEdges, lower, upper);
+
+                // 3. 混合邊緣抓取法 B: 自適應二值化邊緣 (專殺黃色夾板等顏色相近的邊緣)
+                let threshEdges = new cv.Mat();
+                cv.adaptiveThreshold(blurred, threshEdges, 255, cv.ADAPTIVE_THRESH_GAUSSIAN_C, cv.THRESH_BINARY_INV, 15, 4);
+
+                // 4. 合併兩種特徵線條
+                let mergedEdges = new cv.Mat();
+                cv.bitwise_or(cannyEdges, threshEdges, mergedEdges);
+
+                // 5. 強力形態學運算：膨脹後侵蝕 (Dilate -> Erode)，接合斷裂的邊框線條
                 let morph = new cv.Mat();
-                cv.morphologyEx(edged, morph, cv.MORPH_CLOSE, kernel);
+                let kernel = cv.getStructuringElement(cv.MORPH_RECT, new cv.Size(7, 7)); // 較大的 Kernel 助於接合
+                cv.dilate(mergedEdges, morph, kernel, new cv.Point(-1, -1), 1);
+                cv.erode(morph, morph, kernel, new cv.Point(-1, -1), 1);
 
-                // 4. 尋找輪廓
+                // 6. 尋找輪廓
                 let contours = new cv.MatVector();
                 let hierarchy = new cv.Mat();
                 cv.findContours(morph, contours, hierarchy, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE);
@@ -448,19 +489,21 @@
 
                 let bestPts = null;
 
-                // 5. 迭代找尋四個頂點的紙張
                 for (let i = 0; i < Math.min(5, cntsArray.length); i++) {
                     let cnt = cntsArray[i].cnt;
                     let area = cntsArray[i].area;
-                    
+                    // 濾除太小的雜訊 (小於畫面 5%)
                     if (area < (width * height * 0.05)) continue;
 
-                    let peri = cv.arcLength(cnt, true);
-                    let approx = new cv.Mat();
-                    
-                    cv.approxPolyDP(cnt, approx, 0.025 * peri, true);
+                    // 凸包運算以無視紙張的微小破損或金屬夾凹陷
+                    let hull = new cv.Mat();
+                    cv.convexHull(cnt, hull, false, true);
 
-                    if (approx.rows === 4 && cv.isContourConvex(approx)) {
+                    let peri = cv.arcLength(hull, true);
+                    let approx = new cv.Mat();
+                    cv.approxPolyDP(hull, approx, 0.025 * peri, true);
+
+                    if (approx.rows === 4) {
                         bestPts = [];
                         for (let j = 0; j < 4; j++) {
                             bestPts.push({ 
@@ -468,19 +511,97 @@
                                 y: approx.data32S[j*2+1] * ratio 
                             });
                         }
-                        approx.delete();
+                        approx.delete(); hull.delete();
+                        break;
+                    } 
+                    // 3角推算平行四邊形第 4 角
+                    else if (approx.rows === 3) {
+                        let p0 = { x: approx.data32S[0], y: approx.data32S[1] };
+                        let p1 = { x: approx.data32S[2], y: approx.data32S[3] };
+                        let p2 = { x: approx.data32S[4], y: approx.data32S[5] };
+
+                        let d01 = Math.hypot(p0.x - p1.x, p0.y - p1.y);
+                        let d12 = Math.hypot(p1.x - p2.x, p1.y - p2.y);
+                        let d20 = Math.hypot(p2.x - p0.x, p2.y - p0.y);
+
+                        let A, B, C;
+                        if (d01 >= d12 && d01 >= d20) { B = p2; A = p0; C = p1; } 
+                        else if (d12 >= d01 && d12 >= d20) { B = p0; A = p1; C = p2; } 
+                        else { B = p1; A = p2; C = p0; }
+
+                        let Dx = A.x + C.x - B.x;
+                        let Dy = A.y + C.y - B.y;
+
+                        bestPts = [
+                            { x: A.x * ratio, y: A.y * ratio },
+                            { x: B.x * ratio, y: B.y * ratio },
+                            { x: C.x * ratio, y: C.y * ratio },
+                            { x: Dx * ratio, y: Dy * ratio }
+                        ];
+                        approx.delete(); hull.delete();
                         break;
                     }
-                    approx.delete();
+                    approx.delete(); hull.delete();
                 }
 
-                small.delete(); gray.delete(); blurred.delete(); edged.delete(); 
-                kernel.delete(); morph.delete(); contours.delete(); hierarchy.delete();
+                small.delete(); gray.delete(); blurred.delete(); cannyEdges.delete(); 
+                threshEdges.delete(); mergedEdges.delete(); kernel.delete(); 
+                morph.delete(); contours.delete(); hierarchy.delete();
+
+                if (!bestPts && cntsArray.length > 0) {
+                    let largestCnt = cntsArray[0].cnt;
+                    // 如果最大輪廓仍然非常大，才做物理端點強制吸附
+                    if (cntsArray[0].area > (width * height * 0.15)) {
+                        let hull = new cv.Mat();
+                        cv.convexHull(largestCnt, hull, false, true);
+                        
+                        let points = [];
+                        for (let j = 0; j < hull.rows; j++) {
+                            points.push({ 
+                                x: hull.data32S[j*2] * ratio, 
+                                y: hull.data32S[j*2+1] * ratio 
+                            });
+                        }
+                        hull.delete();
+
+                        if (points.length > 0) {
+                            const wReal = src.cols;
+                            const hReal = src.rows;
+                            
+                            const physicalCorners = [
+                                { x: 0, y: 0 },         
+                                { x: wReal, y: 0 },     
+                                { x: wReal, y: hReal }, 
+                                { x: 0, y: hReal }      
+                            ];
+
+                            bestPts = [];
+                            for (let k = 0; k < 4; k++) {
+                                let target = physicalCorners[k];
+                                let closestPoint = null;
+                                let minDist = Infinity;
+
+                                for (let p of points) {
+                                    let dist = Math.hypot(p.x - target.x, p.y - target.y);
+                                    if (dist < minDist) {
+                                        minDist = dist;
+                                        closestPoint = p;
+                                    }
+                                }
+                                if (minDist > Math.max(wReal, hReal) * 0.4) {
+                                    bestPts.push({ x: target.x, y: target.y });
+                                } else {
+                                    bestPts.push({ x: closestPoint.x, y: closestPoint.y });
+                                }
+                            }
+                        }
+                    }
+                }
 
                 if (bestPts) return orderPts(bestPts);
                 return null;
             } catch (e) { 
-                console.error("邊緣偵測發生錯誤:", e);
+                console.error("智慧邊緣分析異常:", e);
                 return null; 
             }
         }
@@ -488,7 +609,6 @@
         function orderPts(pts) {
             let cx = pts.reduce((sum, p) => sum + p.x, 0) / 4;
             let cy = pts.reduce((sum, p) => sum + p.y, 0) / 4;
-
             let sortedPts = pts.map(p => {
                 return {
                     x: p.x,
@@ -496,9 +616,7 @@
                     angle: Math.atan2(p.y - cy, p.x - cx) * 180 / Math.PI
                 };
             });
-
             sortedPts.sort((a, b) => a.angle - b.angle);
-
             return [
                 { x: sortedPts[0].x, y: sortedPts[0].y, id: 0 },
                 { x: sortedPts[1].x, y: sortedPts[1].y, id: 1 },
@@ -508,44 +626,39 @@
         }
 
         function autoUpdateParams() {
-            if (!srcMat || corners.length < 4) return;
-            let minX = Math.max(0, Math.min(...corners.map(p => p.x)));
-            let maxX = Math.min(srcMat.cols - 1, Math.max(...corners.map(p => p.x)));
-            let minY = Math.max(0, Math.min(...corners.map(p => p.y)));
-            let maxY = Math.min(srcMat.rows - 1, Math.max(...corners.map(p => p.y)));
-            let roiW = maxX - minX; let roiH = maxY - minY;
-            if (roiW <= 0 || roiH <= 0) return;
-            
-            let roi = srcMat.roi(new cv.Rect(minX, minY, roiW, roiH));
-            let gray = new cv.Mat();
-            cv.cvtColor(roi, gray, cv.COLOR_RGBA2GRAY, 0);
-            let std = new cv.Mat(); let mean = new cv.Mat();
-            cv.meanStdDev(gray, mean, std);
-            
-            let sd = std.data64F[0];
-            let m = mean.data64F[0];
+        if (!srcMat || corners.length < 4) return;
+        let minX = Math.max(0, Math.min(...corners.map(p => p.x)));
+        let maxX = Math.min(srcMat.cols - 1, Math.max(...corners.map(p => p.x)));
+        let minY = Math.max(0, Math.min(...corners.map(p => p.y)));
+        let maxY = Math.min(srcMat.rows - 1, Math.max(...corners.map(p => p.y)));
+        let roiW = maxX - minX; let roiH = maxY - minY;
+        if (roiW <= 0 || roiH <= 0) return;
+        
+        let roi = srcMat.roi(new cv.Rect(minX, minY, roiW, roiH));
+        let gray = new cv.Mat();
+        cv.cvtColor(roi, gray, cv.COLOR_RGBA2GRAY, 0);
+        let std = new cv.Mat(); let mean = new cv.Mat();
+        cv.meanStdDev(gray, mean, std);
+        
+        let sd = std.data64F[0];
+        let m = mean.data64F[0];
 
-            let recBlockSize = Math.max(21, Math.floor(Math.max(roi.cols, roi.rows) * 0.02));
-            if (recBlockSize % 2 === 0) recBlockSize++;
-            
-            let recCValue;
-            if (sd > 50) recCValue = 15;
-            else if (sd > 35) recCValue = 12;
-            else if (sd > 20) recCValue = 9;
-            else recCValue = 6;
+        let recBlockSize = Math.max(21, Math.floor(Math.max(roi.cols, roi.rows) * 0.02));
+        if (recBlockSize % 2 === 0) recBlockSize++;
+        
+        let recCValue = sd > 50 ? 15 : sd > 35 ? 12 : sd > 20 ? 9 : 6;
+        if (m > 200 && recCValue > 8) recCValue -= 2;
+        if (m < 100) recCValue += 2;
 
-            if (m > 200 && recCValue > 8) recCValue -= 2;
-            if (m < 100) recCValue += 2;
+        blockSizeInput.value = recBlockSize;
+        cValueInput.value = recCValue;
+        blockSizeVal.textContent = recBlockSize + " (自動)";
+        cValueVal.textContent = recCValue + " (自動)";
+        
+        roi.delete(); gray.delete(); mean.delete(); std.delete();
+    }
 
-            blockSizeInput.value = recBlockSize;
-            cValueInput.value = recCValue;
-            blockSizeVal.textContent = recBlockSize + " (自動)";
-            cValueVal.textContent = recCValue + " (自動)";
-            
-            roi.delete(); gray.delete(); mean.delete(); std.delete();
-        }
-
-        function renderEditor() {
+    function renderEditor() {
             if (!srcMat) return;
             const wrap = document.getElementById('canvas-area-wrapper');
             scaleFactor = Math.min(1.0, (wrap.clientWidth - 40) / srcMat.cols);
@@ -611,9 +724,9 @@
             let x = cx - rect.left; 
             let y = cy - rect.top;
 
-            // 放寬限制端點拖曳範圍，最大超出邊緣為畫布本身寬高的 100% 緩衝 (適用於極端歪斜)
-            const bufferX = rect.width * 1.0;
-            const bufferY = rect.height * 1.0;
+            // 支援端點拉到影像外
+            const bufferX = rect.width * 1.5;
+            const bufferY = rect.height * 1.5;
             x = Math.max(-bufferX, Math.min(x, rect.width + bufferX));
             y = Math.max(-bufferY, Math.min(y, rect.height + bufferY));
 
@@ -624,7 +737,6 @@
             corners[id].y = (y - PADDING) / scaleFactor;
             drawOverlay();
 
-            // 更新放大鏡
             const magContainer = document.getElementById('magnifier-container');
             const magCanvas = document.getElementById('magnifier-canvas');
             if (magCanvas) {
@@ -653,40 +765,37 @@
         }
 
         function applySharpen(src, level) {
-            if (level === 0) return src.clone();
-            let dst = new cv.Mat();
-            let kernel;
-            if (level === 1) {
-                kernel = cv.matFromArray(3, 3, cv.CV_32F, [0, -0.25, 0, -0.25, 2, -0.25, 0, -0.25, 0]);
-            } else if (level === 2) {
-                kernel = cv.matFromArray(3, 3, cv.CV_32F, [0, -0.5, 0, -0.5, 3, -0.5, 0, -0.5, 0]);
-            } else if (level === 3) {
-                kernel = cv.matFromArray(3, 3, cv.CV_32F, [0, -1, 0, -1, 5, -1, 0, -1, 0]);
-            } else {
-                kernel = cv.matFromArray(3, 3, cv.CV_32F, [-1, -1, -1, -1, 9, -1, -1, -1, -1]);
-            }
-            cv.filter2D(src, dst, -1, kernel);
-            kernel.delete();
-            return dst;
-        }
+        if (level === 0) return src.clone();
+        let dst = new cv.Mat();
+        let kernel;
+        if (level === 1) kernel = cv.matFromArray(3, 3, cv.CV_32F, [0, -0.25, 0, -0.25, 2, -0.25, 0, -0.25, 0]);
+        else if (level === 2) kernel = cv.matFromArray(3, 3, cv.CV_32F, [0, -0.5, 0, -0.5, 3, -0.5, 0, -0.5, 0]);
+        else if (level === 3) kernel = cv.matFromArray(3, 3, cv.CV_32F, [0, -1, 0, -1, 5, -1, 0, -1, 0]);
+        else kernel = cv.matFromArray(3, 3, cv.CV_32F, [-1, -1, -1, -1, 9, -1, -1, -1, -1]);
+        cv.filter2D(src, dst, -1, kernel);
+        kernel.delete();
+        return dst;
+    }
 
-        function enhanceColorDocument(src) {
-            let bg = new cv.Mat();
-            let kSize = Math.floor(Math.max(src.cols, src.rows) / 35);
-            if (kSize % 2 === 0) kSize++;
-            if (kSize < 21) kSize = 21;
-            cv.blur(src, bg, new cv.Size(kSize, kSize));
-            
-            let dst = new cv.Mat();
-            cv.divide(src, bg, dst, 255.0, -1);
-            
-            bg.delete();
-            return dst;
-        }
+    // ==========================================
+    // 核心進化：還原 v5.7 穩定快速的陰影濾除引擎
+    // ==========================================
+    function enhanceColorDocument(src) {
+        let bg = new cv.Mat();
+        let kSize = Math.floor(Math.max(src.cols, src.rows) / 35);
+        if (kSize % 2 === 0) kSize++;
+        if (kSize < 21) kSize = 21;
+        
+        cv.blur(src, bg, new cv.Size(kSize, kSize));
+        let dst = new cv.Mat();
+        cv.divide(src, bg, dst, 255.0, -1);
+        bg.delete();
+        return dst;
+    }
 
-        btnProcess.addEventListener('click', () => {
+    btnProcess.addEventListener('click', () => {
             if (!srcMat) return;
-            updateStatus("正在進行去黑邊校正與影像優化...", "⏳");
+            updateStatus("正在還原透視與大面積陰影去除...", "⏳");
             
             setTimeout(() => {
                 let tl = corners[0]; let tr = corners[1]; let br = corners[2]; let bl = corners[3];
@@ -697,7 +806,17 @@
                 let dT = cv.matFromArray(4, 1, cv.CV_32FC2, [0, 0, w, 0, w, h, 0, h]);
                 let m = cv.getPerspectiveTransform(sT, dT);
                 let warped = new cv.Mat();
-                cv.warpPerspective(srcMat, warped, m, new cv.Size(w, h));
+
+                // 遺失邊界改為純白色填充
+                cv.warpPerspective(
+                    srcMat, 
+                    warped, 
+                    m, 
+                    new cv.Size(w, h), 
+                    cv.INTER_LINEAR, 
+                    cv.BORDER_CONSTANT, 
+                    new cv.Scalar(255, 255, 255, 255)
+                );
                 
                 let cropX = Math.max(12, Math.floor(w * 0.01));
                 let cropY = Math.max(12, Math.floor(h * 0.01));
@@ -706,17 +825,10 @@
                 
                 let rect = new cv.Rect(cropX, cropY, cropW, cropH);
                 let cropped = warped.roi(rect);
-                
                 let rgbCropped = new cv.Mat();
                 cv.cvtColor(cropped, rgbCropped, cv.COLOR_RGBA2RGB, 0);
 
-                let enhancedTemp = null;
-                if (removeShadowCheck.checked) {
-                    enhancedTemp = enhanceColorDocument(rgbCropped);
-                } else {
-                    enhancedTemp = rgbCropped.clone();
-                }
-                
+                let enhancedTemp = removeShadowCheck.checked ? enhanceColorDocument(rgbCropped) : rgbCropped.clone();
                 let sL = parseInt(sharpenLevel.value);
                 let sharpened = applySharpen(enhancedTemp, sL);
                 
@@ -743,11 +855,8 @@
                 btnDownload.classList.remove('hidden');
                 btnPrint.classList.remove('hidden');
                 
-                // 處理完成後允許存入拼貼暫存
                 btnAddCollage.disabled = false;
-
-                updateStatus("校正完成，邊緣已修整", "✅", "success");
-
+                updateStatus("校正完成，金屬夾與漸層陰影已優化", "✅", "success");
                 resultSection.scrollIntoView({ behavior: 'smooth' });
                 
                 sT.delete(); dT.delete(); m.delete(); warped.delete(); cropped.delete(); 
@@ -757,14 +866,11 @@
 
         document.getElementById('result-container').addEventListener('click', () => {
             if (resultCanvas.classList.contains('hidden')) return;
-            // 點擊放大使用高畫質 JPG 格式
             fullscreenImg.src = resultCanvas.toDataURL('image/jpeg', 0.95);
             fullscreenModal.classList.remove('hidden');
             fullscreenImg.classList.remove('modal-exit-active');
             fullscreenImg.classList.add('modal-enter-active');
-            setTimeout(() => {
-                fullscreenImg.classList.remove('modal-enter-active', 'modal-enter');
-            }, 200);
+            setTimeout(() => { fullscreenImg.classList.remove('modal-enter-active', 'modal-enter'); }, 200);
         });
 
         const closeFullscreen = () => {
@@ -777,12 +883,9 @@
 
         btnCloseModal.addEventListener('click', closeFullscreen);
         fullscreenModal.addEventListener('click', (e) => {
-            if (e.target === fullscreenModal || e.target === fullscreenImg) {
-                closeFullscreen();
-            }
+            if (e.target === fullscreenModal || e.target === fullscreenImg) closeFullscreen();
         });
 
-        // 修復 3: 改為 JPG 格式儲存下載
         btnDownload.addEventListener('click', () => { 
             const l = document.createElement('a'); 
             l.download = `${originalFileName}_校正.jpg`; 
@@ -790,25 +893,16 @@
             l.click(); 
         });
 
-        // 修復 1: 原生列印相容性更新
         btnPrint.addEventListener('click', () => {
             const u = resultCanvas.toDataURL('image/jpeg', 1.0);
-            
-            // 動態創建列印區域
             let printArea = document.getElementById('print-area');
             if (!printArea) {
                 printArea = document.createElement('div');
                 printArea.id = 'print-area';
                 document.body.appendChild(printArea);
             }
-            
-            // 將圖片塞入列印區域
             printArea.innerHTML = `<img src="${u}" />`;
-            
-            // 給予 DOM 一點渲染時間後觸發列印 (依靠 @media print 隱藏原始介面)
-            setTimeout(() => {
-                window.print();
-            }, 100);
+            setTimeout(() => { window.print(); }, 100);
         });
 
         function rotateImage(mode) {
@@ -820,8 +914,7 @@
                 corners = orderPts(corners.map(p => ({ x: oldH - p.y, y: p.x, id: p.id })));
             } else if (mode === 180) {
                 cv.rotate(srcMat, dst, cv.ROTATE_180);
-                let oldW = srcMat.cols;
-                let oldH = srcMat.rows;
+                let oldW = srcMat.cols; let oldH = srcMat.rows;
                 corners = orderPts(corners.map(p => ({ x: oldW - p.x, y: oldH - p.y, id: p.id })));
             }
             srcMat.delete(); srcMat = dst;
@@ -830,37 +923,59 @@
 
         btnRotate90.addEventListener('click', () => rotateImage(90));
         btnRotate180.addEventListener('click', () => rotateImage(180));
-
         btnResetParams.addEventListener('click', () => {
             if (!srcMat) return;
             autoUpdateParams();
-            updateStatus("已恢復為此區域的最佳推薦參數", "🔄", "success");
+            updateStatus("已還原至最佳推薦參數", "🔄", "success");
         });
 
         // ==========================================
-        // 核心新增：雙圖拼貼助手邏輯
+        // 多功能插槽與 HTML5 拖曳排序
         // ==========================================
+        const slotsContainer = document.getElementById('collage-slots-container');
+
         function updateCollageUI() {
-            for (let i = 0; i < 2; i++) {
-                const slot = document.getElementById(`slot-${i}`);
+            slotsContainer.innerHTML = '';
+            
+            for (let i = 0; i < 6; i++) {
+                const slot = document.createElement('div');
+                slot.id = `slot-${i}`;
+                slot.dataset.index = i;
+                slot.className = "relative overflow-hidden group transition-all duration-200 border rounded-lg h-20 flex flex-col items-center justify-center bg-white";
+                
                 if (collageImages[i]) {
+                    slot.classList.add('border-solid', 'border-indigo-500', 'cursor-grab');
+                    slot.draggable = true;
+                    
                     slot.innerHTML = `
-                        <img src="${collageImages[i]}" class="w-full h-full object-contain p-1" />
+                        <img src="${collageImages[i]}" class="w-full h-full object-contain p-1 pointer-events-none" />
+                        <span class="absolute bottom-1 left-1 bg-indigo-600 text-[9px] text-white px-1.5 rounded-full font-bold">${i + 1}</span>
                         <button onclick="removeCollageItem(${i}, event)" class="absolute top-1 right-1 bg-red-500 hover:bg-red-600 text-white rounded-full p-1 shadow-md transition-all z-10">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"></path></svg>
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-2.5 w-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"></path></svg>
                         </button>
                     `;
-                    slot.classList.remove('border-dashed', 'border-indigo-200');
-                    slot.classList.add('border-solid', 'border-indigo-500');
+
+                    slot.addEventListener('dragstart', handleDragStart);
+                    slot.addEventListener('dragover', handleDragOver);
+                    slot.addEventListener('dragenter', handleDragEnter);
+                    slot.addEventListener('dragleave', handleDragLeave);
+                    slot.addEventListener('drop', handleDrop);
+                    slot.addEventListener('dragend', handleDragEnd);
                 } else {
-                    slot.innerHTML = `<span class="text-xs text-gray-400">插槽 ${i === 0 ? '一' : '二'} (空)</span>`;
-                    slot.classList.remove('border-solid', 'border-indigo-500');
                     slot.classList.add('border-dashed', 'border-indigo-200');
+                    slot.innerHTML = `<span class="text-[10px] text-gray-400">插槽 ${i + 1}</span>`;
+                    
+                    slot.addEventListener('dragover', handleDragOver);
+                    slot.addEventListener('dragenter', handleDragEnter);
+                    slot.addEventListener('dragleave', handleDragLeave);
+                    slot.addEventListener('drop', handleDrop);
                 }
+                
+                slotsContainer.appendChild(slot);
             }
 
-            // 只有當暫存集滿兩張圖時，才啟用拼貼按鈕
-            if (collageImages.length >= 2) {
+            const filledCount = collageImages.filter(Boolean).length;
+            if (filledCount >= 2) {
                 btnCollageH.disabled = false;
                 btnCollageV.disabled = false;
             } else {
@@ -869,94 +984,171 @@
             }
         }
 
-        // 存入當前結果至拼貼插槽 (採用 JPG 格式)
+        function handleDragStart(e) {
+            draggedIndex = parseInt(this.dataset.index);
+            e.dataTransfer.effectAllowed = 'move';
+            this.style.opacity = '0.5';
+        }
+
+        function handleDragOver(e) {
+            e.preventDefault();
+            return false;
+        }
+
+        function handleDragEnter(e) {
+            this.classList.add('drag-over-slot');
+        }
+
+        function handleDragLeave(e) {
+            this.classList.remove('drag-over-slot');
+        }
+
+        function handleDrop(e) {
+            e.preventDefault();
+            this.classList.remove('drag-over-slot');
+            const targetIndex = parseInt(this.dataset.index);
+
+            if (draggedIndex !== null && draggedIndex !== targetIndex) {
+                const temp = collageImages[draggedIndex];
+                collageImages[draggedIndex] = collageImages[targetIndex];
+                collageImages[targetIndex] = temp;
+                
+                collageImages = collageImages.filter(Boolean);
+                
+                updateCollageUI();
+                updateStatus("已調整圖片排列順序", "🔄", "success");
+            }
+        }
+
+        function handleDragEnd(e) {
+            this.style.opacity = '1';
+            draggedIndex = null;
+            document.querySelectorAll('#collage-slots-container > div').forEach(el => {
+                el.classList.remove('drag-over-slot');
+            });
+        }
+
         btnAddCollage.addEventListener('click', () => {
             if (resultCanvas.classList.contains('hidden')) {
-                updateStatus("請先校正並生成影像結果！", "⚠️");
-                return;
+                updateStatus("請先校正並生成影像結果！", "⚠️"); return;
             }
-
-            if (collageImages.length >= 2) {
-                updateStatus("拼貼槽已滿！請先清空或刪除其中一張。", "⚠️");
-                return;
+            if (collageImages.length >= 6) {
+                updateStatus("拼貼槽已達上限 6 張！", "⚠️"); return;
             }
-
             const dataUrl = resultCanvas.toDataURL('image/jpeg', 0.95);
             collageImages.push(dataUrl);
             updateCollageUI();
-            updateStatus(`已將當前結果存入插槽 ${collageImages.length}`, "📥", "success");
+            updateStatus(`已將校正結果加入插槽 ${collageImages.length}`, "📥", "success");
         });
 
-        // 刪除特定插槽圖片
         window.removeCollageItem = function(index, event) {
             if (event) event.stopPropagation();
             collageImages.splice(index, 1);
             updateCollageUI();
-            updateStatus("已移除該插槽圖片", "🧹");
+            updateStatus("已移除該圖片", "🧹");
         }
 
-        // 清空暫存
         btnClearCollage.addEventListener('click', () => {
-            collageImages = [];
+            collageImages = []; 
             updateCollageUI();
-            updateStatus("已清空拼貼暫存", "🧹");
+            updateStatus("已清空所有插槽", "🧹");
         });
 
-        // 執行拼貼合併 (Stitching)
+        // ==========================================
+        // 核心：格狀自動對稱排版合成引擎 (Grid Collage)
+        // ==========================================
         function makeCollage(direction) {
-            if (collageImages.length < 2) return;
-            updateStatus("正在合成文件拼貼中...", "⏳");
+            const activeImages = collageImages.filter(Boolean);
+            if (activeImages.length < 2) return;
+            
+            updateStatus(`正在計算與合成 ${activeImages.length} 份文件...`, "⏳");
 
-            const img1 = new Image();
-            const img2 = new Image();
+            const loadedImages = [];
+            let loadedCount = 0;
 
-            img1.onload = () => {
-                img2.onload = () => {
-                    const ctx = resultCanvas.getContext('2d');
-                    const w1 = img1.width;
-                    const h1 = img1.height;
-                    const w2 = img2.width;
-                    const h2 = img2.height;
+            activeImages.forEach((src, idx) => {
+                const img = new Image();
+                img.onload = () => {
+                    loadedImages[idx] = img;
+                    loadedCount++;
+                    if (loadedCount === activeImages.length) {
+                        renderGridCollage(loadedImages, direction);
+                    }
+                };
+                img.src = src;
+            });
+        }
 
-                    if (direction === 'horizontal') {
-                        // 左右水平拼貼：以第一張圖片的高度為基準，等比例縮放第二張
-                        const scale2 = h1 / h2;
-                        const newW2 = w2 * scale2;
+        function renderGridCollage(images, direction) {
+            const numImages = images.length;
+            let rows = 1;
+            let cols = numImages;
 
-                        resultCanvas.width = w1 + newW2;
-                        resultCanvas.height = h1;
+            if (numImages === 2) {
+                if (direction === 'horizontal') { rows = 1; cols = 2; } 
+                else { rows = 2; cols = 1; }                            
+            } 
+            else if (numImages === 3) {
+                if (direction === 'horizontal') { rows = 1; cols = 3; } 
+                else { rows = 3; cols = 1; }                            
+            } 
+            else if (numImages === 4) {
+                rows = 2; cols = 2;
+            } 
+            else if (numImages === 5 || numImages === 6) {
+                if (direction === 'horizontal') { rows = 2; cols = 3; } 
+                else { rows = 3; cols = 2; }                            
+            }
 
-                        ctx.fillStyle = "#ffffff";
-                        ctx.fillRect(0, 0, resultCanvas.width, resultCanvas.height);
-                        ctx.drawImage(img1, 0, 0, w1, h1);
-                        ctx.drawImage(img2, w1, 0, newW2, h1);
+            const standardW = images[0].width;
+            const standardH = images[0].height;
+            const finalW = standardW * cols;
+            const finalH = standardH * rows;
+
+            resultCanvas.width = finalW;
+            resultCanvas.height = finalH;
+
+            const ctx = resultCanvas.getContext('2d');
+            ctx.fillStyle = "#ffffff";
+            ctx.fillRect(0, 0, finalW, finalH);
+
+            for (let r = 0; r < rows; r++) {
+                for (let c = 0; c < cols; c++) {
+                    const imgIndex = r * cols + c;
+                    if (imgIndex >= numImages) continue;
+
+                    const img = images[imgIndex];
+                    const cellX = c * standardW;
+                    const cellY = r * standardH;
+
+                    const imgRatio = img.width / img.height;
+                    const cellRatio = standardW / standardH;
+                    let targetW, targetH, targetX, targetY;
+
+                    if (imgRatio > cellRatio) {
+                        targetW = standardW;
+                        targetH = standardW / imgRatio;
+                        targetX = cellX;
+                        targetY = cellY + (standardH - targetH) / 2;
                     } else {
-                        // 上下垂直拼貼：以第一張圖片的寬度為基準，等比例縮放第二張
-                        const scale2 = w1 / w2;
-                        const newH2 = h2 * scale2;
-
-                        resultCanvas.width = w1;
-                        resultCanvas.height = h1 + newH2;
-
-                        ctx.fillStyle = "#ffffff";
-                        ctx.fillRect(0, 0, resultCanvas.width, resultCanvas.height);
-                        ctx.drawImage(img1, 0, 0, w1, h1);
-                        ctx.drawImage(img2, 0, h1, w1, newH2);
+                        targetH = standardH;
+                        targetW = standardH * imgRatio;
+                        targetY = cellY;
+                        targetX = cellX + (standardW - targetW) / 2;
                     }
 
-                    // 重新將結果顯現在預覽區，並提供下載/列印
-                    resultCanvas.classList.remove('hidden');
-                    resultPlaceholder.classList.add('hidden');
-                    resultHoverOverlay.classList.remove('hidden');
-                    btnDownload.classList.remove('hidden');
-                    btnPrint.classList.remove('hidden');
+                    ctx.drawImage(img, targetX, targetY, targetW, targetH);
+                }
+            }
 
-                    updateStatus("雙圖二合一拼貼成功！", "✨", "success");
-                    resultSection.scrollIntoView({ behavior: 'smooth' });
-                };
-                img2.src = collageImages[1];
-            };
-            img1.src = collageImages[0];
+            resultCanvas.classList.remove('hidden');
+            resultPlaceholder.classList.add('hidden');
+            resultHoverOverlay.classList.remove('hidden');
+            btnDownload.classList.remove('hidden');
+            btnPrint.classList.remove('hidden');
+
+            updateStatus(`${numImages} 張文件 (${cols}x${rows}) 格狀拼貼合成完畢！`, "✨", "success");
+            resultSection.scrollIntoView({ behavior: 'smooth' });
         }
 
         btnCollageH.addEventListener('click', () => makeCollage('horizontal'));
