@@ -413,8 +413,9 @@
             return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
         }
 
+        // 偵測是否為不明或空值
         function isUnknownValue(value) {
-            return value === '' || value === 0 || value === '0' || value === undefined || value === null || value === '不明';
+            return value === '' || value === 0 || value === '0' || value === undefined || value === null || value === '不明' || value === '0';
         }
 
         function getDisplayValue(value) {
@@ -725,10 +726,20 @@
                 noResultsMessage.classList.add('hidden'); mapNoResults.classList.add('hidden');
             }
 
-            const cond = (i) => ({ electric: !es || getDisplayValue(i['電務段']) === es, station: !st || getDisplayValue(i['分駐所']) === st, city: !ci || getDisplayValue(i['所在縣市']) === ci, section: !se || getDisplayValue(i['區間']) === se, line: !li || getDisplayValue(i['路線別']) === li });
+            // 連動篩選邏輯，計算當前條件下的其它欄位候選項
+            const cond = (i) => ({ 
+                electric: !es || getDisplayValue(i['電務段']) === es, 
+                station: !st || getDisplayValue(i['分駐所']) === st, 
+                city: !ci || getDisplayValue(i['所在縣市']) === ci, 
+                section: !se || getDisplayValue(i['區間']) === se, 
+                line: !li || getDisplayValue(i['路線別']) === li 
+            });
+
             populateFilter(electricSectionFilter, fullCrossingData.filter(i => { const c = cond(i); return c.city && c.station && c.section && c.line; }), '電務段', '電務段');
             populateFilter(stationFilter, fullCrossingData.filter(i => { const c = cond(i); return c.electric && c.city && c.section && c.line; }), '分駐所', '分駐所');
             populateFilter(cityFilter, fullCrossingData.filter(i => { const c = cond(i); return c.electric && c.station && c.section && c.line; }), '所在縣市', '縣市');
+            populateFilter(sectionFilter, fullCrossingData.filter(i => { const c = cond(i); return c.electric && c.station && c.city && c.line; }), '區間', '區間');
+            populateFilter(lineFilter, fullCrossingData.filter(i => { const c = cond(i); return c.electric && c.station && c.city && c.section; }), '路線別', '路線');
 
             if (autoScroll && !isMapView) scrollToTop();
         }
@@ -736,7 +747,9 @@
         function scrollToTop() { window.scrollTo({ top: 0, behavior: 'smooth' }); }
         
         searchInput.addEventListener('input', () => { clearTimeout(debounceTimer); debounceTimer = setTimeout(() => filterAndRender(true), 400); });
-        [electricSectionFilter, cityFilter, stationFilter].forEach(el => el.addEventListener('change', () => filterAndRender(true)));
+        
+        // 綁定所有下拉選單的變動事件（已補上 sectionFilter 與 lineFilter）
+        [electricSectionFilter, cityFilter, stationFilter, sectionFilter, lineFilter].forEach(el => el.addEventListener('change', () => filterAndRender(true)));
         
         window.addEventListener('scroll', () => {
             if (window.scrollY > 300) {
