@@ -766,6 +766,27 @@
             if (e.target === importModal) closeImportModal();
         });
 
+        // 將 Excel 序列日期 (如 46120) 轉換為民國年格式 (如 115/04/08)
+        function formatExcelDate(dateStr) {
+            if (!dateStr) return '';
+            // 檢查是否為純數字字串
+            if (/^\d+$/.test(dateStr)) {
+                const serial = parseInt(dateStr, 10);
+                if (serial > 59) { // Excel 從 1900 開始計算，且有 1900 年閏年 bug。59 是 1900/2/28
+                    // 25569 是 1970/1/1 的 Excel 序列號
+                    const utcDays = serial - 25569;
+                    const dateInfo = new Date(utcDays * 86400 * 1000);
+                    if (!isNaN(dateInfo.getTime())) {
+                        const year = dateInfo.getUTCFullYear();
+                        const month = String(dateInfo.getUTCMonth() + 1).padStart(2, '0');
+                        const day = String(dateInfo.getUTCDate()).padStart(2, '0');
+                        return `${year - 1911}/${month}/${day}`;
+                    }
+                }
+            }
+            return dateStr; // 若非純數字或解析失敗，回傳原始字串
+        }
+
         // 處理匯入資料邏輯
         confirmImportBtn.addEventListener('click', () => {
             const text = importTextarea.value.trim();
@@ -784,7 +805,7 @@
                     const id = parts[0].trim();
                     if (id) {
                         constructMap[id] = {
-                            '施工日期': parts[1] ? parts[1].trim() : '',
+                            '施工日期': formatExcelDate(parts[1] ? parts[1].trim() : ''),
                             '施工數量': parts[2] ? parts[2].trim() : '',
                             '施工狀態': parts[3] ? parts[3].trim() : ''
                         };
