@@ -748,7 +748,7 @@
         
         searchInput.addEventListener('input', () => { clearTimeout(debounceTimer); debounceTimer = setTimeout(() => filterAndRender(true), 400); });
         
-        // 綁定所有下拉選單的變動事件（已補上 sectionFilter 與 lineFilter）
+        // 綁定所有下拉選單的變動事件
         [electricSectionFilter, cityFilter, stationFilter, sectionFilter, lineFilter].forEach(el => el.addEventListener('change', () => filterAndRender(true)));
         
         window.addEventListener('scroll', () => {
@@ -882,7 +882,7 @@
                 });
         });
 
-    // 實作分享與複製功能
+    // 實作分享與複製功能 (Windows 裝置優先採用剪貼簿複製)
     window.handleShare = function(btn) {
         try {
             const itemData = JSON.parse(btn.getAttribute('data-item'));
@@ -900,7 +900,11 @@
             const shareTitle = `平交道資訊：${name}`;
             const shareText = `📍 ${name} (ID: ${id})\n🗺️ 位置：${loc}${mapUrl ? '\n🔗 Google 地圖：' + mapUrl : ''}`;
 
-            if (navigator.share) {
+            // 檢查是否為 Windows 裝置
+            const isWindows = /Windows/i.test(navigator.userAgent);
+
+            // 如果不是 Windows 且瀏覽器支援原生分享介面，則呼叫原生分享
+            if (!isWindows && navigator.share) {
                 navigator.share({
                     title: shareTitle,
                     text: shareText,
@@ -908,6 +912,7 @@
                     if (err.name !== 'AbortError') fallbackCopyTextToClipboard(shareText);
                 });
             } else {
+                // Windows 裝置或不支援原生分享時，直接複製至剪貼簿
                 fallbackCopyTextToClipboard(shareText);
             }
         } catch (e) {
