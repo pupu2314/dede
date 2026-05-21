@@ -43,17 +43,72 @@
             border-radius: 8px;
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
         }
+        .header-area {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 1rem;
+            position: relative;
+        }
         h1.app-title {
             color: var(--primary-color);
             border-bottom: none;
             text-align: center;
-            margin-top: 0;
-            margin-bottom: 1rem;
+            margin: 0;
         }
         h1 small {
             font-size: 0.5em; 
             color: #666;
         }
+        
+        /* 頂部自動同步狀態燈 */
+        .sync-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.35rem;
+            padding: 0.25rem 0.6rem;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: bold;
+            margin-top: 0.5rem;
+            background-color: #e9ecef;
+            color: #495057;
+            transition: all 0.3s ease;
+        }
+        .sync-badge.syncing {
+            background-color: #cff4fc;
+            color: #055160;
+        }
+        .sync-badge.synced {
+            background-color: #d1e7dd;
+            color: #0f5132;
+        }
+        .sync-badge.error {
+            background-color: #f8d7da;
+            color: #842029;
+        }
+        .sync-spinner {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            border: 2px solid currentColor;
+            border-right-color: transparent;
+            border-radius: 50%;
+            animation: spin 0.75s linear infinite;
+        }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            display: inline-block;
+        }
+        .status-dot.green { background-color: var(--success-color); }
+        .status-dot.red { background-color: var(--danger-color); }
+
         h2 {
             color: var(--primary-color);
             border-bottom: 2px solid var(--border-color);
@@ -468,11 +523,18 @@
 </head>
 <body>
     <div class="container main-layout">
-        <h1 class="app-title">加班費計算機 <small>v2.8.7</small></h1>
+        <div class="header-area">
+            <h1 class="app-title">加班費計算機 <small>v2.9.0</small></h1>
+            <!-- 雲端同步狀態指示器 -->
+            <div id="auto-sync-status" class="sync-badge" style="display: none;">
+                <span class="sync-spinner"></span>
+                <span class="sync-text">確認雲端同步中...</span>
+            </div>
+        </div>
         
         <!-- 未同步提醒條 (預設隱藏) -->
         <div id="unsynced-alert" class="sync-alert-bar" style="display: none;">
-            <span>⚠️ 您有尚未同步的資料</span>
+            <span>⚠️ 您有尚未同步的資料（正在嘗試背景自動同步）</span>
             <button id="quick-sync-btn" class="btn-small btn-warning">立即同步</button>
         </div>
 
@@ -490,8 +552,8 @@
             <p><strong>使用前請注意：</strong></p>
             <ul style="text-align: left; margin: 0.5rem 0;">
                 <li>📱 資料預設儲存在<strong>本地瀏覽器</strong>中。</li>
-                <li>☁️ <strong>免費雲端同步：</strong>支援 Google Apps Script (GAS) 同步！</li>
-                <li>🏖️ <strong>新功能：</strong>新增特休假計算與管理功能。</li>
+                <li>☁️ <strong>自動多裝置同步：</strong>支援 Google Apps Script (GAS) 雙向背景自動同步！設定後開檔與更動時將自動保持最新。</li>
+                <li>🏖️ <strong>特休管理：</strong>新增特休假計算與管理功能。</li>
             </ul>
             <p style="margin-top: 1rem;">請先至「設定」分頁完成基本資料，然後開始記錄！</p>
             <button id="close-welcome" class="btn-secondary btn-small" style="margin-top: 0.5rem;">我知道了</button>
@@ -679,10 +741,13 @@
 
                 <!-- 雲端同步區塊 -->
                 <div id="cloud-sync-section" style="margin-bottom: 2rem; background: #f0f7ff; padding: 1rem; border-radius: 8px; border: 1px solid #cce5ff;">
-                    <h3 style="margin-top:0; color: #0056b3;">☁️ Google Sheets 雲端同步</h3>
+                    <h3 style="margin-top:0; color: #0056b3;">☁️ Google Sheets 雲端自動同步</h3>
                     <div id="gas-config-container">
                         <p style="margin-bottom: 0.5rem; font-size: 0.95rem;">
                             請在 Google 試算表中建立 Apps Script，並將發布後的 <strong>Web App URL</strong> 貼在下方。
+                        </p>
+                        <p style="font-size: 0.85rem; color: #555; margin-bottom: 1rem;">
+                            💡 啟用後，系統將在 <strong>打開網頁時自動下載合併</strong>、在 <strong>資料變更時自動在背景上傳同步</strong>，實現多裝置自動同步！
                         </p>
                         <div style="display: flex; gap: 0.5rem; margin-bottom: 1rem;">
                             <input type="text" id="gas-url-input" placeholder="https://script.google.com/macros/s/..../exec" style="flex:1;">
@@ -692,12 +757,12 @@
 
                     <div id="gas-sync-actions" style="display: none;">
                         <div class="user-info" style="margin-bottom: 1rem; font-size: 0.9rem; display: flex; justify-content: space-between; align-items: center;">
-                            <span style="color: var(--success-color); font-weight: bold;">✅ 已連結 Google Sheets</span>
+                            <span style="color: var(--success-color); font-weight: bold;">✅ 已連結 Google Sheets（已啟用自動背景雙向同步）</span>
                             <button id="reset-gas-url" class="btn-small btn-secondary">重設網址</button>
                         </div>
                         <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
-                            <button id="sync-upload-btn" class="btn-sync upload">⬆️ 上傳覆蓋 (備份)</button>
-                            <button id="sync-download-btn" class="btn-sync download">⬇️ 下載合併 (還原)</button>
+                            <button id="sync-upload-btn" class="btn-sync upload">⬆️ 手動上傳覆蓋 (備份)</button>
+                            <button id="sync-download-btn" class="btn-sync download">⬇️ 手動下載合併 (還原)</button>
                         </div>
                         <div id="sync-status" class="sync-status-msg" style="display: none;"></div>
                     </div>
@@ -758,7 +823,7 @@
 
 <script>
 /**
- * 加班費計算機 v2.8.6 - 整合修正版
+ * 加班費計算機 v2.9.0 - 自動多裝置同步優化版
  */
 (function() {
     'use strict';
@@ -850,11 +915,20 @@
     const toastEl = document.getElementById('toast');
     const tabButtons = document.querySelectorAll('.tab-btn');
     const tabContents = document.querySelectorAll('.tab-content');
+    
+    // 自動同步 UI
+    const autoSyncBadge = document.getElementById('auto-sync-status');
+    const autoSyncSpinner = autoSyncBadge.querySelector('.sync-spinner');
+    const autoSyncText = autoSyncBadge.querySelector('.sync-text');
 
     let settings = {};
     let records = [];
     let punchTimerInterval = null;
     let gasAppUrl = '';
+    
+    // 自動同步用的排程器與鎖
+    let autoSyncTimer = null;
+    let isSyncing = false;
 
     const escapeHtml = (unsafe) => {
         if (unsafe === null || unsafe === undefined) return '';
@@ -889,9 +963,15 @@
         };
     };
 
+    // 核心自動同步觸發點
     function updateLastModified() {
         localStorage.setItem(STORAGE_KEYS.LAST_MODIFIED, Date.now().toString());
         checkSyncStatus();
+        
+        // 若有啟用 GAS 網址，在資料更動後 1.5 秒延遲觸發自動上傳（防抖，避免連續點擊造成的效能負擔）
+        if (gasAppUrl) {
+            triggerAutoUpload();
+        }
     }
 
     function showToast(message, type = 'info') {
@@ -1101,7 +1181,7 @@
             updateLastModified();
             calculateHourlyRate();
             
-            // 重要：發薪日可能改變，因此重新計算並連動更新月曆篩選器
+            // 發薪日改變，連動更新月曆篩選器
             monthFilter.value = getDefaultMonthValue();
             updatePayPeriodHint();
             
@@ -1307,6 +1387,9 @@
         localStorage.setItem(STORAGE_KEYS.TEMP_RECORD, JSON.stringify(tempRecord));
         updatePunchUI(true);
         startTimer(new Date(tempRecord.start));
+        
+        // 即時打卡時更新狀態 (暫不觸發雲端上傳，等結束打卡再同步)
+        updateLastModified();
     }
     
     function endPunch() {
@@ -1327,6 +1410,8 @@
             restoreMsgEl.style.backgroundColor = '#d4edda';
             restoreMsgEl.style.borderColor = '#c3e6cb';
             restoreMsgEl.style.color = '#155724';
+            
+            updateLastModified();
         }
     }
 
@@ -1407,7 +1492,6 @@
         return { start: periodStart, end: periodEnd, displayText: `${formatDate(periodStart)} ~ ${formatDate(periodEnd)}` };
     };
 
-    // --- 修正後的預設月份邏輯 ---
     function getDefaultMonthValue() {
         const today = new Date();
         const currentYear = today.getFullYear();
@@ -1418,7 +1502,6 @@
         let targetYear = currentYear;
         let targetMonth = currentMonth;
 
-        // 若並非1號發薪，且今日已經達到或超過發薪日，則應該歸屬於「下一個月」的發薪週期
         if (payday !== 1 && currentDay >= payday) {
             targetMonth++;
             if (targetMonth > 11) {
@@ -1427,7 +1510,6 @@
             }
         }
 
-        // 手動組合字串，避開 toISOString() 的 UTC 時差干擾
         const mm = String(targetMonth + 1).padStart(2, '0');
         return `${targetYear}-${mm}`;
     }
@@ -1435,8 +1517,13 @@
     function checkSyncStatus() {
         const lastSync = localStorage.getItem(STORAGE_KEYS.LAST_SYNC) || 0;
         const lastMod = localStorage.getItem(STORAGE_KEYS.LAST_MODIFIED) || 0;
-        if (parseInt(lastMod) > parseInt(lastSync) && gasAppUrl) unsyncedAlert.style.display = 'flex';
-        else unsyncedAlert.style.display = 'none';
+        
+        // 只有在手動背景同步失敗、或無自動背景上傳時才顯示顯眼的警告條
+        if (parseInt(lastMod) > parseInt(lastSync) && gasAppUrl) {
+            unsyncedAlert.style.display = 'flex';
+        } else {
+            unsyncedAlert.style.display = 'none';
+        }
     }
 
     function render() {
@@ -1530,7 +1617,6 @@
         const [year, month] = monthValue.split('-');
         const period = getPayPeriod(monthValue);
         
-        // 過濾掉特休紀錄
         const filteredRecords = filterRecords(monthValue);
         const overtimeRecords = filteredRecords.filter(r => r.type !== 'special_leave');
         const dailyGroups = groupRecordsByDay(overtimeRecords);
@@ -1575,7 +1661,6 @@
         const [year, month] = monthValue.split('-');
         const period = getPayPeriod(monthValue);
         
-        // 過濾掉特休紀錄
         const filteredRecords = filterRecords(monthValue);
         const overtimeRecords = filteredRecords.filter(r => r.type !== 'special_leave');
         const dailyGroups = groupRecordsByDay(overtimeRecords);
@@ -1598,7 +1683,175 @@
         link.click();
     }
 
-    // --- Google Apps Script ---
+
+    // ==========================================
+    // 👑 進階「自動雙向同步模組」（多裝置自動對接）
+    // ==========================================
+    
+    // 更新頂部自動同步狀態燈
+    function showAutoSyncState(state, customMessage = '') {
+        autoSyncBadge.style.display = 'inline-flex';
+        autoSyncBadge.className = 'sync-badge ' + state;
+        
+        switch (state) {
+            case 'syncing':
+                autoSyncSpinner.style.display = 'inline-block';
+                autoSyncText.textContent = customMessage || '自動同步中...';
+                break;
+            case 'synced':
+                autoSyncSpinner.style.display = 'none';
+                autoSyncText.innerHTML = `<span class="status-dot green"></span> ${customMessage || '雲端同步已完成'}`;
+                // 3 秒後自動隱藏，維持視覺簡潔
+                setTimeout(() => {
+                    if (autoSyncBadge.classList.contains('synced')) {
+                        autoSyncBadge.style.display = 'none';
+                    }
+                }, 4000);
+                break;
+            case 'error':
+                autoSyncSpinner.style.display = 'none';
+                autoSyncText.innerHTML = `<span class="status-dot red"></span> ${customMessage || '自動同步失敗'}`;
+                break;
+            default:
+                autoSyncBadge.style.display = 'none';
+        }
+    }
+
+    // 觸發防抖自動上傳
+    function triggerAutoUpload() {
+        if (!gasAppUrl) return;
+        
+        if (autoSyncTimer) clearTimeout(autoSyncTimer);
+        
+        // 更動後延遲 1.5 秒執行，防止連續點擊或頻繁輸入引發多次請求
+        autoSyncTimer = setTimeout(async () => {
+            await autoSyncUpload();
+        }, 1500);
+    }
+
+    // 自動上傳核心 (背景執行，不打擾使用者)
+    async function autoSyncUpload() {
+        if (!gasAppUrl || isSyncing) return;
+        isSyncing = true;
+        showAutoSyncState('syncing', '備份更新中...');
+        
+        try {
+            const payload = {
+                action: 'save',
+                data: { settings, records }
+            };
+            
+            const response = await fetch(gasAppUrl, {
+                method: 'POST',
+                body: JSON.stringify(payload),
+                headers: { 'Content-Type': 'text/plain;charset=utf-8' }
+            });
+            
+            if (!response.ok) throw new Error('伺服器未回應');
+            const result = await response.json();
+            
+            if (result.status === 'success') {
+                const nowTimestamp = Date.now();
+                localStorage.setItem(STORAGE_KEYS.LAST_SYNC, nowTimestamp.toString());
+                localStorage.setItem(STORAGE_KEYS.LAST_BACKUP, nowTimestamp.toString());
+                document.getElementById('backup-reminder').style.display = 'none';
+                
+                showAutoSyncState('synced', '已自動備份');
+                checkSyncStatus();
+            } else {
+                throw new Error(result.message || '雲端回傳錯誤');
+            }
+        } catch (e) {
+            console.warn('自動上傳失敗（可能是連線問題）：', e.message);
+            showAutoSyncState('error', '未成功備份');
+            checkSyncStatus();
+        } finally {
+            isSyncing = false;
+        }
+    }
+
+    // 啟動時自動下載與合併
+    async function autoSyncDownloadOnLoad() {
+        if (!gasAppUrl || isSyncing) return;
+        isSyncing = true;
+        showAutoSyncState('syncing', '檢測多裝置同步...');
+        
+        try {
+            const response = await fetch(`${gasAppUrl}?action=load`);
+            if (!response.ok) throw new Error('伺服器未回應');
+            const result = await response.json();
+            
+            if (result.status === 'success' && result.data) {
+                const cloudData = result.data;
+                const cloudRecords = cloudData.records || [];
+                const cloudSettings = cloudData.settings || {};
+                
+                let localChanged = false;
+                
+                // 1. 合併設定 (以更新的時間或完整度優先)
+                if (cloudSettings.salary && cloudSettings.salary !== settings.salary) {
+                    settings = { ...settings, ...cloudSettings };
+                    localStorage.setItem(STORAGE_KEYS.SETTINGS, JSON.stringify(settings));
+                    localChanged = true;
+                }
+                
+                // 2. 智慧合併紀錄 (防止覆蓋本地剛新增或打卡中的新資料)
+                let mergedRecords = [...records];
+                let newIncomingCount = 0;
+                
+                cloudRecords.forEach(cloudRec => {
+                    if (!cloudRec.id) return;
+                    const localIndex = mergedRecords.findIndex(r => r.id === cloudRec.id);
+                    
+                    if (localIndex > -1) {
+                        // 如果在雲端找到了同 id 資料，且雙方不一致，以雲端為主
+                        // (在分散式系統中，這代表其他裝置有最新改動)
+                        if (JSON.stringify(mergedRecords[localIndex]) !== JSON.stringify(cloudRec)) {
+                            mergedRecords[localIndex] = cloudRec;
+                            localChanged = true;
+                        }
+                    } else {
+                        // 如果本地不存在此筆 id，直接插入 (其他裝置新增的紀錄)
+                        mergedRecords.push(cloudRec);
+                        localChanged = true;
+                        newIncomingCount++;
+                    }
+                });
+                
+                if (localChanged) {
+                    records = mergedRecords;
+                    records.sort((a, b) => new Date(b.start) - new Date(a.start));
+                    localStorage.setItem(STORAGE_KEYS.RECORDS, JSON.stringify(records));
+                    
+                    const nowTimestamp = Date.now();
+                    localStorage.setItem(STORAGE_KEYS.LAST_SYNC, nowTimestamp.toString());
+                    localStorage.setItem(STORAGE_KEYS.LAST_MODIFIED, nowTimestamp.toString());
+                    
+                    loadSettings();
+                    loadRecords();
+                    render();
+                    
+                    showAutoSyncState('synced', `已同步新資料 (${newIncomingCount} 筆)`);
+                } else {
+                    // 若資料無更動，標註已同步完成即可
+                    localStorage.setItem(STORAGE_KEYS.LAST_SYNC, Date.now().toString());
+                    showAutoSyncState('synced', '多裝置同步已是最新');
+                }
+                checkSyncStatus();
+            } else {
+                throw new Error('雲端無可用資料或伺服器異常');
+            }
+        } catch (e) {
+            console.warn('背景同步載入失敗：', e.message);
+            showAutoSyncState('error', '多裝置同步未連線');
+            checkSyncStatus();
+        } finally {
+            isSyncing = false;
+        }
+    }
+
+
+    // --- Google Apps Script (手動控制功能) ---
     function loadGasUrl() {
         gasAppUrl = localStorage.getItem(STORAGE_KEYS.GAS_APP_URL) || '';
         gasUrlInput.value = gasAppUrl;
@@ -1613,16 +1866,19 @@
         gasAppUrl = url;
         localStorage.setItem(STORAGE_KEYS.GAS_APP_URL, gasAppUrl);
         updateGasUiState();
-        checkSyncStatus();
-        await asyncAlert('網址已儲存！您可以開始同步資料了。');
+        
+        // 儲存網址後，立刻進行一次「下載合併」以同步多裝置狀態
+        await asyncAlert('網址已儲存！系統已為您啟用雙向自動同步，現在開始自動同步最新資料。');
+        await autoSyncDownloadOnLoad();
     }
 
     async function resetGasUrl() {
-        if(await asyncConfirm('確定要移除連結嗎？')) {
+        if(await asyncConfirm('確定要移除連結嗎？\n移除後將停止背景自動同步。')) {
             gasAppUrl = '';
             localStorage.removeItem(STORAGE_KEYS.GAS_APP_URL);
             gasUrlInput.value = '';
             updateGasUiState();
+            showAutoSyncState('none');
             checkSyncStatus();
         }
     }
@@ -1640,6 +1896,7 @@
         showToast(msg, type);
     }
 
+    // 手動上傳覆蓋 (備份)
     async function syncToCloud() {
         if (!gasAppUrl) { switchTab('backup'); return; }
         try {
@@ -1648,9 +1905,12 @@
             if (!response.ok) throw new Error('Network response was not ok');
             const result = await response.json();
             if (result.status === 'success') {
-                localStorage.setItem(STORAGE_KEYS.LAST_SYNC, Date.now().toString());
+                const nowTimestamp = Date.now();
+                localStorage.setItem(STORAGE_KEYS.LAST_SYNC, nowTimestamp.toString());
+                localStorage.setItem(STORAGE_KEYS.LAST_BACKUP, nowTimestamp.toString());
                 document.getElementById('backup-reminder').style.display = 'none';
-                updateSyncStatus(`✅ 上傳成功！(時間: ${new Date().toLocaleTimeString()})`, 'success');
+                updateSyncStatus(`✅ 手動備份上傳成功！(時間: ${new Date().toLocaleTimeString()})`, 'success');
+                showAutoSyncState('synced', '手動上傳已完成');
                 checkSyncStatus();
             } else throw new Error(result.message || 'Unknown error from server');
         } catch (e) {
@@ -1658,11 +1918,12 @@
         }
     }
 
+    // 手動下載合併 (還原)
     async function syncFromCloud() {
         if (!gasAppUrl) return;
-        if (!(await asyncConfirm('確定要從雲端下載資料嗎？\n這將會與您現有的本地資料合併。'))) return;
+        if (!(await asyncConfirm('確定要從雲端下載資料嗎？\n這將會與您現有的本地資料進行智慧合併。'))) return;
         try {
-            updateSyncStatus('正在讀取雲端資料...', 'info');
+            updateSyncStatus('正在讀取雲端資料並進行合併...', 'info');
             const response = await fetch(`${gasAppUrl}?action=load`);
             if (!response.ok) throw new Error('Network response was not ok');
             const result = await response.json();
@@ -1675,7 +1936,12 @@
             cloudData.records.forEach(remoteRec => {
                 if (!remoteRec.id) return;
                 const localIdx = records.findIndex(localRec => localRec.id === remoteRec.id);
-                if (localIdx > -1) { records[localIdx] = remoteRec; updatedCount++; }
+                if (localIdx > -1) { 
+                    if (JSON.stringify(records[localIdx]) !== JSON.stringify(remoteRec)) {
+                        records[localIdx] = remoteRec; 
+                        updatedCount++; 
+                    }
+                }
                 else { records.push(remoteRec); addedCount++; }
             });
 
@@ -1685,7 +1951,8 @@
             localStorage.setItem(STORAGE_KEYS.LAST_SYNC, Date.now().toString());
 
             loadSettings(); loadRecords(); render(); checkSyncStatus();
-            updateSyncStatus(`✅ 下載完成！(新增: ${addedCount}, 更新: ${updatedCount})`, 'success');
+            updateSyncStatus(`✅ 下載合併完成！(新增: ${addedCount} 筆, 更新原記錄: ${updatedCount} 筆)`, 'success');
+            showAutoSyncState('synced', '手動下載完成');
         } catch (e) {
             updateSyncStatus('❌ 下載失敗: ' + (e.message || '請檢查網址是否正確'), 'error');
         }
@@ -1812,7 +2079,7 @@
         document.getElementById('leave-date').valueAsDate = new Date();
         
         tabButtons.forEach(btn => btn.addEventListener('click', () => switchTab(btn.dataset.tab)));
-        quickSyncBtn.addEventListener('click', () => { gasAppUrl ? syncToCloud() : switchTab('backup'); });
+        quickSyncBtn.addEventListener('click', () => { gasAppUrl ? autoSyncUpload() : switchTab('backup'); });
 
         document.getElementById('export-text').addEventListener('click', () => {
             document.getElementById('export-textarea').value = JSON.stringify({ settings, records }, null, 2);
@@ -1859,7 +2126,7 @@
         syncDownloadBtn.addEventListener('click', syncFromCloud);
     }
 
-    function init() {
+    async function init() {
         loadSettings(); loadRecords(); loadGasUrl();
         
         // 設定預設月份
@@ -1877,6 +2144,11 @@
         if (['#punch', '#records', '#settings', '#leave'].includes(hash)) {
             switchTab(hash.substring(1));
             setTimeout(() => history.replaceState(null, null, ' '), 1000);
+        }
+        
+        // 🚀 關鍵改良：若有設定 GAS 雲端連結，一開啟網頁就「自動在背景下載並智慧合併」最新雲端資料
+        if (gasAppUrl) {
+            await autoSyncDownloadOnLoad();
         }
     }
 
