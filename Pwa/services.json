@@ -163,7 +163,21 @@
         {
           "id": "oil_massage_1hr",
           "name": "[油推]能量精油 健康調理 /1hr(含機能保養)",
-          "price": 1200
+          "price": 1200,
+          "promotions": [
+            {
+              "label": "5月優惠",
+              "price": 1000,
+              "start": "2026-05-24",
+              "end": "2026-05-24"
+            },
+            {
+              "label": "6月優惠",
+              "price": 1000,
+              "start": "2026-06-01",
+              "end": "2026-06-30"
+            }
+          ]
         },
         {
           "id": "oil_massage_1.5hr",
