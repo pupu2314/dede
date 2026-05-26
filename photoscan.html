@@ -66,7 +66,8 @@
         </div>
     </div>
 
-    <div class="w-full max-w-7xl mx-auto space-y-6"> 
+    <!-- 移除了 max-w-7xl mx-auto，讓畫面自動滿版 -->
+    <div class="w-full space-y-6"> 
         
         <div class="text-center">
             <h1 class="text-3xl font-bold text-gray-900 mb-2">📄 智慧文件校正掃描器 Pro v6.0</h1>
@@ -181,8 +182,8 @@
             </div>
         </div>
 
-        <!-- 執行大按鈕區與導覽列 -->
-        <div class="py-4 my-4 flex flex-col md:flex-row items-center justify-center gap-6 bg-white p-4 rounded-xl shadow-sm border border-gray-100 mx-auto max-w-4xl">
+        <!-- 執行大按鈕區與導覽列：同樣移除 max-w-4xl 寬度限制 -->
+        <div class="py-4 my-4 flex flex-col md:flex-row items-center justify-center gap-6 bg-white p-4 rounded-xl shadow-sm border border-gray-100 w-full">
             <!-- 多檔切換導覽列 -->
             <div id="file-nav-container" class="hidden flex items-center justify-between bg-blue-50 p-2 rounded-lg border border-blue-100 shadow-inner min-w-[250px]">
                 <button id="btn-prev-file" class="px-4 py-2 bg-white border border-gray-300 rounded shadow-sm text-sm font-semibold text-gray-700 hover:bg-gray-50 disabled:opacity-40 transition">&lt; 上一張</button>
