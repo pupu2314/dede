@@ -273,6 +273,7 @@
         let fileQueue = [];        
         let currentFileIndex = 0;  
         let processedResults = {}; 
+        let savedCorners = {}; // 新增：儲存各圖片的端點資訊 { index: corners }
         let isModifiedSinceLastProcess = false; 
 
         let draggedIndex = null;
@@ -428,14 +429,23 @@
                 img.onload = () => {
                     if (srcMat) srcMat.delete();
                     srcMat = cv.imread(img);
-                    let detected = adobeScanStyleDetect(srcMat);
-                    if (detected) {
-                        corners = detected;
-                        updateStatus(`[第 ${currentFileIndex+1} 張] 邊界辨識成功！`, "✨", "success");
+
+                    // 新增：檢查是否有儲存過的端點
+                    if (savedCorners[currentFileIndex]) {
+                        corners = JSON.parse(JSON.stringify(savedCorners[currentFileIndex]));
+                        updateStatus(`[第 ${currentFileIndex+1} 張] 已載入先前調整的端點`, "📍", "success");
                     } else {
-                        resetCornersToFullBoundary();
-                        updateStatus(`[第 ${currentFileIndex+1} 張] 未偵測到明顯邊界，使用預設框`, "📍");
+                        let detected = adobeScanStyleDetect(srcMat);
+                        if (detected) {
+                            corners = detected;
+                            updateStatus(`[第 ${currentFileIndex+1} 張] 邊界辨識成功！`, "✨", "success");
+                        } else {
+                            resetCornersToFullBoundary();
+                            updateStatus(`[第 ${currentFileIndex+1} 張] 未偵測到明顯邊界，使用預設框`, "📍");
+                        }
+                        savedCorners[currentFileIndex] = JSON.parse(JSON.stringify(corners));
                     }
+                    
                     autoUpdateParams(); 
                     renderEditor();
                     
@@ -537,6 +547,7 @@
             autoUpdateParams();
             renderEditor();
             isModifiedSinceLastProcess = true; 
+            savedCorners[currentFileIndex] = JSON.parse(JSON.stringify(corners)); // 新增：記憶重置後的端點
             updateStatus("已將定位端點重置", "🔄");
         });
 
@@ -758,6 +769,7 @@
             document.getElementById('magnifier-container').classList.add('hidden');
             autoUpdateParams(); 
             isModifiedSinceLastProcess = true; 
+            savedCorners[currentFileIndex] = JSON.parse(JSON.stringify(corners)); // 新增：記憶拖曳後的端點
             document.removeEventListener('mousemove', drag); 
             document.removeEventListener('mouseup', stopDrag); 
             document.removeEventListener('touchmove', drag); 
@@ -998,6 +1010,7 @@
             }
             srcMat.delete(); srcMat = dst;
             isModifiedSinceLastProcess = true; 
+            savedCorners[currentFileIndex] = JSON.parse(JSON.stringify(corners)); // 新增：記憶旋轉後的端點
             renderEditor();
         }
 
