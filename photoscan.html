@@ -1,67 +1,9 @@
-
-和 Gemini 的對話
-1.增加一次加入多張照片，依序處理的功能。
-
-當用戶一次拖曳多張照片，讓用戶一次處理一張，並可以選"上一張"或"下一張"做手動切換，可以批次下載或列印多張。
-
-2.避免一張照片在橫式列印時使用兩張A4紙 （可能因長寬比例問題導致高度過高）。
-
-3. 有辦法讓列印功能自動依照紙張最適應的方式選擇橫式或直式嗎？還是這歸瀏覽器控制？
-
-這是一個非常實用的功能升級！針對您的需求，我已經對程式碼進行了全面改寫。在提供完整程式碼之前，先回答您關於列印方向的問題：
-
-關於問題 3：自動判斷直式/橫式列印
-這是歸瀏覽器控制的。 網頁端無法「強制」改變使用者的印表機設定。但是，我們可以使用 CSS 的 @page { size: auto; } 屬性。在現代瀏覽器（尤其是 Chrome/Edge）中，當設定為 size: auto 時，瀏覽器會自動根據內容的長寬比來決定使用直式或橫式。
-此外，為了解決您提到的「橫印時變兩頁」（問題2），我已經在 @media print 中加入了嚴格的 100vh (螢幕/紙張高度限制) 與 object-fit: contain 屬性，確保每張圖片一定會乖乖縮放並完美的塞在單一 A4 頁面內，絕不會溢出到第二頁。
-
-以下為升級到 v6.0 的完整程式碼，包含多檔上傳、上一張/下一張切換、批次處理記憶、批次列印與批次下載功能。
-防呆機制與介面優化
-5月26日 上午8:52
-
-本次主要升級 (v6.0) 總結：
-支援多檔案拖曳 / 選擇： 上傳按鈕已加入 multiple 屬性，且拖曳功能現在可以一次接收多張照片。只要上傳超過一張，左側面板就會自動出現「上一張 / 下一張」的導覽列。
-
-記憶化批次處理： 每當您對當前照片點擊「執行當前校正」後，系統會自動在背景將結果記錄下來。只要處理過兩張以上，右側結果區塊的右上角就會出現醒目的「批次列印」與「批次下載」按鈕。
-
-完美解決雙頁列印問題 (CSS升級)： 大幅度改寫 @media print 區塊，加入了 .print-page 類別。我們透過強制設定 height: 100vh 搭配 object-fit: contain，並隱藏了所有的滾動條。這樣能強迫瀏覽器把每張處理好的長條圖片完美壓縮在單一頁面的邊框內，從根本上解決了橫式列印時跨到第二張空白紙的問題。
-
-自動最佳化列印方向： 加入了 @page { size: auto; } 屬性。網頁端無法寫死「只能橫印」，但透過這個屬性交給 Chrome / Edge 去判斷，當您的長寬比較寬時，它們的列印對話框預設就會自動幫您跳轉到橫向列印。
-
-1. 增加防呆機制，防止用戶調整完端點，未按下"執行當前校正"上一張"或"下一張"，而遺失操作，增加提示訊息；但若是已有輸出成品的上下張切換則免除提示。
-
-2. 將"上下張切換"介面移動到"執行當前校正 ✨"旁，減少用戶操作難度。
-
-為了解決誤觸導致操作遺失的問題，並進一步優化使用體驗，我已經幫您加上了「未儲存防呆檢查」，同時將多檔切換的介面直接拉到最常用的「執行」按鈕旁邊，這樣能大幅減少滑鼠的移動距離！
-
-以下是為您加入這些功能的程式碼更新：
-
-這次的升級重點說明：
-加入未儲存變更提示 (防呆)： 現在當您拖曳端點、旋轉圖片或重置框架後，只要忘記點擊「執行當前校正」就直接按「上一張/下一張」，系統就會跳出 確認彈窗 提醒您會遺失調整內容，避免做白工！若是剛載入或是已經輸出的狀態則能流暢直接切換。
-
-操作動線優化： 已將「多檔切換導覽列」(上一張/下一張按鈕) 從設定面板移出來，並放置在網頁中央最顯眼的「執行當前校正 ✨」大按鈕左側。現在您處理批次文件時，滑鼠幾乎不需要大範圍移動，就能流暢進行 微調 -> 執行 -> 下一張 的操作迴圈了。
-
-I made some changes. 修正了先前因為搬動 UI 區塊不小心導致「多圖拼貼助手」與「影像優化設定」部分 HTML 標籤遺失的問題。同時，我把所有抓取 DOM 元素的變數宣告（如 slotsContainer 和各種按鈕）統一集中到 JavaScript 程式碼的頂部，徹底解決了事件監聽器綁定時 Cannot read properties of null 以及 Cannot access 'slotsContainer' before initialization (TDZ) 的初始化錯誤。現在版面和程式碼邏輯已完全恢復正常且穩定運作！
-
-
-1
-
-Gemini 是 AI，有時可能會出錯。
-
-檔案
-已建立
-
-防呆機制與介面優化
-5月 26, 8:52 上午
-已新增
-「HTML」圖示
-photoscan
-HTML
 <!DOCTYPE html>
 <html lang="zh-TW">
 <head>
     <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>智慧文件校正掃描器 Pro v5.9</title>
+    <title>智慧文件校正掃描器 Pro v6.0</title>
     
     <style>
         body { background-color: #f3f4f6; font-family: system-ui, -apple-system, sans-serif; }
@@ -81,37 +23,56 @@ HTML
         .modal-exit { opacity: 1; transform: scale(1); }
         .modal-exit-active { opacity: 0; transform: scale(0.95); transition: all 0.2s ease-in; }
 
-        /* 拖曳排序時的虛線外框樣式 */
         .drag-over-slot { border-color: #4f46e5 !important; background-color: #e0e7ff !important; transform: scale(1.02); }
 
+        /* 列印專屬優化 CSS */
         #print-area { display: none; }
         @media print {
+            @page { margin: 0; size: auto; } /* size: auto 讓瀏覽器自動判斷直橫印 */
+            html, body { margin: 0; padding: 0; background: white; }
             body > *:not(#print-area) { display: none !important; }
-            #print-area { display: flex !important; position: absolute; left: 0; top: 0; width: 100%; justify-content: center; margin: 0; padding: 0; background: white; }
-            #print-area img { max-width: 100%; height: auto; object-fit: contain; }
+            #print-area { display: block !important; position: absolute; left: 0; top: 0; width: 100%; margin: 0; padding: 0; background: white; }
+            
+            /* 強制將每張圖片限制在單一頁面內，防止溢位產生白頁 */
+            .print-page { 
+                width: 100vw; 
+                height: 100vh; 
+                display: flex; 
+                justify-content: center; 
+                align-items: center; 
+                page-break-after: always; 
+                box-sizing: border-box; 
+                padding: 10mm; /* 留出安全邊距 */
+                overflow: hidden;
+            }
+            .print-page:last-child { page-break-after: auto; }
+            .print-page img { 
+                max-width: 100%; 
+                max-height: 100%; 
+                object-fit: contain; /* 確保圖片不變形且不超出邊界 */
+            }
         }
     </style>
-    <!-- Tailwind CSS 生成樣式 -->
-    <style>*, ::before, ::after{--tw-border-spacing-x:0;--tw-border-spacing-y:0;--tw-translate-x:0;--tw-translate-y:0;--tw-rotate:0;--tw-skew-x:0;--tw-skew-y:0;--tw-scale-x:1;--tw-scale-y:1;--tw-pan-x: ;--tw-pan-y: ;--tw-pinch-zoom: ;--tw-scroll-snap-strictness:proximity;--tw-gradient-from-position: ;--tw-gradient-via-position: ;--tw-gradient-to-position: ;--tw-ordinal: ;--tw-slashed-zero: ;--tw-numeric-figure: ;--tw-numeric-spacing: ;--tw-numeric-fraction: ;--tw-ring-inset: ;--tw-ring-offset-width:0px;--tw-ring-offset-color:#fff;--tw-ring-color:rgb(59 130 246 / 0.5);--tw-ring-offset-shadow:0 0 #0000;--tw-ring-shadow:0 0 #0000;--tw-shadow:0 0 #0000;--tw-shadow-colored:0 0 #0000;--tw-blur: ;--tw-brightness: ;--tw-contrast: ;--tw-grayscale: ;--tw-hue-rotate: ;--tw-invert: ;--tw-saturate: ;--tw-sepia: ;--tw-drop-shadow: ;--tw-backdrop-blur: ;--tw-backdrop-brightness: ;--tw-backdrop-contrast: ;--tw-backdrop-grayscale: ;--tw-backdrop-hue-rotate: ;--tw-backdrop-invert: ;--tw-backdrop-opacity: ;--tw-backdrop-saturate: ;--tw-backdrop-sepia: ;--tw-contain-size: ;--tw-contain-layout: ;--tw-contain-paint: ;--tw-contain-style: }::backdrop{--tw-border-spacing-x:0;--tw-border-spacing-y:0;--tw-translate-x:0;--tw-translate-y:0;--tw-rotate:0;--tw-skew-x:0;--tw-skew-y:0;--tw-scale-x:1;--tw-scale-y:1;--tw-pan-x: ;--tw-pan-y: ;--tw-pinch-zoom: ;--tw-scroll-snap-strictness:proximity;--tw-gradient-from-position: ;--tw-gradient-via-position: ;--tw-gradient-to-position: ;--tw-ordinal: ;--tw-slashed-zero: ;--tw-numeric-figure: ;--tw-numeric-spacing: ;--tw-numeric-fraction: ;--tw-ring-inset: ;--tw-ring-offset-width:0px;--tw-ring-offset-color:#fff;--tw-ring-color:rgb(59 130 246 / 0.5);--tw-ring-offset-shadow:0 0 #0000;--tw-ring-shadow:0 0 #0000;--tw-shadow:0 0 #0000;--tw-shadow-colored:0 0 #0000;--tw-blur: ;--tw-brightness: ;--tw-contrast: ;--tw-grayscale: ;--tw-hue-rotate: ;--tw-invert: ;--tw-saturate: ;--tw-sepia: ;--tw-drop-shadow: ;--tw-backdrop-blur: ;--tw-backdrop-brightness: ;--tw-backdrop-contrast: ;--tw-backdrop-grayscale: ;--tw-backdrop-hue-rotate: ;--tw-backdrop-invert: ;--tw-backdrop-opacity: ;--tw-backdrop-saturate: ;--tw-backdrop-sepia: ;--tw-contain-size: ;--tw-contain-layout: ;--tw-contain-paint: ;--tw-contain-style: }/* ! tailwindcss v3.4.17 | MIT License | https://tailwindcss.com */*,::after,::before{box-sizing:border-box;border-width:0;border-style:solid;border-color:#e5e7eb}::after,::before{--tw-content:''}:host,html{line-height:1.5;-webkit-text-size-adjust:100%;-moz-tab-size:4;tab-size:4;font-family:ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";font-feature-settings:normal;font-variation-settings:normal;-webkit-tap-highlight-color:transparent}body{margin:0;line-height:inherit}hr{height:0;color:inherit;border-top-width:1px}abbr:where([title]){-webkit-text-decoration:underline dotted;text-decoration:underline dotted}h1,h2,h3,h4,h5,h6{font-size:inherit;font-weight:inherit}a{color:inherit;text-decoration:inherit}b,strong{font-weight:bolder}code,kbd,pre,samp{font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;font-feature-settings:normal;font-variation-settings:normal;font-size:1em}small{font-size:80%}sub,sup{font-size:75%;line-height:0;position:relative;vertical-align:baseline}sub{bottom:-.25em}sup{top:-.5em}table{text-indent:0;border-color:inherit;border-collapse:collapse}button,input,optgroup,select,textarea{font-family:inherit;font-feature-settings:inherit;font-variation-settings:inherit;font-size:100%;font-weight:inherit;line-height:inherit;letter-spacing:inherit;color:inherit;margin:0;padding:0}button,select{text-transform:none}button,input:where([type=button]),input:where([type=reset]),input:where([type=submit]){-webkit-appearance:button;background-color:transparent;background-image:none}:-moz-focusring{outline:auto}:-moz-ui-invalid{box-shadow:none}progress{vertical-align:baseline}::-webkit-inner-spin-button,::-webkit-outer-spin-button{height:auto}[type=search]{-webkit-appearance:textfield;outline-offset:-2px}::-webkit-search-decoration{-webkit-appearance:none}::-webkit-file-upload-button{-webkit-appearance:button;font:inherit}summary{display:list-item}blockquote,dd,dl,figure,h1,h2,h3,h4,h5,h6,hr,p,pre{margin:0}fieldset{margin:0;padding:0}legend{padding:0}menu,ol,ul{list-style:none;margin:0;padding:0}dialog{padding:0}textarea{resize:vertical}input::placeholder,textarea::placeholder{opacity:1;color:#9ca3af}[role=button],button{cursor:pointer}:disabled{cursor:default}audio,canvas,embed,iframe,img,object,svg,video{display:block;vertical-align:middle}img,video{max-width:100%;height:auto}[hidden]:where(:not([hidden=until-found])){display:none}.pointer-events-none{pointer-events:none}.fixed{position:fixed}.absolute{position:absolute}.relative{position:relative}.inset-0{inset:0px}.left-0{left:0px}.left-1\/2{left:50%}.right-6{right:1.5rem}.top-0{top:0px}.top-1\/2{top:50%}.top-6{top:1.5rem}.z-\[150\]{z-index:150}.z-\[200\]{z-index:200}.z-\[201\]{z-index:201}.z-\[300\]{z-index:300}.mx-auto{margin-left:auto;margin-right:auto}.mb-1{margin-bottom:0.25rem}.mb-2{margin-bottom:0.5rem}.mb-3{margin-bottom:0.75rem}.flex{display:flex}.grid{display:grid}.hidden{display:none}.h-1\.5{height:0.375rem}.h-4{height:1rem}.h-8{height:2rem}.h-\[1px\]{height:1px}.h-auto{height:auto}.h-full{height:100%}.max-h-full{max-height:100%}.min-h-\[400px\]{min-height:400px}.w-1\.5{width:0.375rem}.w-4{width:1rem}.w-8{width:2rem}.w-\[1px\]{width:1px}.w-full{width:100%}.max-w-7xl{max-width:80rem}.max-w-full{max-width:100%}.flex-1{flex:1 1 0%}.-translate-x-1\/2{--tw-translate-x:-50%;transform:translate(var(--tw-translate-x), var(--tw-translate-y)) rotate(var(--tw-rotate)) skewX(var(--tw-skew-x)) skewY(var(--tw-skew-y)) scaleX(var(--tw-scale-x)) scaleY(var(--tw-scale-y))}.-translate-y-1\/2{--tw-translate-y:-50%;transform:translate(var(--tw-translate-x), var(--tw-translate-y)) rotate(var(--tw-rotate)) skewX(var(--tw-skew-x)) skewY(var(--tw-skew-y)) scaleX(var(--tw-scale-x)) scaleY(var(--tw-scale-y))}.translate-y-4{--tw-translate-y:1rem;transform:translate(var(--tw-translate-x), var(--tw-translate-y)) rotate(var(--tw-rotate)) skewX(var(--tw-skew-x)) skewY(var(--tw-skew-y)) scaleX(var(--tw-scale-x)) scaleY(var(--tw-scale-y))}.transform{transform:translate(var(--tw-translate-x), var(--tw-translate-y)) rotate(var(--tw-rotate)) skewX(var(--tw-skew-x)) skewY(var(--tw-skew-y)) scaleX(var(--tw-scale-x)) scaleY(var(--tw-scale-y))}.cursor-pointer{cursor:pointer}.cursor-zoom-in{cursor:zoom-in}.cursor-zoom-out{cursor:zoom-out}.grid-cols-1{grid-template-columns:repeat(1, minmax(0, 1fr))}.grid-cols-2{grid-template-columns:repeat(2, minmax(0, 1fr))}.grid-cols-3{grid-template-columns:repeat(3, minmax(0, 1fr))}.flex-col{flex-direction:column}.flex-wrap{flex-wrap:wrap}.items-start{align-items:flex-start}.items-center{align-items:center}.justify-center{justify-content:center}.justify-between{justify-content:space-between}.gap-1{gap:0.25rem}.gap-2{gap:0.5rem}.gap-3{gap:0.75rem}.gap-4{gap:1rem}.gap-6{gap:1.5rem}.gap-8{gap:2rem}.space-x-1\.5 > :not([hidden]) ~ :not([hidden]){--tw-space-x-reverse:0;margin-right:calc(0.375rem * var(--tw-space-x-reverse));margin-left:calc(0.375rem * calc(1 - var(--tw-space-x-reverse)))}.space-x-2 > :not([hidden]) ~ :not([hidden]){--tw-space-x-reverse:0;margin-right:calc(0.5rem * var(--tw-space-x-reverse));margin-left:calc(0.5rem * calc(1 - var(--tw-space-x-reverse)))}.space-x-3 > :not([hidden]) ~ :not([hidden]){--tw-space-x-reverse:0;margin-right:calc(0.75rem * var(--tw-space-x-reverse));margin-left:calc(0.75rem * calc(1 - var(--tw-space-x-reverse)))}.space-y-3 > :not([hidden]) ~ :not([hidden]){--tw-space-y-reverse:0;margin-top:calc(0.75rem * calc(1 - var(--tw-space-y-reverse)));margin-bottom:calc(0.75rem * var(--tw-space-y-reverse))}.space-y-4 > :not([hidden]) ~ :not([hidden]){--tw-space-y-reverse:0;margin-top:calc(1rem * calc(1 - var(--tw-space-y-reverse)));margin-bottom:calc(1rem * var(--tw-space-y-reverse))}.space-y-6 > :not([hidden]) ~ :not([hidden]){--tw-space-y-reverse:0;margin-top:calc(1.5rem * calc(1 - var(--tw-space-y-reverse)));margin-bottom:calc(1.5rem * var(--tw-space-y-reverse))}.overflow-auto{overflow:auto}.overflow-hidden{overflow:hidden}.rounded{border-radius:0.25rem}.rounded-full{border-radius:9999px}.rounded-lg{border-radius:0.5rem}.rounded-md{border-radius:0.375rem}.rounded-xl{border-radius:0.75rem}.rounded-2xl{border-radius:1rem}.border{border-width:1px}.border-2{border-width:2px}.border-4{border-width:4px}.border-\[3px\]{border-width:3px}.border-b{border-bottom-width:1px}.border-dashed{border-style:dashed}.border-blue-100{--tw-border-opacity:1;border-color:rgb(219 234 254 / var(--tw-border-opacity, 1))}.border-blue-200{--tw-border-opacity:1;border-color:rgb(191 219 254 / var(--tw-border-opacity, 1))}.border-gray-200{--tw-border-opacity:1;border-color:rgb(229 231 235 / var(--tw-border-opacity, 1))}.border-gray-300{--tw-border-opacity:1;border-color:rgb(209 213 219 / var(--tw-border-opacity, 1))}.border-red-200{--tw-border-opacity:1;border-color:rgb(254 202 202 / var(--tw-border-opacity, 1))}.border-white{--tw-border-opacity:1;border-color:rgb(255 255 255 / var(--tw-border-opacity, 1))}.border-yellow-200{--tw-border-opacity:1;border-color:rgb(254 240 138 / var(--tw-border-opacity, 1))}.border-indigo-100{--tw-border-opacity:1;border-color:rgb(224 231 255 / var(--tw-border-opacity, 1))}.border-indigo-200{--tw-border-opacity:1;border-color:rgb(199 210 254 / var(--tw-border-opacity, 1))}.border-indigo-500{--tw-border-opacity:1;border-color:rgb(99 102 241 / var(--tw-border-opacity, 1))}.bg-black\/0{background-color:rgb(0 0 0 / 0)}.bg-black\/75{background-color:rgb(0 0 0 / 0.75)}.bg-black\/95{background-color:rgb(0 0 0 / 0.95)}.bg-blue-600/90{background-color:rgb(37 99 235 / 0.9)}.bg-blue-50\/30{background-color:rgb(239 246 255 / 0.3)}.bg-blue-600{--tw-bg-opacity:1;background-color:rgb(37 99 235 / var(--tw-bg-opacity, 1))}.bg-gray-100{--tw-bg-opacity:1;background-color:rgb(243 244 246 / var(--tw-bg-opacity, 1))}.bg-gray-200{--tw-bg-opacity:1;background-color:rgb(229 231 235 / var(--tw-bg-opacity, 1))}.bg-gray-50{--tw-bg-opacity:1;background-color:rgb(249 250 251 / var(--tw-bg-opacity, 1))}.bg-gray-700{--tw-bg-opacity:1;background-color:rgb(55 65 81 / var(--tw-bg-opacity, 1))}.bg-green-600{--tw-bg-opacity:1;background-color:rgb(22 163 74 / var(--tw-bg-opacity, 1))}.bg-red-50{--tw-bg-opacity:1;background-color:rgb(254 242 242 / var(--tw-bg-opacity, 1))}.bg-red-500{--tw-bg-opacity:1;background-color:rgb(239 68 68 / var(--tw-bg-opacity, 1))}.bg-red-500\/50{background-color:rgb(239 68 68 / 0.5)}.bg-white{--tw-bg-opacity:1;background-color:rgb(255 255 255 / var(--tw-bg-opacity, 1))}.bg-white\/20{background-color:rgb(255 255 255 / 0.2)}.bg-yellow-50{--tw-bg-opacity:1;background-color:rgb(254 252 232 / var(--tw-bg-opacity, 1))}.bg-indigo-50\/50{background-color:rgb(245 247 255 / 0.5)}.bg-indigo-600{--tw-bg-opacity:1;background-color:rgb(79 70 229 / var(--tw-bg-opacity, 1))}.bg-gradient-to-r{background-image:linear-gradient(to right, var(--tw-gradient-stops))}.from-blue-600{--tw-gradient-from:#2563eb var(--tw-gradient-from-position);--tw-gradient-to:rgb(37 99 235 / 0) var(--tw-gradient-to-position);--tw-gradient-stops:var(--tw-gradient-from), var(--tw-gradient-to)}.to-indigo-700{--tw-gradient-to:#4338ca var(--tw-gradient-to-position)}.object-contain{object-fit:contain}.p-1{padding:0.25rem}.p-2{padding:0.5rem}.p-3{padding:0.75rem}.p-4{padding:1rem}.p-6{padding:1.5rem}.p-8{padding:2rem}.px-12{padding-left:3rem;padding-right:3rem}.px-2{padding-left:0.5rem;padding-right:0.5rem}.px-3{padding-left:0.75rem;padding-right:0.75rem}.px-4{padding-left:1rem;padding-right:1rem}.px-5{padding-left:1.25rem;padding-right:1.25rem}.py-1{padding-top:0.25rem;padding-bottom:0.25rem}.py-1\.5{padding-top:0.375rem;padding-bottom:0.375rem}.py-2{padding-top:0.5rem;padding-bottom:0.5rem}.py-2\.5{padding-top:0.625rem;padding-bottom:0.625rem}.py-4{padding-top:1rem;padding-bottom:1rem}.pb-2{padding-bottom:0.5rem}.pt-1{padding-top:0.25rem}.text-center{text-align:center}.font-mono{font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace}.text-2xl{font-size:1.5rem;line-height:2rem}.text-3xl{font-size:1.875rem;line-height:2.25rem}.text-\[10px\]{font-size:10px}.text-\[11px\]{font-size:11px}.text-lg{font-size:1.125rem;line-height:1.75rem}.text-sm{font-size:0.875rem;line-height:1.25rem}.text-xs{font-size:0.75rem;line-height:1rem}.font-bold{font-weight:700}.font-medium{font-weight:500}.font-normal{font-weight:400}.font-semibold{font-weight:600}.uppercase{text-transform:uppercase}.tracking-tighter{letter-spacing:-0.05em}.text-blue-600{--tw-text-opacity:1;color:rgb(37 99 235 / var(--tw-text-opacity, 1))}.text-gray-400{--tw-text-opacity:1;color:rgb(156 163 175 / var(--tw-text-opacity, 1))}.text-gray-500{--tw-text-opacity:1;color:rgb(107 114 128 / var(--tw-text-opacity, 1))}.text-gray-600{--tw-text-opacity:1;color:rgb(75 85 99 / var(--tw-text-opacity, 1))}.text-gray-700{--tw-text-opacity:1;color:rgb(55 65 81 / var(--tw-text-opacity, 1))}.text-gray-800{--tw-text-opacity:1;color:rgb(31 41 55 / var(--tw-text-opacity, 1))}.text-gray-900{--tw-text-opacity:1;color:rgb(17 24 39 / var(--tw-text-opacity, 1))}.text-indigo-700{--tw-text-opacity:1;color:rgb(67 56 202 / var(--tw-text-opacity, 1))}.text-indigo-800{--tw-text-opacity:1;color:rgb(55 48 163 / var(--tw-text-opacity, 1))}.text-red-600{--tw-text-opacity:1;color:rgb(220 38 38 / var(--tw-text-opacity, 1))}.text-white{--tw-text-opacity:1;color:rgb(255 255 255 / var(--tw-text-opacity, 1))}.accent-indigo-600{accent-color:#4f46e5}.opacity-0{opacity:0}.opacity-100{opacity:1}.shadow-2xl{--tw-shadow:0 25px 50px -12px rgb(0 0 0 / 0.25);--tw-shadow-colored:0 25px 50px -12px var(--tw-shadow-color);box-shadow:var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000), var(--tw-shadow)}.shadow-\[0_10px_25px_rgba\(0\2c 0\2c 0\2c 0\.5\)\]{--tw-shadow:0 10px 25px rgba(0,0,0,0.5);--tw-shadow-colored:0 10px 25px var(--tw-shadow-color);box-shadow:var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000), var(--tw-shadow)}.shadow-lg{--tw-shadow:0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);--tw-shadow-colored:0 10px 15px -3px var(--tw-shadow-color), 0 4px 6px -4px var(--tw-shadow-color);box-shadow:var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000), var(--tw-shadow)}.shadow-md{--tw-shadow:0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);--tw-shadow-colored:0 4px 6px -1px var(--tw-shadow-color), 0 2px 4px -2px var(--tw-shadow-color);box-shadow:var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000), var(--tw-shadow)}.shadow-sm{--tw-shadow:0 1px 2px 0 rgb(0 0 0 / 0.05);--tw-shadow-colored:0 1px 2px 0 var(--tw-shadow-color);box-shadow:var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000), var(--tw-shadow)}.shadow-xl{--tw-shadow:0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);--tw-shadow-colored:0 20px 25px -5px var(--tw-shadow-color), 0 8px 10px -6px var(--tw-shadow-color);box-shadow:var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000), var(--tw-shadow)}.backdrop-blur-sm{--tw-backdrop-blur:blur(4px);-webkit-backdrop-filter:var(--tw-backdrop-blur) var(--tw-backdrop-brightness) var(--tw-backdrop-contrast) var(--tw-backdrop-grayscale) var(--tw-backdrop-hue-rotate) var(--tw-backdrop-invert) var(--tw-backdrop-opacity) var(--tw-backdrop-saturate) var(--tw-backdrop-sepia);backdrop-filter:var(--tw-backdrop-blur) var(--tw-backdrop-brightness) var(--tw-backdrop-contrast) var(--tw-backdrop-grayscale) var(--tw-backdrop-hue-rotate) var(--tw-backdrop-invert) var(--tw-backdrop-opacity) var(--tw-backdrop-saturate) var(--tw-backdrop-sepia)}.transition{transition-property:color, background-color, border-color, fill, stroke, opacity, box-shadow, transform, filter, -webkit-text-decoration-color, -webkit-backdrop-filter;transition-property:color, background-color, border-color, text-decoration-color, fill, stroke, opacity, box-shadow, transform, filter, backdrop-filter;transition-property:color, background-color, border-color, text-decoration-color, fill, stroke, opacity, box-shadow, transform, filter, backdrop-filter, -webkit-text-decoration-color, -webkit-backdrop-filter;transition-timing-function:cubic-bezier(0.4, 0, 0.2, 1);transition-duration:150ms}.transition-all{transition-property:all;transition-timing-function:cubic-bezier(0.4, 0, 0.2, 1);transition-duration:150ms}.transition-colors{transition-property:color, background-color, border-color, fill, stroke, -webkit-text-decoration-color;transition-property:color, background-color, border-color, text-decoration-color, fill, stroke;transition-property:color, background-color, border-color, text-decoration-color, fill, stroke, -webkit-text-decoration-color;transition-timing-function:cubic-bezier(0.4, 0, 0.2, 1);transition-duration:150ms}.transition-opacity{transition-property:opacity;transition-timing-function:cubic-bezier(0.4, 0, 0.2, 1);transition-duration:150ms}.transition-transform{transition-property:transform;transition-timing-function:cubic-bezier(0.4, 0, 0.2, 1);transition-duration:150ms}.duration-300{transition-duration:300ms}.hover\:scale-105:hover{--tw-scale-x:1.05;--tw-scale-y:1.05;transform:translate(var(--tw-translate-x), var(--tw-translate-y)) rotate(var(--tw-rotate)) skewX(var(--tw-skew-x)) skewY(var(--tw-skew-y)) scaleX(var(--tw-scale-x)) scaleY(var(--tw-scale-y))}.hover\:bg-blue-700:hover{--tw-bg-opacity:1;background-color:rgb(29 78 216 / var(--tw-bg-opacity, 1))}.hover\:bg-gray-100:hover{--tw-bg-opacity:1;background-color:rgb(243 244 246 / var(--tw-bg-opacity, 1))}.hover\:bg-gray-200:hover{--tw-bg-opacity:1;background-color:rgb(229 231 235 / var(--tw-bg-opacity, 1))}.hover\:bg-gray-800:hover{--tw-bg-opacity:1;background-color:rgb(31 41 55 / var(--tw-bg-opacity, 1))}.hover\:bg-green-700:hover{--tw-bg-opacity:1;background-color:rgb(21 128 61 / var(--tw-bg-opacity, 1))}.hover\:bg-red-100:hover{--tw-bg-opacity:1;background-color:rgb(254 226 226 / var(--tw-bg-opacity, 1))}.hover\:bg-white\/30:hover{background-color:rgb(255 255 255 / 0.3)}.hover\:from-blue-700:hover{--tw-gradient-from:#1d4ed8 var(--tw-gradient-from-position);--tw-gradient-to:rgb(29 78 216 / 0) var(--tw-gradient-to-position);--tw-gradient-stops:var(--tw-gradient-from), var(--tw-gradient-to)}.hover\:to-indigo-800:hover{--tw-gradient-to:#3730a3 var(--tw-gradient-to-position)}.hover\:text-gray-300:hover{--tw-text-opacity:1;color:rgb(209 213 219 / var(--tw-text-opacity, 1))}.hover\:text-gray-700:hover{--tw-text-opacity:1;color:rgb(55 65 81 / var(--tw-text-opacity, 1))}.disabled\:bg-gray-200:disabled{background-color:rgb(229 231 235 / 1)}.disabled\:text-gray-400:disabled{color:rgb(156 163 175 / 1)}.disabled\:opacity-100:disabled{opacity:1}.disabled\:opacity-50:disabled{opacity:0.5}.disabled\:opacity-40:disabled{opacity:0.4}.group:hover .group-hover\:translate-y-0{--tw-translate-y:0px;transform:translate(var(--tw-translate-x), var(--tw-translate-y)) rotate(var(--tw-rotate)) skewX(var(--tw-skew-x)) skewY(var(--tw-skew-y)) scaleX(var(--tw-scale-x)) scaleY(var(--tw-scale-y))}.group:hover .group-hover\:scale-\[1\.01\]{--tw-scale-x:1.01;--tw-scale-y:1.01;transform:translate(var(--tw-translate-x), var(--tw-translate-y)) rotate(var(--tw-rotate)) skewX(var(--tw-skew-x)) skewY(var(--tw-skew-y)) scaleX(var(--tw-scale-x)) scaleY(var(--tw-scale-y))}.group:hover .group-hover\:bg-black\/5{background-color:rgb(0 0 0 / 0.05)}.group:hover .group-hover\:opacity-100{opacity:1}@media (min-width: 768px){.md\:p-8{padding:2rem}.md\:grid-cols-2{grid-template-columns:repeat(2, minmax(0, 1fr))}}@media (min-width: 1024px){.lg\:grid-cols-2{grid-template-columns:repeat(2, minmax(0, 1fr))}.lg\:grid-cols-3{grid-template-columns:repeat(3, minmax(0, 1fr))}}</style>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
 </head>
 <body class="text-gray-800 p-4 md:p-8">
     
     <!-- 全網頁滿版拖曳視覺回饋遮罩 -->
     <div id="drop-zone-overlay" class="hidden fixed inset-0 bg-blue-600/90 z-[300] flex flex-col justify-center items-center text-white text-2xl font-bold gap-4 pointer-events-none transition-opacity duration-200 opacity-0">
         <div class="border-4 border-dashed border-white p-8 rounded-2xl flex flex-col items-center gap-2">
-            <span>📥 放開滑鼠即可上傳文件照片</span>
-            <span class="text-sm font-normal opacity-80">支援任意圖片格式，將自動啟動智慧校正</span>
+            <span>📥 放開滑鼠即可上傳 (支援一次拖曳多檔)</span>
+            <span class="text-sm font-normal opacity-80">將自動加入處理佇列</span>
         </div>
     </div>
 
-    <div class="w-full px-4 space-y-6"> 
+    <div class="w-full max-w-7xl mx-auto space-y-6"> 
         
         <div class="text-center">
-            <h1 class="text-3xl font-bold text-gray-900 mb-2">📄 智慧文件校正掃描器 Pro v5.9</h1>
-            <p class="text-gray-500 text-sm">混合邊緣偵測 (對抗黃色板夾) / 高速去陰影還原 / 智慧格狀拼貼</p>
+            <h1 class="text-3xl font-bold text-gray-900 mb-2">📄 智慧文件校正掃描器 Pro v6.0</h1>
+            <p class="text-gray-500 text-sm">支援多檔批次處理 / 混合邊緣偵測 / 高速去陰影還原</p>
         </div>
 
-        <!-- 懸浮通知容器 -->
         <div id="toast-container">
             <div id="status-toast" class="toast toast-success" style="opacity: 1;">
                 <span id="status-icon">✅</span>
@@ -128,58 +89,42 @@ HTML
                     <h2 class="text-lg font-semibold border-b pb-2 mb-3">1. 檔案與方向控制</h2>
                     <div class="flex flex-wrap gap-3 items-center mb-4">
                         <label class="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-lg cursor-pointer transition font-medium shadow-sm flex items-center">
-                            上傳照片
-                            <input type="file" id="image-upload" accept="image/*">
+                            上傳照片 (可多選)
+                            <!-- 支援多檔 -->
+                            <input type="file" id="image-upload" accept="image/*" multiple>
                         </label>
                     </div>
                     
                     <div class="flex flex-wrap gap-2 mb-4">
-                        <button id="btn-rotate-90" class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-3 py-2 rounded-lg transition text-xs font-medium border border-gray-300 disabled:opacity-50" disabled="">
-                            旋轉 90°
-                        </button>
-                        <button id="btn-rotate-180" class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-3 py-2 rounded-lg transition text-xs font-medium border border-gray-300 disabled:opacity-50" disabled="">
-                            旋轉 180°
-                        </button>
-                        <button id="btn-reset-corners" class="bg-red-50 hover:bg-red-100 text-red-600 px-3 py-2 rounded-lg transition text-xs font-medium border border-red-200 disabled:opacity-50" disabled="">
-                            全圖重置
-                        </button>
+                        <button id="btn-rotate-90" class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-3 py-2 rounded-lg transition text-xs font-medium border border-gray-300 disabled:opacity-50" disabled>旋轉 90°</button>
+                        <button id="btn-rotate-180" class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-3 py-2 rounded-lg transition text-xs font-medium border border-gray-300 disabled:opacity-50" disabled>旋轉 180°</button>
+                        <button id="btn-reset-corners" class="bg-red-50 hover:bg-red-100 text-red-600 px-3 py-2 rounded-lg transition text-xs font-medium border border-red-200 disabled:opacity-50" disabled>全圖重置</button>
                     </div>
                 </div>
                 <div class="p-3 bg-gray-50 rounded-lg border border-gray-200 text-xs text-gray-600">
-                    💡 提示：您可以將圖片拖曳至**網頁任何地方**來快速上傳與校正。
+                    💡 提示：您可以將**多張圖片**拖曳至網頁中，系統會建立處理佇列。
                 </div>
             </div>
 
-            <!-- 第二欄：📚 雙圖拼貼助手 (升級 6 欄位 + 支援拖曳排序 + 智慧格狀排版) -->
-        <div class="p-4 bg-indigo-50/50 rounded-lg border border-indigo-100 space-y-3 h-full flex flex-col justify-between">
-            <div>
-                <h3 class="text-sm font-bold text-indigo-800 flex items-center gap-1.5 border-b border-indigo-100 pb-1.5 mb-2">
-                    <span>📚 多圖拼貼助手 (最大 6 張 / 拖曳排序)</span>
-                </h3>
-                <p class="text-xs text-gray-500 mb-2">
-                    將結果存入插槽。系統會依張數自動進行對稱格狀拼貼（例：4張為 2×2，6張為 2×3 或 3×2 排列）。可拖曳方塊調換順序！
-                </p>
-                <!-- 6 個插槽，3x2 配置 -->
-                <div id="collage-slots-container" class="grid grid-cols-3 gap-2 mb-3">
-                        <!-- 插槽由 JS 動態生成 -->
-                    </div>
+            <!-- 第二欄：📚 多圖拼貼助手 (最大 6 張) -->
+            <div class="p-4 bg-indigo-50/50 rounded-lg border border-indigo-100 space-y-3 h-full flex flex-col justify-between">
+                <div>
+                    <h3 class="text-sm font-bold text-indigo-800 flex items-center gap-1.5 border-b border-indigo-100 pb-1.5 mb-2">
+                        <span>📚 多圖拼貼助手 (最大 6 張)</span>
+                    </h3>
+                    <p class="text-xs text-gray-500 mb-2">將結果存入插槽。系統會依張數自動對稱格狀排版。可拖曳排序！</p>
+                    <div id="collage-slots-container" class="grid grid-cols-3 gap-2 mb-3"></div>
                 </div>
                 <div class="space-y-2">
                     <div class="flex gap-2">
-                        <button id="btn-add-collage" class="flex-1 text-xs bg-indigo-600 text-white hover:bg-indigo-700 font-bold py-2.5 px-3 rounded transition shadow-sm disabled:bg-gray-200 disabled:text-gray-400 disabled:opacity-100" disabled>
+                        <button id="btn-add-collage" class="flex-1 text-xs bg-indigo-600 text-white hover:bg-indigo-700 font-bold py-2.5 px-3 rounded transition shadow-sm disabled:opacity-50" disabled>
                             📥 存入當前結果
                         </button>
-                        <button id="btn-clear-collage" class="text-xs bg-white hover:bg-gray-100 text-gray-600 font-semibold py-2.5 px-3 rounded border border-gray-200 transition">
-                            清空
-                        </button>
+                        <button id="btn-clear-collage" class="text-xs bg-white hover:bg-gray-100 text-gray-600 font-semibold py-2.5 px-3 rounded border border-gray-200 transition">清空</button>
                     </div>
                     <div class="grid grid-cols-2 gap-2 pt-1 border-t border-indigo-100">
-                        <button id="btn-collage-h" class="text-xs bg-white hover:bg-indigo-100 text-indigo-700 font-bold py-2 rounded border border-indigo-200 transition disabled:opacity-40" disabled>
-                            ↔️ 水平拼貼
-                        </button>
-                        <button id="btn-collage-v" class="text-xs bg-white hover:bg-indigo-100 text-indigo-700 font-bold py-2 rounded border border-indigo-200 transition disabled:opacity-40" disabled>
-                            ↕️ 垂直拼貼
-                        </button>
+                        <button id="btn-collage-h" class="text-xs bg-white hover:bg-indigo-100 text-indigo-700 font-bold py-2 rounded border border-indigo-200 transition disabled:opacity-40" disabled>↔️ 水平拼貼</button>
+                        <button id="btn-collage-v" class="text-xs bg-white hover:bg-indigo-100 text-indigo-700 font-bold py-2 rounded border border-indigo-200 transition disabled:opacity-40" disabled>↕️ 垂直拼貼</button>
                     </div>
                 </div>
             </div>
@@ -190,7 +135,7 @@ HTML
                     2. 影像優化設定
                     <div class="flex items-center space-x-3 text-sm font-normal">
                         <label class="flex items-center space-x-1.5 cursor-pointer bg-gray-50 px-2 py-1 rounded border hover:bg-gray-100 transition">
-                            <input type="checkbox" id="remove-shadow" class="w-4 h-4 text-blue-600 rounded" checked="" disabled="">
+                            <input type="checkbox" id="remove-shadow" class="w-4 h-4 text-blue-600 rounded" checked disabled>
                             <span class="text-xs font-medium">啟用去陰影</span>
                         </label>
                     </div>
@@ -216,36 +161,42 @@ HTML
                                 <span class="text-gray-600">感應範圍 (Block Size)</span>
                                 <span id="block-size-val" class="font-bold text-blue-600">自動</span>
                             </div>
-                            <input type="range" id="block-size" min="3" max="99" step="2" value="21" class="w-full" disabled="">
+                            <input type="range" id="block-size" min="3" max="99" step="2" value="21" class="w-full" disabled>
                         </div>
                         <div>
                             <div class="flex justify-between text-[11px] mb-0.5">
                                 <span class="text-gray-600">亮度補償 (C Value)</span>
                                 <span id="c-value-val" class="font-bold text-blue-600">自動</span>
                             </div>
-                            <input type="range" id="c-value" min="0" max="30" step="1" value="10" class="w-full" disabled="">
+                            <input type="range" id="c-value" min="0" max="30" step="1" value="10" class="w-full" disabled>
                         </div>
-                        <button id="btn-reset-params" class="w-full text-[11px] bg-white hover:bg-gray-100 text-blue-600 font-bold py-1.5 rounded border border-blue-200 transition disabled:opacity-50" disabled="">
+                        <button id="btn-reset-params" class="w-full text-[11px] bg-white hover:bg-gray-100 text-blue-600 font-bold py-1.5 rounded border border-blue-200 transition disabled:opacity-50" disabled>
                             🔄 恢復目前推薦數值
                         </button>
                     </div>
-
                     <div id="color-settings" class="hidden text-xs text-gray-600 bg-yellow-50 p-2 rounded border border-yellow-200 text-center">
-                    🎨 彩色去陰影模式已啟用
+                        🎨 彩色去陰影模式已啟用
+                    </div>
                 </div>
             </div>
         </div>
-    </div>
 
-    <!-- 執行大按鈕區 -->
-    <div class="text-center py-2" style="margin: 1rem 0;">
-        <button id="btn-process" class="bg-gradient-to-r from-blue-600 to-indigo-700 hover:from-blue-700 hover:to-indigo-800 text-white rounded-full font-bold shadow-xl transition transform hover:scale-105 disabled:opacity-50 flex items-center mx-auto" style="padding: 1.25rem 4rem; font-size: 1.25rem;" disabled="">
-            執行校正輸出 ✨
-        </button>
-    </div>
+        <!-- 執行大按鈕區與導覽列 -->
+        <div class="py-4 my-4 flex flex-col md:flex-row items-center justify-center gap-6 bg-white p-4 rounded-xl shadow-sm border border-gray-100 mx-auto max-w-4xl">
+            <!-- 多檔切換導覽列 -->
+            <div id="file-nav-container" class="hidden flex items-center justify-between bg-blue-50 p-2 rounded-lg border border-blue-100 shadow-inner min-w-[250px]">
+                <button id="btn-prev-file" class="px-4 py-2 bg-white border border-gray-300 rounded shadow-sm text-sm font-semibold text-gray-700 hover:bg-gray-50 disabled:opacity-40 transition">&lt; 上一張</button>
+                <span id="file-counter" class="text-sm font-bold text-blue-800 tracking-wide">0 / 0</span>
+                <button id="btn-next-file" class="px-4 py-2 bg-white border border-gray-300 rounded shadow-sm text-sm font-semibold text-gray-700 hover:bg-gray-50 disabled:opacity-40 transition">下一張 &gt;</button>
+            </div>
 
-    <!-- 工作畫布區 -->
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            <button id="btn-process" class="bg-gradient-to-r from-blue-600 to-indigo-700 hover:from-blue-700 hover:to-indigo-800 text-white rounded-full font-bold shadow-xl transition transform hover:scale-105 disabled:opacity-50 flex items-center px-10 py-4 text-xl" disabled>
+                執行當前校正 ✨
+            </button>
+        </div>
+
+        <!-- 工作畫布區 -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
             <div class="flex flex-col items-center border rounded-xl p-4 bg-white shadow-sm overflow-visible">
                 <h3 class="text-sm font-bold text-gray-500 mb-3 uppercase tracking-tighter">編輯區 (拖曳藍點進行微調)</h3>
                 <div class="w-full flex justify-center items-center flex-1 bg-gray-200 rounded min-h-[400px] transition-colors overflow-visible" id="canvas-area-wrapper">
@@ -257,11 +208,15 @@ HTML
             </div>
 
             <div id="result-section" class="flex flex-col items-center border rounded-xl p-4 bg-white shadow-sm overflow-hidden min-h-[400px]">
-                <div class="w-full flex justify-between items-center mb-3">
-                    <h3 class="text-sm font-bold text-gray-500 uppercase tracking-tighter">高品質結果</h3>
+                <div class="w-full flex flex-wrap justify-between items-center mb-3 gap-2">
+                    <h3 class="text-sm font-bold text-gray-500 uppercase tracking-tighter">處理結果 <span id="current-result-badge" class="hidden bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full text-[10px]"></span></h3>
                     <div class="flex space-x-2">
-                        <button id="btn-print" class="bg-gray-700 hover:bg-gray-800 text-white px-4 py-1.5 rounded text-xs font-bold hidden shadow-sm transition">🖨️ 列印</button>
-                        <button id="btn-download" class="bg-green-600 hover:bg-green-700 text-white px-4 py-1.5 rounded text-xs font-bold hidden shadow-sm transition">💾 下載 JPG</button>
+                        <!-- 單檔操作 -->
+                        <button id="btn-print" class="bg-gray-600 hover:bg-gray-700 text-white px-3 py-1.5 rounded text-xs font-bold hidden shadow-sm transition">🖨️ 單張列印</button>
+                        <button id="btn-download" class="bg-green-600 hover:bg-green-700 text-white px-3 py-1.5 rounded text-xs font-bold hidden shadow-sm transition">💾 單張下載</button>
+                        <!-- 多檔批次操作 -->
+                        <button id="btn-batch-print" class="bg-gray-800 hover:bg-gray-900 text-white px-3 py-1.5 rounded text-xs font-bold hidden shadow-sm transition outline outline-2 outline-offset-1 outline-gray-300">🖨️ 批次列印 (<span id="batch-print-count">0</span>)</button>
+                        <button id="btn-batch-download" class="bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1.5 rounded text-xs font-bold hidden shadow-sm transition outline outline-2 outline-offset-1 outline-emerald-300">💾 批次下載 (<span id="batch-down-count">0</span>)</button>
                     </div>
                 </div>
                 <div id="result-container" class="w-full flex-1 flex justify-center items-center bg-gray-50 rounded border-2 border-dashed border-gray-200 relative overflow-hidden p-4 group cursor-zoom-in">
@@ -276,7 +231,7 @@ HTML
             </div>
         </div>
 
-        <!-- 滿版圖片檢視器 (Modal) -->
+        <!-- 滿版圖片檢視器 -->
         <div id="fullscreen-modal" class="hidden fixed inset-0 bg-black/95 z-[200] flex justify-center items-center backdrop-blur-sm">
             <button id="btn-close-modal" class="absolute top-6 right-6 text-white hover:text-gray-300 bg-white/20 hover:bg-white/30 rounded-full p-2 transition z-[201]">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
@@ -297,9 +252,15 @@ HTML
         </div>
     </div>
 
+    <!-- 列印專用容器 -->
+    <div id="print-area"></div>
+
     <script async src="https://docs.opencv.org/4.8.0/opencv.js" onload="onOpenCvReady()"></script>
 
     <script>
+        // ==========================================
+        // 核心狀態變數
+        // ==========================================
         let srcMat = null;
         let corners = []; 
         let scaleFactor = 1;
@@ -308,24 +269,20 @@ HTML
         const PADDING = 0;
         let isBwMode = true; 
 
+        // 多檔批次狀態
+        let fileQueue = [];        
+        let currentFileIndex = 0;  
+        let processedResults = {}; 
+        let isModifiedSinceLastProcess = false; 
+
         let draggedIndex = null;
 
+        // ==========================================
+        // 集中 DOM 元素綁定 (解決 ReferenceError 與 TypeError)
+        // ==========================================
         const statusToast = document.getElementById('status-toast');
         const statusText = document.getElementById('status-text');
         const statusIcon = document.getElementById('status-icon');
-
-        function updateStatus(text, icon = "⏳", type = "default") {
-            statusText.textContent = text;
-            statusIcon.textContent = icon;
-            if (type === "success") {
-                statusToast.classList.add('toast-success');
-            } else {
-                statusToast.classList.remove('toast-success');
-            }
-            statusToast.style.opacity = '0';
-            setTimeout(() => statusToast.style.opacity = '1', 10);
-        }
-
         const uploadInput = document.getElementById('image-upload');
         const editorCanvas = document.getElementById('editor-canvas');
         const overlayCanvas = document.getElementById('overlay-canvas');
@@ -335,17 +292,30 @@ HTML
         const btnRotate90 = document.getElementById('btn-rotate-90');
         const btnRotate180 = document.getElementById('btn-rotate-180');
         const btnResetCorners = document.getElementById('btn-reset-corners');
+        
         const btnDownload = document.getElementById('btn-download');
         const btnPrint = document.getElementById('btn-print');
+        const btnBatchDownload = document.getElementById('btn-batch-download');
+        const btnBatchPrint = document.getElementById('btn-batch-print');
+        const batchDownCount = document.getElementById('batch-down-count');
+        const batchPrintCount = document.getElementById('batch-print-count');
+
         const btnResetParams = document.getElementById('btn-reset-params');
         const resultPlaceholder = document.getElementById('result-placeholder');
         const resultSection = document.getElementById('result-section');
         const resultHoverOverlay = document.getElementById('result-hover-overlay');
+        const currentResultBadge = document.getElementById('current-result-badge');
         
+        const fileNavContainer = document.getElementById('file-nav-container');
+        const btnPrevFile = document.getElementById('btn-prev-file');
+        const btnNextFile = document.getElementById('btn-next-file');
+        const fileCounterText = document.getElementById('file-counter');
+
         const btnAddCollage = document.getElementById('btn-add-collage');
         const btnClearCollage = document.getElementById('btn-clear-collage');
         const btnCollageH = document.getElementById('btn-collage-h');
         const btnCollageV = document.getElementById('btn-collage-v');
+        const slotsContainer = document.getElementById('collage-slots-container');
 
         const fullscreenModal = document.getElementById('fullscreen-modal');
         const fullscreenImg = document.getElementById('fullscreen-img');
@@ -359,15 +329,31 @@ HTML
         const sharpenLevel = document.getElementById('sharpen-level');
         const sharpenVal = document.getElementById('sharpen-val');
 
-        sharpenLevel.addEventListener('input', (e) => {
-            const levels = ["關閉", "微弱", "中等", "強烈", "極強"];
-            sharpenVal.textContent = levels[e.target.value];
-        });
-
         const btnModeBw = document.getElementById('mode-bw');
         const btnModeColor = document.getElementById('mode-color');
         const bwSettings = document.getElementById('bw-settings');
         const colorSettings = document.getElementById('color-settings');
+
+        // ==========================================
+        // 系統與 UI 互動邏輯
+        // ==========================================
+
+        function updateStatus(text, icon = "⏳", type = "default") {
+            statusText.textContent = text;
+            statusIcon.textContent = icon;
+            if (type === "success") {
+                statusToast.classList.add('toast-success');
+            } else {
+                statusToast.classList.remove('toast-success');
+            }
+            statusToast.style.opacity = '0';
+            setTimeout(() => statusToast.style.opacity = '1', 10);
+        }
+
+        sharpenLevel.addEventListener('input', (e) => {
+            const levels = ["關閉", "微弱", "中等", "強烈", "極強"];
+            sharpenVal.textContent = levels[e.target.value];
+        });
 
         btnModeBw.addEventListener('click', () => {
             isBwMode = true;
@@ -396,11 +382,45 @@ HTML
         blockSizeInput.addEventListener('input', (e) => { blockSizeVal.textContent = e.target.value; });
         cValueInput.addEventListener('input', (e) => { cValueVal.textContent = e.target.value; });
 
-        function handleFile(file) {
-            if (!file || !file.type.startsWith('image/')) return;
+        // --- 多檔載入核心邏輯 ---
+        function handleFiles(files) {
+            if (!files || files.length === 0) return;
+            
+            let addedCount = 0;
+            for(let i=0; i<files.length; i++) {
+                if(files[i].type.startsWith('image/')) {
+                    fileQueue.push(files[i]);
+                    addedCount++;
+                }
+            }
+            
+            if (addedCount > 0) {
+                if (fileQueue.length === addedCount) {
+                    currentFileIndex = 0;
+                    loadCurrentFile();
+                } else {
+                    updateNavUI(); 
+                }
+                updateStatus(`已加入 ${addedCount} 張影像，共 ${fileQueue.length} 張`, "📥", "success");
+            }
+        }
+
+        function loadCurrentFile() {
+            if (fileQueue.length === 0) return;
+            
+            isModifiedSinceLastProcess = false; 
+            const file = fileQueue[currentFileIndex];
             originalFileName = file.name.replace(/\.[^/.]+$/, "");
             
-            updateStatus(`正在進行高對比邊緣分析...`, "🔍");
+            updateStatus(`[${currentFileIndex+1}/${fileQueue.length}] 高對比邊緣分析中...`, "🔍");
+            updateNavUI();
+            
+            resultCanvas.classList.add('hidden');
+            resultPlaceholder.classList.remove('hidden');
+            resultHoverOverlay.classList.add('hidden');
+            btnDownload.classList.add('hidden');
+            btnPrint.classList.add('hidden');
+            currentResultBadge.classList.add('hidden');
 
             const reader = new FileReader();
             reader.onload = (event) => {
@@ -411,10 +431,10 @@ HTML
                     let detected = adobeScanStyleDetect(srcMat);
                     if (detected) {
                         corners = detected;
-                        updateStatus(`自動邊界辨識成功！`, "✨", "success");
+                        updateStatus(`[第 ${currentFileIndex+1} 張] 邊界辨識成功！`, "✨", "success");
                     } else {
                         resetCornersToFullBoundary();
-                        updateStatus(`對比不足，已啟動預設矩形框架`, "📍");
+                        updateStatus(`[第 ${currentFileIndex+1} 張] 未偵測到明顯邊界，使用預設框`, "📍");
                     }
                     autoUpdateParams(); 
                     renderEditor();
@@ -427,13 +447,48 @@ HTML
                     removeShadowCheck.disabled = false;
                     blockSizeInput.disabled = false;
                     cValueInput.disabled = false;
+
+                    if(processedResults[currentFileIndex]) {
+                        showProcessedResult(processedResults[currentFileIndex]);
+                    }
                 };
                 img.src = event.target.result;
             };
             reader.readAsDataURL(file);
         }
 
-        uploadInput.addEventListener('change', (e) => handleFile(e.target.files[0]));
+        function updateNavUI() {
+            if (fileQueue.length > 1) {
+                fileNavContainer.classList.remove('hidden');
+                btnPrevFile.disabled = currentFileIndex === 0;
+                btnNextFile.disabled = currentFileIndex === fileQueue.length - 1;
+                fileCounterText.textContent = `第 ${currentFileIndex + 1} / ${fileQueue.length} 張`;
+            } else {
+                fileNavContainer.classList.add('hidden');
+            }
+        }
+
+        btnPrevFile.addEventListener('click', () => {
+            if (isModifiedSinceLastProcess) {
+                if (!confirm("您已調整過端點但尚未執行校正，確定要切換圖片嗎？\n(未執行的變更將會遺失)")) return;
+            }
+            if (currentFileIndex > 0) {
+                currentFileIndex--;
+                loadCurrentFile();
+            }
+        });
+
+        btnNextFile.addEventListener('click', () => {
+            if (isModifiedSinceLastProcess) {
+                if (!confirm("您已調整過端點但尚未執行校正，確定要切換圖片嗎？\n(未執行的變更將會遺失)")) return;
+            }
+            if (currentFileIndex < fileQueue.length - 1) {
+                currentFileIndex++;
+                loadCurrentFile();
+            }
+        });
+
+        uploadInput.addEventListener('change', (e) => handleFiles(e.target.files));
 
         let dragCounter = 0;
         window.addEventListener('dragenter', (e) => { 
@@ -443,9 +498,7 @@ HTML
             overlay.classList.remove('hidden');
             setTimeout(() => overlay.classList.add('opacity-100'), 10);
         });
-        window.addEventListener('dragover', (e) => { 
-            e.preventDefault(); 
-        });
+        window.addEventListener('dragover', (e) => { e.preventDefault(); });
         window.addEventListener('dragleave', (e) => { 
             e.preventDefault(); 
             dragCounter--;
@@ -462,11 +515,10 @@ HTML
             overlay.classList.remove('opacity-100');
             overlay.classList.add('hidden');
             if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-                handleFile(e.dataTransfer.files[0]);
+                handleFiles(e.dataTransfer.files);
             }
         });
 
-        // 縮減 fallback 的矩形為內縮 5%，避免直接死鎖在 0 座標導致拖曳困難
         function resetCornersToFullBoundary() {
             if (!srcMat) return;
             const w = srcMat.cols; const h = srcMat.rows;
@@ -484,11 +536,12 @@ HTML
             resetCornersToFullBoundary();
             autoUpdateParams();
             renderEditor();
+            isModifiedSinceLastProcess = true; 
             updateStatus("已將定位端點重置", "🔄");
         });
 
         // ==========================================
-        // 核心進化：混合式邊緣偵測 (對抗低對比黃色板夾與複雜桌面)
+        // 邊緣偵測演算法
         // ==========================================
         function adobeScanStyleDetect(src) {
             try {
@@ -503,11 +556,9 @@ HTML
                 let gray = new cv.Mat();
                 cv.cvtColor(small, gray, cv.COLOR_RGBA2GRAY, 0);
 
-                // 1. 高斯模糊降噪
                 let blurred = new cv.Mat();
                 cv.GaussianBlur(gray, blurred, new cv.Size(5, 5), 0, 0, cv.BORDER_DEFAULT);
 
-                // 2. 混合邊緣抓取法 A: 動態 Canny (針對普通紙張邊緣)
                 let meanMat = new cv.Mat(); let stdMat = new cv.Mat();
                 cv.meanStdDev(blurred, meanMat, stdMat);
                 let meanVal = meanMat.data64F[0];
@@ -518,21 +569,17 @@ HTML
                 let cannyEdges = new cv.Mat();
                 cv.Canny(blurred, cannyEdges, lower, upper);
 
-                // 3. 混合邊緣抓取法 B: 自適應二值化邊緣 (專殺黃色夾板等顏色相近的邊緣)
                 let threshEdges = new cv.Mat();
                 cv.adaptiveThreshold(blurred, threshEdges, 255, cv.ADAPTIVE_THRESH_GAUSSIAN_C, cv.THRESH_BINARY_INV, 15, 4);
 
-                // 4. 合併兩種特徵線條
                 let mergedEdges = new cv.Mat();
                 cv.bitwise_or(cannyEdges, threshEdges, mergedEdges);
 
-                // 5. 強力形態學運算：膨脹後侵蝕 (Dilate -> Erode)，接合斷裂的邊框線條
                 let morph = new cv.Mat();
-                let kernel = cv.getStructuringElement(cv.MORPH_RECT, new cv.Size(7, 7)); // 較大的 Kernel 助於接合
+                let kernel = cv.getStructuringElement(cv.MORPH_RECT, new cv.Size(7, 7));
                 cv.dilate(mergedEdges, morph, kernel, new cv.Point(-1, -1), 1);
                 cv.erode(morph, morph, kernel, new cv.Point(-1, -1), 1);
 
-                // 6. 尋找輪廓
                 let contours = new cv.MatVector();
                 let hierarchy = new cv.Mat();
                 cv.findContours(morph, contours, hierarchy, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE);
@@ -550,10 +597,8 @@ HTML
                 for (let i = 0; i < Math.min(5, cntsArray.length); i++) {
                     let cnt = cntsArray[i].cnt;
                     let area = cntsArray[i].area;
-                    // 濾除太小的雜訊 (小於畫面 5%)
                     if (area < (width * height * 0.05)) continue;
 
-                    // 凸包運算以無視紙張的微小破損或金屬夾凹陷
                     let hull = new cv.Mat();
                     cv.convexHull(cnt, hull, false, true);
 
@@ -564,40 +609,23 @@ HTML
                     if (approx.rows === 4) {
                         bestPts = [];
                         for (let j = 0; j < 4; j++) {
-                            bestPts.push({ 
-                                x: approx.data32S[j*2] * ratio, 
-                                y: approx.data32S[j*2+1] * ratio 
-                            });
+                            bestPts.push({ x: approx.data32S[j*2] * ratio, y: approx.data32S[j*2+1] * ratio });
                         }
-                        approx.delete(); hull.delete();
-                        break;
-                    } 
-                    // 3角推算平行四邊形第 4 角
-                    else if (approx.rows === 3) {
+                        approx.delete(); hull.delete(); break;
+                    } else if (approx.rows === 3) {
                         let p0 = { x: approx.data32S[0], y: approx.data32S[1] };
                         let p1 = { x: approx.data32S[2], y: approx.data32S[3] };
                         let p2 = { x: approx.data32S[4], y: approx.data32S[5] };
-
                         let d01 = Math.hypot(p0.x - p1.x, p0.y - p1.y);
                         let d12 = Math.hypot(p1.x - p2.x, p1.y - p2.y);
                         let d20 = Math.hypot(p2.x - p0.x, p2.y - p0.y);
-
                         let A, B, C;
                         if (d01 >= d12 && d01 >= d20) { B = p2; A = p0; C = p1; } 
                         else if (d12 >= d01 && d12 >= d20) { B = p0; A = p1; C = p2; } 
                         else { B = p1; A = p2; C = p0; }
-
-                        let Dx = A.x + C.x - B.x;
-                        let Dy = A.y + C.y - B.y;
-
-                        bestPts = [
-                            { x: A.x * ratio, y: A.y * ratio },
-                            { x: B.x * ratio, y: B.y * ratio },
-                            { x: C.x * ratio, y: C.y * ratio },
-                            { x: Dx * ratio, y: Dy * ratio }
-                        ];
-                        approx.delete(); hull.delete();
-                        break;
+                        let Dx = A.x + C.x - B.x; let Dy = A.y + C.y - B.y;
+                        bestPts = [ { x: A.x * ratio, y: A.y * ratio }, { x: B.x * ratio, y: B.y * ratio }, { x: C.x * ratio, y: C.y * ratio }, { x: Dx * ratio, y: Dy * ratio } ];
+                        approx.delete(); hull.delete(); break;
                     }
                     approx.delete(); hull.delete();
                 }
@@ -608,49 +636,24 @@ HTML
 
                 if (!bestPts && cntsArray.length > 0) {
                     let largestCnt = cntsArray[0].cnt;
-                    // 如果最大輪廓仍然非常大，才做物理端點強制吸附
                     if (cntsArray[0].area > (width * height * 0.15)) {
                         let hull = new cv.Mat();
                         cv.convexHull(largestCnt, hull, false, true);
-                        
                         let points = [];
-                        for (let j = 0; j < hull.rows; j++) {
-                            points.push({ 
-                                x: hull.data32S[j*2] * ratio, 
-                                y: hull.data32S[j*2+1] * ratio 
-                            });
-                        }
+                        for (let j = 0; j < hull.rows; j++) { points.push({ x: hull.data32S[j*2] * ratio, y: hull.data32S[j*2+1] * ratio }); }
                         hull.delete();
-
                         if (points.length > 0) {
-                            const wReal = src.cols;
-                            const hReal = src.rows;
-                            
-                            const physicalCorners = [
-                                { x: 0, y: 0 },         
-                                { x: wReal, y: 0 },     
-                                { x: wReal, y: hReal }, 
-                                { x: 0, y: hReal }      
-                            ];
-
+                            const wReal = src.cols; const hReal = src.rows;
+                            const physicalCorners = [ { x: 0, y: 0 }, { x: wReal, y: 0 }, { x: wReal, y: hReal }, { x: 0, y: hReal } ];
                             bestPts = [];
                             for (let k = 0; k < 4; k++) {
-                                let target = physicalCorners[k];
-                                let closestPoint = null;
-                                let minDist = Infinity;
-
+                                let target = physicalCorners[k]; let closestPoint = null; let minDist = Infinity;
                                 for (let p of points) {
                                     let dist = Math.hypot(p.x - target.x, p.y - target.y);
-                                    if (dist < minDist) {
-                                        minDist = dist;
-                                        closestPoint = p;
-                                    }
+                                    if (dist < minDist) { minDist = dist; closestPoint = p; }
                                 }
-                                if (minDist > Math.max(wReal, hReal) * 0.4) {
-                                    bestPts.push({ x: target.x, y: target.y });
-                                } else {
-                                    bestPts.push({ x: closestPoint.x, y: closestPoint.y });
-                                }
+                                if (minDist > Math.max(wReal, hReal) * 0.4) { bestPts.push({ x: target.x, y: target.y }); } 
+                                else { bestPts.push({ x: closestPoint.x, y: closestPoint.y }); }
                             }
                         }
                     }
@@ -659,64 +662,51 @@ HTML
                 if (bestPts) return orderPts(bestPts);
                 return null;
             } catch (e) { 
-                console.error("智慧邊緣分析異常:", e);
-                return null; 
+                console.error("智慧邊緣分析異常:", e); return null; 
             }
         }
 
         function orderPts(pts) {
             let cx = pts.reduce((sum, p) => sum + p.x, 0) / 4;
             let cy = pts.reduce((sum, p) => sum + p.y, 0) / 4;
-            let sortedPts = pts.map(p => {
-                return {
-                    x: p.x,
-                    y: p.y,
-                    angle: Math.atan2(p.y - cy, p.x - cx) * 180 / Math.PI
-                };
-            });
+            let sortedPts = pts.map(p => { return { x: p.x, y: p.y, angle: Math.atan2(p.y - cy, p.x - cx) * 180 / Math.PI }; });
             sortedPts.sort((a, b) => a.angle - b.angle);
             return [
-                { x: sortedPts[0].x, y: sortedPts[0].y, id: 0 },
-                { x: sortedPts[1].x, y: sortedPts[1].y, id: 1 },
-                { x: sortedPts[2].x, y: sortedPts[2].y, id: 2 },
-                { x: sortedPts[3].x, y: sortedPts[3].y, id: 3 }
+                { x: sortedPts[0].x, y: sortedPts[0].y, id: 0 }, { x: sortedPts[1].x, y: sortedPts[1].y, id: 1 },
+                { x: sortedPts[2].x, y: sortedPts[2].y, id: 2 }, { x: sortedPts[3].x, y: sortedPts[3].y, id: 3 }
             ];
         }
 
         function autoUpdateParams() {
-        if (!srcMat || corners.length < 4) return;
-        let minX = Math.max(0, Math.min(...corners.map(p => p.x)));
-        let maxX = Math.min(srcMat.cols - 1, Math.max(...corners.map(p => p.x)));
-        let minY = Math.max(0, Math.min(...corners.map(p => p.y)));
-        let maxY = Math.min(srcMat.rows - 1, Math.max(...corners.map(p => p.y)));
-        let roiW = maxX - minX; let roiH = maxY - minY;
-        if (roiW <= 0 || roiH <= 0) return;
-        
-        let roi = srcMat.roi(new cv.Rect(minX, minY, roiW, roiH));
-        let gray = new cv.Mat();
-        cv.cvtColor(roi, gray, cv.COLOR_RGBA2GRAY, 0);
-        let std = new cv.Mat(); let mean = new cv.Mat();
-        cv.meanStdDev(gray, mean, std);
-        
-        let sd = std.data64F[0];
-        let m = mean.data64F[0];
+            if (!srcMat || corners.length < 4) return;
+            let minX = Math.max(0, Math.min(...corners.map(p => p.x)));
+            let maxX = Math.min(srcMat.cols - 1, Math.max(...corners.map(p => p.x)));
+            let minY = Math.max(0, Math.min(...corners.map(p => p.y)));
+            let maxY = Math.min(srcMat.rows - 1, Math.max(...corners.map(p => p.y)));
+            let roiW = maxX - minX; let roiH = maxY - minY;
+            if (roiW <= 0 || roiH <= 0) return;
+            
+            let roi = srcMat.roi(new cv.Rect(minX, minY, roiW, roiH));
+            let gray = new cv.Mat();
+            cv.cvtColor(roi, gray, cv.COLOR_RGBA2GRAY, 0);
+            let std = new cv.Mat(); let mean = new cv.Mat();
+            cv.meanStdDev(gray, mean, std);
+            
+            let sd = std.data64F[0]; let m = mean.data64F[0];
+            let recBlockSize = Math.max(21, Math.floor(Math.max(roi.cols, roi.rows) * 0.02));
+            if (recBlockSize % 2 === 0) recBlockSize++;
+            
+            let recCValue = sd > 50 ? 15 : sd > 35 ? 12 : sd > 20 ? 9 : 6;
+            if (m > 200 && recCValue > 8) recCValue -= 2;
+            if (m < 100) recCValue += 2;
 
-        let recBlockSize = Math.max(21, Math.floor(Math.max(roi.cols, roi.rows) * 0.02));
-        if (recBlockSize % 2 === 0) recBlockSize++;
-        
-        let recCValue = sd > 50 ? 15 : sd > 35 ? 12 : sd > 20 ? 9 : 6;
-        if (m > 200 && recCValue > 8) recCValue -= 2;
-        if (m < 100) recCValue += 2;
+            blockSizeInput.value = recBlockSize; cValueInput.value = recCValue;
+            blockSizeVal.textContent = recBlockSize + " (自動)"; cValueVal.textContent = recCValue + " (自動)";
+            
+            roi.delete(); gray.delete(); mean.delete(); std.delete();
+        }
 
-        blockSizeInput.value = recBlockSize;
-        cValueInput.value = recCValue;
-        blockSizeVal.textContent = recBlockSize + " (自動)";
-        cValueVal.textContent = recCValue + " (自動)";
-        
-        roi.delete(); gray.delete(); mean.delete(); std.delete();
-    }
-
-    function renderEditor() {
+        function renderEditor() {
             if (!srcMat) return;
             const wrap = document.getElementById('canvas-area-wrapper');
             scaleFactor = Math.min(1.0, (wrap.clientWidth - 40) / srcMat.cols);
@@ -767,6 +757,7 @@ HTML
             activeH = null; 
             document.getElementById('magnifier-container').classList.add('hidden');
             autoUpdateParams(); 
+            isModifiedSinceLastProcess = true; 
             document.removeEventListener('mousemove', drag); 
             document.removeEventListener('mouseup', stopDrag); 
             document.removeEventListener('touchmove', drag); 
@@ -778,18 +769,13 @@ HTML
             const cx = e.clientX || (e.touches && e.touches[0].clientX);
             const cy = e.clientY || (e.touches && e.touches[0].clientY);
             const rect = container.getBoundingClientRect();
-            
-            let x = cx - rect.left; 
-            let y = cy - rect.top;
+            let x = cx - rect.left; let y = cy - rect.top;
 
-            // 支援端點拉到影像外
-            const bufferX = rect.width * 1.5;
-            const bufferY = rect.height * 1.5;
+            const bufferX = rect.width * 1.5; const bufferY = rect.height * 1.5;
             x = Math.max(-bufferX, Math.min(x, rect.width + bufferX));
             y = Math.max(-bufferY, Math.min(y, rect.height + bufferY));
 
-            activeH.style.left = x + 'px'; 
-            activeH.style.top = y + 'px';
+            activeH.style.left = x + 'px'; activeH.style.top = y + 'px';
             const id = parseInt(activeH.dataset.id);
             corners[id].x = (x - PADDING) / scaleFactor;
             corners[id].y = (y - PADDING) / scaleFactor;
@@ -799,61 +785,45 @@ HTML
             const magCanvas = document.getElementById('magnifier-canvas');
             if (magCanvas) {
                 const magCtx = magCanvas.getContext('2d');
-                const magSize = 140;
-                const zoom = 2.5; 
-                const srcSize = magSize / zoom;
-                
-                let magLeft = cx + 30;
-                let magTop = cy - magSize - 30;
-                
+                const magSize = 140; const zoom = 2.5; const srcSize = magSize / zoom;
+                let magLeft = cx + 30; let magTop = cy - magSize - 30;
                 if (magTop < 10) magTop = cy + 40;
                 if (magLeft + magSize > window.innerWidth) magLeft = cx - magSize - 30;
-                
-                magContainer.style.left = magLeft + 'px';
-                magContainer.style.top = magTop + 'px';
-                
-                let canvasX = x - PADDING;
-                let canvasY = y - PADDING;
-                
-                magCtx.fillStyle = '#e5e7eb';
-                magCtx.fillRect(0, 0, magSize, magSize);
+                magContainer.style.left = magLeft + 'px'; magContainer.style.top = magTop + 'px';
+                let canvasX = x - PADDING; let canvasY = y - PADDING;
+                magCtx.fillStyle = '#e5e7eb'; magCtx.fillRect(0, 0, magSize, magSize);
                 magCtx.drawImage(editorCanvas, canvasX - srcSize/2, canvasY - srcSize/2, srcSize, srcSize, 0, 0, magSize, magSize);
                 magCtx.drawImage(overlayCanvas, canvasX - srcSize/2, canvasY - srcSize/2, srcSize, srcSize, 0, 0, magSize, magSize);
             }
         }
 
         function applySharpen(src, level) {
-        if (level === 0) return src.clone();
-        let dst = new cv.Mat();
-        let kernel;
-        if (level === 1) kernel = cv.matFromArray(3, 3, cv.CV_32F, [0, -0.25, 0, -0.25, 2, -0.25, 0, -0.25, 0]);
-        else if (level === 2) kernel = cv.matFromArray(3, 3, cv.CV_32F, [0, -0.5, 0, -0.5, 3, -0.5, 0, -0.5, 0]);
-        else if (level === 3) kernel = cv.matFromArray(3, 3, cv.CV_32F, [0, -1, 0, -1, 5, -1, 0, -1, 0]);
-        else kernel = cv.matFromArray(3, 3, cv.CV_32F, [-1, -1, -1, -1, 9, -1, -1, -1, -1]);
-        cv.filter2D(src, dst, -1, kernel);
-        kernel.delete();
-        return dst;
-    }
+            if (level === 0) return src.clone();
+            let dst = new cv.Mat(); let kernel;
+            if (level === 1) kernel = cv.matFromArray(3, 3, cv.CV_32F, [0, -0.25, 0, -0.25, 2, -0.25, 0, -0.25, 0]);
+            else if (level === 2) kernel = cv.matFromArray(3, 3, cv.CV_32F, [0, -0.5, 0, -0.5, 3, -0.5, 0, -0.5, 0]);
+            else if (level === 3) kernel = cv.matFromArray(3, 3, cv.CV_32F, [0, -1, 0, -1, 5, -1, 0, -1, 0]);
+            else kernel = cv.matFromArray(3, 3, cv.CV_32F, [-1, -1, -1, -1, 9, -1, -1, -1, -1]);
+            cv.filter2D(src, dst, -1, kernel);
+            kernel.delete();
+            return dst;
+        }
 
-    // ==========================================
-    // 核心進化：還原 v5.7 穩定快速的陰影濾除引擎
-    // ==========================================
-    function enhanceColorDocument(src) {
-        let bg = new cv.Mat();
-        let kSize = Math.floor(Math.max(src.cols, src.rows) / 35);
-        if (kSize % 2 === 0) kSize++;
-        if (kSize < 21) kSize = 21;
-        
-        cv.blur(src, bg, new cv.Size(kSize, kSize));
-        let dst = new cv.Mat();
-        cv.divide(src, bg, dst, 255.0, -1);
-        bg.delete();
-        return dst;
-    }
+        function enhanceColorDocument(src) {
+            let bg = new cv.Mat();
+            let kSize = Math.floor(Math.max(src.cols, src.rows) / 35);
+            if (kSize % 2 === 0) kSize++; if (kSize < 21) kSize = 21;
+            cv.blur(src, bg, new cv.Size(kSize, kSize));
+            let dst = new cv.Mat();
+            cv.divide(src, bg, dst, 255.0, -1);
+            bg.delete();
+            return dst;
+        }
 
-    btnProcess.addEventListener('click', () => {
+        // --- 執行處理 (綁定批次儲存) ---
+        btnProcess.addEventListener('click', () => {
             if (!srcMat) return;
-            updateStatus("正在還原透視與大面積陰影去除...", "⏳");
+            updateStatus(`正在處理 第 ${currentFileIndex+1} 張...`, "⏳");
             
             setTimeout(() => {
                 let tl = corners[0]; let tr = corners[1]; let br = corners[2]; let bl = corners[3];
@@ -865,21 +835,10 @@ HTML
                 let m = cv.getPerspectiveTransform(sT, dT);
                 let warped = new cv.Mat();
 
-                // 遺失邊界改為純白色填充
-                cv.warpPerspective(
-                    srcMat, 
-                    warped, 
-                    m, 
-                    new cv.Size(w, h), 
-                    cv.INTER_LINEAR, 
-                    cv.BORDER_CONSTANT, 
-                    new cv.Scalar(255, 255, 255, 255)
-                );
+                cv.warpPerspective(srcMat, warped, m, new cv.Size(w, h), cv.INTER_LINEAR, cv.BORDER_CONSTANT, new cv.Scalar(255, 255, 255, 255));
                 
-                let cropX = Math.max(12, Math.floor(w * 0.01));
-                let cropY = Math.max(12, Math.floor(h * 0.01));
-                let cropW = Math.max(10, Math.floor(w - 2 * cropX));
-                let cropH = Math.max(10, Math.floor(h - 2 * cropY));
+                let cropX = Math.max(12, Math.floor(w * 0.01)); let cropY = Math.max(12, Math.floor(h * 0.01));
+                let cropW = Math.max(10, Math.floor(w - 2 * cropX)); let cropH = Math.max(10, Math.floor(h - 2 * cropY));
                 
                 let rect = new cv.Rect(cropX, cropY, cropW, cropH);
                 let cropped = warped.roi(rect);
@@ -906,22 +865,59 @@ HTML
                     finalRes = sharpened.clone();
                 }
                 
-                cv.imshow('result-canvas', finalRes);
-                resultCanvas.classList.remove('hidden');
-                resultPlaceholder.classList.add('hidden');
-                resultHoverOverlay.classList.remove('hidden');
-                btnDownload.classList.remove('hidden');
-                btnPrint.classList.remove('hidden');
-                
-                btnAddCollage.disabled = false;
-                updateStatus("校正完成，金屬夾與漸層陰影已優化", "✅", "success");
-                resultSection.scrollIntoView({ behavior: 'smooth' });
+                const dataURL = finalRes.toDataURL ? finalRes.toDataURL() : matToDataURL(finalRes); 
+                processedResults[currentFileIndex] = dataURL;
+                updateBatchUI();
+                showProcessedResult(dataURL);
+
+                isModifiedSinceLastProcess = false; 
+                updateStatus(`第 ${currentFileIndex+1} 張校正完成！`, "✅", "success");
                 
                 sT.delete(); dT.delete(); m.delete(); warped.delete(); cropped.delete(); 
                 rgbCropped.delete(); enhancedTemp.delete(); sharpened.delete(); finalRes.delete();
             }, 50);
         });
 
+        function matToDataURL(mat) {
+            let tempCanvas = document.createElement('canvas');
+            tempCanvas.width = mat.cols;
+            tempCanvas.height = mat.rows;
+            cv.imshow(tempCanvas, mat);
+            return tempCanvas.toDataURL('image/jpeg', 0.95);
+        }
+
+        function showProcessedResult(dataUrl) {
+            const ctx = resultCanvas.getContext('2d');
+            const img = new Image();
+            img.onload = () => {
+                resultCanvas.width = img.width;
+                resultCanvas.height = img.height;
+                ctx.drawImage(img, 0, 0);
+                
+                resultCanvas.classList.remove('hidden');
+                resultPlaceholder.classList.add('hidden');
+                resultHoverOverlay.classList.remove('hidden');
+                btnDownload.classList.remove('hidden');
+                btnPrint.classList.remove('hidden');
+                btnAddCollage.disabled = false;
+
+                currentResultBadge.textContent = `第 ${currentFileIndex + 1} 張`;
+                currentResultBadge.classList.remove('hidden');
+            };
+            img.src = dataUrl;
+        }
+
+        function updateBatchUI() {
+            const count = Object.keys(processedResults).length;
+            if (count > 1) {
+                btnBatchPrint.classList.remove('hidden');
+                btnBatchDownload.classList.remove('hidden');
+                batchPrintCount.textContent = count;
+                batchDownCount.textContent = count;
+            }
+        }
+
+        // --- 滿版檢視器 ---
         document.getElementById('result-container').addEventListener('click', () => {
             if (resultCanvas.classList.contains('hidden')) return;
             fullscreenImg.src = resultCanvas.toDataURL('image/jpeg', 0.95);
@@ -938,11 +934,10 @@ HTML
                 fullscreenImg.classList.remove('modal-exit-active');
             }, 200);
         };
-
         btnCloseModal.addEventListener('click', closeFullscreen);
-        fullscreenModal.addEventListener('click', (e) => {
-            if (e.target === fullscreenModal || e.target === fullscreenImg) closeFullscreen();
-        });
+        fullscreenModal.addEventListener('click', (e) => { if (e.target === fullscreenModal || e.target === fullscreenImg) closeFullscreen(); });
+
+        // --- 下載與列印模組 ---
 
         btnDownload.addEventListener('click', () => { 
             const l = document.createElement('a'); 
@@ -951,16 +946,42 @@ HTML
             l.click(); 
         });
 
-        btnPrint.addEventListener('click', () => {
-            const u = resultCanvas.toDataURL('image/jpeg', 1.0);
-            let printArea = document.getElementById('print-area');
-            if (!printArea) {
-                printArea = document.createElement('div');
-                printArea.id = 'print-area';
-                document.body.appendChild(printArea);
+        btnBatchDownload.addEventListener('click', () => {
+            updateStatus(`正在批次下載 ${Object.keys(processedResults).length} 個檔案...`, "💾");
+            let index = 0;
+            for (const key in processedResults) {
+                setTimeout(() => {
+                    const l = document.createElement('a');
+                    let baseName = fileQueue[key].name.replace(/\.[^/.]+$/, "");
+                    l.download = `${baseName}_校正.jpg`;
+                    l.href = processedResults[key];
+                    l.click();
+                }, index * 300); 
+                index++;
             }
-            printArea.innerHTML = `<img src="${u}" />`;
-            setTimeout(() => { window.print(); }, 100);
+        });
+
+        function executePrint(dataUrls) {
+            let printArea = document.getElementById('print-area');
+            printArea.innerHTML = ''; 
+
+            dataUrls.forEach(url => {
+                const pageDiv = document.createElement('div');
+                pageDiv.className = 'print-page';
+                pageDiv.innerHTML = `<img src="${url}" />`;
+                printArea.appendChild(pageDiv);
+            });
+
+            setTimeout(() => { window.print(); }, 200);
+        }
+
+        btnPrint.addEventListener('click', () => {
+            executePrint([resultCanvas.toDataURL('image/jpeg', 1.0)]);
+        });
+
+        btnBatchPrint.addEventListener('click', () => {
+            const urls = Object.keys(processedResults).map(k => processedResults[k]);
+            executePrint(urls);
         });
 
         function rotateImage(mode) {
@@ -976,235 +997,125 @@ HTML
                 corners = orderPts(corners.map(p => ({ x: oldW - p.x, y: oldH - p.y, id: p.id })));
             }
             srcMat.delete(); srcMat = dst;
+            isModifiedSinceLastProcess = true; 
             renderEditor();
         }
 
         btnRotate90.addEventListener('click', () => rotateImage(90));
         btnRotate180.addEventListener('click', () => rotateImage(180));
         btnResetParams.addEventListener('click', () => {
-            if (!srcMat) return;
-            autoUpdateParams();
-            updateStatus("已還原至最佳推薦參數", "🔄", "success");
+            if (!srcMat) return; autoUpdateParams(); updateStatus("已還原至最佳推薦參數", "🔄", "success");
         });
 
         // ==========================================
         // 多功能插槽與 HTML5 拖曳排序
         // ==========================================
-        const slotsContainer = document.getElementById('collage-slots-container');
-
+        
         function updateCollageUI() {
             slotsContainer.innerHTML = '';
-            
             for (let i = 0; i < 6; i++) {
                 const slot = document.createElement('div');
-                slot.id = `slot-${i}`;
-                slot.dataset.index = i;
+                slot.id = `slot-${i}`; slot.dataset.index = i;
                 slot.className = "relative overflow-hidden group transition-all duration-200 border rounded-lg h-20 flex flex-col items-center justify-center bg-white";
-                
                 if (collageImages[i]) {
                     slot.classList.add('border-solid', 'border-indigo-500', 'cursor-grab');
                     slot.draggable = true;
-                    
                     slot.innerHTML = `
                         <img src="${collageImages[i]}" class="w-full h-full object-contain p-1 pointer-events-none" />
                         <span class="absolute bottom-1 left-1 bg-indigo-600 text-[9px] text-white px-1.5 rounded-full font-bold">${i + 1}</span>
                         <button onclick="removeCollageItem(${i}, event)" class="absolute top-1 right-1 bg-red-500 hover:bg-red-600 text-white rounded-full p-1 shadow-md transition-all z-10">
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-2.5 w-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"></path></svg>
-                        </button>
-                    `;
-
-                    slot.addEventListener('dragstart', handleDragStart);
-                    slot.addEventListener('dragover', handleDragOver);
-                    slot.addEventListener('dragenter', handleDragEnter);
-                    slot.addEventListener('dragleave', handleDragLeave);
-                    slot.addEventListener('drop', handleDrop);
-                    slot.addEventListener('dragend', handleDragEnd);
+                        </button>`;
+                    slot.addEventListener('dragstart', handleDragStart); slot.addEventListener('dragover', handleDragOver);
+                    slot.addEventListener('dragenter', handleDragEnter); slot.addEventListener('dragleave', handleDragLeave);
+                    slot.addEventListener('drop', handleDrop); slot.addEventListener('dragend', handleDragEnd);
                 } else {
                     slot.classList.add('border-dashed', 'border-indigo-200');
                     slot.innerHTML = `<span class="text-[10px] text-gray-400">插槽 ${i + 1}</span>`;
-                    
-                    slot.addEventListener('dragover', handleDragOver);
-                    slot.addEventListener('dragenter', handleDragEnter);
-                    slot.addEventListener('dragleave', handleDragLeave);
-                    slot.addEventListener('drop', handleDrop);
+                    slot.addEventListener('dragover', handleDragOver); slot.addEventListener('dragenter', handleDragEnter);
+                    slot.addEventListener('dragleave', handleDragLeave); slot.addEventListener('drop', handleDrop);
                 }
-                
                 slotsContainer.appendChild(slot);
             }
-
             const filledCount = collageImages.filter(Boolean).length;
-            if (filledCount >= 2) {
-                btnCollageH.disabled = false;
-                btnCollageV.disabled = false;
-            } else {
-                btnCollageH.disabled = true;
-                btnCollageV.disabled = true;
-            }
+            btnCollageH.disabled = filledCount < 2; btnCollageV.disabled = filledCount < 2;
         }
 
-        function handleDragStart(e) {
-            draggedIndex = parseInt(this.dataset.index);
-            e.dataTransfer.effectAllowed = 'move';
-            this.style.opacity = '0.5';
-        }
-
-        function handleDragOver(e) {
-            e.preventDefault();
-            return false;
-        }
-
-        function handleDragEnter(e) {
-            this.classList.add('drag-over-slot');
-        }
-
-        function handleDragLeave(e) {
-            this.classList.remove('drag-over-slot');
-        }
-
+        function handleDragStart(e) { draggedIndex = parseInt(this.dataset.index); e.dataTransfer.effectAllowed = 'move'; this.style.opacity = '0.5'; }
+        function handleDragOver(e) { e.preventDefault(); return false; }
+        function handleDragEnter(e) { this.classList.add('drag-over-slot'); }
+        function handleDragLeave(e) { this.classList.remove('drag-over-slot'); }
         function handleDrop(e) {
-            e.preventDefault();
-            this.classList.remove('drag-over-slot');
+            e.preventDefault(); this.classList.remove('drag-over-slot');
             const targetIndex = parseInt(this.dataset.index);
-
             if (draggedIndex !== null && draggedIndex !== targetIndex) {
-                const temp = collageImages[draggedIndex];
-                collageImages[draggedIndex] = collageImages[targetIndex];
-                collageImages[targetIndex] = temp;
-                
+                const temp = collageImages[draggedIndex]; collageImages[draggedIndex] = collageImages[targetIndex]; collageImages[targetIndex] = temp;
                 collageImages = collageImages.filter(Boolean);
-                
-                updateCollageUI();
-                updateStatus("已調整圖片排列順序", "🔄", "success");
+                updateCollageUI(); updateStatus("已調整圖片排列順序", "🔄", "success");
             }
         }
-
         function handleDragEnd(e) {
-            this.style.opacity = '1';
-            draggedIndex = null;
-            document.querySelectorAll('#collage-slots-container > div').forEach(el => {
-                el.classList.remove('drag-over-slot');
-            });
+            this.style.opacity = '1'; draggedIndex = null;
+            document.querySelectorAll('#collage-slots-container > div').forEach(el => { el.classList.remove('drag-over-slot'); });
         }
 
         btnAddCollage.addEventListener('click', () => {
-            if (resultCanvas.classList.contains('hidden')) {
-                updateStatus("請先校正並生成影像結果！", "⚠️"); return;
-            }
-            if (collageImages.length >= 6) {
-                updateStatus("拼貼槽已達上限 6 張！", "⚠️"); return;
-            }
+            if (resultCanvas.classList.contains('hidden')) { updateStatus("請先校正並生成影像結果！", "⚠️"); return; }
+            if (collageImages.length >= 6) { updateStatus("拼貼槽已達上限 6 張！", "⚠️"); return; }
             const dataUrl = resultCanvas.toDataURL('image/jpeg', 0.95);
-            collageImages.push(dataUrl);
-            updateCollageUI();
-            updateStatus(`已將校正結果加入插槽 ${collageImages.length}`, "📥", "success");
+            collageImages.push(dataUrl); updateCollageUI(); updateStatus(`已將校正結果加入插槽 ${collageImages.length}`, "📥", "success");
         });
 
-        window.removeCollageItem = function(index, event) {
-            if (event) event.stopPropagation();
-            collageImages.splice(index, 1);
-            updateCollageUI();
-            updateStatus("已移除該圖片", "🧹");
-        }
+        window.removeCollageItem = function(index, event) { if (event) event.stopPropagation(); collageImages.splice(index, 1); updateCollageUI(); updateStatus("已移除該圖片", "🧹"); }
+        btnClearCollage.addEventListener('click', () => { collageImages = []; updateCollageUI(); updateStatus("已清空所有插槽", "🧹"); });
 
-        btnClearCollage.addEventListener('click', () => {
-            collageImages = []; 
-            updateCollageUI();
-            updateStatus("已清空所有插槽", "🧹");
-        });
-
-        // ==========================================
-        // 核心：格狀自動對稱排版合成引擎 (Grid Collage)
-        // ==========================================
         function makeCollage(direction) {
             const activeImages = collageImages.filter(Boolean);
             if (activeImages.length < 2) return;
-            
             updateStatus(`正在計算與合成 ${activeImages.length} 份文件...`, "⏳");
-
-            const loadedImages = [];
-            let loadedCount = 0;
-
+            const loadedImages = []; let loadedCount = 0;
             activeImages.forEach((src, idx) => {
                 const img = new Image();
                 img.onload = () => {
-                    loadedImages[idx] = img;
-                    loadedCount++;
-                    if (loadedCount === activeImages.length) {
-                        renderGridCollage(loadedImages, direction);
-                    }
+                    loadedImages[idx] = img; loadedCount++;
+                    if (loadedCount === activeImages.length) renderGridCollage(loadedImages, direction);
                 };
                 img.src = src;
             });
         }
 
         function renderGridCollage(images, direction) {
-            const numImages = images.length;
-            let rows = 1;
-            let cols = numImages;
+            const numImages = images.length; let rows = 1; let cols = numImages;
+            if (numImages === 2) { if (direction === 'horizontal') { rows = 1; cols = 2; } else { rows = 2; cols = 1; } } 
+            else if (numImages === 3) { if (direction === 'horizontal') { rows = 1; cols = 3; } else { rows = 3; cols = 1; } } 
+            else if (numImages === 4) { rows = 2; cols = 2; } 
+            else if (numImages === 5 || numImages === 6) { if (direction === 'horizontal') { rows = 2; cols = 3; } else { rows = 3; cols = 2; } }
 
-            if (numImages === 2) {
-                if (direction === 'horizontal') { rows = 1; cols = 2; } 
-                else { rows = 2; cols = 1; }                            
-            } 
-            else if (numImages === 3) {
-                if (direction === 'horizontal') { rows = 1; cols = 3; } 
-                else { rows = 3; cols = 1; }                            
-            } 
-            else if (numImages === 4) {
-                rows = 2; cols = 2;
-            } 
-            else if (numImages === 5 || numImages === 6) {
-                if (direction === 'horizontal') { rows = 2; cols = 3; } 
-                else { rows = 3; cols = 2; }                            
-            }
+            const standardW = images[0].width; const standardH = images[0].height;
+            const finalW = standardW * cols; const finalH = standardH * rows;
 
-            const standardW = images[0].width;
-            const standardH = images[0].height;
-            const finalW = standardW * cols;
-            const finalH = standardH * rows;
-
-            resultCanvas.width = finalW;
-            resultCanvas.height = finalH;
-
+            resultCanvas.width = finalW; resultCanvas.height = finalH;
             const ctx = resultCanvas.getContext('2d');
-            ctx.fillStyle = "#ffffff";
-            ctx.fillRect(0, 0, finalW, finalH);
+            ctx.fillStyle = "#ffffff"; ctx.fillRect(0, 0, finalW, finalH);
 
             for (let r = 0; r < rows; r++) {
                 for (let c = 0; c < cols; c++) {
                     const imgIndex = r * cols + c;
                     if (imgIndex >= numImages) continue;
-
                     const img = images[imgIndex];
-                    const cellX = c * standardW;
-                    const cellY = r * standardH;
-
-                    const imgRatio = img.width / img.height;
-                    const cellRatio = standardW / standardH;
+                    const cellX = c * standardW; const cellY = r * standardH;
+                    const imgRatio = img.width / img.height; const cellRatio = standardW / standardH;
                     let targetW, targetH, targetX, targetY;
-
-                    if (imgRatio > cellRatio) {
-                        targetW = standardW;
-                        targetH = standardW / imgRatio;
-                        targetX = cellX;
-                        targetY = cellY + (standardH - targetH) / 2;
-                    } else {
-                        targetH = standardH;
-                        targetW = standardH * imgRatio;
-                        targetY = cellY;
-                        targetX = cellX + (standardW - targetW) / 2;
-                    }
-
+                    if (imgRatio > cellRatio) { targetW = standardW; targetH = standardW / imgRatio; targetX = cellX; targetY = cellY + (standardH - targetH) / 2; } 
+                    else { targetH = standardH; targetW = standardH * imgRatio; targetY = cellY; targetX = cellX + (standardW - targetW) / 2; }
                     ctx.drawImage(img, targetX, targetY, targetW, targetH);
                 }
             }
-
-            resultCanvas.classList.remove('hidden');
-            resultPlaceholder.classList.add('hidden');
-            resultHoverOverlay.classList.remove('hidden');
-            btnDownload.classList.remove('hidden');
-            btnPrint.classList.remove('hidden');
-
+            resultCanvas.classList.remove('hidden'); resultPlaceholder.classList.add('hidden');
+            resultHoverOverlay.classList.remove('hidden'); btnDownload.classList.remove('hidden'); btnPrint.classList.remove('hidden');
+            
+            const collageDataURL = resultCanvas.toDataURL('image/jpeg', 0.95);
+            
             updateStatus(`${numImages} 張文件 (${cols}x${rows}) 格狀拼貼合成完畢！`, "✨", "success");
             resultSection.scrollIntoView({ behavior: 'smooth' });
         }
@@ -1214,5 +1125,3 @@ HTML
     </script>
 </body>
 </html>
-photoscan.html
-目前顯示的是「photoscan.html」。
