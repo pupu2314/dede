@@ -2,13 +2,18 @@
 <html lang="zh-Hant">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>電動摩托車紀錄系統</title>
     
     <!-- PWA 設定 -->
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#2563eb">
     <link rel="apple-touch-icon" href="icon-192.png">
+    
+    <!-- Google Fonts 載入 Inter 與 繁中 Noto Sans -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Sans+TC:wght@400;500;700;900&display=swap" rel="stylesheet">
     
     <link rel="stylesheet" href="motolog.css">
 </head>
@@ -17,48 +22,66 @@
     <div id="topAlert" class="top-alert"></div>
 
     <div class="container">
+        <!-- 頂部精緻導覽列 -->
         <div class="header">
-            <h1>🏍️ 電動摩托車紀錄</h1>
+            <div class="header-content">
+                <span class="moto-icon">🏍️</span>
+                <h1>電動摩托車紀錄</h1>
+            </div>
         </div>
         
+        <!-- 數據儀表板 -->
         <div class="dashboard">
             <div class="stat-card">
+                <div class="stat-icon">📈</div>
                 <h3>總里程</h3>
-                <div class="value" id="totalMileage">0</div>
-                <div class="subtitle">公里</div>
+                <div class="value-group">
+                    <span class="value" id="totalMileage">0</span>
+                    <span class="subtitle">公里</span>
+                </div>
             </div>
             <div class="stat-card">
+                <div class="stat-icon">⚡</div>
                 <h3>上次充電</h3>
-                <div class="value" id="lastChargeDays">-</div>
-                <div class="subtitle" id="lastChargeDate">無記錄</div>
+                <div class="value-group">
+                    <span class="value" id="lastChargeDays">-</span>
+                    <span class="subtitle" id="lastChargeDate">無記錄</span>
+                </div>
             </div>
-            <div class="stat-card">
+            <div class="stat-card" id="maintCard">
+                <div class="stat-icon">🛠️</div>
                 <h3>下次保養</h3>
-                <div class="value" id="nextServiceStatus">正常</div>
-                <div class="subtitle" id="nextServiceDate">待記錄</div>
+                <div class="value-group">
+                    <span class="value" id="nextServiceStatus">正常</span>
+                    <span class="subtitle" id="nextServiceDate">待記錄</span>
+                </div>
             </div>
             <div class="stat-card">
+                <div class="stat-icon">💰</div>
                 <h3>總花費</h3>
-                <div class="value" id="totalExpense">0</div>
-                <div class="subtitle">NT$</div>
+                <div class="value-group">
+                    <span class="value" id="totalExpense">0</span>
+                    <span class="subtitle">NT$</span>
+                </div>
             </div>
         </div>
         
         <div class="content">
+            <!-- 導覽標籤列 -->
             <div class="tabs-wrapper">
                 <div class="tabs">
-                    <button class="tab-button active" data-tab="status">快速更新</button>
-                    <button class="tab-button" data-tab="charge">充電</button>
-                    <button class="tab-button" data-tab="maintenance">保養</button>
-                    <button class="tab-button" data-tab="expense">其他</button>
-                    <button class="tab-button" data-tab="statistics">統計</button>
-                    <button class="tab-button" data-tab="settings">設定</button>
+                    <button class="tab-button active" data-tab="status">📝 快速更新</button>
+                    <button class="tab-button" data-tab="charge">⚡ 充電</button>
+                    <button class="tab-button" data-tab="maintenance">🛠️ 保養</button>
+                    <button class="tab-button" data-tab="expense">💰 其他</button>
+                    <button class="tab-button" data-tab="statistics">📊 統計</button>
+                    <button class="tab-button" data-tab="settings">⚙️ 設定</button>
                 </div>
             </div>
             
             <!-- 快速更新頁面 -->
             <div id="statusTab" class="tab-content active">
-                <div class="form-card">
+                <div class="form-card animate-slide-up">
                     <h3 id="statusTitle">📝 快速更新狀態</h3>
                     <!-- 顯示最後更新時間 -->
                     <div id="lastUpdateInfo" class="last-update-info"></div>
@@ -66,7 +89,10 @@
                     <form id="statusForm">
                         <div class="form-group">
                             <label>目前里程 (ODO)</label>
-                            <input type="number" inputmode="decimal" step="0.1" id="sOdo" placeholder="自動帶入最新紀錄..." required style="font-size: 1.2rem;">
+                            <div class="input-wrapper">
+                                <input type="number" inputmode="decimal" step="0.1" id="sOdo" placeholder="自動帶入最新紀錄..." required>
+                                <span class="input-suffix">km</span>
+                            </div>
                         </div>
                         <div class="form-group">
                             <label>目前電量</label>
@@ -79,7 +105,7 @@
                                 <div class="battery-option"><input type="radio" id="sb5" name="sBattery" value="5"><label for="sb5">5</label></div>
                             </div>
                         </div>
-                        <button type="submit" class="btn btn-primary btn-full btn-lg" style="margin-top: 20px;">💾 更新狀態</button>
+                        <button type="submit" class="btn btn-primary btn-full btn-lg" style="margin-top: 10px;">💾 更新狀態</button>
                     </form>
                 </div>
             </div>
@@ -87,7 +113,7 @@
             <!-- 充電頁面 -->
             <div id="chargeTab" class="tab-content">
                 <div id="startChargeSection">
-                    <div class="form-card">
+                    <div class="form-card animate-slide-up">
                         <h3>⚡ 開始充電</h3>
                         <form id="startChargeForm">
                             <div class="form-group">
@@ -98,12 +124,15 @@
                                     <button type="button" class="station-btn" data-station="家裡">🏠 家裡</button>
                                     <button type="button" class="station-btn" data-station="其他">📍 其他</button>
                                 </div>
-                                <input type="text" id="cStation" placeholder="輸入自訂地點" style="display:none; margin-top:10px;">
+                                <input type="text" id="cStation" placeholder="輸入自訂地點" style="display:none; margin-top:12px;">
                             </div>
                             
                             <div class="form-group">
                                 <label>目前里程 (ODO)</label>
-                                <input type="number" inputmode="decimal" step="0.1" id="cOdo" placeholder="例如: 1234.5" required>
+                                <div class="input-wrapper">
+                                    <input type="number" inputmode="decimal" step="0.1" id="cOdo" placeholder="例如: 1234.5" required>
+                                    <span class="input-suffix">km</span>
+                                </div>
                             </div>
                             
                             <div class="form-group">
@@ -120,7 +149,7 @@
                             
                             <div class="form-group">
                                 <label>備註</label>
-                                <textarea id="cNotes" rows="2" placeholder="選填..."></textarea>
+                                <textarea id="cNotes" rows="2" placeholder="有甚麼想紀錄的嗎..."></textarea>
                             </div>
                              
                             <button type="submit" class="btn btn-success btn-full btn-lg">⚡ 開始充電</button>
@@ -129,10 +158,17 @@
                 </div>
                 
                 <div id="endChargeSection" style="display:none;">
-                    <div class="charging-status">
-                        <h3>⚡ 充電進行中</h3>
+                    <!-- 精緻擬真充電控制面板 -->
+                    <div class="charging-status-panel animate-pulse-glow">
+                        <div class="charging-header">
+                            <span class="charging-badge">⚡ CHARGING</span>
+                            <h3>充電進行中</h3>
+                        </div>
+                        <div class="charging-timer-wrapper">
+                            <div class="charging-timer" id="chargingTimer">00:00:00</div>
+                            <div class="charging-wave-bg"></div>
+                        </div>
                         <div id="currentChargeInfo"></div>
-                        <div class="charging-timer" id="chargingTimer">00:00:00</div>
                     </div>
                     
                     <div class="form-card">
@@ -150,19 +186,29 @@
                                 </div>
                             </div>
                             
-                            <div class="form-group" id="kwhGroup">
-                                <label>充電度數 (kWh)</label>
-                                <input type="number" inputmode="decimal" step="0.01" id="cKwh" placeholder="例如: 1.5">
-                            </div>
-                            
-                            <div class="form-group" id="costGroup">
-                                <label>充電費用 (NT$)</label>
-                                <input type="number" inputmode="decimal" step="0.01" id="cCost" placeholder="例如: 30.50">
+                            <div class="row-group">
+                                <div class="form-group half" id="kwhGroup">
+                                    <label>充電度數</label>
+                                    <div class="input-wrapper">
+                                        <input type="number" inputmode="decimal" step="0.01" id="cKwh" placeholder="例如: 1.5">
+                                        <span class="input-suffix">kWh</span>
+                                    </div>
+                                </div>
+                                <div class="form-group half" id="costGroup">
+                                    <label>充電費用</label>
+                                    <div class="input-wrapper">
+                                        <input type="number" inputmode="decimal" step="0.01" id="cCost" placeholder="例如: 30">
+                                        <span class="input-suffix">NT$</span>
+                                    </div>
+                                </div>
                             </div>
                             
                             <div class="form-group">
                                 <label>預估里程 (Range)</label>
-                                <input type="number" inputmode="decimal" step="0.1" id="cRange" placeholder="儀表顯示值">
+                                <div class="input-wrapper">
+                                    <input type="number" inputmode="decimal" step="0.1" id="cRange" placeholder="儀表顯示之剩餘里程">
+                                    <span class="input-suffix">km</span>
+                                </div>
                             </div>
                             
                             <button type="submit" class="btn btn-primary btn-full btn-lg">✅ 完成並儲存</button>
@@ -171,13 +217,27 @@
                 </div>
                 
                 <div class="analytics-grid">
-                    <div class="analytics-card"><h4>平均效率</h4><p id="avgEfficiency">-</p></div>
-                    <div class="analytics-card"><h4>最佳效率</h4><p id="bestEfficiency">-</p></div>
-                    <div class="analytics-card"><h4>總次數</h4><p id="totalCharges">0</p></div>
+                    <div class="analytics-card">
+                        <div class="analytics-icon">⚡</div>
+                        <h4>平均效率</h4>
+                        <p id="avgEfficiency">-</p>
+                    </div>
+                    <div class="analytics-card">
+                        <div class="analytics-icon">🏆</div>
+                        <h4>最佳效率</h4>
+                        <p id="bestEfficiency">-</p>
+                    </div>
+                    <div class="analytics-card">
+                        <div class="analytics-icon">🔄</div>
+                        <h4>總次數</h4>
+                        <p id="totalCharges">0</p>
+                    </div>
                 </div>
                 
                 <div class="filter-bar">
-                    <input type="text" id="chargeSearch" placeholder="🔍 搜尋地點...">
+                    <div class="search-input-wrapper">
+                        <input type="text" id="chargeSearch" placeholder="🔍 搜尋地點...">
+                    </div>
                     <select id="chargeMonthFilter"><option value="">所有月份</option></select>
                     <button type="button" id="recalcCostBtn" class="btn btn-secondary btn-sm">🔄 重新計算電費</button>
                 </div>
@@ -187,7 +247,7 @@
             
             <!-- 保養頁面 -->
             <div id="maintenanceTab" class="tab-content">
-                <div class="form-card">
+                <div class="form-card animate-slide-up">
                     <h3 id="maintTitle">🛠️ 記錄保養</h3>
                     <form id="maintenanceForm">
                         <input type="hidden" id="editingMaintId">
@@ -195,22 +255,23 @@
                             <div class="form-group half"><label>日期</label><input type="date" id="mDate" required></div>
                             <div class="form-group half"><label>時間</label><input type="time" id="mTime" required></div>
                         </div>
-                        <button type="button" class="btn btn-secondary btn-sm" id="maintNowBtn">🕒 填入現在時間</button>
+                        <button type="button" class="btn btn-secondary btn-sm" id="maintNowBtn" style="width: auto; align-self: flex-start;">🕒 填入現在時間</button>
                         
                         <div class="form-group" style="margin-top:15px;">
                             <label>里程 (ODO)</label>
-                            <input type="number" inputmode="decimal" step="0.1" id="mOdo" placeholder="公里" required>
+                            <div class="input-wrapper">
+                                <input type="number" inputmode="decimal" step="0.1" id="mOdo" placeholder="請輸入里程數" required>
+                                <span class="input-suffix">km</span>
+                            </div>
                         </div>
                         
                         <div class="form-group">
                             <label>地點</label>
-                            <div style="display:flex; gap:8px;">
-                                <select id="mLocationSelect" style="flex:1;">
-                                    <option value="基隆成功專賣店">基隆成功專賣店</option>
-                                    <option value="其他">其他...</option>
-                                </select>
-                            </div>
-                            <input type="text" id="mLocationInput" placeholder="輸入地點名稱" style="display:none; margin-top:10px;">
+                            <select id="mLocationSelect">
+                                <option value="基隆成功專賣店">基隆成功專賣店</option>
+                                <option value="其他">其他...</option>
+                            </select>
+                            <input type="text" id="mLocationInput" placeholder="輸入地點名稱" style="display:none; margin-top:12px;">
                         </div>
                         
                         <div class="form-group">
@@ -224,19 +285,21 @@
                             </select>
                         </div>
                         
-                        <div class="form-group"><label>備註</label><textarea id="mNotes" rows="2"></textarea></div>
+                        <div class="form-group"><label>備註</label><textarea id="mNotes" rows="2" placeholder="詳細保養內容..."></textarea></div>
                         
-                        <h3>項目清單</h3>
-                        <div id="partsList"></div>
-                        
-                        <div class="form-group">
-                            <label>快速加入</label>
-                            <div id="maintTemplates" class="scroll-chips">
-                                <!-- Templates via JS -->
+                        <div class="parts-section">
+                            <h3>保養項目清單</h3>
+                            <div id="partsList"></div>
+                            
+                            <div class="form-group">
+                                <label style="font-weight: 500; font-size: 0.85rem; color: var(--text-muted);">快速加入保養零件</label>
+                                <div id="maintTemplates" class="scroll-chips">
+                                    <!-- Templates via JS -->
+                                </div>
                             </div>
+                            
+                            <button type="button" class="btn btn-secondary btn-full" id="addPartBtn" style="margin-bottom: 20px;">➕ 自訂項目</button>
                         </div>
-                        
-                        <button type="button" class="btn btn-success" id="addPartBtn" style="margin-bottom: 15px;">➕ 自訂項目</button>
                         
                         <div class="total-cost-bar">
                             <span>總費用</span>
@@ -244,7 +307,7 @@
                         </div>
                         
                         <button type="submit" class="btn btn-primary btn-full btn-lg">💾 儲存記錄</button>
-                        <button type="button" class="btn btn-secondary btn-full btn-lg" id="cancelMaintEdit" style="display:none; margin-top:10px;">取消編輯</button>
+                        <button type="button" class="btn btn-danger btn-full btn-lg" id="cancelMaintEdit" style="display:none; margin-top:12px;">取消編輯</button>
                     </form>
                 </div>
                 
@@ -263,7 +326,7 @@
             
             <!-- 其他頁面 -->
             <div id="expenseTab" class="tab-content">
-                <div class="form-card">
+                <div class="form-card animate-slide-up">
                     <h3 id="expenseTitle">💰 記錄花費</h3>
                     <form id="expenseForm">
                         <input type="hidden" id="editingExpenseId">
@@ -271,7 +334,7 @@
                             <div class="form-group half"><label>日期</label><input type="date" id="eDate" required></div>
                             <div class="form-group half"><label>時間</label><input type="time" id="eTime" required></div>
                         </div>
-                        <button type="button" class="btn btn-secondary btn-sm" id="expenseNowBtn">🕒 填入現在時間</button>
+                        <button type="button" class="btn btn-secondary btn-sm" id="expenseNowBtn" style="width: auto; align-self: flex-start;">🕒 填入現在時間</button>
                         
                         <div class="form-group" style="margin-top:15px;">
                             <label>類別</label>
@@ -286,13 +349,22 @@
                         </div>
                         <div class="form-group">
                             <label>金額 (NT$)</label>
-                            <input type="number" inputmode="numeric" id="eAmount" placeholder="0" required style="font-size: 1.2rem;">
+                            <div class="input-wrapper">
+                                <input type="number" inputmode="numeric" id="eAmount" placeholder="0" required style="font-size: 1.1rem; font-weight: 600;">
+                                <span class="input-suffix">NT$</span>
+                            </div>
                         </div>
-                        <div class="form-group"><label>里程 (選填)</label><input type="number" inputmode="decimal" step="0.1" id="eOdo" placeholder="公里"></div>
-                        <div class="form-group"><label>說明</label><textarea id="eDescription" rows="2"></textarea></div>
+                        <div class="form-group">
+                            <label>里程 (選填)</label>
+                            <div class="input-wrapper">
+                                <input type="number" inputmode="decimal" step="0.1" id="eOdo" placeholder="公里">
+                                <span class="input-suffix">km</span>
+                            </div>
+                        </div>
+                        <div class="form-group"><label>說明</label><textarea id="eDescription" rows="2" placeholder="詳細說明花費項目..."></textarea></div>
                         
                         <button type="submit" class="btn btn-primary btn-full btn-lg">💾 儲存記錄</button>
-                        <button type="button" class="btn btn-secondary btn-full btn-lg" id="cancelExpenseEdit" style="display:none; margin-top:10px;">取消編輯</button>
+                        <button type="button" class="btn btn-danger btn-full btn-lg" id="cancelExpenseEdit" style="display:none; margin-top:12px;">取消編輯</button>
                     </form>
                 </div>
                 
@@ -305,30 +377,53 @@
             </div>
             
             <div id="statisticsTab" class="tab-content">
-                <div class="analytics-grid">
-                    <div class="analytics-card"><h4>總里程</h4><p id="statTotalMileage">0 公里</p></div>
-                    <div class="analytics-card"><h4>平均日里程</h4><p id="statAvgDaily">0 公里</p></div>
-                    <div class="analytics-card"><h4>每公里總成本</h4><p id="statCostPerKm">0 NT$</p></div>
-                    <div class="analytics-card"><h4>充電成本/km</h4><p id="statChargeCostPerKm">0 NT$</p></div>
-                    <div class="analytics-card"><h4>總花費</h4><p id="statTotalCost">0 NT$</p></div>
+                <div class="analytics-grid double-column animate-slide-up">
+                    <div class="analytics-card big">
+                        <div class="analytics-icon">📈</div>
+                        <h4>總行駛里程</h4>
+                        <p id="statTotalMileage">0 公里</p>
+                    </div>
+                    <div class="analytics-card big">
+                        <div class="analytics-icon">📅</div>
+                        <h4>平均日里程</h4>
+                        <p id="statAvgDaily">0 公里</p>
+                    </div>
+                    <div class="analytics-card big">
+                        <div class="analytics-icon">💸</div>
+                        <h4>每公里總成本</h4>
+                        <p id="statCostPerKm">0 NT$</p>
+                    </div>
+                    <div class="analytics-card big">
+                        <div class="analytics-icon">⚡</div>
+                        <h4>充電成本/km</h4>
+                        <p id="statChargeCostPerKm">0 NT$</p>
+                    </div>
+                    <div class="analytics-card big full-width">
+                        <div class="analytics-icon">🪙</div>
+                        <h4>累計總耗費金額</h4>
+                        <p id="statTotalCost" style="font-size: 1.8rem; color: var(--danger);">0 NT$</p>
+                    </div>
                 </div>
             </div>
             
             <div id="settingsTab" class="tab-content">
-                <div class="form-card">
-                    <h3>⚙️ 設定</h3>
+                <div class="form-card animate-slide-up">
+                    <h3>⚙️ 系統設定</h3>
                     <div id="settingsForm">
                         <div class="form-group">
                             <label>電費單價 (NT$/度)</label>
-                            <input type="number" inputmode="decimal" step="0.1" id="electricRate" placeholder="例如: 3.5">
-                            <small>用於自動計算公司或家裡的充電費用</small>
+                            <div class="input-wrapper">
+                                <input type="number" inputmode="decimal" step="0.1" id="electricRate" placeholder="例如: 3.5">
+                                <span class="input-suffix">元/度</span>
+                            </div>
+                            <small class="form-tip">設定此值後，系統將自動估算家裡或公司的充電成本</small>
                         </div>
                         
                         <div class="form-group">
                             <label>外觀主題</label>
                             <select id="themeSelect">
-                                <option value="light">🌞 亮色模式</option>
-                                <option value="dark">🌙 深色模式</option>
+                                <option value="light">🌞 經典亮色模式</option>
+                                <option value="dark">🌙 極致深色模式</option>
                             </select>
                         </div>
 
@@ -336,18 +431,18 @@
                         <div class="form-group">
                             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
                                 <label style="margin-bottom:0;">Google Sheets API</label>
-                                <button type="button" id="showTutorialBtn" class="btn btn-text btn-sm" style="padding:4px 8px; font-size:0.9rem; color:var(--primary);">📖 設定教學</button>
+                                <button type="button" id="showTutorialBtn" class="btn btn-text btn-sm" style="padding:4px 8px; font-size:0.9rem; color:var(--primary); font-weight: bold;">📖 設定教學</button>
                             </div>
-                            <input type="text" id="gasUrl" placeholder="https://script.google.com/macros/s/..." style="font-size:0.8rem;">
-                            <small>請輸入 GAS 發布後的 Web App URL 以啟用雲端同步</small>
+                            <input type="text" id="gasUrl" placeholder="https://script.google.com/macros/s/..." style="font-size:0.8rem; letter-spacing: 0.5px;">
+                            <small class="form-tip">填入 Google Apps Script 部署後的網頁應用程式 URL 以開啟雲端自動同步功能</small>
                         </div>
 
-                        <button type="button" class="btn btn-primary btn-block-setting btn-full" id="saveSettingsBtn">儲存設定</button>
+                        <button type="button" class="btn btn-primary btn-block-setting btn-full" id="saveSettingsBtn">儲存所有設定</button>
                     </div>
                 </div>
                 
                 <div class="data-management">
-                    <h3>📦 資料備份與還原</h3>
+                    <h3>📦 資料同步與雲端管理</h3>
                     
                     <div class="data-btns-stack" style="margin-bottom: 20px;">
                         <button class="btn btn-warning btn-block-setting" id="syncToCloudBtn">☁️ 同步到 Google Sheets</button>
@@ -357,32 +452,38 @@
                     <input type="file" id="jsonImport" accept=".json" style="display:none;">
                     <div class="data-btns-stack">
                         <button class="btn btn-success btn-block-setting" id="exportAllBtn">📤 匯出備份檔 (JSON)</button>
-                        <button class="btn btn-primary btn-block-setting" id="importBtn">📥 匯入備份檔</button>
-                        <button class="btn btn-danger btn-block-setting" id="clearAllBtn">🗑️ 清除所有資料</button>
+                        <button class="btn btn-primary btn-block-setting" id="importBtn">📥 匯入備份檔 (JSON)</button>
+                        <button class="btn btn-danger btn-block-setting" id="clearAllBtn">🗑️ 清除所有本機資料</button>
                     </div>
                 </div>
                 <!-- 版本顯示區塊 -->
-                <div style="text-align: center; margin-top: 20px; color: var(--secondary);">
-                   <small id="appVersion"></small>
+                <div style="text-align: center; margin-top: 30px; color: var(--text-muted);">
+                   <small id="appVersion" style="letter-spacing: 1px; font-weight: 500; font-family: 'Inter', sans-serif;"></small>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- 編輯充電視窗 -->
+    <!-- 編輯充電彈出視窗 -->
     <div id="editChargeModal" class="modal">
         <div class="modal-content">
             <div class="modal-header">
-                <h3>編輯充電</h3>
-                <button class="btn btn-text" id="closeEditModal">關閉</button>
+                <h3>⚡ 編輯充電紀錄</h3>
+                <button class="btn btn-text close-btn" id="closeEditModal">關閉</button>
             </div>
             <form id="editChargeForm">
                 <input type="hidden" id="editingChargeId">
                 <div class="form-scroll-area">
                     <div class="form-group"><label>開始時間</label><input type="datetime-local" id="edit_cStartTime" required></div>
                     <div class="form-group"><label>結束時間</label><input type="datetime-local" id="edit_cEndTime" required></div>
-                    <div class="form-group"><label>里程 (ODO)</label><input type="number" inputmode="decimal" step="0.1" id="edit_cOdo" required></div>
-                    <div class="form-group"><label>充電站</label><input type="text" id="edit_cStation"></div>
+                    <div class="form-group">
+                        <label>里程 (ODO)</label>
+                        <div class="input-wrapper">
+                            <input type="number" inputmode="decimal" step="0.1" id="edit_cOdo" required>
+                            <span class="input-suffix">km</span>
+                        </div>
+                    </div>
+                    <div class="form-group"><label>充電站名稱</label><input type="text" id="edit_cStation"></div>
                     <div class="row-group">
                         <div class="form-group half">
                             <label>開始電量</label>
@@ -408,8 +509,20 @@
                         </div>
                     </div>
                     <div class="row-group">
-                        <div class="form-group half"><label>度數 (kWh)</label><input type="number" inputmode="decimal" step="0.01" id="edit_cKwh"></div>
-                        <div class="form-group half"><label>費用 (NT$)</label><input type="number" inputmode="decimal" step="0.01" id="edit_cCost"></div>
+                        <div class="form-group half">
+                            <label>度數 (kWh)</label>
+                            <div class="input-wrapper">
+                                <input type="number" inputmode="decimal" step="0.01" id="edit_cKwh">
+                                <span class="input-suffix">kWh</span>
+                            </div>
+                        </div>
+                        <div class="form-group half">
+                            <label>費用 (NT$)</label>
+                            <div class="input-wrapper">
+                                <input type="number" inputmode="decimal" step="0.01" id="edit_cCost">
+                                <span class="input-suffix">NT$</span>
+                            </div>
+                        </div>
                     </div>
                     <div class="form-group"><label>備註</label><textarea id="edit_cNotes" rows="2"></textarea></div>
                 </div>
@@ -420,27 +533,27 @@
         </div>
     </div>
 
-    <!-- 教學視窗 (Tutorial Modal) -->
+    <!-- 教學彈出視窗 (Tutorial Modal) -->
     <div id="tutorialModal" class="modal">
         <div class="modal-content">
             <div class="modal-header">
-                <h3>☁️ 雲端同步教學</h3>
-                <button class="btn btn-text" id="closeTutorialModal">關閉</button>
+                <h3>☁️ 雲端同步設定指南</h3>
+                <button class="btn btn-text close-btn" id="closeTutorialModal">關閉</button>
             </div>
             <div class="form-scroll-area tutorial-content">
                 <h4>步驟 1：建立 Google 試算表</h4>
-                <p>1. 建立一個空白的 Google 試算表。</p>
-                <p>2. 在下方分頁籤，建立 4 個分頁，名稱請<b>完全一致</b>：</p>
-                <ul style="margin-left:20px; margin-bottom:10px;">
+                <p>1. 建立一個全新的空白 Google 試算表。</p>
+                <p>2. 在試算表下方的工作表頁籤中，分別建立以下 4 個分頁，請確保名稱<b>完全一致</b>：</p>
+                <ul class="tutorial-list">
                     <li><code>ChargeLog</code></li>
                     <li><code>MaintenanceLog</code></li>
                     <li><code>ExpenseLog</code></li>
                     <li><code>StatusLog</code></li>
                 </ul>
 
-                <h4>步驟 2：Apps Script (重要修正)</h4>
+                <h4>步驟 2：貼上 Apps Script 同步代碼</h4>
                 <p>1. 點擊上方選單「擴充功能」>「Apps Script」。</p>
-                <p>2. 刪除原有內容，貼上以下程式碼 (已修正數字變日期問題)：</p>
+                <p>2. 刪除原有預設代碼，完整貼上以下程式碼：</p>
                 <pre><code>function doPost(e) {
   try {
     var data = JSON.parse(e.postData.contents);
@@ -485,7 +598,6 @@ function saveToSheet(ss, sheetName, dataArray) {
 function readSheet(ss, sheetName) {
   var sheet = ss.getSheetByName(sheetName);
   if (!sheet) return [];
-  // 修正：使用 getDisplayValues() 確保讀到的是字串，避免數字被誤轉為 Date
   var rows = sheet.getDataRange().getDisplayValues();
   if (rows.length < 2) return [];
   var headers = rows[0];
@@ -506,17 +618,17 @@ function readSheet(ss, sheetName) {
   return data;
 }</code></pre>
 
-                <h4>步驟 3：部署</h4>
+                <h4>步驟 3：部署 API</h4>
                 <p>1. 點擊右上角「部署」>「新增部署作業」。</p>
-                <p>2. 類型選擇「網頁應用程式」。</p>
-                <p>3. 設定：</p>
-                <ul style="margin-left:20px;">
-                    <li>執行身分：<b>我 (您的信箱)</b></li>
-                    <li>誰可以存取：<b>所有人 (這很重要！)</b></li>
+                <p>2. 部署類型選擇「網頁應用程式」。</p>
+                <p>3. 安全設定：</p>
+                <ul class="tutorial-list">
+                    <li>執行身分：選擇<b>我 (您的 Google 帳戶信箱)</b></li>
+                    <li>誰可以存取：務必選擇<b>所有人 (Anyone)</b></li>
                 </ul>
-                <p>4. 點擊部署，授權時選擇「進階」>「前往... (不安全)」>「允許」。</p>
-                <p>5. 複製產生的網址 (以 <code>/exec</code> 結尾)。</p>
-                <p style="color:var(--danger); font-weight:bold;">※ 注意：若已部署過，請點擊「管理部署作業」>「鉛筆圖示」> 版本選擇「新版本」> 部署，才能套用新程式碼。</p>
+                <p>4. 點擊部署，於授權對話框中點選「進階」>「前往... (不安全)」> 點選「允許」。</p>
+                <p>5. 複製部署成功後產生的網頁應用程式網址 (網址以 <code>/exec</code> 結尾)。</p>
+                <p class="tutorial-alert">※ 重大提示：日後若修改 Google Sheets 代碼，請記得在「管理部署作業」點選鉛筆編輯，將版本選擇「新版本」並再次部署，如此修改才會正式生效。</p>
             </div>
             <div class="modal-footer">
                 <button class="btn btn-primary btn-full btn-lg" onclick="document.getElementById('closeTutorialModal').click()">我瞭解了</button>
@@ -526,14 +638,14 @@ function readSheet(ss, sheetName) {
     
     <div class="toast" id="toast"></div>
     <script src="motolog.js"></script>
-    <script>
-      if ('serviceWorker' in navigator) {
-        window.addEventListener('load', () => {
-          navigator.serviceWorker.register('./sw.js')
-            .then((reg) => console.log('Service Worker registered.', reg))
-            .catch((err) => console.log('Service Worker registration failed.', err));
-        });
-      }
-    </script>
+    <script>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('./sw.js')
+            .then((reg) => console.log('Service Worker registered.', reg))
+            .catch((err) => console.log('Service Worker registration failed.', err));
+        });
+      }
+    </script>
 </body>
 </html>
