@@ -1,6 +1,6 @@
-console.log('motolog.js (v16.2.3): loaded');
+console.log('motolog.js (v16.3): loaded');
 
-const APP_VERSION = 'v16.2.3';
+const APP_VERSION = 'v16.3';
 const SETTINGS_KEY = 'motorcycleSettings';
 const BACKUP_KEY = 'lastBackupDate';
 const DIRTY_KEY = 'hasUnsyncedChanges';
@@ -29,7 +29,6 @@ var selectedStation = '';
 function safeParseFloat(val) {
     if (val === undefined || val === null || val === '') return 0;
     if (typeof val === 'number') return val;
-    // 移除千分位逗號防止 parseFloat("1,234.5") 被解析為 1 的問題
     var clean = String(val).replace(/,/g, '').trim();
     return parseFloat(clean) || 0;
 }
@@ -64,7 +63,7 @@ window.deleteRecord = function(key, id) {
     markDataDirty();
     loadAllData();
     showToast('🗑️ 已刪除');
-    // 自動同步
+    // 自動同步最新異動到雲端
     triggerAutoSync();
 };
 
@@ -149,7 +148,7 @@ document.addEventListener('DOMContentLoaded', function() {
         populateMaintTemplates();
         populateMonthFilters(); 
         
-        // 關鍵修正：一載入就先載入並初始化設定表單數值，防範未點選設定頁就計算電費
+        // 關鍵載入：先初始化設定表單數值
         loadSettings(); 
         
         loadAllData();
@@ -166,7 +165,7 @@ document.addEventListener('DOMContentLoaded', function() {
             if (chargeTabBtn) chargeTabBtn.click();
         }
 
-        // 開啟網頁時自動確認是否需要同步
+        // 開啟網頁時，自動檢查並進行雙向同步（若有未上傳的則上傳，同時一律拉取雲端最新資料默默融合）
         checkAndAutoSyncOnLoad();
 
     } catch (err) {
@@ -332,7 +331,6 @@ function getLatestState() {
 
     var allRecords = [];
     
-    // 關鍵修正：全面套用 safeParseFloat / safeParseInt 以防萬一字串包含逗號
     charges.forEach(r => allRecords.push({ ts: getRecordTimestamp(r), odo: safeParseFloat(r.odo), battery: safeParseInt(r.batteryEnd), type: 'charge', raw: r }));
     statuses.forEach(r => allRecords.push({ ts: getRecordTimestamp(r), odo: safeParseFloat(r.odo), battery: safeParseInt(r.battery), type: 'status', raw: r }));
     maints.forEach(r => allRecords.push({ ts: getRecordTimestamp(r), odo: safeParseFloat(r.odo), battery: null, type: 'maint', raw: r }));
@@ -472,7 +470,7 @@ function recalcElectricityCost() {
         loadChargeHistory(); 
         updateDashboard(); 
         showToast(`✅ 已重新計算 ${count} 筆紀錄`);
-        // 自動同步
+        // 自動同步最新變更
         triggerAutoSync();
     } else { showToast('沒有符合條件需更新的紀錄'); }
 }
@@ -581,7 +579,7 @@ function saveStatus(e) {
         id: Date.now(),
         startTime: now.toISOString(),
         odo: safeParseFloat(safe('sOdo').value) || 0,
-        battery: safeParseInt(document.querySelector('input[name="sBattery"]:checked').value),
+        battery: safeParseInt(document.querySelector('input[name="sBattery"][value]:checked, input[name="sBattery"]:checked').value),
     };
     localStorage.setItem('statusLog', JSON.stringify([optimizeRecord(record)])); 
     markDataDirty();
@@ -1058,6 +1056,9 @@ function saveSettings() {
     markDataDirty();
     applyTheme(theme);
     showToast('設定已儲存');
+    
+    // 設定儲存時也嘗試進行一次拉取確認，保持最新
+    pullLatestFromCloudOnDemand();
 }
 
 function applyTheme(theme) {
@@ -1074,7 +1075,6 @@ function applyTheme(theme) {
 
 function autoCalculateCost() {
     if(safe('cKwh').dataset.autoCalc !== "true") return;
-    // 關鍵修正：直接從 localStorage 中撈取單價，防止 Settings Tab 欄位未加載
     var s = JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}');
     var rate = safeParseFloat(s.electricRate) || 0;
     var kwh = safeParseFloat(safe('cKwh').value) || 0;
@@ -1200,7 +1200,7 @@ function clearAllData() {
     }
 }
 
-// 靜態呼叫：無詢問背景自動同步功能 (新增/編輯後直接呼叫)
+// 靜態呼叫：無詢問背景自動同步上傳功能
 function triggerAutoSync() {
     var settings = loadSettings();
     if (!settings.gasUrl) return; 
@@ -1239,13 +1239,103 @@ function triggerAutoSync() {
     });
 }
 
-// 開啟網頁時，自動檢查本機是否有未同步變更，並嘗試自動同步
+// === 重大修正：多裝置資訊雙向拉取邏輯 ===
+// 背景靜態拉取與融合雲端最新的資料
+function pullLatestFromCloudOnDemand() {
+    var settings = loadSettings();
+    if (!settings.gasUrl || !navigator.onLine) return;
+
+    // 開啟 PWA 後，在背景默默向 Google Sheets 下載資料進行智慧融合
+    fetch(settings.gasUrl, {
+        method: 'POST',
+        body: JSON.stringify({ action: 'restore' })
+    })
+    .then(res => res.json())
+    .then(data => {
+        if(data.status === 'success' && data.data) {
+            var d = data.data;
+
+            const sanitize = (list) => {
+                if(!Array.isArray(list)) return [];
+                return list.map(item => {
+                    if (typeof item.odo === 'string' && item.odo.startsWith('1900')) {
+                        item.odo = 0; 
+                    }
+                    if (item.odo !== undefined) item.odo = safeParseFloat(item.odo);
+                    if (item.battery !== undefined) item.battery = safeParseInt(item.battery);
+                    if (item.batteryStart !== undefined) item.batteryStart = safeParseInt(item.batteryStart);
+                    if (item.batteryEnd !== undefined) item.batteryEnd = safeParseInt(item.batteryEnd);
+                    if (item.kwh !== undefined) item.kwh = safeParseFloat(item.kwh);
+                    if (item.cost !== undefined) item.cost = safeParseFloat(item.cost);
+                    if (item.amount !== undefined) item.amount = safeParseFloat(item.amount);
+                    if (item.totalCost !== undefined) item.totalCost = safeParseFloat(item.totalCost);
+                    if (item.parts && Array.isArray(item.parts)) {
+                        item.parts = item.parts.map(p => ({
+                            name: p.name,
+                            cost: safeParseFloat(p.cost)
+                        }));
+                    }
+                    return optimizeRecord(item);
+                });
+            };
+
+            // 取得清洗後的雲端新資料
+            var cloudCharges = sanitize(d.ChargeLog);
+            var cloudMaints = sanitize(d.MaintenanceLog);
+            var cloudExpenses = sanitize(d.ExpenseLog);
+            var cloudStatus = sanitize(d.StatusLog);
+
+            // 智慧融合：我們不直接強行覆蓋。如果本機正處於 "Dirty"（代表有尚未上傳的新資訊），就先不要下載覆蓋本機
+            var isDirty = localStorage.getItem(DIRTY_KEY) === 'true';
+            if (!isDirty) {
+                // 如果本機資料與雲端資料不同（例如：其他裝置補登了新紀錄），就默默載入並重繪 UI
+                var localCharges = JSON.parse(localStorage.getItem('chargeLog') || '[]');
+                var localMaints = JSON.parse(localStorage.getItem('maintenanceLog') || '[]');
+                var localExpenses = JSON.parse(localStorage.getItem('expenseLog') || '[]');
+                var localStatus = JSON.parse(localStorage.getItem('statusLog') || '[]');
+
+                var isDiff = (localCharges.length !== cloudCharges.length) || 
+                             (localMaints.length !== cloudMaints.length) ||
+                             (localExpenses.length !== cloudExpenses.length) ||
+                             (localStatus.length !== cloudStatus.length) ||
+                             (JSON.stringify(localCharges) !== JSON.stringify(cloudCharges));
+
+                if (isDiff) {
+                    console.log('偵測到其他裝置的更新！正在背景同步融合...');
+                    localStorage.setItem('chargeLog', JSON.stringify(cloudCharges));
+                    localStorage.setItem('maintenanceLog', JSON.stringify(cloudMaints));
+                    localStorage.setItem('expenseLog', JSON.stringify(cloudExpenses));
+                    localStorage.setItem('statusLog', JSON.stringify(cloudStatus));
+                    
+                    // 重繪所有 UI，完全無需重整網頁
+                    loadAllData();
+                    prefillForms();
+                    populateMonthFilters();
+                    showToast('🔄 已同步其他裝置的最新數據');
+                }
+            }
+        }
+    })
+    .catch(err => {
+        console.error('背景拉取雲端數據失敗：', err);
+    });
+}
+
+// 關鍵優化：開啟網頁時的自動檢查與雙向同步程序
 function checkAndAutoSyncOnLoad() {
     var settings = loadSettings();
     var isDirty = localStorage.getItem(DIRTY_KEY) === 'true';
-    if (isDirty && settings.gasUrl && navigator.onLine) {
-        console.log('偵測到未同步的變更，開啟網頁自動同步...');
-        triggerAutoSync();
+    
+    if (settings.gasUrl && navigator.onLine) {
+        if (isDirty) {
+            // 本機有尚未同步的資訊 ➡️ 先進行雲端上傳同步
+            console.log('偵測到未同步的變更，開啟網頁自動上傳同步...');
+            triggerAutoSync();
+        } else {
+            // 本機目前沒有未同步的資訊 ➡️ 主動拉取雲端看看其他裝置有沒有上傳新紀錄
+            console.log('本機與雲端狀態正常，嘗試檢查雲端是否有其他裝置的新數據...');
+            pullLatestFromCloudOnDemand();
+        }
     }
 }
 
@@ -1325,7 +1415,6 @@ function restoreFromGoogleSheets() {
                     if (typeof item.odo === 'string' && item.odo.startsWith('1900')) {
                         item.odo = 0; 
                     }
-                    // 關鍵修正：將從 Google Sheets 下載回來的字串數值先移除千分位逗號，再轉成純數字儲存
                     if (item.odo !== undefined) item.odo = safeParseFloat(item.odo);
                     if (item.battery !== undefined) item.battery = safeParseInt(item.battery);
                     if (item.batteryStart !== undefined) item.batteryStart = safeParseInt(item.batteryStart);
