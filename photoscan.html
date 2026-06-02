@@ -3,7 +3,7 @@
 <head>
     <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>智慧文件校正掃描器 Pro v6.0</title>
+    <title>文件翻拍校正器</title>
     
     <style>
         body { background-color: #f3f4f6; font-family: system-ui, -apple-system, sans-serif; }
@@ -66,11 +66,24 @@
         </div>
     </div>
 
-    <!-- 移除了 max-w-7xl mx-auto，讓畫面自動滿版 -->
+    <!-- 統一的確認彈出視窗 (取代原生的 confirm) -->
+    <div id="custom-confirm-modal" class="hidden fixed inset-0 bg-black/70 z-[400] flex justify-center items-center backdrop-blur-sm">
+        <div class="bg-white rounded-xl shadow-2xl p-6 max-w-sm w-full mx-4 transform transition-all scale-95 opacity-0" id="custom-confirm-box">
+            <h3 class="text-lg font-bold text-gray-900 mb-3 flex items-center gap-2 border-b pb-2">
+                <span class="text-amber-500 text-2xl">⚠️</span> 溫馨提醒
+            </h3>
+            <p id="custom-confirm-message" class="text-gray-600 text-sm mb-6 whitespace-pre-line leading-relaxed"></p>
+            <div class="flex justify-end gap-3">
+                <button id="btn-confirm-cancel" class="px-5 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg text-sm font-bold transition">取消</button>
+                <button id="btn-confirm-proceed" class="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-bold transition shadow-sm">確定繼續</button>
+            </div>
+        </div>
+    </div>
+
     <div class="w-full space-y-6"> 
         
         <div class="text-center">
-            <h1 class="text-3xl font-bold text-gray-900 mb-2">📄 智慧文件校正掃描器 Pro v6.0</h1>
+            <h1 class="text-3xl font-bold text-gray-900 mb-2">📄 文件翻拍校正器</h1>
             <p class="text-gray-500 text-sm">支援多檔批次處理 / 混合邊緣偵測 / 高速去陰影還原</p>
         </div>
 
@@ -119,7 +132,7 @@
                 <div class="space-y-2">
                     <div class="flex gap-2">
                         <button id="btn-add-collage" class="flex-1 text-xs bg-indigo-600 text-white hover:bg-indigo-700 font-bold py-2.5 px-3 rounded transition shadow-sm disabled:opacity-50" disabled>
-                            📥 存入當前結果
+                            📥 存入目前結果
                         </button>
                         <button id="btn-clear-collage" class="text-xs bg-white hover:bg-gray-100 text-gray-600 font-semibold py-2.5 px-3 rounded border border-gray-200 transition">清空</button>
                     </div>
@@ -182,7 +195,7 @@
             </div>
         </div>
 
-        <!-- 執行大按鈕區與導覽列：同樣移除 max-w-4xl 寬度限制 -->
+        <!-- 執行大按鈕區與導覽列 -->
         <div class="py-4 my-4 flex flex-col md:flex-row items-center justify-center gap-6 bg-white p-4 rounded-xl shadow-sm border border-gray-100 w-full">
             <!-- 多檔切換導覽列 -->
             <div id="file-nav-container" class="hidden flex items-center justify-between bg-blue-50 p-2 rounded-lg border border-blue-100 shadow-inner min-w-[250px]">
@@ -192,7 +205,7 @@
             </div>
 
             <button id="btn-process" class="bg-gradient-to-r from-blue-600 to-indigo-700 hover:from-blue-700 hover:to-indigo-800 text-white rounded-full font-bold shadow-xl transition transform hover:scale-105 disabled:opacity-50 flex items-center px-10 py-4 text-xl" disabled>
-                執行當前校正 ✨
+                執行目前校正 ✨
             </button>
         </div>
 
@@ -274,13 +287,13 @@
         let fileQueue = [];        
         let currentFileIndex = 0;  
         let processedResults = {}; 
-        let savedCorners = {}; // 新增：儲存各圖片的端點資訊 { index: corners }
+        let savedCorners = {}; 
         let isModifiedSinceLastProcess = false; 
 
         let draggedIndex = null;
 
         // ==========================================
-        // 集中 DOM 元素綁定 (解決 ReferenceError 與 TypeError)
+        // 集中 DOM 元素綁定
         // ==========================================
         const statusToast = document.getElementById('status-toast');
         const statusText = document.getElementById('status-text');
@@ -336,6 +349,13 @@
         const bwSettings = document.getElementById('bw-settings');
         const colorSettings = document.getElementById('color-settings');
 
+        // 自訂 Confirm Modal 綁定
+        const confirmModal = document.getElementById('custom-confirm-modal');
+        const confirmBox = document.getElementById('custom-confirm-box');
+        const confirmMessage = document.getElementById('custom-confirm-message');
+        const btnConfirmCancel = document.getElementById('btn-confirm-cancel');
+        const btnConfirmProceed = document.getElementById('btn-confirm-proceed');
+
         // ==========================================
         // 系統與 UI 互動邏輯
         // ==========================================
@@ -351,6 +371,49 @@
             statusToast.style.opacity = '0';
             setTimeout(() => statusToast.style.opacity = '1', 10);
         }
+
+        // --- 自訂 Confirm Modal 邏輯 ---
+        let currentConfirmCallback = null;
+        
+        function showConfirmModal(message, onConfirm) {
+            confirmMessage.textContent = message;
+            currentConfirmCallback = onConfirm;
+            
+            confirmModal.classList.remove('hidden');
+            setTimeout(() => {
+                confirmBox.classList.remove('scale-95', 'opacity-0');
+                confirmBox.classList.add('scale-100', 'opacity-100');
+            }, 10);
+        }
+        
+        function closeConfirmModal() {
+            confirmBox.classList.remove('scale-100', 'opacity-100');
+            confirmBox.classList.add('scale-95', 'opacity-0');
+            setTimeout(() => { 
+                confirmModal.classList.add('hidden'); 
+                currentConfirmCallback = null;
+            }, 200);
+        }
+
+        btnConfirmCancel.addEventListener('click', closeConfirmModal);
+        btnConfirmProceed.addEventListener('click', () => {
+            if (currentConfirmCallback) currentConfirmCallback();
+            closeConfirmModal();
+        });
+
+        // 檢查未處理檔案的輔助函式 (下載/列印時呼叫)
+        function checkUnprocessedFiles(callback, actionName) {
+            const totalCount = fileQueue.length;
+            const processedCount = Object.keys(processedResults).length;
+            
+            if (totalCount > 1 && processedCount < totalCount) {
+                const unprocessedCount = totalCount - processedCount;
+                showConfirmModal(`您上傳了 ${totalCount} 張照片，但還有 ${unprocessedCount} 張尚未校正。\n\n確定要略過它們，直接執行「${actionName}」嗎？`, callback);
+            } else {
+                callback();
+            }
+        }
+
 
         sharpenLevel.addEventListener('input', (e) => {
             const levels = ["關閉", "微弱", "中等", "強烈", "極強"];
@@ -431,7 +494,6 @@
                     if (srcMat) srcMat.delete();
                     srcMat = cv.imread(img);
 
-                    // 新增：檢查是否有儲存過的端點
                     if (savedCorners[currentFileIndex]) {
                         corners = JSON.parse(JSON.stringify(savedCorners[currentFileIndex]));
                         updateStatus(`[第 ${currentFileIndex+1} 張] 已載入先前調整的端點`, "📍", "success");
@@ -480,22 +542,32 @@
         }
 
         btnPrevFile.addEventListener('click', () => {
+            const goPrev = () => {
+                if (currentFileIndex > 0) {
+                    currentFileIndex--;
+                    loadCurrentFile();
+                }
+            };
+            
             if (isModifiedSinceLastProcess) {
-                if (!confirm("您已調整過端點但尚未執行校正，確定要切換圖片嗎？\n(未執行的變更將會遺失)")) return;
-            }
-            if (currentFileIndex > 0) {
-                currentFileIndex--;
-                loadCurrentFile();
+                showConfirmModal("您已調整過端點但尚未執行校正，確定要切換圖片嗎？\n(未執行的變更將會遺失)", goPrev);
+            } else {
+                goPrev();
             }
         });
 
         btnNextFile.addEventListener('click', () => {
+            const goNext = () => {
+                if (currentFileIndex < fileQueue.length - 1) {
+                    currentFileIndex++;
+                    loadCurrentFile();
+                }
+            };
+
             if (isModifiedSinceLastProcess) {
-                if (!confirm("您已調整過端點但尚未執行校正，確定要切換圖片嗎？\n(未執行的變更將會遺失)")) return;
-            }
-            if (currentFileIndex < fileQueue.length - 1) {
-                currentFileIndex++;
-                loadCurrentFile();
+                showConfirmModal("您已調整過端點但尚未執行校正，確定要切換圖片嗎？\n(未執行的變更將會遺失)", goNext);
+            } else {
+                goNext();
             }
         });
 
@@ -548,7 +620,7 @@
             autoUpdateParams();
             renderEditor();
             isModifiedSinceLastProcess = true; 
-            savedCorners[currentFileIndex] = JSON.parse(JSON.stringify(corners)); // 新增：記憶重置後的端點
+            savedCorners[currentFileIndex] = JSON.parse(JSON.stringify(corners)); 
             updateStatus("已將定位端點重置", "🔄");
         });
 
@@ -770,7 +842,7 @@
             document.getElementById('magnifier-container').classList.add('hidden');
             autoUpdateParams(); 
             isModifiedSinceLastProcess = true; 
-            savedCorners[currentFileIndex] = JSON.parse(JSON.stringify(corners)); // 新增：記憶拖曳後的端點
+            savedCorners[currentFileIndex] = JSON.parse(JSON.stringify(corners)); 
             document.removeEventListener('mousemove', drag); 
             document.removeEventListener('mouseup', stopDrag); 
             document.removeEventListener('touchmove', drag); 
@@ -953,25 +1025,29 @@
         // --- 下載與列印模組 ---
 
         btnDownload.addEventListener('click', () => { 
-            const l = document.createElement('a'); 
-            l.download = `${originalFileName}_校正.jpg`; 
-            l.href = resultCanvas.toDataURL('image/jpeg', 0.95); 
-            l.click(); 
+            checkUnprocessedFiles(() => {
+                const l = document.createElement('a'); 
+                l.download = `${originalFileName}_校正.jpg`; 
+                l.href = resultCanvas.toDataURL('image/jpeg', 0.95); 
+                l.click(); 
+            }, "單張下載");
         });
 
         btnBatchDownload.addEventListener('click', () => {
-            updateStatus(`正在批次下載 ${Object.keys(processedResults).length} 個檔案...`, "💾");
-            let index = 0;
-            for (const key in processedResults) {
-                setTimeout(() => {
-                    const l = document.createElement('a');
-                    let baseName = fileQueue[key].name.replace(/\.[^/.]+$/, "");
-                    l.download = `${baseName}_校正.jpg`;
-                    l.href = processedResults[key];
-                    l.click();
-                }, index * 300); 
-                index++;
-            }
+            checkUnprocessedFiles(() => {
+                updateStatus(`正在批次下載 ${Object.keys(processedResults).length} 個檔案...`, "💾");
+                let index = 0;
+                for (const key in processedResults) {
+                    setTimeout(() => {
+                        const l = document.createElement('a');
+                        let baseName = fileQueue[key].name.replace(/\.[^/.]+$/, "");
+                        l.download = `${baseName}_校正.jpg`;
+                        l.href = processedResults[key];
+                        l.click();
+                    }, index * 300); 
+                    index++;
+                }
+            }, "批次下載");
         });
 
         function executePrint(dataUrls) {
@@ -989,12 +1065,16 @@
         }
 
         btnPrint.addEventListener('click', () => {
-            executePrint([resultCanvas.toDataURL('image/jpeg', 1.0)]);
+            checkUnprocessedFiles(() => {
+                executePrint([resultCanvas.toDataURL('image/jpeg', 1.0)]);
+            }, "單張列印");
         });
 
         btnBatchPrint.addEventListener('click', () => {
-            const urls = Object.keys(processedResults).map(k => processedResults[k]);
-            executePrint(urls);
+            checkUnprocessedFiles(() => {
+                const urls = Object.keys(processedResults).map(k => processedResults[k]);
+                executePrint(urls);
+            }, "批次列印");
         });
 
         function rotateImage(mode) {
@@ -1011,7 +1091,7 @@
             }
             srcMat.delete(); srcMat = dst;
             isModifiedSinceLastProcess = true; 
-            savedCorners[currentFileIndex] = JSON.parse(JSON.stringify(corners)); // 新增：記憶旋轉後的端點
+            savedCorners[currentFileIndex] = JSON.parse(JSON.stringify(corners)); 
             renderEditor();
         }
 
