@@ -700,8 +700,8 @@
                 const startStName = item['區間起'] || '';
                 const endStName = item['區間迄'] || '';
                 
-                const startStHtml = startStName ? `<button class="text-indigo-600 hover:underline font-bold bg-indigo-50/80 px-1.5 py-0.5 rounded" onclick="showEntityModal('station', '${startStName}')">${startStName}</button>` : '未知';
-                const endStHtml = endStName ? `<button class="text-indigo-600 hover:underline font-bold bg-indigo-50/80 px-1.5 py-0.5 rounded" onclick="showEntityModal('station', '${endStName}')">${endStName}</button>` : '未知';
+                const startStHtml = startStName ? `<button class="text-indigo-600 hover:underline font-bold bg-indigo-50/80 px-1.5 py-0.5 rounded" onclick="showEntityModal('station', '${startStName}'">${startStName}</button>` : '未知';
+                const endStHtml = endStName ? `<button class="text-indigo-600 hover:underline font-bold bg-indigo-50/80 px-1.5 py-0.5 rounded" onclick="showEntityModal('station', '${endStName}'">${endStName}</button>` : '未知';
                 
                 const electricHtml = item['電務段'] ? `<button class="text-indigo-600 hover:underline font-semibold bg-purple-50 px-1.5 py-0.5 rounded" onclick="showEntityModal('electric', '${item['電務段']}')">${item['電務段']}電務段</button>` : '未知';
                 const divisionHtml = item['分駐所'] ? `<button class="text-indigo-600 hover:underline font-semibold bg-amber-50 px-1.5 py-0.5 rounded" onclick="showEntityModal('division', '${item['分駐所']}')">${item['分駐所']}分駐所</button>` : '未知';
