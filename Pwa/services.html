@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DeDe男士美學 - 服務價目表</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .ocean-gradient { background: linear-gradient(135deg, #e0f2f1 0%, #b2ebf2 100%); }
+        .price-line-through { text-decoration: line-through; color: #7f8c8d; font-size: 0.9em; margin-right: 8px; }
+        .promo-price { color: #e53e3e; font-weight: bold; }
+        [v-cloak] { display: none; }
+    </style>
+</head>
+<body class="ocean-gradient min-h-screen p-4 md:p-8 text-gray-800">
+
+    <div class="max-w-3xl mx-auto bg-white rounded-2xl shadow-xl overflow-hidden" id="app">
+        <!-- 標題區塊 (自動帶入年月) -->
+        <div class="bg-blue-600 text-white p-6 text-center">
+            <h1 class="text-2xl font-bold">DeDe 男士專屬美容美體中心</h1>
+            <p class="text-blue-100 mt-1" id="page-subtitle">載入中...</p>
+        </div>
+
+        <div class="p-6">
+            <!-- 載入中提示 -->
+            <div id="loading" class="text-center py-10 text-gray-500">
+                <svg class="animate-spin h-8 w-8 mx-auto mb-4 text-blue-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                正在讀取最新優惠資訊...
+            </div>
+
+            <div id="content" class="hidden">
+                <!-- 促銷區域 (自動產生) -->
+                <section id="promo-section" class="mb-8 hidden">
+                    <h2 class="text-xl font-bold text-blue-800 mb-4 border-b-2 border-blue-200 pb-2 flex items-center">
+                        <span class="mr-2">🔥</span> 本月熱門優惠
+                    </h2>
+                    <div id="promo-list" class="space-y-3">
+                        <!-- 促銷項目將插入於此 -->
+                    </div>
+                </section>
+
+                <!-- 完整項目列表 (自動產生) -->
+                <section>
+                    <h2 class="text-xl font-bold text-blue-800 mb-4 border-b-2 border-blue-200 pb-2 flex items-center">
+                        <span class="mr-2">📋</span> 完整服務項目
+                    </h2>
+                    <div id="menu-list">
+                        <!-- 完整項目將插入於此 -->
+                    </div>
+                </section>
+            </div>
+
+            <!-- 底部預約 -->
+            <div class="mt-10 text-center border-t border-gray-100 pt-8">
+                <a href="https://line.me/R/ti/p/..." class="inline-block bg-blue-600 text-white font-bold py-3 px-10 rounded-full shadow-lg hover:bg-blue-700 transition transform hover:-translate-y-1">
+                    立即透過 LINE 預約
+                </a>
+                <p class="text-xs text-gray-500 mt-4">基隆市愛二路58號2樓 | 採預約制</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 格式化金額
+        const formatMoney = (amount) => '$' + amount.toLocaleString('zh-TW');
+
+        // 判斷目前時間是否有符合的優惠活動
+        const getActivePromotion = (promotions) => {
+            if (!promotions || promotions.length === 0) return null;
+            const now = new Date(); // 獲取使用者當下開啟網頁的時間
+            
+            for (const promo of promotions) {
+                const start = new Date(promo.start);
+                const end = new Date(promo.end);
+                end.setHours(23, 59, 59, 999); // 確保包含結束日期的最後一刻
+                
+                if (now >= start && now <= end) {
+                    return promo; // 如果在期間內，回傳這個優惠資訊
+                }
+            }
+            return null;
+        };
+
+        async function init() {
+            let data;
+            try {
+                // 嘗試讀取外部 JSON (若伺服器環境下)
+                const res = await fetch('services.json');
+                if (res.ok) {
+                    data = await res.json();
+                } else {
+                    data = fallbackData; // 若抓不到，使用預設資料
+                }
+            } catch (err) {
+                data = fallbackData; // 瀏覽器本地預覽或跨域時使用預設資料
+            }
+
+            // 更新頁面標題日期 (例如: 115年6月服務價目表)
+            const now = new Date();
+            const twYear = now.getFullYear() - 1911;
+            const month = now.getMonth() + 1;
+            document.getElementById('page-subtitle').innerText = `${twYear}年${month}月 服務價目表`;
+
+            // 建立所有服務的快取清單，用來算組合優惠的原價
+            const itemsMap = new Map();
+            data.categories.forEach(cat => {
+                cat.items.forEach(item => itemsMap.set(item.id, item));
+            });
+
+            const promoListElement = document.getElementById('promo-list');
+            const menuListElement = document.getElementById('menu-list');
+            let hasPromo = false;
+
+            // --- 處理本月熱門優惠 ---
+
+            // 1. 處理 Combo 組合優惠
+            if (data.combos) {
+                data.combos.forEach(combo => {
+                    const activePromo = getActivePromotion(combo.promotions);
+                    if (activePromo) {
+                        hasPromo = true;
+                        // 自動加總組合內的原價
+                        const originalPrice = combo.itemIds.reduce((sum, id) => {
+                            const item = itemsMap.get(id);
+                            return sum + (item ? item.price : 0);
+                        }, 0);
+
+                        promoListElement.innerHTML += createPromoHtml(combo.name, originalPrice, activePromo.price, activePromo.label);
+                    }
+                });
+            }
+
+            // 2. 處理單項服務優惠 (放在熱門優惠區塊)
+            data.categories.forEach(cat => {
+                cat.items.forEach(item => {
+                    const activePromo = getActivePromotion(item.promotions);
+                    if (activePromo) {
+                        hasPromo = true;
+                        promoListElement.innerHTML += createPromoHtml(item.name, item.price, activePromo.price, activePromo.label);
+                    }
+                });
+            });
+
+            // 顯示或隱藏熱門優惠區塊
+            if (hasPromo) {
+                document.getElementById('promo-section').classList.remove('hidden');
+            }
+
+            // --- 處理完整服務清單 ---
+            data.categories.forEach(cat => {
+                let catHtml = `<h3 class="font-bold text-gray-700 mt-6 mb-2 text-lg border-l-4 border-blue-400 pl-2">${cat.name}</h3>`;
+                catHtml += `<table class="w-full text-sm mb-4">`;
+                
+                cat.items.forEach(item => {
+                    const activePromo = getActivePromotion(item.promotions);
+                    catHtml += `<tr class="border-b border-gray-100 hover:bg-blue-50 transition">
+                                  <td class="py-3 text-gray-800">${item.name}</td>
+                                  <td class="text-right py-3 whitespace-nowrap">`;
+                    
+                    if (activePromo) {
+                        // 有特價時：顯示原價刪除線 + 特價
+                        catHtml += `<span class="price-line-through">${formatMoney(item.price)}</span>
+                                    <span class="promo-price">${formatMoney(activePromo.price)}</span>`;
+                    } else {
+                        // 沒特價時：直接顯示原價
+                        catHtml += `<span class="text-gray-700 font-medium">${formatMoney(item.price)}</span>`;
+                    }
+                    catHtml += `  </td>
+                                </tr>`;
+                });
+                catHtml += `</table>`;
+                menuListElement.innerHTML += catHtml;
+            });
+
+            // 移除 Loading，顯示內容
+            document.getElementById('loading').classList.add('hidden');
+            document.getElementById('content').classList.remove('hidden');
+        }
+
+        // 產生優惠區塊的 HTML 模板
+        function createPromoHtml(name, originalPrice, promoPrice, label) {
+            return `
+                <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center bg-blue-50 p-4 rounded-xl border border-blue-100 shadow-sm relative overflow-hidden">
+                    <div class="absolute top-0 right-0 bg-red-500 text-white text-xs px-2 py-1 rounded-bl-lg font-bold">${label}</div>
+                    <span class="font-medium text-gray-800 mt-2 sm:mt-0 pr-4">${name}</span>
+                    <div class="mt-2 sm:mt-0 flex items-center">
+                        <span class="text-xs text-gray-400 mr-1">原價</span>
+                        <span class="price-line-through">${formatMoney(originalPrice)}</span>
+                        <span class="text-xs text-red-500 font-bold ml-2 mr-1">優惠</span>
+                        <span class="promo-price text-lg">${formatMoney(promoPrice)}</span>
+                    </div>
+                </div>
+            `;
+        }
+
+        // 執行初始化
+        window.addEventListener('DOMContentLoaded', init);
+    </script>
+</body>
+</html>
