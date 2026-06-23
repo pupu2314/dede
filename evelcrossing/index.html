@@ -697,7 +697,13 @@
         }
 
         function filterAndRender(autoScroll = false) {
-            const s = searchInput.value.toLowerCase(), es = electricSectionFilter.value, ci = cityFilter.value, st = stationFilter.value, se = sectionFilter.value, li = lineFilter.value;
+            // 使用 normalize('NFKC') 正規化搜尋輸入
+            const s = searchInput.value.normalize('NFKC').toLowerCase();
+            const es = electricSectionFilter.value;
+            const ci = cityFilter.value;
+            const st = stationFilter.value;
+            const se = sectionFilter.value;
+            const li = lineFilter.value;
 
             let temp = fullCrossingData.filter(i => {
                 const nm = i['平交道名稱'].toLowerCase().includes(s) || (i['舊名或別名'] && i['舊名或別名'].toLowerCase().includes(s));
@@ -861,7 +867,7 @@
         });
 
         window.addEventListener('load', () => {
-            // 單純載入主資料，不再讀取 URL params
+            // 單純載入主資料
             fetch('evelcrossing.json')
                 .then(r => r.json())
                 .then(mainData => {
@@ -871,6 +877,14 @@
                         delete item['施工狀態'];
                         delete item['施工日期'];
                         delete item['施工數量'];
+
+                        // 💥 重要修復：對所有字串欄位進行 Unicode NFKC 標準化
+                        // 這能一次解決 Yilan 416「中正路 (U+F917)」以及「年 (U+F92B)」等所有相容異體字問題。
+                        for (let key in item) {
+                            if (typeof item[key] === 'string') {
+                                item[key] = item[key].normalize('NFKC');
+                            }
+                        }
                     });
 
                     fullCrossingData = mainData;
