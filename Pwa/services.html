@@ -9,12 +9,19 @@
         .ocean-gradient { background: linear-gradient(135deg, #e0f2f1 0%, #b2ebf2 100%); }
         .price-line-through { text-decoration: line-through; color: #7f8c8d; font-size: 0.9em; margin-right: 8px; }
         .promo-price { color: #e53e3e; font-weight: bold; }
+        
+        /* 針對多欄位佈局時，避免卡片被切斷 */
+        .break-inside-avoid { break-inside: avoid; }
+        
+        /* 懸浮按鈕的底部空間預留 */
+        body { padding-bottom: 80px; } 
+
         [v-cloak] { display: none; }
     </style>
 </head>
 <body class="ocean-gradient min-h-screen p-4 md:p-8 text-gray-800">
 
-    <div class="max-w-3xl mx-auto bg-white rounded-2xl shadow-xl overflow-hidden" id="app">
+    <div class="max-w-5xl mx-auto bg-white rounded-2xl shadow-xl overflow-hidden" id="app">
         <!-- 標題區塊 (自動帶入年月) -->
         <div class="bg-blue-600 text-white p-6 text-center">
             <h1 class="text-2xl font-bold">DeDe 男士專屬美容美體中心</h1>
@@ -37,33 +44,102 @@
                     <h2 class="text-xl font-bold text-blue-800 mb-4 border-b-2 border-blue-200 pb-2 flex items-center">
                         <span class="mr-2">🔥</span> 本月熱門優惠
                     </h2>
-                    <div id="promo-list" class="space-y-3">
+                    <!-- 熱門優惠在大螢幕也適用多欄 -->
+                    <div id="promo-list" class="columns-1 md:columns-2 gap-4 space-y-4">
                         <!-- 促銷項目將插入於此 -->
                     </div>
                 </section>
 
-                <!-- 完整項目列表 (自動產生) -->
+                <!-- 完整項目列表 (自動產生，使用多欄瀑布流排版) -->
                 <section>
                     <h2 class="text-xl font-bold text-blue-800 mb-4 border-b-2 border-blue-200 pb-2 flex items-center">
                         <span class="mr-2">📋</span> 完整服務項目
                     </h2>
-                    <div id="menu-list">
+                    <!-- RWD: 手機1欄, 平板2欄, 電腦3欄 -->
+                    <div id="menu-list" class="columns-1 md:columns-2 lg:columns-3 gap-6">
                         <!-- 完整項目將插入於此 -->
                     </div>
                 </section>
             </div>
-
-            <!-- 底部預約 -->
-            <div class="mt-10 text-center border-t border-gray-100 pt-8">
-                <a href="https://line.me/R/ti/p/..." class="inline-block bg-blue-600 text-white font-bold py-3 px-10 rounded-full shadow-lg hover:bg-blue-700 transition transform hover:-translate-y-1">
-                    立即透過 LINE 預約
-                </a>
-                <p class="text-xs text-gray-500 mt-4">基隆市愛二路58號2樓 | 採預約制</p>
+            
+            <div class="mt-8 text-center text-xs text-gray-500 pb-4">
+                基隆市愛二路58號2樓 | 採預約制
             </div>
         </div>
     </div>
 
+    <!-- 懸浮式預約按鈕 -->
+    <div class="fixed bottom-0 left-0 w-full bg-white border-t border-gray-200 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)] p-3 flex justify-center z-50">
+        <a href="https://lin.ee/6fc6qGl" class="w-full max-w-sm flex items-center justify-center bg-green-500 text-white font-bold py-3 px-6 rounded-full shadow-md hover:bg-green-600 transition transform hover:-translate-y-1">
+            <svg class="w-6 h-6 mr-2 fill-current" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M24 10.304c0-5.369-5.383-9.738-12-9.738-6.616 0-12 4.369-12 9.738 0 4.814 4.269 8.846 10.036 9.608.391.084.922.258 1.057.592.122.303.079.778.039 1.085l-.171 1.027c-.053.303-.242 1.186 1.039.647 1.281-.54 6.911-4.069 9.428-6.967 1.739-1.907 2.572-3.843 2.572-5.992zm-18.988 2.595h-2.128v-4.832h2.128v4.832zm3.324 0h-2.127v-4.832h2.127v4.832zm4.17 0h-1.428l-1.996-2.585v2.585h-1.895v-4.832h1.428l1.996 2.585v-2.585h1.895v4.832zm4.908 0h-3.325v-4.832h3.325v1.272h-1.396v.505h1.396v1.272h-1.396v.511h1.396v1.272z"/></svg>
+            立即透過 LINE 預約
+        </a>
+    </div>
+
     <script>
+        // 預設資料：全部皆為原價，不包含任何 promotions 節點。
+        // 若外部 JSON 載入失敗，網頁仍可正常運作且不顯示錯誤的優惠資訊。
+        const fallbackData = {
+          "categories": [
+            {
+              "name": "男士專屬除毛",
+              "items": [
+                { "id": "private_full", "name": "私密處除毛 (全除)", "price": 1900 },
+                { "id": "nose", "name": "鼻毛", "price": 200 },
+                { "id": "private_shape", "name": "私密處除毛 (局部/造型)", "price": 1900 },
+                { "id": "private_trim", "name": "私密處毛修剪-一般修剪無痛(修剪+沐浴)", "price": 300 },
+                { "id": "belly_lower", "name": "三角處(下腹毛以下,根部以上)", "price": 800 },
+                { "id": "armpit", "name": "腋下毛", "price": 600 },
+                { "id": "belly_upper", "name": "上腹部毛(肚臍以上胸部以下)", "price": 600 },
+                { "id": "belly_middle", "name": "下腹部毛(肚臍以下陰毛以上)", "price": 600 },
+                { "id": "arm_half", "name": "半手臂", "price": 1600 },
+                { "id": "arm_full", "name": "全手臂", "price": 3000 },
+                { "id": "finger", "name": "手指", "price": 300 },
+                { "id": "hand_back", "name": "手背", "price": 300 },
+                { "id": "toe", "name": "腳趾", "price": 300 },
+                { "id": "foot_back", "name": "腳背", "price": 300 },
+                { "id": "leg_calf", "name": "小腿", "price": 1900 },
+                { "id": "leg_thigh", "name": "大腿", "price": 1900 },
+                { "id": "leg_full", "name": "全腿", "price": 3500 },
+                { "id": "nipple", "name": "奶頭毛", "price": 200 },
+                { "id": "chest", "name": "胸毛", "price": 600 },
+                { "id": "private_area", "name": "區域單獨除毛", "price": 600 },
+                { "id": "beard", "name": "鬍子熱蠟除毛(八字鬍與下巴)", "price": 1000 },
+                { "id": "private_combo_part", "name": "私密處單一區域任選2部位", "price": 1200 }
+              ]
+            },
+            {
+              "name": "男士專屬油壓",
+              "items": [
+                { "id": "oil_massage_1hr", "name": "[油推]能量精油 健康調理 /1hr(含機能保養)", "price": 1200 },
+                { "id": "oil_massage_1.5hr", "name": "[油推]能量精油健康調理 /1.5hr(含機能保養)", "price": 1800 }
+              ]
+            },
+            {
+              "name": "男士專屬指壓",
+              "items": [
+                { "id": "acupressure_1hr", "name": "[指壓]能量健康調理 /1hr", "price": 1000 },
+                { "id": "acupressure_1.5hr", "name": "[指壓]能量健康調理 /1.5hr", "price": 1500 }
+              ]
+            },
+            {
+              "name": "男士專屬筋膜刀體雕",
+              "items": [
+                { "id": "fascia_knife_1hr", "name": "筋膜刀體雕 氣脈健康調理 /1hr", "price": 1600 },
+                { "id": "fascia_knife_1.5hr", "name": "筋膜刀體雕 氣脈健康調理 /1.5hr", "price": 2200 }
+              ]
+            },
+            {
+              "name": "男士專屬SPA",
+              "items": [
+                { "id": "spa_face", "name": "【臉部】更新油美白煥膚萬年礦泥臉部肌膚調理 /1hr", "price": 1800 },
+                { "id": "spa_private", "name": "【私密處】更新油美白換膚萬年礦泥 屁股+私密處 肌膚調理 /1hr", "price": 2200 },
+                { "id": "spa_body", "name": "【全身】更新油全身深層敷體淨化 /1.5hr", "price": 3000 }
+              ]
+            }
+          ]
+        };
+
         // 格式化金額
         const formatMoney = (amount) => '$' + amount.toLocaleString('zh-TW');
 
@@ -151,8 +227,10 @@
 
             // --- 處理完整服務清單 ---
             data.categories.forEach(cat => {
-                let catHtml = `<h3 class="font-bold text-gray-700 mt-6 mb-2 text-lg border-l-4 border-blue-400 pl-2">${cat.name}</h3>`;
-                catHtml += `<table class="w-full text-sm mb-4">`;
+                // 將每個分類包裝在一個區塊內，並加上 break-inside-avoid 避免被截斷到不同欄位
+                let catHtml = `<div class="bg-gray-50 rounded-xl p-4 mb-6 break-inside-avoid border border-gray-100 shadow-sm">
+                                  <h3 class="font-bold text-gray-700 mb-3 text-lg border-l-4 border-blue-400 pl-2">${cat.name}</h3>
+                                  <table class="w-full text-sm">`;
                 
                 cat.items.forEach(item => {
                     const activePromo = getActivePromotion(item.promotions);
@@ -171,7 +249,7 @@
                     catHtml += `  </td>
                                 </tr>`;
                 });
-                catHtml += `</table>`;
+                catHtml += `</table></div>`;
                 menuListElement.innerHTML += catHtml;
             });
 
@@ -183,10 +261,10 @@
         // 產生優惠區塊的 HTML 模板
         function createPromoHtml(name, originalPrice, promoPrice, label) {
             return `
-                <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center bg-blue-50 p-4 rounded-xl border border-blue-100 shadow-sm relative overflow-hidden">
+                <div class="break-inside-avoid flex flex-col justify-between bg-blue-50 p-4 rounded-xl border border-blue-100 shadow-sm relative overflow-hidden mb-4 md:mb-0 w-full">
                     <div class="absolute top-0 right-0 bg-red-500 text-white text-xs px-2 py-1 rounded-bl-lg font-bold">${label}</div>
-                    <span class="font-medium text-gray-800 mt-2 sm:mt-0 pr-4">${name}</span>
-                    <div class="mt-2 sm:mt-0 flex items-center">
+                    <span class="font-medium text-gray-800 pr-4 mt-2 sm:mt-0">${name}</span>
+                    <div class="mt-3 flex items-center justify-end">
                         <span class="text-xs text-gray-400 mr-1">原價</span>
                         <span class="price-line-through">${formatMoney(originalPrice)}</span>
                         <span class="text-xs text-red-500 font-bold ml-2 mr-1">優惠</span>
