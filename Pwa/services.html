@@ -55,24 +55,28 @@
                     <h2 class="text-xl font-bold text-blue-800 mb-4 border-b-2 border-blue-200 pb-2 flex items-center">
                         <span class="mr-2">📋</span> 完整服務項目
                     </h2>
-                    <!-- RWD: 手機1欄, 平板2欄, 電腦3欄 -->
-                    <div id="menu-list" class="columns-1 md:columns-2 lg:columns-3 gap-6">
+                    <!-- RWD: 移除預設的 columns，改用 Grid 來做更細緻的跨欄控制 -->
+                    <div id="menu-list" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                         <!-- 完整項目將插入於此 -->
                     </div>
                 </section>
-            </div>
-            
-            <div class="mt-8 text-center text-xs text-gray-500 pb-4">
-                基隆市愛二路58號2樓 | 採預約制
             </div>
         </div>
     </div>
 
     <!-- 懸浮式預約按鈕 -->
     <div class="fixed bottom-0 left-0 w-full bg-white border-t border-gray-200 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)] p-3 flex justify-center z-50">
-        <a href="https://lin.ee/6fc6qGl" class="w-full max-w-sm flex items-center justify-center bg-green-500 text-white font-bold py-3 px-6 rounded-full shadow-md hover:bg-green-600 transition transform hover:-translate-y-1">
-            <svg class="w-6 h-6 mr-2 fill-current" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M24 10.304c0-5.369-5.383-9.738-12-9.738-6.616 0-12 4.369-12 9.738 0 4.814 4.269 8.846 10.036 9.608.391.084.922.258 1.057.592.122.303.079.778.039 1.085l-.171 1.027c-.053.303-.242 1.186 1.039.647 1.281-.54 6.911-4.069 9.428-6.967 1.739-1.907 2.572-3.843 2.572-5.992zm-18.988 2.595h-2.128v-4.832h2.128v4.832zm3.324 0h-2.127v-4.832h2.127v4.832zm4.17 0h-1.428l-1.996-2.585v2.585h-1.895v-4.832h1.428l1.996 2.585v-2.585h1.895v4.832zm4.908 0h-3.325v-4.832h3.325v1.272h-1.396v.505h1.396v1.272h-1.396v.511h1.396v1.272z"/></svg>
-            立即透過 LINE 預約
+        <a href="https://lin.ee/6fc6qGl" class="w-full max-w-sm flex items-center justify-center bg-[#06C755] text-white font-bold py-3 px-6 rounded-full shadow-md hover:bg-[#05b34c] transition transform hover:-translate-y-1">
+            <!-- 修正後的 LINE Icon (SVG) -->
+            <svg class="w-8 h-8 mr-2" viewBox="0 0 320 320" xmlns="http://www.w3.org/2000/svg">
+                <rect fill="#fff" width="320" height="320" rx="72.14"/>
+                <path fill="#06c755" d="M266.66,144.92c0-47.74-47.86-86.58-106.69-86.58S53.28,97.18,53.28,144.92c0,42.8,38,78.65,89.22,85.42,3.48.75,8.21,2.29,9.4,5.26,1.08,2.7.71,6.93.35,9.65,0,0-1.25,7.53-1.52,9.13-.47,2.7-2.15,10.55,9.24,5.76s61.44-36.18,83.82-61.95h0C259.25,181.24,266.66,164,266.66,144.92Z"/>
+                <path fill="#fff" d="M231.16,172.49h-30a2,2,0,0,1-2-2v0h0V123.94h0v0a2,2,0,0,1,2-2h30a2,2,0,0,1,2,2v7.57a2,2,0,0,1-2,2H210.79v7.85h20.37a2,2,0,0,1,2,2V151a2,2,0,0,1-2,2H210.79v7.86h20.37a2,2,0,0,1,2,2v7.56A2,2,0,0,1,231.16,172.49Z"/>
+                <path fill="#fff" d="M120.29,172.49a2,2,0,0,0,2-2v-7.56a2,2,0,0,0-2-2H99.92v-37a2,2,0,0,0-2-2H90.32a2,2,0,0,0-2,2v46.53h0v0a2,2,0,0,0,2,2h30Z"/>
+                <rect fill="#fff" x="128.73" y="121.85" width="11.64" height="50.64" rx="2.04"/>
+                <path fill="#fff" d="M189.84,121.85h-7.56a2,2,0,0,0-2,2v27.66l-21.3-28.77a1.2,1.2,0,0,0-.17-.21v0l-.12-.12,0,0-.11-.09-.06,0-.11-.08-.06,0-.11-.06-.07,0-.11,0-.07,0-.12,0-.08,0-.12,0h-.08l-.11,0h-7.71a2,2,0,0,0-2,2v46.56a2,2,0,0,0,2,2h7.57a2,2,0,0,0,2-2V142.81l21.33,28.8a2,2,0,0,0,.52.52h0l.12.08.06,0,.1.05.1,0,.07,0,.14,0h0a2.42,2.42,0,0,0,.54.07h7.52a2,2,0,0,0,2-2V123.89A2,2,0,0,0,189.84,121.85Z"/>
+            </svg>
+            本中心採預約制，立即透過 LINE 預約
         </a>
     </div>
 
@@ -84,28 +88,28 @@
             {
               "name": "男士專屬除毛",
               "items": [
-                { "id": "private_full", "name": "私密處除毛 (全除)", "price": 1900 },
+                { "id": "private_full", "name": "私密處除毛 (全除)", "desc": "含三角處、陰莖、陰囊、會陰、肛門、鼠蹊部", "price": 1900 },
                 { "id": "nose", "name": "鼻毛", "price": 200 },
                 { "id": "private_shape", "name": "私密處除毛 (局部/造型)", "price": 1900 },
                 { "id": "private_trim", "name": "私密處毛修剪-一般修剪無痛(修剪+沐浴)", "price": 300 },
-                { "id": "belly_lower", "name": "三角處(下腹毛以下,根部以上)", "price": 800 },
+                { "id": "belly_lower", "name": "三角處除毛", "desc": "腹部下方至陰莖上方區域", "price": 800 },
                 { "id": "armpit", "name": "腋下毛", "price": 600 },
                 { "id": "belly_upper", "name": "上腹部毛(肚臍以上胸部以下)", "price": 600 },
                 { "id": "belly_middle", "name": "下腹部毛(肚臍以下陰毛以上)", "price": 600 },
-                { "id": "arm_half", "name": "半手臂", "price": 1600 },
-                { "id": "arm_full", "name": "全手臂", "price": 3000 },
+                { "id": "arm_half", "name": "半手臂", "desc": "上手臂或下手臂擇一", "price": 1600 },
+                { "id": "arm_full", "name": "全手臂", "desc": "上手臂及下手臂", "price": 3000 },
                 { "id": "finger", "name": "手指", "price": 300 },
                 { "id": "hand_back", "name": "手背", "price": 300 },
                 { "id": "toe", "name": "腳趾", "price": 300 },
                 { "id": "foot_back", "name": "腳背", "price": 300 },
                 { "id": "leg_calf", "name": "小腿", "price": 1900 },
                 { "id": "leg_thigh", "name": "大腿", "price": 1900 },
-                { "id": "leg_full", "name": "全腿", "price": 3500 },
+                { "id": "leg_full", "name": "全腿", "desc": "大腿及小腿", "price": 3500 },
                 { "id": "nipple", "name": "奶頭毛", "price": 200 },
                 { "id": "chest", "name": "胸毛", "price": 600 },
-                { "id": "private_area", "name": "區域單獨除毛", "price": 600 },
+                { "id": "private_area", "name": "區域單獨除毛", "desc": "陰莖、陰囊、會陰、肛門、鼠蹊部擇一部位", "price": 600 },
                 { "id": "beard", "name": "鬍子熱蠟除毛(八字鬍與下巴)", "price": 1000 },
-                { "id": "private_combo_part", "name": "私密處單一區域任選2部位", "price": 1200 }
+                { "id": "private_combo_part", "name": "私密處單一區域任選2部位", "desc": "陰莖、陰囊、會陰、肛門、鼠蹊部擇兩部位", "price": 1200 }
               ]
             },
             {
@@ -227,29 +231,40 @@
 
             // --- 處理完整服務清單 ---
             data.categories.forEach(cat => {
-                // 將每個分類包裝在一個區塊內，並加上 break-inside-avoid 避免被截斷到不同欄位
-                let catHtml = `<div class="bg-gray-50 rounded-xl p-4 mb-6 break-inside-avoid border border-gray-100 shadow-sm">
-                                  <h3 class="font-bold text-gray-700 mb-3 text-lg border-l-4 border-blue-400 pl-2">${cat.name}</h3>
-                                  <table class="w-full text-sm">`;
+                // 針對「男士專屬除毛」在 lg (電腦) 尺寸時設定跨 2 欄 (col-span-2)
+                // 其他項目維持跨 1 欄 (col-span-1)
+                const gridSpanClass = cat.name === "男士專屬除毛" ? "lg:col-span-2" : "col-span-1";
+
+                let catHtml = `<div class="${gridSpanClass} bg-gray-50 rounded-xl p-4 break-inside-avoid border border-gray-100 shadow-sm flex flex-col">
+                                  <h3 class="font-bold text-gray-700 mb-3 text-lg border-l-4 border-blue-400 pl-2">${cat.name}</h3>`;
+                
+                // 如果是除毛項目（跨兩欄），我們在內部也做成兩欄（masonry 或 grid）來善用空間
+                const innerGridClass = cat.name === "男士專屬除毛" ? "columns-1 md:columns-2 gap-4" : "";
+                
+                catHtml += `<div class="${innerGridClass}">`;
                 
                 cat.items.forEach(item => {
                     const activePromo = getActivePromotion(item.promotions);
-                    catHtml += `<tr class="border-b border-gray-100 hover:bg-blue-50 transition">
-                                  <td class="py-3 text-gray-800">${item.name}</td>
-                                  <td class="text-right py-3 whitespace-nowrap">`;
+                    // 為了避免內部 columns 把一個項目的標題跟價格切斷，加入 break-inside-avoid
+                    catHtml += `<div class="border-b border-gray-100 hover:bg-blue-50 transition py-3 flex justify-between items-start break-inside-avoid">
+                                  <div class="text-gray-800 pr-4">
+                                      <div class="font-medium">${item.name}</div>
+                                      ${item.desc ? `<div class="text-xs text-gray-500 mt-1">${item.desc}</div>` : ''}
+                                  </div>
+                                  <div class="text-right whitespace-nowrap">`;
                     
                     if (activePromo) {
                         // 有特價時：顯示原價刪除線 + 特價
-                        catHtml += `<span class="price-line-through">${formatMoney(item.price)}</span>
+                        catHtml += `<span class="price-line-through block text-xs mb-1">${formatMoney(item.price)}</span>
                                     <span class="promo-price">${formatMoney(activePromo.price)}</span>`;
                     } else {
                         // 沒特價時：直接顯示原價
                         catHtml += `<span class="text-gray-700 font-medium">${formatMoney(item.price)}</span>`;
                     }
-                    catHtml += `  </td>
-                                </tr>`;
+                    catHtml += `  </div>
+                                </div>`;
                 });
-                catHtml += `</table></div>`;
+                catHtml += `</div></div>`; // 關閉 inner div 和 outer card div
                 menuListElement.innerHTML += catHtml;
             });
 
