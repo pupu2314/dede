@@ -46,12 +46,12 @@
         {
           "id": "arm_half",
           "name": "半手臂",
-          "price": 1600
+          "price": 1300
         },
         {
           "id": "arm_full",
           "name": "全手臂",
-          "price": 3000,
+          "price": 2500,
           "promotions": [
             {
               "label": "6月優惠",
