@@ -44,18 +44,27 @@
             </div>
 
             <div id="content" class="hidden">
-                <!-- 優惠與集點專區 (改為上下排列) -->
+                <!-- 優惠與集點專區 (上下排列) -->
                 <section id="promo-section" class="mb-10">
                     <h2 class="text-xl font-bold text-blue-800 mb-4 border-b-2 border-blue-200 pb-2 flex items-center">
-                        <span class="mr-2">🔥</span> 本月活動與優惠
+                        <span class="mr-2" id="promo-header-icon">🔥</span> 
+                        <span id="promo-header-text">本月活動與優惠</span>
                     </h2>
                     <div class="flex flex-col gap-6">
-                        <!-- 優惠清單區塊 (自動 RWD：手機單欄，平板以上雙欄) -->
+                        
+                        <!-- 區塊 A：一般月促銷清單 (預設顯示) -->
                         <div id="promo-list" class="grid grid-cols-1 md:grid-cols-2 gap-4 hidden">
                             <!-- 促銷項目將插入於此 -->
                         </div>
+
+                        <!-- 區塊 B：專屬身分提示卡 (預設隱藏，切換時顯示) -->
+                        <div id="special-discount-msg" class="hidden bg-gradient-to-r from-blue-50 to-indigo-50 p-6 sm:p-8 rounded-xl border border-blue-200 text-center shadow-sm">
+                            <div id="special-discount-icon" class="text-5xl mb-3">🎓</div>
+                            <h3 id="special-discount-title" class="text-xl sm:text-2xl font-bold text-blue-800 mb-2">已套用OO優惠享原價O折優惠</h3>
+                            <p id="special-discount-desc" class="text-sm sm:text-base text-blue-600 font-medium">※ 提示訊息</p>
+                        </div>
                         
-                        <!-- 集點活動說明卡 (橫向全寬顯示) -->
+                        <!-- 區塊 C：集點活動說明卡 (永遠顯示) -->
                         <div class="bg-gradient-to-r from-yellow-50 to-orange-50 p-5 sm:p-6 rounded-xl border border-yellow-200 shadow-sm flex flex-col justify-center relative overflow-hidden">
                             <div class="absolute -right-4 -top-4 text-7xl opacity-20 select-none">🎁</div>
                             <h3 class="font-bold text-yellow-800 text-lg mb-2 flex items-center">
@@ -103,6 +112,7 @@
     <script>
         let currentData = null;
         let currentDiscountType = 'normal'; 
+        let hasPromoItems = false; // 紀錄是否有月促銷活動
 
         const fallbackData = {
           "categories": [
@@ -186,9 +196,43 @@
             return null;
         };
 
+        // 處理頂端促銷區塊的顯示切換
+        function updatePromoSectionVisibility(type) {
+            const promoList = document.getElementById('promo-list');
+            const specialMsg = document.getElementById('special-discount-msg');
+            const specialTitle = document.getElementById('special-discount-title');
+            const specialDesc = document.getElementById('special-discount-desc');
+            const specialIcon = document.getElementById('special-discount-icon');
+            const promoHeaderIcon = document.getElementById('promo-header-icon');
+            const promoHeaderText = document.getElementById('promo-header-text');
+
+            if (type === 'normal') {
+                promoHeaderIcon.innerText = '🔥';
+                promoHeaderText.innerText = '本月活動與優惠';
+                if (hasPromoItems) promoList.classList.remove('hidden');
+                specialMsg.classList.add('hidden');
+            } else {
+                promoHeaderIcon.innerText = '🎉';
+                promoHeaderText.innerText = '專屬身分優惠';
+                promoList.classList.add('hidden');
+                specialMsg.classList.remove('hidden');
+
+                if (type === 'student') {
+                    specialIcon.innerText = '🎓';
+                    specialTitle.innerText = '已套用學生優惠享原價 8 折優惠';
+                    specialDesc.innerText = '※ 請於結帳時出示有效學生證件核對';
+                } else if (type === 'birthday') {
+                    specialIcon.innerText = '🎂';
+                    specialTitle.innerText = '已套用壽星優惠享原價 5 折優惠';
+                    specialDesc.innerText = '※ 請於結帳時出示身分證件核對生日月份';
+                }
+            }
+        }
+
         window.setDiscount = function(type) {
             currentDiscountType = type;
             
+            // 變更按鈕外觀
             document.querySelectorAll('.tab-btn').forEach(btn => {
                 btn.classList.remove('bg-blue-600', 'text-white');
                 btn.classList.add('bg-gray-100', 'text-gray-600');
@@ -197,10 +241,15 @@
             activeBtn.classList.remove('bg-gray-100', 'text-gray-600');
             activeBtn.classList.add('bg-blue-600', 'text-white');
 
+            // 變更促銷區塊的顯示
+            updatePromoSectionVisibility(type);
+
+            // 重新計算與渲染服務清單
             renderMenu();
             
-            if(type === 'student') alert('已切換為學生專屬 8 折優惠！\n請於結帳時出示有效學生證件。');
-            if(type === 'birthday') alert('已切換為當月壽星 5 折優惠！\n請於結帳時出示身分證件核對生日。');
+            // 保留原本的彈出視窗加強提醒 (選擇性，若覺得干擾可刪除這兩行)
+            if(type === 'student') alert('已切換為學生專屬優惠！\n請於結帳時出示有效學生證件。');
+            if(type === 'birthday') alert('已切換為當月壽星優惠！\n請於結帳時出示身分證件核對生日。');
         };
 
         function renderMenu() {
@@ -285,13 +334,12 @@
 
             // --- 處理本月熱門優惠 ---
             const promoListElement = document.getElementById('promo-list');
-            let hasPromo = false;
-
+            
             if (currentData.combos) {
                 currentData.combos.forEach(combo => {
                     const activePromo = getActivePromotion(combo.promotions);
                     if (activePromo) {
-                        hasPromo = true;
+                        hasPromoItems = true;
                         const originalPrice = combo.itemIds.reduce((sum, id) => {
                             const item = itemsMap.get(id);
                             return sum + (item ? item.price : 0);
@@ -305,13 +353,13 @@
                 cat.items.forEach(item => {
                     const activePromo = getActivePromotion(item.promotions);
                     if (activePromo) {
-                        hasPromo = true;
+                        hasPromoItems = true;
                         promoListElement.innerHTML += createPromoHtml(item.name, item.price, activePromo.price, activePromo.label);
                     }
                 });
             });
 
-            if (hasPromo) {
+            if (hasPromoItems) {
                 document.getElementById('promo-list').classList.remove('hidden');
             }
 
