@@ -12,9 +12,10 @@
         .promo-price { color: #e53e3e; font-weight: bold; }
     </style>
 </head>
-<body class="ocean-gradient min-h-screen p-4 md:p-8 text-gray-800 pb-16">
+<body class="ocean-gradient min-h-screen p-2 md:p-4 text-gray-800 pb-16">
 
-    <div class="max-w-4xl mx-auto bg-white rounded-2xl shadow-xl overflow-hidden relative" id="app">
+    <!-- 移除 max-w-4xl，改用 w-full 並設定最大的 max-w-7xl 讓內容往兩側展開 -->
+    <div class="w-full max-w-7xl mx-auto bg-white rounded-2xl shadow-xl overflow-hidden relative" id="app">
         <div class="bg-blue-600 text-white p-6 text-center">
             <h1 class="text-2xl font-bold">DeDe 男士專屬美容美體中心</h1>
             <p class="text-blue-100 mt-1 tracking-wider" id="page-subtitle">載入中...</p>
@@ -22,10 +23,6 @@
 
         <div class="p-4 md:p-8 pb-16">
             <div id="loading" class="text-center py-10 text-gray-500">
-                <svg class="animate-spin h-8 w-8 mx-auto mb-4 text-blue-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                </svg>
                 正在讀取最新優惠資訊...
             </div>
 
@@ -34,7 +31,7 @@
                     <h2 class="text-xl font-bold text-blue-800 mb-4 border-b-2 border-blue-200 pb-2 flex items-center">
                         <span class="mr-2">🔥</span> 本月熱門優惠
                     </h2>
-                    <div id="promo-list" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div id="promo-list" class="grid grid-cols-1 lg:grid-cols-2 gap-4">
                     </div>
                 </section>
 
@@ -43,19 +40,20 @@
                         <span class="mr-2">📋</span> 完整服務項目
                     </h2>
 
-                    <!-- 改為 lg:hidden，確保單欄與雙欄模式都會顯示跳轉按鈕 -->
                     <div id="quick-jump" class="flex flex-wrap gap-2 mb-6 lg:hidden">
                     </div>
 
-                    <div id="menu-list" class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    <!-- 調整 Grid 斷點：在超大螢幕 (xl) 強制展開為三欄，避免內容擁擠 -->
+                    <div id="menu-list" class="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-8">
                     </div>
                 </section>
             </div>
         </div>
     </div>
 
+    <!-- 懸浮預約按鈕 -->
     <div class="fixed bottom-0 left-0 w-full z-50 p-4 pointer-events-none flex justify-center">
-        <a href="https://lin.ee/6fc6qGl" target="_blank" class="pointer-events-auto bg-[#06C755] text-white font-bold py-3 px-6 rounded-full shadow-[0_4px_20px_rgba(6,199,85,0.4)] hover:bg-[#05b34c] transition transform hover:-translate-y-1 flex items-center justify-center w-full max-w-sm">
+        <a href="https://lin.ee/6fc6qGl" target="_blank" class="pointer-events-auto bg-[#06C755] text-white font-bold py-3 px-6 rounded-full shadow-[0_4px_20px_rgba(6,199,85,0.4)] hover:bg-[#05b34c] transition transform hover:-translate-y-1 flex items-center justify-center w-full max-w-md">
             <svg class="w-8 h-8 mr-2" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 320">
                 <rect fill="#ffffff" width="320" height="320" rx="72.14"/>
                 <path fill="#06c755" d="M266.66,144.92c0-47.74-47.86-86.58-106.69-86.58S53.28,97.18,53.28,144.92c0,42.8,38,78.65,89.22,85.42,3.48.75,8.21,2.29,9.4,5.26,1.08,2.7.71,6.93.35,9.65,0,0-1.25,7.53-1.52,9.13-.47,2.7-2.15,10.55,9.24,5.76s61.44-36.18,83.82-61.95h0C259.25,181.24,266.66,164,266.66,144.92Z"/>
@@ -67,6 +65,8 @@
             <span class="text-[15px] sm:text-base tracking-wide">本中心採預約制，立即透過 LINE 預約</span>
         </a>
     </div>
+
+
     <script>
         // 預設備份資料 (純原價與註解，作為防呆機制)
         const fallbackData = {
