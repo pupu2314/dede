@@ -17,7 +17,8 @@
 </head>
 <body class="ocean-gradient min-h-screen text-gray-800 pb-16">
 
-    <div class="w-full max-w-7xl mx-auto bg-white min-h-screen shadow-xl overflow-hidden relative" id="app">
+    <!-- 移除了 overflow-hidden，恢復 sticky 的懸浮功能 -->
+    <div class="w-full max-w-7xl mx-auto bg-white min-h-screen shadow-xl relative" id="app">
         <!-- 頂部標題 -->
         <div class="bg-blue-600 text-white p-6 text-center">
             <h1 class="text-2xl font-bold">DeDe 男士專屬美容美體中心</h1>
@@ -112,7 +113,7 @@
     <script>
         let currentData = null;
         let currentDiscountType = 'normal'; 
-        let hasPromoItems = false; // 紀錄是否有月促銷活動
+        let hasPromoItems = false; 
 
         const fallbackData = {
           "categories": [
@@ -196,7 +197,6 @@
             return null;
         };
 
-        // 處理頂端促銷區塊的顯示切換
         function updatePromoSectionVisibility(type) {
             const promoList = document.getElementById('promo-list');
             const specialMsg = document.getElementById('special-discount-msg');
@@ -232,7 +232,6 @@
         window.setDiscount = function(type) {
             currentDiscountType = type;
             
-            // 變更按鈕外觀
             document.querySelectorAll('.tab-btn').forEach(btn => {
                 btn.classList.remove('bg-blue-600', 'text-white');
                 btn.classList.add('bg-gray-100', 'text-gray-600');
@@ -241,13 +240,9 @@
             activeBtn.classList.remove('bg-gray-100', 'text-gray-600');
             activeBtn.classList.add('bg-blue-600', 'text-white');
 
-            // 變更促銷區塊的顯示
             updatePromoSectionVisibility(type);
-
-            // 重新計算與渲染服務清單
             renderMenu();
             
-            // 保留原本的彈出視窗加強提醒 (選擇性，若覺得干擾可刪除這兩行)
             if(type === 'student') alert('已切換為學生專屬優惠！\n請於結帳時出示有效學生證件。');
             if(type === 'birthday') alert('已切換為當月壽星優惠！\n請於結帳時出示身分證件核對生日。');
         };
