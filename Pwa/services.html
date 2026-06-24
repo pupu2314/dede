@@ -18,14 +18,19 @@
 <body class="ocean-gradient min-h-screen text-gray-800 pb-16">
 
     <div class="w-full max-w-7xl mx-auto bg-white min-h-screen shadow-xl overflow-hidden relative" id="app">
+        <!-- 頂部標題 -->
         <div class="bg-blue-600 text-white p-6 text-center">
             <h1 class="text-2xl font-bold">DeDe 男士專屬美容美體中心</h1>
             <p class="text-blue-100 mt-1 tracking-wider" id="page-subtitle">載入中...</p>
         </div>
 
+        <!-- 頂端懸浮控制列 (Sticky Nav) -->
         <div class="sticky top-0 z-40 bg-white/95 backdrop-blur-sm shadow-md border-b border-gray-200 px-4 py-3 w-full">
+            <!-- 快速跳轉 -->
             <div id="quick-jump" class="flex flex-wrap justify-center gap-2 mb-3">
-                </div>
+                <!-- JS 自動生成 -->
+            </div>
+            <!-- 優惠切換標籤 -->
             <div class="flex justify-center gap-2">
                 <button onclick="setDiscount('normal')" id="tab-normal" class="tab-btn bg-blue-600 text-white px-4 py-1.5 rounded-lg text-sm font-bold shadow-sm transition">一般原價</button>
                 <button onclick="setDiscount('student')" id="tab-student" class="tab-btn bg-gray-100 text-gray-600 hover:bg-gray-200 px-4 py-1.5 rounded-lg text-sm font-bold transition">學生 8 折</button>
@@ -39,41 +44,48 @@
             </div>
 
             <div id="content" class="hidden">
+                <!-- 優惠與集點專區 (改為上下排列) -->
                 <section id="promo-section" class="mb-10">
                     <h2 class="text-xl font-bold text-blue-800 mb-4 border-b-2 border-blue-200 pb-2 flex items-center">
                         <span class="mr-2">🔥</span> 本月活動與優惠
                     </h2>
-                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                        <div id="promo-list" class="grid grid-cols-1 gap-4 hidden">
-                            </div>
+                    <div class="flex flex-col gap-6">
+                        <!-- 優惠清單區塊 (自動 RWD：手機單欄，平板以上雙欄) -->
+                        <div id="promo-list" class="grid grid-cols-1 md:grid-cols-2 gap-4 hidden">
+                            <!-- 促銷項目將插入於此 -->
+                        </div>
                         
-                        <div class="bg-gradient-to-r from-yellow-50 to-orange-50 p-5 rounded-xl border border-yellow-200 shadow-sm flex flex-col justify-center relative overflow-hidden">
-                            <div class="absolute -right-4 -top-4 text-6xl opacity-20">🎁</div>
+                        <!-- 集點活動說明卡 (橫向全寬顯示) -->
+                        <div class="bg-gradient-to-r from-yellow-50 to-orange-50 p-5 sm:p-6 rounded-xl border border-yellow-200 shadow-sm flex flex-col justify-center relative overflow-hidden">
+                            <div class="absolute -right-4 -top-4 text-7xl opacity-20 select-none">🎁</div>
                             <h3 class="font-bold text-yellow-800 text-lg mb-2 flex items-center">
                                 <span class="mr-2">🎁</span> 會員集點活動
                             </h3>
-                            <div class="text-yellow-900 leading-relaxed">
-                                消費滿 <strong class="text-red-500">$1,500</strong> 即可集 1 點<br>
-                                集滿 10 點立即折抵 <strong class="text-red-500">$500</strong> 元
+                            <div class="text-yellow-900 leading-relaxed font-medium">
+                                消費滿 <strong class="text-red-500 text-lg mx-1">$1,500</strong> 即可集 1 點<br>
+                                集滿 10 點立即折抵 <strong class="text-red-500 text-lg mx-1">$500</strong> 元
                             </div>
-                            <div class="text-xs text-yellow-700 mt-3 pt-3 border-t border-yellow-200/50">
+                            <div class="text-xs text-yellow-700 mt-4 pt-3 border-t border-yellow-200/60">
                                 ※ 備註：折扣與集點額度皆以結帳「實付金額」計算
                             </div>
                         </div>
                     </div>
                 </section>
 
+                <!-- 完整服務項目列表 -->
                 <section>
                     <h2 class="text-xl font-bold text-blue-800 mb-6 border-b-2 border-blue-200 pb-2 flex items-center">
                         <span class="mr-2">📋</span> 完整服務項目
                     </h2>
                     <div id="menu-list" class="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-8">
-                        </div>
+                        <!-- 完整項目將插入於此 -->
+                    </div>
                 </section>
             </div>
         </div>
     </div>
 
+    <!-- 懸浮預約按鈕 -->
     <div class="fixed bottom-0 left-0 w-full z-50 p-4 pointer-events-none flex justify-center">
         <a href="https://lin.ee/6fc6qGl" target="_blank" class="pointer-events-auto bg-[#06C755] text-white font-bold py-3 px-6 rounded-full shadow-[0_4px_20px_rgba(6,199,85,0.4)] hover:bg-[#05b34c] transition transform hover:-translate-y-1 flex items-center justify-center w-full max-w-md">
             <svg class="w-8 h-8 mr-2" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 320">
@@ -90,7 +102,7 @@
 
     <script>
         let currentData = null;
-        let currentDiscountType = 'normal'; // 'normal', 'student', 'birthday'
+        let currentDiscountType = 'normal'; 
 
         const fallbackData = {
           "categories": [
@@ -174,11 +186,9 @@
             return null;
         };
 
-        // 切換優惠標籤的邏輯
         window.setDiscount = function(type) {
             currentDiscountType = type;
             
-            // 更新按鈕樣式
             document.querySelectorAll('.tab-btn').forEach(btn => {
                 btn.classList.remove('bg-blue-600', 'text-white');
                 btn.classList.add('bg-gray-100', 'text-gray-600');
@@ -187,24 +197,19 @@
             activeBtn.classList.remove('bg-gray-100', 'text-gray-600');
             activeBtn.classList.add('bg-blue-600', 'text-white');
 
-            // 重新渲染選單
             renderMenu();
             
-            // 若為特殊身份，跳出友善提示
             if(type === 'student') alert('已切換為學生專屬 8 折優惠！\n請於結帳時出示有效學生證件。');
             if(type === 'birthday') alert('已切換為當月壽星 5 折優惠！\n請於結帳時出示身分證件核對生日。');
         };
 
-        // 渲染完整服務清單
         function renderMenu() {
             const menuListElement = document.getElementById('menu-list');
             menuListElement.innerHTML = '';
             
-            // 決定目前的折扣乘數 (基於原價)
             let multiplier = 1;
-            let discountLabel = '';
-            if (currentDiscountType === 'student') { multiplier = 0.8; discountLabel = '學生價'; }
-            if (currentDiscountType === 'birthday') { multiplier = 0.5; discountLabel = '壽星價'; }
+            if (currentDiscountType === 'student') multiplier = 0.8;
+            if (currentDiscountType === 'birthday') multiplier = 0.5;
 
             currentData.categories.forEach((cat, index) => {
                 let catHtml = `<div id="cat-${index}" class="scroll-offset ${cat.name.includes('除毛') ? 'lg:col-span-2' : ''}">`;
@@ -226,12 +231,10 @@
                                     <div class="text-right whitespace-nowrap pt-0.5">`;
                     
                     if (multiplier !== 1) {
-                        // 套用身分折扣 (學生/壽星)
                         const calcPrice = basePrice * multiplier;
                         catHtml += `<div class="price-line-through block sm:inline">${formatMoney(basePrice)}</div>
                                     <div class="text-blue-600 font-bold block sm:inline text-base">${formatMoney(calcPrice)}</div>`;
                     } else {
-                        // 一般狀態：檢查是否有本月特價
                         const activePromo = getActivePromotion(item.promotions);
                         if (activePromo) {
                             catHtml += `<div class="price-line-through block sm:inline">${formatMoney(basePrice)}</div>
@@ -312,10 +315,8 @@
                 document.getElementById('promo-list').classList.remove('hidden');
             }
 
-            // 初始渲染選單
             renderMenu();
 
-            // 顯示內容
             document.getElementById('loading').classList.add('hidden');
             document.getElementById('content').classList.remove('hidden');
         }
