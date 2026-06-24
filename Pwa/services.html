@@ -6,25 +6,21 @@
     <title>DeDe男士美學 - 服務價目表</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        html { scroll-behavior: smooth; } /* 啟用平滑滾動 */
+        html { scroll-behavior: smooth; }
         .ocean-gradient { background: linear-gradient(135deg, #e0f2f1 0%, #b2ebf2 100%); }
         .price-line-through { text-decoration: line-through; color: #7f8c8d; font-size: 0.9em; margin-right: 8px; }
         .promo-price { color: #e53e3e; font-weight: bold; }
-        [v-cloak] { display: none; }
     </style>
 </head>
-<body class="ocean-gradient min-h-screen p-4 md:p-8 text-gray-800 pb-32">
+<body class="ocean-gradient min-h-screen p-4 md:p-8 text-gray-800 pb-16">
 
     <div class="max-w-4xl mx-auto bg-white rounded-2xl shadow-xl overflow-hidden relative" id="app">
-        <!-- 標題區塊 (自動帶入年月) -->
         <div class="bg-blue-600 text-white p-6 text-center">
             <h1 class="text-2xl font-bold">DeDe 男士專屬美容美體中心</h1>
             <p class="text-blue-100 mt-1 tracking-wider" id="page-subtitle">載入中...</p>
         </div>
 
-        <!-- 主內容區：加上 pb-32 確保底部不被懸浮按鈕遮擋 -->
-        <div class="p-4 md:p-8 pb-32">
-            <!-- 載入中提示 -->
+        <div class="p-4 md:p-8 pb-16">
             <div id="loading" class="text-center py-10 text-gray-500">
                 <svg class="animate-spin h-8 w-8 mx-auto mb-4 text-blue-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                     <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
@@ -34,36 +30,30 @@
             </div>
 
             <div id="content" class="hidden">
-                <!-- 促銷區域 (自動產生) -->
                 <section id="promo-section" class="mb-10 hidden">
                     <h2 class="text-xl font-bold text-blue-800 mb-4 border-b-2 border-blue-200 pb-2 flex items-center">
                         <span class="mr-2">🔥</span> 本月熱門優惠
                     </h2>
                     <div id="promo-list" class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <!-- 促銷項目將插入於此 -->
                     </div>
                 </section>
 
-                <!-- 完整項目列表 (自動產生) -->
                 <section>
                     <h2 class="text-xl font-bold text-blue-800 mb-4 border-b-2 border-blue-200 pb-2 flex items-center">
                         <span class="mr-2">📋</span> 完整服務項目
                     </h2>
 
-                    <!-- 手機版專屬快速跳轉 (md:hidden 代表大螢幕隱藏) -->
-                    <div id="quick-jump" class="flex flex-wrap gap-2 mb-6 md:hidden">
-                        <!-- 快速跳轉按鈕將插入於此 -->
+                    <!-- 改為 lg:hidden，確保單欄與雙欄模式都會顯示跳轉按鈕 -->
+                    <div id="quick-jump" class="flex flex-wrap gap-2 mb-6 lg:hidden">
                     </div>
 
                     <div id="menu-list" class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                        <!-- 完整項目將插入於此 -->
                     </div>
                 </section>
             </div>
         </div>
     </div>
 
-    <!-- 懸浮預約按鈕 -->
     <div class="fixed bottom-0 left-0 w-full z-50 p-4 pointer-events-none flex justify-center">
         <a href="https://lin.ee/6fc6qGl" target="_blank" class="pointer-events-auto bg-[#06C755] text-white font-bold py-3 px-6 rounded-full shadow-[0_4px_20px_rgba(6,199,85,0.4)] hover:bg-[#05b34c] transition transform hover:-translate-y-1 flex items-center justify-center w-full max-w-sm">
             <svg class="w-8 h-8 mr-2" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 320">
@@ -77,7 +67,6 @@
             <span class="text-[15px] sm:text-base tracking-wide">本中心採預約制，立即透過 LINE 預約</span>
         </a>
     </div>
-
     <script>
         // 預設備份資料 (純原價與註解，作為防呆機制)
         const fallbackData = {
