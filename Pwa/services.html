@@ -6,29 +6,24 @@
     <title>DeDe男士美學 - 服務價目表</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
+        html { scroll-behavior: smooth; } /* 啟用平滑滾動 */
         .ocean-gradient { background: linear-gradient(135deg, #e0f2f1 0%, #b2ebf2 100%); }
         .price-line-through { text-decoration: line-through; color: #7f8c8d; font-size: 0.9em; margin-right: 8px; }
         .promo-price { color: #e53e3e; font-weight: bold; }
-        
-        /* 針對多欄位佈局時，避免卡片被切斷 */
-        .break-inside-avoid { break-inside: avoid; }
-        
-        /* 懸浮按鈕的底部空間預留 */
-        body { padding-bottom: 80px; } 
-
         [v-cloak] { display: none; }
     </style>
 </head>
-<body class="ocean-gradient min-h-screen p-4 md:p-8 text-gray-800">
+<body class="ocean-gradient min-h-screen p-4 md:p-8 text-gray-800 pb-32">
 
-    <div class="max-w-5xl mx-auto bg-white rounded-2xl shadow-xl overflow-hidden" id="app">
+    <div class="max-w-4xl mx-auto bg-white rounded-2xl shadow-xl overflow-hidden relative" id="app">
         <!-- 標題區塊 (自動帶入年月) -->
         <div class="bg-blue-600 text-white p-6 text-center">
             <h1 class="text-2xl font-bold">DeDe 男士專屬美容美體中心</h1>
-            <p class="text-blue-100 mt-1" id="page-subtitle">載入中...</p>
+            <p class="text-blue-100 mt-1 tracking-wider" id="page-subtitle">載入中...</p>
         </div>
 
-        <div class="p-6">
+        <!-- 主內容區：加上 pb-32 確保底部不被懸浮按鈕遮擋 -->
+        <div class="p-4 md:p-8 pb-32">
             <!-- 載入中提示 -->
             <div id="loading" class="text-center py-10 text-gray-500">
                 <svg class="animate-spin h-8 w-8 mx-auto mb-4 text-blue-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
@@ -40,23 +35,27 @@
 
             <div id="content" class="hidden">
                 <!-- 促銷區域 (自動產生) -->
-                <section id="promo-section" class="mb-8 hidden">
+                <section id="promo-section" class="mb-10 hidden">
                     <h2 class="text-xl font-bold text-blue-800 mb-4 border-b-2 border-blue-200 pb-2 flex items-center">
                         <span class="mr-2">🔥</span> 本月熱門優惠
                     </h2>
-                    <!-- 熱門優惠在大螢幕也適用多欄 -->
-                    <div id="promo-list" class="columns-1 md:columns-2 gap-4 space-y-4">
+                    <div id="promo-list" class="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <!-- 促銷項目將插入於此 -->
                     </div>
                 </section>
 
-                <!-- 完整項目列表 (自動產生，使用多欄瀑布流排版) -->
+                <!-- 完整項目列表 (自動產生) -->
                 <section>
                     <h2 class="text-xl font-bold text-blue-800 mb-4 border-b-2 border-blue-200 pb-2 flex items-center">
                         <span class="mr-2">📋</span> 完整服務項目
                     </h2>
-                    <!-- RWD: 移除預設的 columns，改用 Grid 來做更細緻的跨欄控制 -->
-                    <div id="menu-list" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+
+                    <!-- 手機版專屬快速跳轉 (md:hidden 代表大螢幕隱藏) -->
+                    <div id="quick-jump" class="flex flex-wrap gap-2 mb-6 md:hidden">
+                        <!-- 快速跳轉按鈕將插入於此 -->
+                    </div>
+
+                    <div id="menu-list" class="grid grid-cols-1 lg:grid-cols-3 gap-6">
                         <!-- 完整項目將插入於此 -->
                     </div>
                 </section>
@@ -64,59 +63,57 @@
         </div>
     </div>
 
-    <!-- 懸浮式預約按鈕 -->
-    <div class="fixed bottom-0 left-0 w-full bg-white border-t border-gray-200 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)] p-3 flex justify-center z-50">
-        <a href="https://lin.ee/6fc6qGl" class="w-full max-w-sm flex items-center justify-center bg-[#06C755] text-white font-bold py-3 px-6 rounded-full shadow-md hover:bg-[#05b34c] transition transform hover:-translate-y-1">
-            <!-- 修正後的 LINE Icon (SVG) -->
-            <svg class="w-8 h-8 mr-2" viewBox="0 0 320 320" xmlns="http://www.w3.org/2000/svg">
-                <rect fill="#fff" width="320" height="320" rx="72.14"/>
+    <!-- 懸浮預約按鈕 -->
+    <div class="fixed bottom-0 left-0 w-full z-50 p-4 pointer-events-none flex justify-center">
+        <a href="https://lin.ee/6fc6qGl" target="_blank" class="pointer-events-auto bg-[#06C755] text-white font-bold py-3 px-6 rounded-full shadow-[0_4px_20px_rgba(6,199,85,0.4)] hover:bg-[#05b34c] transition transform hover:-translate-y-1 flex items-center justify-center w-full max-w-sm">
+            <svg class="w-8 h-8 mr-2" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 320">
+                <rect fill="#ffffff" width="320" height="320" rx="72.14"/>
                 <path fill="#06c755" d="M266.66,144.92c0-47.74-47.86-86.58-106.69-86.58S53.28,97.18,53.28,144.92c0,42.8,38,78.65,89.22,85.42,3.48.75,8.21,2.29,9.4,5.26,1.08,2.7.71,6.93.35,9.65,0,0-1.25,7.53-1.52,9.13-.47,2.7-2.15,10.55,9.24,5.76s61.44-36.18,83.82-61.95h0C259.25,181.24,266.66,164,266.66,144.92Z"/>
-                <path fill="#fff" d="M231.16,172.49h-30a2,2,0,0,1-2-2v0h0V123.94h0v0a2,2,0,0,1,2-2h30a2,2,0,0,1,2,2v7.57a2,2,0,0,1-2,2H210.79v7.85h20.37a2,2,0,0,1,2,2V151a2,2,0,0,1-2,2H210.79v7.86h20.37a2,2,0,0,1,2,2v7.56A2,2,0,0,1,231.16,172.49Z"/>
-                <path fill="#fff" d="M120.29,172.49a2,2,0,0,0,2-2v-7.56a2,2,0,0,0-2-2H99.92v-37a2,2,0,0,0-2-2H90.32a2,2,0,0,0-2,2v46.53h0v0a2,2,0,0,0,2,2h30Z"/>
-                <rect fill="#fff" x="128.73" y="121.85" width="11.64" height="50.64" rx="2.04"/>
-                <path fill="#fff" d="M189.84,121.85h-7.56a2,2,0,0,0-2,2v27.66l-21.3-28.77a1.2,1.2,0,0,0-.17-.21v0l-.12-.12,0,0-.11-.09-.06,0-.11-.08-.06,0-.11-.06-.07,0-.11,0-.07,0-.12,0-.08,0-.12,0h-.08l-.11,0h-7.71a2,2,0,0,0-2,2v46.56a2,2,0,0,0,2,2h7.57a2,2,0,0,0,2-2V142.81l21.33,28.8a2,2,0,0,0,.52.52h0l.12.08.06,0,.1.05.1,0,.07,0,.14,0h0a2.42,2.42,0,0,0,.54.07h7.52a2,2,0,0,0,2-2V123.89A2,2,0,0,0,189.84,121.85Z"/>
+                <path fill="#ffffff" d="M231.16,172.49h-30a2,2,0,0,1-2-2v0h0V123.94h0v0a2,2,0,0,1,2-2h30a2,2,0,0,1,2,2v7.57a2,2,0,0,1-2,2H210.79v7.85h20.37a2,2,0,0,1,2,2V151a2,2,0,0,1-2,2H210.79v7.86h20.37a2,2,0,0,1,2,2v7.56A2,2,0,0,1,231.16,172.49Z"/>
+                <path fill="#ffffff" d="M120.29,172.49a2,2,0,0,0,2-2v-7.56a2,2,0,0,0-2-2H99.92v-37a2,2,0,0,0-2-2H90.32a2,2,0,0,0-2,2v46.53h0v0a2,2,0,0,0,2,2h30Z"/>
+                <rect fill="#ffffff" x="128.73" y="121.85" width="11.64" height="50.64" rx="2.04"/>
+                <path fill="#ffffff" d="M189.84,121.85h-7.56a2,2,0,0,0-2,2v27.66l-21.3-28.77a1.2,1.2,0,0,0-.17-.21v0l-.12-.12,0,0-.11-.09-.06,0-.11-.08-.06,0-.11-.06-.07,0-.11,0-.07,0-.12,0-.08,0-.12,0h-.08l-.11,0h-7.71a2,2,0,0,0-2,2v46.56a2,2,0,0,0,2,2h7.57a2,2,0,0,0,2-2V142.81l21.33,28.8a2,2,0,0,0,.52.52h0l.12.08.06,0,.1.05.1,0,.07,0,.14,0h0a2.42,2.42,0,0,0,.54.07h7.52a2,2,0,0,0,2-2V123.89A2,2,0,0,0,189.84,121.85Z"/>
             </svg>
-            本中心採預約制，立即透過 LINE 預約
+            <span class="text-[15px] sm:text-base tracking-wide">本中心採預約制，立即透過 LINE 預約</span>
         </a>
     </div>
 
     <script>
-        // 預設資料：全部皆為原價，不包含任何 promotions 節點。
-        // 若外部 JSON 載入失敗，網頁仍可正常運作且不顯示錯誤的優惠資訊。
+        // 預設備份資料 (純原價與註解，作為防呆機制)
         const fallbackData = {
           "categories": [
             {
               "name": "男士專屬除毛",
               "items": [
-                { "id": "private_full", "name": "私密處除毛 (全除)", "desc": "含三角處、陰莖、陰囊、會陰、肛門、鼠蹊部", "price": 1900 },
+                { "id": "private_full", "name": "私密處除毛 (全除)", "price": 1900, "desc": "含三角處、陰莖、陰囊、會陰、肛門、鼠蹊部" },
                 { "id": "nose", "name": "鼻毛", "price": 200 },
                 { "id": "private_shape", "name": "私密處除毛 (局部/造型)", "price": 1900 },
                 { "id": "private_trim", "name": "私密處毛修剪-一般修剪無痛(修剪+沐浴)", "price": 300 },
-                { "id": "belly_lower", "name": "三角處除毛", "desc": "腹部下方至陰莖上方區域", "price": 800 },
+                { "id": "belly_lower", "name": "三角處除毛(下腹毛以下,根部以上)", "price": 800, "desc": "腹部下方至陰莖上方區域" },
                 { "id": "armpit", "name": "腋下毛", "price": 600 },
                 { "id": "belly_upper", "name": "上腹部毛(肚臍以上胸部以下)", "price": 600 },
                 { "id": "belly_middle", "name": "下腹部毛(肚臍以下陰毛以上)", "price": 600 },
-                { "id": "arm_half", "name": "半手臂", "desc": "上手臂或下手臂擇一", "price": 1600 },
-                { "id": "arm_full", "name": "全手臂", "desc": "上手臂及下手臂", "price": 3000 },
+                { "id": "arm_half", "name": "半手臂", "price": 1600, "desc": "上手臂或下手臂擇一" },
+                { "id": "arm_full", "name": "全手臂", "price": 3000, "desc": "上手臂及下手臂" },
                 { "id": "finger", "name": "手指", "price": 300 },
                 { "id": "hand_back", "name": "手背", "price": 300 },
                 { "id": "toe", "name": "腳趾", "price": 300 },
                 { "id": "foot_back", "name": "腳背", "price": 300 },
                 { "id": "leg_calf", "name": "小腿", "price": 1900 },
                 { "id": "leg_thigh", "name": "大腿", "price": 1900 },
-                { "id": "leg_full", "name": "全腿", "desc": "大腿及小腿", "price": 3500 },
+                { "id": "leg_full", "name": "全腿", "price": 3500, "desc": "大腿及小腿" },
                 { "id": "nipple", "name": "奶頭毛", "price": 200 },
                 { "id": "chest", "name": "胸毛", "price": 600 },
-                { "id": "private_area", "name": "區域單獨除毛", "desc": "陰莖、陰囊、會陰、肛門、鼠蹊部擇一部位", "price": 600 },
+                { "id": "private_area", "name": "區域單獨除毛", "price": 600, "desc": "陰莖、陰囊、會陰、肛門、鼠蹊部擇一部位" },
                 { "id": "beard", "name": "鬍子熱蠟除毛(八字鬍與下巴)", "price": 1000 },
-                { "id": "private_combo_part", "name": "私密處單一區域任選2部位", "desc": "陰莖、陰囊、會陰、肛門、鼠蹊部擇兩部位", "price": 1200 }
+                { "id": "private_combo_part", "name": "私密處單一區域任選2部位", "price": 1200, "desc": "陰莖、陰囊、會陰、肛門、鼠蹊部擇兩部位" }
               ]
             },
             {
               "name": "男士專屬油壓",
               "items": [
-                { "id": "oil_massage_1hr", "name": "[油推]能量精油 健康調理 /1hr(含機能保養)", "price": 1200 },
-                { "id": "oil_massage_1.5hr", "name": "[油推]能量精油健康調理 /1.5hr(含機能保養)", "price": 1800 }
+                { "id": "oil_massage_1hr", "name": "[油推]能量精油 健康調理 /1hr", "price": 1200, "desc": "含機能保養" },
+                { "id": "oil_massage_1.5hr", "name": "[油推]能量精油健康調理 /1.5hr", "price": 1800, "desc": "含機能保養" }
               ]
             },
             {
@@ -144,21 +141,29 @@
           ]
         };
 
+        // 建立備用註解的對照表 (確保如果 JSON 沒傳 desc 也能顯示)
+        const fallbackDescMap = {};
+        fallbackData.categories.forEach(cat => {
+            cat.items.forEach(item => {
+                if (item.desc) fallbackDescMap[item.id] = item.desc;
+            });
+        });
+
         // 格式化金額
         const formatMoney = (amount) => '$' + amount.toLocaleString('zh-TW');
 
         // 判斷目前時間是否有符合的優惠活動
         const getActivePromotion = (promotions) => {
             if (!promotions || promotions.length === 0) return null;
-            const now = new Date(); // 獲取使用者當下開啟網頁的時間
+            const now = new Date(); 
             
             for (const promo of promotions) {
                 const start = new Date(promo.start);
                 const end = new Date(promo.end);
-                end.setHours(23, 59, 59, 999); // 確保包含結束日期的最後一刻
+                end.setHours(23, 59, 59, 999); 
                 
                 if (now >= start && now <= end) {
-                    return promo; // 如果在期間內，回傳這個優惠資訊
+                    return promo; 
                 }
             }
             return null;
@@ -167,24 +172,24 @@
         async function init() {
             let data;
             try {
-                // 嘗試讀取外部 JSON (若伺服器環境下)
+                // 嘗試讀取外部 JSON
                 const res = await fetch('services.json');
                 if (res.ok) {
                     data = await res.json();
                 } else {
-                    data = fallbackData; // 若抓不到，使用預設資料
+                    data = fallbackData;
                 }
             } catch (err) {
-                data = fallbackData; // 瀏覽器本地預覽或跨域時使用預設資料
+                data = fallbackData; 
             }
 
-            // 更新頁面標題日期 (例如: 115年6月服務價目表)
+            // 更新頁面標題日期
             const now = new Date();
             const twYear = now.getFullYear() - 1911;
             const month = now.getMonth() + 1;
             document.getElementById('page-subtitle').innerText = `${twYear}年${month}月 服務價目表`;
 
-            // 建立所有服務的快取清單，用來算組合優惠的原價
+            // 建立所有服務的快取清單
             const itemsMap = new Map();
             data.categories.forEach(cat => {
                 cat.items.forEach(item => itemsMap.set(item.id, item));
@@ -192,28 +197,24 @@
 
             const promoListElement = document.getElementById('promo-list');
             const menuListElement = document.getElementById('menu-list');
+            const quickJumpElement = document.getElementById('quick-jump');
             let hasPromo = false;
 
             // --- 處理本月熱門優惠 ---
-
-            // 1. 處理 Combo 組合優惠
             if (data.combos) {
                 data.combos.forEach(combo => {
                     const activePromo = getActivePromotion(combo.promotions);
                     if (activePromo) {
                         hasPromo = true;
-                        // 自動加總組合內的原價
                         const originalPrice = combo.itemIds.reduce((sum, id) => {
                             const item = itemsMap.get(id);
                             return sum + (item ? item.price : 0);
                         }, 0);
-
                         promoListElement.innerHTML += createPromoHtml(combo.name, originalPrice, activePromo.price, activePromo.label);
                     }
                 });
             }
 
-            // 2. 處理單項服務優惠 (放在熱門優惠區塊)
             data.categories.forEach(cat => {
                 cat.items.forEach(item => {
                     const activePromo = getActivePromotion(item.promotions);
@@ -224,47 +225,55 @@
                 });
             });
 
-            // 顯示或隱藏熱門優惠區塊
             if (hasPromo) {
                 document.getElementById('promo-section').classList.remove('hidden');
             }
 
-            // --- 處理完整服務清單 ---
-            data.categories.forEach(cat => {
-                // 針對「男士專屬除毛」在 lg (電腦) 尺寸時設定跨 2 欄 (col-span-2)
-                // 其他項目維持跨 1 欄 (col-span-1)
-                const gridSpanClass = cat.name === "男士專屬除毛" ? "lg:col-span-2" : "col-span-1";
+            // --- 處理手機版快速跳轉按鈕 ---
+            let quickJumpHtml = '';
+            data.categories.forEach((cat, index) => {
+                // 將「男士專屬除毛」簡化為「除毛」以便於按鈕顯示
+                const shortName = cat.name.replace('男士專屬', '');
+                quickJumpHtml += `<a href="#cat-${index}" class="bg-blue-100 text-blue-700 px-4 py-1.5 rounded-full text-sm font-bold whitespace-nowrap shadow-sm border border-blue-200">${shortName}</a>`;
+            });
+            quickJumpElement.innerHTML = quickJumpHtml;
 
-                let catHtml = `<div class="${gridSpanClass} bg-gray-50 rounded-xl p-4 break-inside-avoid border border-gray-100 shadow-sm flex flex-col">
-                                  <h3 class="font-bold text-gray-700 mb-3 text-lg border-l-4 border-blue-400 pl-2">${cat.name}</h3>`;
+            // --- 處理完整服務清單 ---
+            data.categories.forEach((cat, index) => {
+                // 外層容器：給予 id 以利快速跳轉，scroll-mt-8 用於保留滾動後的頂部空間
+                // 如果是包含「除毛」的分類，在大螢幕強制跨 2 欄位
+                let catHtml = `<div id="cat-${index}" class="scroll-mt-8 ${cat.name.includes('除毛') ? 'lg:col-span-2' : ''}">`;
+                catHtml += `<div class="bg-blue-50/50 p-4 rounded-xl h-full border border-blue-50">`;
+                catHtml += `<h3 class="font-bold text-gray-700 mb-3 text-lg border-l-4 border-blue-500 pl-3">${cat.name}</h3>`;
                 
-                // 如果是除毛項目（跨兩欄），我們在內部也做成兩欄（masonry 或 grid）來善用空間
-                const innerGridClass = cat.name === "男士專屬除毛" ? "columns-1 md:columns-2 gap-4" : "";
-                
-                catHtml += `<div class="${innerGridClass}">`;
+                // 內部排版：如果是跨兩欄的除毛區塊，內部再切為兩欄 (columns-2)
+                catHtml += `<div class="${cat.name.includes('除毛') ? 'columns-1 md:columns-2 gap-6' : 'columns-1'}">`;
                 
                 cat.items.forEach(item => {
                     const activePromo = getActivePromotion(item.promotions);
-                    // 為了避免內部 columns 把一個項目的標題跟價格切斷，加入 break-inside-avoid
-                    catHtml += `<div class="border-b border-gray-100 hover:bg-blue-50 transition py-3 flex justify-between items-start break-inside-avoid">
-                                  <div class="text-gray-800 pr-4">
-                                      <div class="font-medium">${item.name}</div>
-                                      ${item.desc ? `<div class="text-xs text-gray-500 mt-1">${item.desc}</div>` : ''}
-                                  </div>
-                                  <div class="text-right whitespace-nowrap">`;
+                    
+                    // 註解雙重保險：優先使用 JSON 傳來的 desc，沒有則去查 fallback 字典
+                    const finalDesc = item.desc || fallbackDescMap[item.id] || '';
+
+                    catHtml += `<div class="break-inside-avoid border-b border-gray-100 hover:bg-white transition p-2 rounded-lg">
+                                  <div class="flex justify-between items-start">
+                                    <div class="pr-2">
+                                        <div class="text-gray-800 font-medium">${item.name}</div>
+                                        ${finalDesc ? `<div class="text-xs text-gray-500 mt-1">${finalDesc}</div>` : ''}
+                                    </div>
+                                    <div class="text-right whitespace-nowrap pt-0.5">`;
                     
                     if (activePromo) {
-                        // 有特價時：顯示原價刪除線 + 特價
-                        catHtml += `<span class="price-line-through block text-xs mb-1">${formatMoney(item.price)}</span>
-                                    <span class="promo-price">${formatMoney(activePromo.price)}</span>`;
+                        catHtml += `<div class="price-line-through block sm:inline">${formatMoney(item.price)}</div>
+                                    <div class="promo-price block sm:inline text-base">${formatMoney(activePromo.price)}</div>`;
                     } else {
-                        // 沒特價時：直接顯示原價
                         catHtml += `<span class="text-gray-700 font-medium">${formatMoney(item.price)}</span>`;
                     }
-                    catHtml += `  </div>
+                    catHtml += `    </div>
+                                  </div>
                                 </div>`;
                 });
-                catHtml += `</div></div>`; // 關閉 inner div 和 outer card div
+                catHtml += `</div></div></div>`;
                 menuListElement.innerHTML += catHtml;
             });
 
@@ -276,13 +285,13 @@
         // 產生優惠區塊的 HTML 模板
         function createPromoHtml(name, originalPrice, promoPrice, label) {
             return `
-                <div class="break-inside-avoid flex flex-col justify-between bg-blue-50 p-4 rounded-xl border border-blue-100 shadow-sm relative overflow-hidden mb-4 md:mb-0 w-full">
-                    <div class="absolute top-0 right-0 bg-red-500 text-white text-xs px-2 py-1 rounded-bl-lg font-bold">${label}</div>
-                    <span class="font-medium text-gray-800 pr-4 mt-2 sm:mt-0">${name}</span>
-                    <div class="mt-3 flex items-center justify-end">
+                <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center bg-blue-50 p-4 rounded-xl border border-blue-100 shadow-sm relative overflow-hidden">
+                    <div class="absolute top-0 right-0 bg-red-500 text-white text-[10px] px-2 py-0.5 rounded-bl-lg font-bold">${label}</div>
+                    <span class="font-medium text-gray-800 mt-2 sm:mt-0 pr-4">${name}</span>
+                    <div class="mt-2 sm:mt-0 flex items-center justify-end">
                         <span class="text-xs text-gray-400 mr-1">原價</span>
                         <span class="price-line-through">${formatMoney(originalPrice)}</span>
-                        <span class="text-xs text-red-500 font-bold ml-2 mr-1">優惠</span>
+                        <span class="text-xs text-red-500 font-bold ml-1 mr-1">優惠</span>
                         <span class="promo-price text-lg">${formatMoney(promoPrice)}</span>
                     </div>
                 </div>
