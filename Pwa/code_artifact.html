@@ -405,7 +405,7 @@
 
             // 自動根據系統月份，載入資料夾內的動態插圖
             const bannerImg = document.getElementById('month-banner');
-            bannerImg.src = `img/${month}_heading.png`;
+            bannerImg.src = `img/${twYear}${month}_heading.png`;
 
             const itemsMap = new Map();
             currentData.categories.forEach(cat => {
