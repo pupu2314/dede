@@ -263,9 +263,9 @@
             }, 3500);
         }
 
-        // 自動防錯：Banner載入失敗時自動套用您上傳的專案主視覺 11507_nJtF7E.jpg
+        // 自動防錯：Banner載入失敗時自動套用您上傳的專案主視覺 11507_heading.png
         function handleBannerError(imgElement) {
-            imgElement.src = '11507_nJtF7E.jpg';
+            imgElement.src = '11507_heading.png';
         }
 
         const getActivePromotion = (promotions) => {
@@ -405,7 +405,7 @@
 
             // 自動根據系統月份，載入資料夾內的動態插圖
             const bannerImg = document.getElementById('month-banner');
-            bannerImg.src = `${month}月.png`;
+            bannerImg.src = `img/${month}_heading.png`;
 
             const itemsMap = new Map();
             currentData.categories.forEach(cat => {
