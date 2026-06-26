@@ -38,17 +38,17 @@
     <div class="w-full max-w-7xl mx-auto bg-white min-h-screen shadow-2xl relative flex flex-col" id="app">
         
         <!-- 頂部動態 Banner 區塊 -->
-        <div class="relative w-full overflow-hidden bg-slate-900 aspect-[3.5/1] md:aspect-[4.5/1]">
+        <div class="relative w-full overflow-hidden bg-slate-900 aspect-[3.5/1] md:aspect-[4.5/1]" id="banner-container">
             <img 
                 id="month-banner" 
                 src="" 
                 alt="本月主題計畫" 
-                class="w-full h-full object-cover object-center transition-opacity duration-500 opacity-0"
-                onload="this.classList.remove('opacity-0');"
+                class="w-full h-full object-cover object-center transition-opacity duration-500 opacity-0 absolute inset-0 z-10"
+                onload="handleBannerSuccess(this)"
                 onerror="handleBannerError(this)"
             >
-            <!-- 漸層遮罩與文字內容（當自訂圖片加載失敗或作為文字後備疊加） -->
-            <div class="absolute inset-0 bg-gradient-to-t from-slate-900/80 via-slate-900/30 to-transparent flex flex-col justify-end p-4 md:p-8">
+            <!-- 漸層遮罩與文字內容（成功載入插圖時會隱藏此層，失敗時則會顯示於備用底圖之上） -->
+            <div id="banner-text-overlay" class="absolute inset-0 bg-gradient-to-t from-slate-900/95 via-slate-900/40 to-transparent flex flex-col justify-end p-4 md:p-8 z-20">
                 <div class="max-w-3xl">
                     <span class="inline-block bg-blue-600 text-white text-xs font-semibold px-2.5 py-1 rounded-full uppercase tracking-wider mb-2">
                         Men's Care & Grooming
@@ -263,9 +263,28 @@
             }, 3500);
         }
 
-        // 自動防錯：Banner載入失敗時自動套用您上傳的專案主視覺 11507_heading.png
+        // 成功載入動態插圖：顯示完整圖片，並隱藏疊加的文字內容
+        function handleBannerSuccess(imgElement) {
+            imgElement.classList.remove('opacity-0');
+            const overlay = document.getElementById('banner-text-overlay');
+            if (overlay) {
+                overlay.classList.add('hidden');
+            }
+        }
+
+        // 無法成功載入動態插圖：隱藏損毀的 img 標籤，顯示文字，並帶入預備的 11507_nJtF7E.jpg 做為襯底背景
         function handleBannerError(imgElement) {
-            imgElement.src = 'img/11507_heading.png';
+            imgElement.classList.add('hidden');
+            const overlay = document.getElementById('banner-text-overlay');
+            if (overlay) {
+                overlay.classList.remove('hidden');
+            }
+            const container = document.getElementById('banner-container');
+            if (container) {
+                container.style.backgroundImage = "url('11507_nJtF7E.jpg')";
+                container.style.backgroundSize = "cover";
+                container.style.backgroundPosition = "center";
+            }
         }
 
         const getActivePromotion = (promotions) => {
@@ -398,12 +417,12 @@
 
             const now = new Date();
             const twYear = now.getFullYear() - 1911;
-            const month = now.getMonth() + 1; // 2026年6月
+            const month = now.getMonth() + 1; 
             
-            // 自動更新副標題為「XX年XX月 清爽計畫」
+            // 自動更新副標題為「XX年XX月 打造夏日清爽型男」
             document.getElementById('page-subtitle').innerText = `${twYear}年${month}月 打造夏日清爽型男`;
 
-            // 自動根據系統月份，載入資料夾內的動態插圖
+            // 自動根據系統民國年份與月份，載入資料夾內的動態插圖
             const bannerImg = document.getElementById('month-banner');
             bannerImg.src = `img/${twYear}${month}_heading.png`;
 
