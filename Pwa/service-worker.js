@@ -4,22 +4,22 @@
  */
 
 // 升級版號，強制所有用戶端清除舊快取並套用新規則
-const CACHE_NAME = 'price-calculator-v26.7d'; 
-const OFFLINE_URL = 'index.html';
+const CACHE_NAME = 'price-calculator-v26.8a'; 
+const OFFLINE_URL = 'calculator.html';
 
 const urlsToCache = [
-    'index.html',
+    'calculator.html',
     'check.html',
     'services_editor.html',
     'dede.css',
     'app.js',
-    'logo_64.png',
-    'logo_128.png',
-    'logo_192.png',
-    'logo_256.png',
-    'logo_512.png',
-    'dede.png',
-    'LINE.png',
+    'pwa/logo_64.png',
+    'pwa/logo_128.png',
+    'pwa/logo_192.png',
+    'pwa/logo_256.png',
+    'pwa/logo_512.png',
+    'pwa/dede.png',
+    'img/LINE.png',
     'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js'
 ];
 
