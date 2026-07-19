@@ -158,15 +158,18 @@
     <script>
         // ── 僅保留於 HTML 內的補充描述（不含任何價格）──────────────────
         const descMap = {
-            private_full:        '含三角處、陰莖、陰囊、會陰、肛門、鼠蹊部',
-            belly_lower:         '腹部下方至陰莖上方區域',
-            arm_half:            '上手臂或下手臂擇一',
-            arm_full:            '上手臂及下手臂',
-            leg_full:            '大腿及小腿',
-            private_area:        '陰莖、陰囊、會陰、肛門、鼠蹊部擇一部位',
-            private_combo_part:  '陰莖、陰囊、會陰、肛門、鼠蹊部擇兩部位',
-            oil_massage_1hr:     '含機能保養',
-            'oil_massage_1.5hr': '含機能保養',
+            // ── 單項描述 ────────────────────────────────────────────────
+            private_full:           '含三角處、陰莖、陰囊、會陰、肛門、鼠蹊部',
+            belly_lower:            '腹部下方至陰莖上方區域',
+            arm_half:               '上手臂或下手臂擇一',
+            arm_full:               '上手臂及下手臂',
+            leg_full:               '大腿及小腿',
+            private_area:           '陰莖、陰囊、會陰、肛門、鼠蹊部擇一部位',
+            private_combo_part:     '陰莖、陰囊、會陰、肛門、鼠蹊部擇兩部位',
+            oil_massage_1hr:        '含機能保養',
+            'oil_massage_1.5hr':    '含機能保養',
+            // ── 組合優惠描述 ─────────────────────────────────────────────
+            combo_private_armpit:   '三角處、陰莖、陰囊、會陰、肛門、鼠蹊部及腋下',
         };
 
         // ── 狀態 ──────────────────────────────────────────────────────────
@@ -247,12 +250,15 @@
         }
 
         // ── 促銷卡 HTML（含省多少） ───────────────────────────────────────
-        function createPromoHtml(name, originalPrice, promoPrice, label) {
+        function createPromoHtml(name, originalPrice, promoPrice, label, desc) {
             const saved = originalPrice - promoPrice;
             return `
                 <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center bg-white p-3 sm:p-4 rounded-xl border border-blue-100 shadow-sm relative overflow-hidden">
                     <div class="absolute top-0 right-0 bg-red-500 text-white text-[10px] px-2 py-0.5 rounded-bl-lg font-bold">${label}</div>
-                    <span class="font-medium text-gray-800 mt-2 sm:mt-0 pr-4 pl-1">${name}</span>
+                    <div class="mt-2 sm:mt-0 pr-4 pl-1">
+                        <div class="font-medium text-gray-800">${name}</div>
+                        ${desc ? `<div class="text-[13px] text-gray-500 mt-0.5">${desc}</div>` : ''}
+                    </div>
                     <div class="mt-2 sm:mt-0 flex flex-col items-end gap-0.5 min-w-fit">
                         <div class="flex items-center gap-1.5">
                             <span class="price-line-through">${fmt(originalPrice)}</span>
@@ -387,7 +393,7 @@
                     const item = itemsMap.get(id);
                     return sum + (item ? item.price : 0);
                 }, 0);
-                promoList.innerHTML += createPromoHtml(combo.name, originalPrice, activePromo.price, activePromo.label);
+                promoList.innerHTML += createPromoHtml(combo.name, originalPrice, activePromo.price, activePromo.label, descMap[combo.id] || null);
             });
 
             // 單項優惠
@@ -396,7 +402,8 @@
                     const activePromo = getActivePromo(item.promotions);
                     if (!activePromo) return;
                     hasPromoItems = true;
-                    promoList.innerHTML += createPromoHtml(item.name, item.price, activePromo.price, activePromo.label);
+                    const desc = item.desc || descMap[item.id] || null;
+                    promoList.innerHTML += createPromoHtml(item.name, item.price, activePromo.price, activePromo.label, desc);
                 });
             });
 
