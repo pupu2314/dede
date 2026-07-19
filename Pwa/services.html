@@ -8,64 +8,107 @@
     <style>
         html { scroll-behavior: smooth; }
         .ocean-gradient { background: linear-gradient(135deg, #e0f2f1 0%, #b2ebf2 100%); }
-        .price-line-through { text-decoration: line-through; color: #7f8c8d; font-size: 0.9em; margin-right: 8px; }
-        .promo-price { color: #e53e3e; font-weight: bold; }
-        
-        /* 自訂滾動軸預留空間，避免被頂部懸浮選單遮擋 */
-        .scroll-offset { scroll-margin-top: 180px; } 
+        .price-line-through { text-decoration: line-through; color: #9ca3af; font-size: 0.85em; }
+        .promo-price { color: #dc2626; font-weight: bold; }
+
+        /* Sticky Nav 捲動偏移 */
+        .scroll-offset { scroll-margin-top: 130px; }
+
+        /* 快速跳轉橫向滑動 */
+        #quick-jump {
+            display: flex;
+            flex-wrap: nowrap;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+            scrollbar-width: none;
+            gap: 0.5rem;
+            padding-bottom: 2px;
+        }
+        #quick-jump::-webkit-scrollbar { display: none; }
+        #quick-jump a { flex-shrink: 0; }
+
+        /* Toast */
+        #toast {
+            position: fixed;
+            bottom: 80px;
+            left: 50%;
+            transform: translateX(-50%) translateY(20px);
+            background: #1e3a5f;
+            color: #fff;
+            padding: 10px 22px;
+            border-radius: 999px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            white-space: nowrap;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.25);
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.25s ease, transform 0.25s ease;
+            z-index: 999;
+        }
+        #toast.show {
+            opacity: 1;
+            transform: translateX(-50%) translateY(0);
+        }
     </style>
 </head>
 <body class="ocean-gradient min-h-screen text-gray-800 pb-16">
 
-    <!-- 移除了 overflow-hidden，恢復 sticky 的懸浮功能 -->
     <div class="w-full max-w-7xl mx-auto bg-white min-h-screen shadow-xl relative" id="app">
+
         <!-- 頂部標題 -->
         <div class="bg-blue-600 text-white p-6 text-center">
             <h1 class="text-2xl font-bold">DeDe 男士專屬美容美體中心</h1>
             <p class="text-blue-100 mt-1 tracking-wider" id="page-subtitle">載入中...</p>
         </div>
 
-        <!-- 頂端懸浮控制列 (Sticky Nav) -->
-        <div class="sticky top-0 z-40 bg-white/95 backdrop-blur-sm shadow-md border-b border-gray-200 px-4 py-3 w-full">
-            <!-- 快速跳轉 -->
-            <div id="quick-jump" class="flex flex-wrap justify-center gap-2 mb-3">
-                <!-- JS 自動生成 -->
+        <!-- Sticky Nav -->
+        <div class="sticky top-0 z-40 bg-white/95 backdrop-blur-sm shadow-md border-b border-gray-200 px-4 py-2.5 w-full">
+            <!-- 快速跳轉（手機橫滑） -->
+            <div id="quick-jump" class="mb-2.5 px-0.5">
+                <!-- JS 生成 -->
             </div>
-            <!-- 優惠切換標籤 -->
+            <!-- 折扣切換 -->
             <div class="flex justify-center gap-2">
-                <button onclick="setDiscount('normal')" id="tab-normal" class="tab-btn bg-blue-600 text-white px-4 py-1.5 rounded-lg text-sm font-bold shadow-sm transition">一般原價</button>
-                <button onclick="setDiscount('student')" id="tab-student" class="tab-btn bg-gray-100 text-gray-600 hover:bg-gray-200 px-4 py-1.5 rounded-lg text-sm font-bold transition">學生 8 折</button>
+                <button onclick="setDiscount('normal')"   id="tab-normal"   class="tab-btn bg-blue-600 text-white px-4 py-1.5 rounded-lg text-sm font-bold shadow-sm transition">一般原價</button>
+                <button onclick="setDiscount('student')"  id="tab-student"  class="tab-btn bg-gray-100 text-gray-600 hover:bg-gray-200 px-4 py-1.5 rounded-lg text-sm font-bold transition">學生 8 折</button>
                 <button onclick="setDiscount('birthday')" id="tab-birthday" class="tab-btn bg-gray-100 text-gray-600 hover:bg-gray-200 px-4 py-1.5 rounded-lg text-sm font-bold transition">壽星 5 折</button>
             </div>
         </div>
 
         <div class="p-4 md:p-8 pb-16">
-            <div id="loading" class="text-center py-10 text-gray-500">
-                正在讀取最新優惠資訊...
+
+            <!-- 載入中 -->
+            <div id="loading" class="text-center py-10 text-gray-500">正在讀取最新優惠資訊...</div>
+
+            <!-- 讀取失敗 -->
+            <div id="error" class="hidden text-center py-16">
+                <div class="text-5xl mb-4">⚠️</div>
+                <p class="text-gray-600 font-medium">無法讀取服務資料，請重新整理頁面。</p>
+                <button onclick="location.reload()" class="mt-4 px-5 py-2 bg-blue-600 text-white rounded-lg text-sm font-bold hover:bg-blue-700 transition">重新整理</button>
             </div>
 
             <div id="content" class="hidden">
-                <!-- 優惠與集點專區 (上下排列) -->
+
+                <!-- 優惠專區 -->
                 <section id="promo-section" class="mb-10">
                     <h2 class="text-xl font-bold text-blue-800 mb-4 border-b-2 border-blue-200 pb-2 flex items-center">
-                        <span class="mr-2" id="promo-header-icon">🔥</span> 
+                        <span class="mr-2" id="promo-header-icon">🔥</span>
                         <span id="promo-header-text">本月活動與優惠</span>
                     </h2>
                     <div class="flex flex-col gap-6">
-                        
-                        <!-- 區塊 A：一般月促銷清單 (預設顯示) -->
-                        <div id="promo-list" class="grid grid-cols-1 md:grid-cols-2 gap-4 hidden">
-                            <!-- 促銷項目將插入於此 -->
-                        </div>
 
-                        <!-- 區塊 B：專屬身分提示卡 (預設隱藏，切換時顯示) -->
+                        <!-- 月促銷清單 -->
+                        <div id="promo-list" class="grid grid-cols-1 md:grid-cols-2 gap-4 hidden"></div>
+
+                        <!-- 專屬身份提示卡 -->
                         <div id="special-discount-msg" class="hidden bg-gradient-to-r from-blue-50 to-indigo-50 p-6 sm:p-8 rounded-xl border border-blue-200 text-center shadow-sm">
                             <div id="special-discount-icon" class="text-5xl mb-3">🎓</div>
-                            <h3 id="special-discount-title" class="text-xl sm:text-2xl font-bold text-blue-800 mb-2">已套用OO優惠享原價O折優惠</h3>
-                            <p id="special-discount-desc" class="text-sm sm:text-base text-blue-600 font-medium">※ 提示訊息</p>
+                            <h3 id="special-discount-title" class="text-xl sm:text-2xl font-bold text-blue-800 mb-2"></h3>
+                            <p  id="special-discount-desc"  class="text-sm sm:text-base text-blue-600 font-medium"></p>
                         </div>
-                        
-                        <!-- 區塊 C：集點活動說明卡 (永遠顯示) -->
+
+                        <!-- 集點活動 -->
                         <div class="bg-gradient-to-r from-yellow-50 to-orange-50 p-5 sm:p-6 rounded-xl border border-yellow-200 shadow-sm flex flex-col justify-center relative overflow-hidden">
                             <div class="absolute -right-4 -top-4 text-7xl opacity-20 select-none">🎁</div>
                             <h3 class="font-bold text-yellow-800 text-lg mb-2 flex items-center">
@@ -82,22 +125,24 @@
                     </div>
                 </section>
 
-                <!-- 完整服務項目列表 -->
+                <!-- 完整服務項目 -->
                 <section>
                     <h2 class="text-xl font-bold text-blue-800 mb-6 border-b-2 border-blue-200 pb-2 flex items-center">
                         <span class="mr-2">📋</span> 完整服務項目
                     </h2>
-                    <div id="menu-list" class="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-8">
-                        <!-- 完整項目將插入於此 -->
-                    </div>
+                    <div id="menu-list" class="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-8"></div>
                 </section>
             </div>
         </div>
     </div>
 
+    <!-- Toast -->
+    <div id="toast"></div>
+
     <!-- 懸浮預約按鈕 -->
     <div class="fixed bottom-0 left-0 w-full z-50 p-4 pointer-events-none flex justify-center">
-        <a href="https://lin.ee/6fc6qGl" target="_blank" class="pointer-events-auto bg-[#06C755] text-white font-bold py-3 px-6 rounded-full shadow-[0_4px_20px_rgba(6,199,85,0.4)] hover:bg-[#05b34c] transition transform hover:-translate-y-1 flex items-center justify-center w-full max-w-md">
+        <a href="https://lin.ee/6fc6qGl" target="_blank"
+           class="pointer-events-auto bg-[#06C755] text-white font-bold py-3 px-6 rounded-full shadow-[0_4px_20px_rgba(6,199,85,0.4)] hover:bg-[#05b34c] transition transform hover:-translate-y-1 flex items-center justify-center w-full max-w-md">
             <svg class="w-8 h-8 mr-2" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 320">
                 <rect fill="#ffffff" width="320" height="320" rx="72.14"/>
                 <path fill="#06c755" d="M266.66,144.92c0-47.74-47.86-86.58-106.69-86.58S53.28,97.18,53.28,144.92c0,42.8,38,78.65,89.22,85.42,3.48.75,8.21,2.29,9.4,5.26,1.08,2.7.71,6.93.35,9.65,0,0-1.25,7.53-1.52,9.13-.47,2.7-2.15,10.55,9.24,5.76s61.44-36.18,83.82-61.95h0C259.25,181.24,266.66,164,266.66,144.92Z"/>
@@ -111,270 +156,256 @@
     </div>
 
     <script>
-        let currentData = null;
-        let currentDiscountType = 'normal'; 
-        let hasPromoItems = false; 
-
-        const fallbackData = {
-          "categories": [
-            {
-              "name": "男士專屬除毛",
-              "items": [
-                { "id": "private_full", "name": "私密處除毛 (全除)", "price": 1900, "desc": "含三角處、陰莖、陰囊、會陰、肛門、鼠蹊部" },
-                { "id": "nose", "name": "鼻毛", "price": 200 },
-                { "id": "private_shape", "name": "私密處除毛 (局部/造型)", "price": 1900 },
-                { "id": "private_trim", "name": "私密處毛修剪-一般修剪無痛(修剪+沐浴)", "price": 300 },
-                { "id": "belly_lower", "name": "三角處除毛(下腹毛以下,根部以上)", "price": 800, "desc": "腹部下方至陰莖上方區域" },
-                { "id": "armpit", "name": "腋下毛", "price": 600 },
-                { "id": "belly_upper", "name": "上腹部毛(肚臍以上胸部以下)", "price": 600 },
-                { "id": "belly_middle", "name": "下腹部毛(肚臍以下陰毛以上)", "price": 600 },
-                { "id": "arm_half", "name": "半手臂", "price": 1600, "desc": "上手臂或下手臂擇一" },
-                { "id": "arm_full", "name": "全手臂", "price": 3000, "desc": "上手臂及下手臂" },
-                { "id": "finger", "name": "手指", "price": 300 },
-                { "id": "hand_back", "name": "手背", "price": 300 },
-                { "id": "toe", "name": "腳趾", "price": 300 },
-                { "id": "foot_back", "name": "腳背", "price": 300 },
-                { "id": "leg_calf", "name": "小腿", "price": 1900 },
-                { "id": "leg_thigh", "name": "大腿", "price": 1900 },
-                { "id": "leg_full", "name": "全腿", "price": 3500, "desc": "大腿及小腿" },
-                { "id": "nipple", "name": "奶頭毛", "price": 200 },
-                { "id": "chest", "name": "胸毛", "price": 600 },
-                { "id": "private_area", "name": "區域單獨除毛", "price": 600, "desc": "陰莖、陰囊、會陰、肛門、鼠蹊部擇一部位" },
-                { "id": "beard", "name": "鬍子熱蠟除毛(八字鬍與下巴)", "price": 1000 },
-                { "id": "private_combo_part", "name": "私密處單一區域任選2部位", "price": 1200, "desc": "陰莖、陰囊、會陰、肛門、鼠蹊部擇兩部位" }
-              ]
-            },
-            {
-              "name": "男士專屬油壓",
-              "items": [
-                { "id": "oil_massage_1hr", "name": "[油推]能量精油 健康調理 /1hr", "price": 1200, "desc": "含機能保養" },
-                { "id": "oil_massage_1.5hr", "name": "[油推]能量精油健康調理 /1.5hr", "price": 1800, "desc": "含機能保養" }
-              ]
-            },
-            {
-              "name": "男士專屬指壓",
-              "items": [
-                { "id": "acupressure_1hr", "name": "[指壓]能量健康調理 /1hr", "price": 1000 },
-                { "id": "acupressure_1.5hr", "name": "[指壓]能量健康調理 /1.5hr", "price": 1500 }
-              ]
-            },
-            {
-              "name": "男士專屬筋膜刀體雕",
-              "items": [
-                { "id": "fascia_knife_1hr", "name": "筋膜刀體雕 氣脈健康調理 /1hr", "price": 1600 },
-                { "id": "fascia_knife_1.5hr", "name": "筋膜刀體雕 氣脈健康調理 /1.5hr", "price": 2200 }
-              ]
-            },
-            {
-              "name": "男士專屬SPA",
-              "items": [
-                { "id": "spa_face", "name": "【臉部】更新油美白煥膚萬年礦泥臉部肌膚調理 /1hr", "price": 1800 },
-                { "id": "spa_private", "name": "【私密處】更新油美白換膚萬年礦泥 屁股+私密處 肌膚調理 /1hr", "price": 2200 },
-                { "id": "spa_body", "name": "【全身】更新油全身深層敷體淨化 /1.5hr", "price": 3000 }
-              ]
-            }
-          ]
+        // ── 僅保留於 HTML 內的補充描述（不含任何價格）──────────────────
+        const descMap = {
+            private_full:        '含三角處、陰莖、陰囊、會陰、肛門、鼠蹊部',
+            belly_lower:         '腹部下方至陰莖上方區域',
+            arm_half:            '上手臂或下手臂擇一',
+            arm_full:            '上手臂及下手臂',
+            leg_full:            '大腿及小腿',
+            private_area:        '陰莖、陰囊、會陰、肛門、鼠蹊部擇一部位',
+            private_combo_part:  '陰莖、陰囊、會陰、肛門、鼠蹊部擇兩部位',
+            oil_massage_1hr:     '含機能保養',
+            'oil_massage_1.5hr': '含機能保養',
         };
 
-        const fallbackDescMap = {};
-        fallbackData.categories.forEach(cat => {
-            cat.items.forEach(item => {
-                if (item.desc) fallbackDescMap[item.id] = item.desc;
-            });
-        });
+        // ── 狀態 ──────────────────────────────────────────────────────────
+        let currentData        = null;
+        let currentDiscountType = 'normal';
+        let hasPromoItems       = false;
 
-        const formatMoney = (amount) => '$' + Math.round(amount).toLocaleString('zh-TW');
+        // ── 工具函式 ──────────────────────────────────────────────────────
+        const fmt = (n) => '$' + Math.round(n).toLocaleString('zh-TW');
 
-        const getActivePromotion = (promotions) => {
-            if (!promotions || promotions.length === 0) return null;
-            const now = new Date(); 
-            for (const promo of promotions) {
-                const start = new Date(promo.start);
-                const end = new Date(promo.end);
-                end.setHours(23, 59, 59, 999); 
-                if (now >= start && now <= end) return promo; 
+        const safeCatId = (name) =>
+            'cat-' + name.replace(/\s+/g, '_').replace(/[^\w\u4e00-\u9fff-]/g, '');
+
+        const getActivePromo = (promotions) => {
+            if (!promotions || !promotions.length) return null;
+            const now = new Date();
+            for (const p of promotions) {
+                const end = new Date(p.end);
+                end.setHours(23, 59, 59, 999);
+                if (now >= new Date(p.start) && now <= end) return p;
             }
             return null;
         };
 
-        function updatePromoSectionVisibility(type) {
-            const promoList = document.getElementById('promo-list');
-            const specialMsg = document.getElementById('special-discount-msg');
-            const specialTitle = document.getElementById('special-discount-title');
-            const specialDesc = document.getElementById('special-discount-desc');
-            const specialIcon = document.getElementById('special-discount-icon');
-            const promoHeaderIcon = document.getElementById('promo-header-icon');
-            const promoHeaderText = document.getElementById('promo-header-text');
-
-            if (type === 'normal') {
-                promoHeaderIcon.innerText = '🔥';
-                promoHeaderText.innerText = '本月活動與優惠';
-                if (hasPromoItems) promoList.classList.remove('hidden');
-                specialMsg.classList.add('hidden');
-            } else {
-                promoHeaderIcon.innerText = '🎉';
-                promoHeaderText.innerText = '專屬身分優惠';
-                promoList.classList.add('hidden');
-                specialMsg.classList.remove('hidden');
-
-                if (type === 'student') {
-                    specialIcon.innerText = '🎓';
-                    specialTitle.innerText = '已套用學生優惠享原價 8 折優惠';
-                    specialDesc.innerText = '※ 請於結帳時出示有效學生證件核對';
-                } else if (type === 'birthday') {
-                    specialIcon.innerText = '🎂';
-                    specialTitle.innerText = '已套用壽星優惠享原價 5 折優惠';
-                    specialDesc.innerText = '※ 請於結帳時出示身分證件核對生日月份';
-                }
-            }
+        // ── Toast ──────────────────────────────────────────────────────────
+        let toastTimer = null;
+        function showToast(msg) {
+            const el = document.getElementById('toast');
+            el.textContent = msg;
+            el.classList.add('show');
+            clearTimeout(toastTimer);
+            toastTimer = setTimeout(() => el.classList.remove('show'), 2800);
         }
 
+        // ── 折扣切換 ──────────────────────────────────────────────────────
         window.setDiscount = function(type) {
             currentDiscountType = type;
-            
+
             document.querySelectorAll('.tab-btn').forEach(btn => {
                 btn.classList.remove('bg-blue-600', 'text-white');
                 btn.classList.add('bg-gray-100', 'text-gray-600');
             });
-            const activeBtn = document.getElementById('tab-' + type);
-            activeBtn.classList.remove('bg-gray-100', 'text-gray-600');
-            activeBtn.classList.add('bg-blue-600', 'text-white');
+            document.getElementById('tab-' + type).classList.replace('bg-gray-100', 'bg-blue-600');
+            document.getElementById('tab-' + type).classList.replace('text-gray-600', 'text-white');
 
-            updatePromoSectionVisibility(type);
+            updatePromoSection(type);
             renderMenu();
-            
-            if(type === 'student') alert('已切換為學生專屬優惠！\n請於結帳時出示有效學生證件。');
-            if(type === 'birthday') alert('已切換為當月壽星優惠！\n請於結帳時出示身分證件核對生日。');
+
+            if (type === 'student')  showToast('🎓 已套用學生 8 折，結帳時請出示學生證');
+            if (type === 'birthday') showToast('🎂 已套用壽星 5 折，結帳時請出示證件');
+            if (type === 'normal')   showToast('已切換回一般原價');
         };
 
-        function renderMenu() {
-            const menuListElement = document.getElementById('menu-list');
-            menuListElement.innerHTML = '';
-            
-            let multiplier = 1;
-            if (currentDiscountType === 'student') multiplier = 0.8;
-            if (currentDiscountType === 'birthday') multiplier = 0.5;
+        // ── 優惠區塊切換 ──────────────────────────────────────────────────
+        function updatePromoSection(type) {
+            const promoList  = document.getElementById('promo-list');
+            const specialMsg = document.getElementById('special-discount-msg');
 
-            currentData.categories.forEach((cat, index) => {
-                let catHtml = `<div id="cat-${index}" class="scroll-offset ${cat.name.includes('除毛') ? 'lg:col-span-2' : ''}">`;
-                catHtml += `<div class="bg-blue-50/40 p-4 sm:p-5 rounded-2xl h-full border border-blue-100 shadow-sm">`;
-                catHtml += `<h3 class="font-bold text-gray-800 mb-4 text-lg border-l-4 border-blue-500 pl-3">${cat.name}</h3>`;
-                
-                catHtml += `<div class="${cat.name.includes('除毛') ? 'columns-1 md:columns-2 gap-6' : 'columns-1'}">`;
-                
+            if (type === 'normal') {
+                document.getElementById('promo-header-icon').textContent = '🔥';
+                document.getElementById('promo-header-text').textContent = '本月活動與優惠';
+                if (hasPromoItems) promoList.classList.remove('hidden');
+                specialMsg.classList.add('hidden');
+            } else {
+                document.getElementById('promo-header-icon').textContent = '🎉';
+                document.getElementById('promo-header-text').textContent = '專屬身分優惠';
+                promoList.classList.add('hidden');
+                specialMsg.classList.remove('hidden');
+
+                const cfg = type === 'student'
+                    ? { icon: '🎓', title: '已套用學生優惠享原價 8 折優惠', desc: '※ 請於結帳時出示有效學生證件核對' }
+                    : { icon: '🎂', title: '已套用壽星優惠享原價 5 折優惠', desc: '※ 請於結帳時出示身分證件核對生日月份' };
+
+                document.getElementById('special-discount-icon').textContent  = cfg.icon;
+                document.getElementById('special-discount-title').textContent = cfg.title;
+                document.getElementById('special-discount-desc').textContent  = cfg.desc;
+            }
+        }
+
+        // ── 促銷卡 HTML（含省多少） ───────────────────────────────────────
+        function createPromoHtml(name, originalPrice, promoPrice, label) {
+            const saved = originalPrice - promoPrice;
+            return `
+                <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center bg-white p-3 sm:p-4 rounded-xl border border-blue-100 shadow-sm relative overflow-hidden">
+                    <div class="absolute top-0 right-0 bg-red-500 text-white text-[10px] px-2 py-0.5 rounded-bl-lg font-bold">${label}</div>
+                    <span class="font-medium text-gray-800 mt-2 sm:mt-0 pr-4 pl-1">${name}</span>
+                    <div class="mt-2 sm:mt-0 flex flex-col items-end gap-0.5 min-w-fit">
+                        <div class="flex items-center gap-1.5">
+                            <span class="price-line-through">${fmt(originalPrice)}</span>
+                            <span class="promo-price text-lg">${fmt(promoPrice)}</span>
+                        </div>
+                        <span class="text-xs text-emerald-600 font-semibold">省 ${fmt(saved)}</span>
+                    </div>
+                </div>`;
+        }
+
+        // ── 渲染完整服務清單 ──────────────────────────────────────────────
+        function renderMenu() {
+            const container   = document.getElementById('menu-list');
+            container.innerHTML = '';
+
+            const multiplier = { student: 0.8, birthday: 0.5 }[currentDiscountType] ?? 1;
+            const isDiscount  = multiplier !== 1;
+
+            currentData.categories.forEach(cat => {
+                const isHairRemoval = cat.name.includes('除毛');
+                const catId         = safeCatId(cat.name);
+
+                // 外層格子：除毛跨兩欄
+                const wrapper = document.createElement('div');
+                wrapper.id        = catId;
+                wrapper.className = `scroll-offset${isHairRemoval ? ' lg:col-span-2' : ''}`;
+
+                // 卡片
+                const card = document.createElement('div');
+                card.className = 'bg-blue-50/40 p-4 sm:p-5 rounded-2xl h-full border border-blue-100 shadow-sm';
+
+                // 標題
+                card.innerHTML = `<h3 class="font-bold text-gray-800 mb-4 text-lg border-l-4 border-blue-500 pl-3">${cat.name}</h3>`;
+
+                // 項目清單（除毛用 grid 2欄，其餘 1欄）
+                const grid = document.createElement('div');
+                grid.className = isHairRemoval
+                    ? 'grid grid-cols-1 md:grid-cols-2 gap-x-6'
+                    : 'grid grid-cols-1';
+
                 cat.items.forEach(item => {
-                    const finalDesc = item.desc || fallbackDescMap[item.id] || '';
+                    const desc      = item.desc || descMap[item.id] || '';
                     const basePrice = item.price;
-                    
-                    catHtml += `<div class="break-inside-avoid border-b border-white hover:bg-white hover:shadow-sm transition p-2.5 rounded-xl mb-1">
-                                  <div class="flex justify-between items-start">
-                                    <div class="pr-2">
-                                        <div class="text-gray-800 font-medium">${item.name}</div>
-                                        ${finalDesc ? `<div class="text-[13px] text-gray-500 mt-1">${finalDesc}</div>` : ''}
-                                    </div>
-                                    <div class="text-right whitespace-nowrap pt-0.5">`;
-                    
-                    if (multiplier !== 1) {
+
+                    // 計算顯示價格
+                    let priceHtml;
+                    if (isDiscount) {
                         const calcPrice = basePrice * multiplier;
-                        catHtml += `<div class="price-line-through block sm:inline">${formatMoney(basePrice)}</div>
-                                    <div class="text-blue-600 font-bold block sm:inline text-base">${formatMoney(calcPrice)}</div>`;
+                        priceHtml = `
+                            <div class="flex items-center gap-1.5">
+                                <span class="price-line-through">${fmt(basePrice)}</span>
+                                <span class="text-blue-600 font-bold">${fmt(calcPrice)}</span>
+                            </div>`;
                     } else {
-                        const activePromo = getActivePromotion(item.promotions);
+                        const activePromo = getActivePromo(item.promotions);
                         if (activePromo) {
-                            catHtml += `<div class="price-line-through block sm:inline">${formatMoney(basePrice)}</div>
-                                        <div class="promo-price block sm:inline text-base">${formatMoney(activePromo.price)}</div>`;
+                            const saved = basePrice - activePromo.price;
+                            priceHtml = `
+                                <div class="flex items-center gap-1.5">
+                                    <span class="price-line-through">${fmt(basePrice)}</span>
+                                    <span class="promo-price">${fmt(activePromo.price)}</span>
+                                </div>
+                                <span class="text-xs text-emerald-600 font-semibold text-right">省 ${fmt(saved)}</span>`;
                         } else {
-                            catHtml += `<span class="text-gray-700 font-medium">${formatMoney(basePrice)}</span>`;
+                            priceHtml = `<span class="text-gray-700 font-medium">${fmt(basePrice)}</span>`;
                         }
                     }
-                    catHtml += `    </div>
-                                  </div>
-                                </div>`;
+
+                    const row = document.createElement('div');
+                    row.className = 'border-b border-white hover:bg-white hover:shadow-sm transition p-2.5 rounded-xl mb-1';
+                    row.innerHTML = `
+                        <div class="flex justify-between items-start gap-2">
+                            <div class="min-w-0">
+                                <div class="text-gray-800 font-medium">${item.name}</div>
+                                ${desc ? `<div class="text-[13px] text-gray-500 mt-0.5">${desc}</div>` : ''}
+                            </div>
+                            <div class="flex flex-col items-end shrink-0 pt-0.5">${priceHtml}</div>
+                        </div>`;
+                    grid.appendChild(row);
                 });
-                catHtml += `</div></div></div>`;
-                menuListElement.innerHTML += catHtml;
+
+                card.appendChild(grid);
+                wrapper.appendChild(card);
+                container.appendChild(wrapper);
             });
         }
 
+        // ── 初始化 ────────────────────────────────────────────────────────
         async function init() {
             try {
                 const res = await fetch('services.json');
-                if (res.ok) {
-                    currentData = await res.json();
-                } else {
-                    currentData = fallbackData;
-                }
+                if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                currentData = await res.json();
             } catch (err) {
-                currentData = fallbackData; 
+                console.error('services.json 載入失敗:', err);
+                document.getElementById('loading').classList.add('hidden');
+                document.getElementById('error').classList.remove('hidden');
+                return;
             }
 
-            const now = new Date();
+            // 民國年月
+            const now    = new Date();
             const twYear = now.getFullYear() - 1911;
-            const month = now.getMonth() + 1;
-            document.getElementById('page-subtitle').innerText = `${twYear}年${month}月 服務價目表`;
+            const month  = now.getMonth() + 1;
+            document.getElementById('page-subtitle').textContent = `${twYear}年${month}月 服務價目表`;
 
+            // 建立 itemsMap（供 combo 計算原價）
             const itemsMap = new Map();
+            currentData.categories.forEach(cat =>
+                cat.items.forEach(item => itemsMap.set(item.id, item))
+            );
+
+            // 快速跳轉（錨點用類別名稱）
+            const quickJump = document.getElementById('quick-jump');
             currentData.categories.forEach(cat => {
-                cat.items.forEach(item => itemsMap.set(item.id, item));
+                const a = document.createElement('a');
+                a.href      = '#' + safeCatId(cat.name);
+                a.textContent = cat.name.replace('男士專屬', '');
+                a.className = 'bg-blue-50 text-blue-700 border border-blue-200 hover:bg-blue-100 px-3 py-1 rounded-full text-sm font-bold shadow-sm transition';
+                quickJump.appendChild(a);
             });
 
-            // --- 產生頂部快速跳轉 ---
-            const quickJumpElement = document.getElementById('quick-jump');
-            let quickJumpHtml = '';
-            currentData.categories.forEach((cat, index) => {
-                const shortName = cat.name.replace('男士專屬', '');
-                quickJumpHtml += `<a href="#cat-${index}" class="bg-blue-50 text-blue-700 border border-blue-200 hover:bg-blue-100 px-3 py-1 rounded-full text-sm font-bold shadow-sm transition">${shortName}</a>`;
+            // 促銷清單
+            const promoList = document.getElementById('promo-list');
+
+            // Combo 優惠
+            (currentData.combos || []).forEach(combo => {
+                const activePromo = getActivePromo(combo.promotions);
+                if (!activePromo) return;
+                hasPromoItems = true;
+                const originalPrice = combo.itemIds.reduce((sum, id) => {
+                    const item = itemsMap.get(id);
+                    return sum + (item ? item.price : 0);
+                }, 0);
+                promoList.innerHTML += createPromoHtml(combo.name, originalPrice, activePromo.price, activePromo.label);
             });
-            quickJumpElement.innerHTML = quickJumpHtml;
 
-            // --- 處理本月熱門優惠 ---
-            const promoListElement = document.getElementById('promo-list');
-            
-            if (currentData.combos) {
-                currentData.combos.forEach(combo => {
-                    const activePromo = getActivePromotion(combo.promotions);
-                    if (activePromo) {
-                        hasPromoItems = true;
-                        const originalPrice = combo.itemIds.reduce((sum, id) => {
-                            const item = itemsMap.get(id);
-                            return sum + (item ? item.price : 0);
-                        }, 0);
-                        promoListElement.innerHTML += createPromoHtml(combo.name, originalPrice, activePromo.price, activePromo.label);
-                    }
-                });
-            }
-
+            // 單項優惠
             currentData.categories.forEach(cat => {
                 cat.items.forEach(item => {
-                    const activePromo = getActivePromotion(item.promotions);
-                    if (activePromo) {
-                        hasPromoItems = true;
-                        promoListElement.innerHTML += createPromoHtml(item.name, item.price, activePromo.price, activePromo.label);
-                    }
+                    const activePromo = getActivePromo(item.promotions);
+                    if (!activePromo) return;
+                    hasPromoItems = true;
+                    promoList.innerHTML += createPromoHtml(item.name, item.price, activePromo.price, activePromo.label);
                 });
             });
 
-            if (hasPromoItems) {
-                document.getElementById('promo-list').classList.remove('hidden');
-            }
+            if (hasPromoItems) promoList.classList.remove('hidden');
 
             renderMenu();
 
             document.getElementById('loading').classList.add('hidden');
             document.getElementById('content').classList.remove('hidden');
-        }
-
-        function createPromoHtml(name, originalPrice, promoPrice, label) {
-            return `
-                <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center bg-white p-3 sm:p-4 rounded-xl border border-blue-100 shadow-sm relative overflow-hidden">
-                    <div class="absolute top-0 right-0 bg-red-500 text-white text-[10px] px-2 py-0.5 rounded-bl-lg font-bold">${label}</div>
-                    <span class="font-medium text-gray-800 mt-2 sm:mt-0 pr-4 pl-1">${name}</span>
-                    <div class="mt-2 sm:mt-0 flex items-center justify-end">
-                        <span class="price-line-through">${formatMoney(originalPrice)}</span>
-                        <span class="promo-price text-lg ml-1">${formatMoney(promoPrice)}</span>
-                    </div>
-                </div>
-            `;
         }
 
         window.addEventListener('DOMContentLoaded', init);
