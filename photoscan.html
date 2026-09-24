@@ -289,6 +289,7 @@
         let processedResults = {}; 
         let savedCorners = {}; 
         let isModifiedSinceLastProcess = false; 
+        let btnProcessMode = 'process'; // 'process' = 執行校正 / 'next' = 下一張
 
         let draggedIndex = null;
 
@@ -418,6 +419,7 @@
         sharpenLevel.addEventListener('input', (e) => {
             const levels = ["關閉", "微弱", "中等", "強烈", "極強"];
             sharpenVal.textContent = levels[e.target.value];
+            if (srcMat) markSettingsChanged();
         });
 
         btnModeBw.addEventListener('click', () => {
@@ -426,6 +428,7 @@
             btnModeColor.className = "flex-1 py-1 text-xs font-medium rounded-md text-gray-500 hover:text-gray-700";
             bwSettings.classList.remove('hidden');
             colorSettings.classList.add('hidden');
+            if (srcMat) markSettingsChanged();
         });
 
         btnModeColor.addEventListener('click', () => {
@@ -434,6 +437,7 @@
             btnModeBw.className = "flex-1 py-1 text-xs font-medium rounded-md text-gray-500 hover:text-gray-700";
             colorSettings.classList.remove('hidden');
             bwSettings.classList.add('hidden');
+            if (srcMat) markSettingsChanged();
         });
 
         function onOpenCvReady() {
@@ -444,8 +448,8 @@
             };
         }
 
-        blockSizeInput.addEventListener('input', (e) => { blockSizeVal.textContent = e.target.value; });
-        cValueInput.addEventListener('input', (e) => { cValueVal.textContent = e.target.value; });
+        blockSizeInput.addEventListener('input', (e) => { blockSizeVal.textContent = e.target.value; if (srcMat) markSettingsChanged(); });
+        cValueInput.addEventListener('input', (e) => { cValueVal.textContent = e.target.value; if (srcMat) markSettingsChanged(); });
 
         // --- 多檔載入核心邏輯 ---
         function handleFiles(files) {
@@ -500,8 +504,14 @@
                     } else {
                         let detected = adobeScanStyleDetect(srcMat);
                         if (detected) {
-                            corners = detected;
-                            updateStatus(`[第 ${currentFileIndex+1} 張] 邊界辨識成功！`, "✨", "success");
+                            corners = detected.corners;
+                            if (detected.confidence === 'high') {
+                                updateStatus(`[第 ${currentFileIndex+1} 張] 邊界辨識成功！`, "✨", "success");
+                            } else if (detected.confidence === 'hough') {
+                                updateStatus(`[第 ${currentFileIndex+1} 張] 以線條輔助推測邊界，建議確認端點`, "📐");
+                            } else {
+                                updateStatus(`[第 ${currentFileIndex+1} 張] 偵測信心較低，請確認四個端點`, "⚠️");
+                            }
                         } else {
                             resetCornersToFullBoundary();
                             updateStatus(`[第 ${currentFileIndex+1} 張] 未偵測到明顯邊界，使用預設框`, "📍");
@@ -523,11 +533,38 @@
 
                     if(processedResults[currentFileIndex]) {
                         showProcessedResult(processedResults[currentFileIndex]);
+                        setProcessButtonMode(currentFileIndex < fileQueue.length - 1 ? 'next' : 'process');
+                    } else {
+                        setProcessButtonMode('process');
                     }
                 };
                 img.src = event.target.result;
             };
             reader.readAsDataURL(file);
+        }
+
+        // 校正按鈕狀態切換：處理完成且尚未變更設定時，直接變成「下一張」快速前進
+        function setProcessButtonMode(mode) {
+            if (mode === 'next' && currentFileIndex < fileQueue.length - 1) {
+                btnProcessMode = 'next';
+                btnProcess.textContent = '下一張 →';
+            } else {
+                btnProcessMode = 'process';
+                btnProcess.textContent = '執行目前校正 ✨';
+            }
+        }
+
+        // 任何會影響輸出結果的設定變更，都標記為未處理並把按鈕改回「執行校正」
+        function markSettingsChanged() {
+            isModifiedSinceLastProcess = true;
+            setProcessButtonMode('process');
+        }
+
+        function goToNextFile() {
+            if (currentFileIndex < fileQueue.length - 1) {
+                currentFileIndex++;
+                loadCurrentFile();
+            }
         }
 
         function updateNavUI() {
@@ -557,12 +594,7 @@
         });
 
         btnNextFile.addEventListener('click', () => {
-            const goNext = () => {
-                if (currentFileIndex < fileQueue.length - 1) {
-                    currentFileIndex++;
-                    loadCurrentFile();
-                }
-            };
+            const goNext = goToNextFile;
 
             if (isModifiedSinceLastProcess) {
                 showConfirmModal("您已調整過端點但尚未執行校正，確定要切換圖片嗎？\n(未執行的變更將會遺失)", goNext);
@@ -619,29 +651,181 @@
             resetCornersToFullBoundary();
             autoUpdateParams();
             renderEditor();
-            isModifiedSinceLastProcess = true; 
+            markSettingsChanged(); 
             savedCorners[currentFileIndex] = JSON.parse(JSON.stringify(corners)); 
             updateStatus("已將定位端點重置", "🔄");
         });
 
         // ==========================================
+        // 邊緣偵測演算法輔助函式
+        // ==========================================
+
+        // 灰階世界白平衡：修正現場暖色調燈光造成的偏色，讓偵測用的對比更穩定
+        function grayWorldBalance(rgbMat) {
+            try {
+                let channels = new cv.MatVector();
+                cv.split(rgbMat, channels);
+                let r = channels.get(0), g = channels.get(1), b = channels.get(2);
+                let meanR = cv.mean(r)[0], meanG = cv.mean(g)[0], meanB = cv.mean(b)[0];
+                let grayTarget = (meanR + meanG + meanB) / 3;
+                if (meanR < 1 || meanG < 1 || meanB < 1) {
+                    channels.delete(); r.delete(); g.delete(); b.delete();
+                    return rgbMat.clone();
+                }
+                let scaleR = Math.min(2.0, Math.max(0.5, grayTarget / meanR));
+                let scaleG = Math.min(2.0, Math.max(0.5, grayTarget / meanG));
+                let scaleB = Math.min(2.0, Math.max(0.5, grayTarget / meanB));
+                r.convertTo(r, -1, scaleR, 0);
+                g.convertTo(g, -1, scaleG, 0);
+                b.convertTo(b, -1, scaleB, 0);
+
+                let mergeVec = new cv.MatVector();
+                mergeVec.push_back(r); mergeVec.push_back(g); mergeVec.push_back(b);
+                let merged = new cv.Mat();
+                cv.merge(mergeVec, merged);
+
+                channels.delete(); mergeVec.delete(); r.delete(); g.delete(); b.delete();
+                return merged;
+            } catch (e) {
+                console.warn("白平衡校正失敗，改用原圖:", e);
+                return rgbMat.clone();
+            }
+        }
+
+        function computeQuadAngles(pts) {
+            let angles = [];
+            for (let i = 0; i < 4; i++) {
+                let prev = pts[(i + 3) % 4];
+                let curr = pts[i];
+                let next = pts[(i + 1) % 4];
+                let v1 = { x: prev.x - curr.x, y: prev.y - curr.y };
+                let v2 = { x: next.x - curr.x, y: next.y - curr.y };
+                let dot = v1.x * v2.x + v1.y * v2.y;
+                let mag1 = Math.hypot(v1.x, v1.y); let mag2 = Math.hypot(v2.x, v2.y);
+                if (mag1 < 1e-6 || mag2 < 1e-6) { angles.push(0); continue; }
+                let cosA = Math.max(-1, Math.min(1, dot / (mag1 * mag2)));
+                angles.push(Math.acos(cosA) * 180 / Math.PI);
+            }
+            return angles;
+        }
+
+        function shoelaceArea(pts) {
+            let sum = 0;
+            for (let i = 0; i < pts.length; i++) {
+                let j = (i + 1) % pts.length;
+                sum += pts[i].x * pts[j].y - pts[j].x * pts[i].y;
+            }
+            return sum / 2;
+        }
+
+        // 排除角度過度扁平(接近共線的偽四邊形)或面積過小的候選
+        function isPlausibleQuad(pts, minArea) {
+            let angles = computeQuadAngles(pts);
+            for (let a of angles) { if (a < 25 || a > 155) return false; }
+            if (Math.abs(shoelaceArea(pts)) < minArea) return false;
+            return true;
+        }
+
+        // 用邊界框粗略估計候選區域的飽和度/亮度，用來排除高彩度的背景物件(例如橘色板夾)
+        function regionSaturationBrightness(hsvMat, pts, matW, matH) {
+            let minX = Math.max(0, Math.floor(Math.min(...pts.map(p => p.x))));
+            let maxX = Math.min(matW - 1, Math.ceil(Math.max(...pts.map(p => p.x))));
+            let minY = Math.max(0, Math.floor(Math.min(...pts.map(p => p.y))));
+            let maxY = Math.min(matH - 1, Math.ceil(Math.max(...pts.map(p => p.y))));
+            if (maxX <= minX || maxY <= minY) return { sat: 128, val: 128 };
+            let roi = hsvMat.roi(new cv.Rect(minX, minY, maxX - minX, maxY - minY));
+            let meanVal = cv.mean(roi);
+            roi.delete();
+            return { sat: meanVal[1], val: meanVal[2] };
+        }
+
+        function lineIntersection(l1, l2) {
+            let x1 = l1.x1, y1 = l1.y1, x2 = l1.x2, y2 = l1.y2;
+            let x3 = l2.x1, y3 = l2.y1, x4 = l2.x2, y4 = l2.y2;
+            let denom = (x1 - x2) * (y3 - y4) - (y1 - y2) * (x3 - x4);
+            if (Math.abs(denom) < 1e-6) return null;
+            let px = ((x1 * y2 - y1 * x2) * (x3 - x4) - (x1 - x2) * (x3 * y4 - y3 * x4)) / denom;
+            let py = ((x1 * y2 - y1 * x2) * (y3 - y4) - (y1 - y2) * (x3 * y4 - y3 * x4)) / denom;
+            return { x: px, y: py };
+        }
+
+        // Hough 直線備援：文件貼齊畫面邊緣、輪廓被截斷時，改用直線交點推算四角
+        function houghLineFallback(edgeMat, width, height) {
+            try {
+                let lines = new cv.Mat();
+                cv.HoughLinesP(edgeMat, lines, 1, Math.PI / 180, 35, Math.min(width, height) * 0.35, 20);
+                let horizontals = [], verticals = [];
+                for (let i = 0; i < lines.rows; i++) {
+                    let x1 = lines.data32S[i*4], y1 = lines.data32S[i*4+1];
+                    let x2 = lines.data32S[i*4+2], y2 = lines.data32S[i*4+3];
+                    let angle = Math.atan2(y2 - y1, x2 - x1) * 180 / Math.PI;
+                    let a = Math.abs(angle);
+                    if (a < 25 || a > 155) horizontals.push({ x1, y1, x2, y2 });
+                    else if (a > 65 && a < 115) verticals.push({ x1, y1, x2, y2 });
+                }
+                lines.delete();
+                if (horizontals.length < 2 || verticals.length < 2) return null;
+
+                horizontals.sort((p, q) => ((p.y1+p.y2)/2) - ((q.y1+q.y2)/2));
+                verticals.sort((p, q) => ((p.x1+p.x2)/2) - ((q.x1+q.x2)/2));
+
+                let topLine = horizontals[0];
+                let bottomLine = horizontals[horizontals.length - 1];
+                let leftLine = verticals[0];
+                let rightLine = verticals[verticals.length - 1];
+
+                let vertGap = Math.abs(((bottomLine.y1+bottomLine.y2)/2) - ((topLine.y1+topLine.y2)/2));
+                let horizGap = Math.abs(((rightLine.x1+rightLine.x2)/2) - ((leftLine.x1+leftLine.x2)/2));
+                if (vertGap < height * 0.25 || horizGap < width * 0.25) return null;
+
+                let tl = lineIntersection(topLine, leftLine);
+                let tr = lineIntersection(topLine, rightLine);
+                let br = lineIntersection(bottomLine, rightLine);
+                let bl = lineIntersection(bottomLine, leftLine);
+                if (!tl || !tr || !br || !bl) return null;
+
+                let pts = [tl, tr, br, bl];
+                for (let p of pts) {
+                    if (!isFinite(p.x) || !isFinite(p.y)) return null;
+                    if (p.x < -width * 0.5 || p.x > width * 1.5 || p.y < -height * 0.5 || p.y > height * 1.5) return null;
+                }
+                if (!isPlausibleQuad(pts, width * height * 0.1)) return null;
+                return pts;
+            } catch (e) {
+                console.warn("Hough 線條備援偵測失敗:", e);
+                return null;
+            }
+        }
+
+        // ==========================================
         // 邊緣偵測演算法
         // ==========================================
         function adobeScanStyleDetect(src) {
+            let small, smallRGB, balanced, gray, blurred, hsv, cannyEdges, threshEdges, mergedEdges, morph, kernel, contours, hierarchy;
+            let cntsArray = [];
             try {
                 let maxDim = 800;
                 let ratio = Math.max(1.0, Math.max(src.cols, src.rows) / maxDim);
                 let width = Math.round(src.cols / ratio);
                 let height = Math.round(src.rows / ratio);
-                
-                let small = new cv.Mat();
-                cv.resize(src, small, new cv.Size(width, height), 0, 0, cv.INTER_AREA);
-                
-                let gray = new cv.Mat();
-                cv.cvtColor(small, gray, cv.COLOR_RGBA2GRAY, 0);
 
-                let blurred = new cv.Mat();
+                small = new cv.Mat();
+                cv.resize(src, small, new cv.Size(width, height), 0, 0, cv.INTER_AREA);
+
+                smallRGB = new cv.Mat();
+                cv.cvtColor(small, smallRGB, cv.COLOR_RGBA2RGB, 0);
+
+                // 偵測前先做灰階世界白平衡，降低現場暖色調燈光造成的偏色與對比不足
+                balanced = grayWorldBalance(smallRGB);
+
+                gray = new cv.Mat();
+                cv.cvtColor(balanced, gray, cv.COLOR_RGB2GRAY, 0);
+
+                blurred = new cv.Mat();
                 cv.GaussianBlur(gray, blurred, new cv.Size(5, 5), 0, 0, cv.BORDER_DEFAULT);
+
+                hsv = new cv.Mat();
+                cv.cvtColor(balanced, hsv, cv.COLOR_RGB2HSV, 0);
 
                 let meanMat = new cv.Mat(); let stdMat = new cv.Mat();
                 cv.meanStdDev(blurred, meanMat, stdMat);
@@ -650,103 +834,156 @@
                 let upper = Math.min(255, meanVal * 1.3);
                 meanMat.delete(); stdMat.delete();
 
-                let cannyEdges = new cv.Mat();
+                cannyEdges = new cv.Mat();
                 cv.Canny(blurred, cannyEdges, lower, upper);
 
-                let threshEdges = new cv.Mat();
+                threshEdges = new cv.Mat();
                 cv.adaptiveThreshold(blurred, threshEdges, 255, cv.ADAPTIVE_THRESH_GAUSSIAN_C, cv.THRESH_BINARY_INV, 15, 4);
 
-                let mergedEdges = new cv.Mat();
+                mergedEdges = new cv.Mat();
                 cv.bitwise_or(cannyEdges, threshEdges, mergedEdges);
 
-                let morph = new cv.Mat();
-                let kernel = cv.getStructuringElement(cv.MORPH_RECT, new cv.Size(7, 7));
+                morph = new cv.Mat();
+                kernel = cv.getStructuringElement(cv.MORPH_RECT, new cv.Size(7, 7));
                 cv.dilate(mergedEdges, morph, kernel, new cv.Point(-1, -1), 1);
                 cv.erode(morph, morph, kernel, new cv.Point(-1, -1), 1);
 
-                let contours = new cv.MatVector();
-                let hierarchy = new cv.Mat();
+                contours = new cv.MatVector();
+                hierarchy = new cv.Mat();
                 cv.findContours(morph, contours, hierarchy, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE);
 
-                let cntsArray = [];
                 for (let i = 0; i < contours.size(); ++i) {
                     let cnt = contours.get(i);
                     let area = cv.contourArea(cnt);
-                    cntsArray.push({ cnt: cnt, area: area, index: i });
+                    cntsArray.push({ cnt: cnt, area: area });
                 }
                 cntsArray.sort((a, b) => b.area - a.area);
 
-                let bestPts = null;
+                // 收集所有候選四邊形，依「面積 + 低飽和度」評分挑選最佳解，
+                // 避免像橘色板夾這類高彩度矩形物件被誤判為文件邊界
+                let candidates = [];
+                const CANDIDATE_COUNT = Math.min(8, cntsArray.length);
 
-                for (let i = 0; i < Math.min(5, cntsArray.length); i++) {
+                for (let i = 0; i < CANDIDATE_COUNT; i++) {
                     let cnt = cntsArray[i].cnt;
                     let area = cntsArray[i].area;
-                    if (area < (width * height * 0.05)) continue;
+                    if (area < (width * height * 0.04)) continue;
 
                     let hull = new cv.Mat();
                     cv.convexHull(cnt, hull, false, true);
-
                     let peri = cv.arcLength(hull, true);
-                    let approx = new cv.Mat();
-                    cv.approxPolyDP(hull, approx, 0.025 * peri, true);
 
-                    if (approx.rows === 4) {
-                        bestPts = [];
-                        for (let j = 0; j < 4; j++) {
-                            bestPts.push({ x: approx.data32S[j*2] * ratio, y: approx.data32S[j*2+1] * ratio });
-                        }
-                        approx.delete(); hull.delete(); break;
-                    } else if (approx.rows === 3) {
-                        let p0 = { x: approx.data32S[0], y: approx.data32S[1] };
-                        let p1 = { x: approx.data32S[2], y: approx.data32S[3] };
-                        let p2 = { x: approx.data32S[4], y: approx.data32S[5] };
-                        let d01 = Math.hypot(p0.x - p1.x, p0.y - p1.y);
-                        let d12 = Math.hypot(p1.x - p2.x, p1.y - p2.y);
-                        let d20 = Math.hypot(p2.x - p0.x, p2.y - p0.y);
-                        let A, B, C;
-                        if (d01 >= d12 && d01 >= d20) { B = p2; A = p0; C = p1; } 
-                        else if (d12 >= d01 && d12 >= d20) { B = p0; A = p1; C = p2; } 
-                        else { B = p1; A = p2; C = p0; }
-                        let Dx = A.x + C.x - B.x; let Dy = A.y + C.y - B.y;
-                        bestPts = [ { x: A.x * ratio, y: A.y * ratio }, { x: B.x * ratio, y: B.y * ratio }, { x: C.x * ratio, y: C.y * ratio }, { x: Dx * ratio, y: Dy * ratio } ];
-                        approx.delete(); hull.delete(); break;
-                    }
-                    approx.delete(); hull.delete();
-                }
-
-                small.delete(); gray.delete(); blurred.delete(); cannyEdges.delete(); 
-                threshEdges.delete(); mergedEdges.delete(); kernel.delete(); 
-                morph.delete(); contours.delete(); hierarchy.delete();
-
-                if (!bestPts && cntsArray.length > 0) {
-                    let largestCnt = cntsArray[0].cnt;
-                    if (cntsArray[0].area > (width * height * 0.15)) {
-                        let hull = new cv.Mat();
-                        cv.convexHull(largestCnt, hull, false, true);
-                        let points = [];
-                        for (let j = 0; j < hull.rows; j++) { points.push({ x: hull.data32S[j*2] * ratio, y: hull.data32S[j*2+1] * ratio }); }
-                        hull.delete();
-                        if (points.length > 0) {
-                            const wReal = src.cols; const hReal = src.rows;
-                            const physicalCorners = [ { x: 0, y: 0 }, { x: wReal, y: 0 }, { x: wReal, y: hReal }, { x: 0, y: hReal } ];
-                            bestPts = [];
-                            for (let k = 0; k < 4; k++) {
-                                let target = physicalCorners[k]; let closestPoint = null; let minDist = Infinity;
-                                for (let p of points) {
-                                    let dist = Math.hypot(p.x - target.x, p.y - target.y);
-                                    if (dist < minDist) { minDist = dist; closestPoint = p; }
-                                }
-                                if (minDist > Math.max(wReal, hReal) * 0.4) { bestPts.push({ x: target.x, y: target.y }); } 
-                                else { bestPts.push({ x: closestPoint.x, y: closestPoint.y }); }
+                    // 漸進式放寬逼近容差，提高抓到標準四邊形的機率
+                    for (let epsFactor = 0.01; epsFactor <= 0.05; epsFactor += 0.005) {
+                        let approx = new cv.Mat();
+                        cv.approxPolyDP(hull, approx, epsFactor * peri, true);
+                        if (approx.rows === 4) {
+                            let pts = [];
+                            for (let j = 0; j < 4; j++) pts.push({ x: approx.data32S[j*2], y: approx.data32S[j*2+1] });
+                            approx.delete();
+                            if (isPlausibleQuad(pts, width * height * 0.04)) {
+                                let sb = regionSaturationBrightness(hsv, pts, width, height);
+                                candidates.push({ pts: pts, area: area, saturation: sb.sat });
                             }
+                            break;
                         }
+                        approx.delete();
+                    }
+                    hull.delete();
+                }
+
+                let bestPts = null;
+                let confidence = null;
+
+                if (candidates.length > 0) {
+                    let maxArea = Math.max(...candidates.map(c => c.area));
+                    candidates.forEach(c => {
+                        let areaScore = c.area / maxArea;
+                        let satScore = 1 - Math.min(1, c.saturation / 200);
+                        c.score = areaScore * 0.65 + satScore * 0.35;
+                    });
+                    candidates.sort((a, b) => b.score - a.score);
+                    bestPts = candidates[0].pts.map(p => ({ x: p.x * ratio, y: p.y * ratio }));
+                    confidence = 'high';
+                }
+
+                // 三角形逼近的舊有備援 (紙張被切掉一角時的救援手段)
+                if (!bestPts) {
+                    for (let i = 0; i < CANDIDATE_COUNT; i++) {
+                        let cnt = cntsArray[i].cnt;
+                        let area = cntsArray[i].area;
+                        if (area < (width * height * 0.05)) continue;
+                        let hull = new cv.Mat();
+                        cv.convexHull(cnt, hull, false, true);
+                        let peri = cv.arcLength(hull, true);
+                        let approx = new cv.Mat();
+                        cv.approxPolyDP(hull, approx, 0.03 * peri, true);
+                        if (approx.rows === 3) {
+                            let p0 = { x: approx.data32S[0], y: approx.data32S[1] };
+                            let p1 = { x: approx.data32S[2], y: approx.data32S[3] };
+                            let p2 = { x: approx.data32S[4], y: approx.data32S[5] };
+                            let d01 = Math.hypot(p0.x - p1.x, p0.y - p1.y);
+                            let d12 = Math.hypot(p1.x - p2.x, p1.y - p2.y);
+                            let d20 = Math.hypot(p2.x - p0.x, p2.y - p0.y);
+                            let A, B, C;
+                            if (d01 >= d12 && d01 >= d20) { B = p2; A = p0; C = p1; }
+                            else if (d12 >= d01 && d12 >= d20) { B = p0; A = p1; C = p2; }
+                            else { B = p1; A = p2; C = p0; }
+                            let Dx = A.x + C.x - B.x; let Dy = A.y + C.y - B.y;
+                            bestPts = [
+                                { x: A.x * ratio, y: A.y * ratio }, { x: B.x * ratio, y: B.y * ratio },
+                                { x: C.x * ratio, y: C.y * ratio }, { x: Dx * ratio, y: Dy * ratio }
+                            ];
+                            confidence = 'weak';
+                            approx.delete(); hull.delete();
+                            break;
+                        }
+                        approx.delete(); hull.delete();
                     }
                 }
 
-                if (bestPts) return orderPts(bestPts);
+                // Hough 直線備援：文件貼齊畫面邊緣、輪廓被邊界截斷時使用
+                if (!bestPts) {
+                    let houghPts = houghLineFallback(morph, width, height);
+                    if (houghPts) {
+                        bestPts = houghPts.map(p => ({ x: p.x * ratio, y: p.y * ratio }));
+                        confidence = 'hough';
+                    }
+                }
+
+                // 最後手段：取最大輪廓的凸包，將其角點對齊到畫面四角
+                if (!bestPts && cntsArray.length > 0 && cntsArray[0].area > (width * height * 0.15)) {
+                    let hull = new cv.Mat();
+                    cv.convexHull(cntsArray[0].cnt, hull, false, true);
+                    let points = [];
+                    for (let j = 0; j < hull.rows; j++) { points.push({ x: hull.data32S[j*2] * ratio, y: hull.data32S[j*2+1] * ratio }); }
+                    hull.delete();
+                    if (points.length > 0) {
+                        const wReal = src.cols; const hReal = src.rows;
+                        const physicalCorners = [ { x: 0, y: 0 }, { x: wReal, y: 0 }, { x: wReal, y: hReal }, { x: 0, y: hReal } ];
+                        bestPts = [];
+                        for (let k = 0; k < 4; k++) {
+                            let target = physicalCorners[k]; let closestPoint = null; let minDist = Infinity;
+                            for (let p of points) {
+                                let dist = Math.hypot(p.x - target.x, p.y - target.y);
+                                if (dist < minDist) { minDist = dist; closestPoint = p; }
+                            }
+                            if (minDist > Math.max(wReal, hReal) * 0.4) { bestPts.push({ x: target.x, y: target.y }); }
+                            else { bestPts.push({ x: closestPoint.x, y: closestPoint.y }); }
+                        }
+                        confidence = 'weak';
+                    }
+                }
+
+                if (bestPts) return { corners: orderPts(bestPts), confidence: confidence };
                 return null;
-            } catch (e) { 
-                console.error("智慧邊緣分析異常:", e); return null; 
+            } catch (e) {
+                console.error("智慧邊緣分析異常:", e); return null;
+            } finally {
+                // 統一釋放所有候選輪廓 Mat 與中間影像，修正原本的記憶體洩漏
+                cntsArray.forEach(item => { if (item.cnt && typeof item.cnt.delete === 'function') { try { item.cnt.delete(); } catch(_) {} } });
+                [small, smallRGB, balanced, gray, blurred, hsv, cannyEdges, threshEdges, mergedEdges, morph, kernel, contours, hierarchy]
+                    .forEach(m => { if (m && typeof m.delete === 'function') { try { m.delete(); } catch(_) {} } });
             }
         }
 
@@ -841,7 +1078,7 @@
             activeH = null; 
             document.getElementById('magnifier-container').classList.add('hidden');
             autoUpdateParams(); 
-            isModifiedSinceLastProcess = true; 
+            markSettingsChanged(); 
             savedCorners[currentFileIndex] = JSON.parse(JSON.stringify(corners)); 
             document.removeEventListener('mousemove', drag); 
             document.removeEventListener('mouseup', stopDrag); 
@@ -894,19 +1131,84 @@
             return dst;
         }
 
+        // 百分位對比拉伸：讓背景更接近純白、文字更黑，取代單純除法校正後偏灰的問題
+        function contrastStretchPercentile(mat, lowPct, highPct) {
+            try {
+                let gray = new cv.Mat();
+                if (mat.channels() >= 3) cv.cvtColor(mat, gray, cv.COLOR_RGB2GRAY);
+                else mat.copyTo(gray);
+
+                const step = 4; // 取樣加速，不影響統計穩定性
+                let hist = new Array(256).fill(0);
+                for (let i = 0; i < gray.rows; i += step) {
+                    for (let j = 0; j < gray.cols; j += step) {
+                        hist[gray.ucharPtr(i, j)[0]]++;
+                    }
+                }
+                gray.delete();
+
+                let total = hist.reduce((a, b) => a + b, 0);
+                if (total === 0) return mat;
+
+                let lowTarget = total * (lowPct / 100);
+                let highTarget = total * (highPct / 100);
+
+                let cum = 0, lowVal = 0;
+                for (let v = 0; v < 256; v++) { cum += hist[v]; if (cum >= lowTarget) { lowVal = v; break; } }
+                cum = 0; let highVal = 255;
+                for (let v = 0; v < 256; v++) { cum += hist[v]; if (cum >= highTarget) { highVal = v; break; } }
+
+                if (highVal <= lowVal + 5) return mat; // 對比已足夠或資料異常，不拉伸避免反效果
+
+                let scale = 255.0 / (highVal - lowVal);
+                let dst = new cv.Mat();
+                mat.convertTo(dst, -1, scale, -lowVal * scale);
+                mat.delete();
+                return dst;
+            } catch (e) {
+                console.warn("對比拉伸失敗，使用原圖:", e);
+                return mat;
+            }
+        }
+
         function enhanceColorDocument(src) {
+            // 背景估計改用「縮小 + 中值模糊 + 放大」取代箱型模糊(box blur)，
+            // 大幅降低文字邊緣暈影(halo)，背景估計也更貼近真實紙面亮度
+            let smallScale = 0.35;
+            let small = new cv.Mat();
+            let smallSize = new cv.Size(
+                Math.max(1, Math.round(src.cols * smallScale)),
+                Math.max(1, Math.round(src.rows * smallScale))
+            );
+            cv.resize(src, small, smallSize, 0, 0, cv.INTER_AREA);
+
+            let smallK = Math.floor(Math.max(smallSize.width, smallSize.height) / 8);
+            if (smallK % 2 === 0) smallK++;
+            if (smallK < 9) smallK = 9;
+            if (smallK > 49) smallK = 49; // medianBlur 的 kernel 太大會非常慢，設上限
+
+            let smallBg = new cv.Mat();
+            cv.medianBlur(small, smallBg, smallK);
+
             let bg = new cv.Mat();
-            let kSize = Math.floor(Math.max(src.cols, src.rows) / 35);
-            if (kSize % 2 === 0) kSize++; if (kSize < 21) kSize = 21;
-            cv.blur(src, bg, new cv.Size(kSize, kSize));
+            cv.resize(smallBg, bg, new cv.Size(src.cols, src.rows), 0, 0, cv.INTER_LINEAR);
+            small.delete(); smallBg.delete();
+
             let dst = new cv.Mat();
             cv.divide(src, bg, dst, 255.0, -1);
             bg.delete();
+
+            dst = contrastStretchPercentile(dst, 0.5, 99.5);
             return dst;
         }
 
         // --- 執行處理 (綁定批次儲存) ---
         btnProcess.addEventListener('click', () => {
+            // 已完成校正且設定未變更時，這顆按鈕直接當「下一張」使用
+            if (btnProcessMode === 'next') {
+                goToNextFile();
+                return;
+            }
             if (!srcMat) return;
             updateStatus(`正在處理 第 ${currentFileIndex+1} 張...`, "⏳");
             
@@ -956,6 +1258,7 @@
                 showProcessedResult(dataURL);
 
                 isModifiedSinceLastProcess = false; 
+                setProcessButtonMode(currentFileIndex < fileQueue.length - 1 ? 'next' : 'process');
                 updateStatus(`第 ${currentFileIndex+1} 張校正完成！`, "✅", "success");
                 
                 sT.delete(); dT.delete(); m.delete(); warped.delete(); cropped.delete(); 
@@ -1090,7 +1393,7 @@
                 corners = orderPts(corners.map(p => ({ x: oldW - p.x, y: oldH - p.y, id: p.id })));
             }
             srcMat.delete(); srcMat = dst;
-            isModifiedSinceLastProcess = true; 
+            markSettingsChanged(); 
             savedCorners[currentFileIndex] = JSON.parse(JSON.stringify(corners)); 
             renderEditor();
         }
@@ -1098,7 +1401,7 @@
         btnRotate90.addEventListener('click', () => rotateImage(90));
         btnRotate180.addEventListener('click', () => rotateImage(180));
         btnResetParams.addEventListener('click', () => {
-            if (!srcMat) return; autoUpdateParams(); updateStatus("已還原至最佳推薦參數", "🔄", "success");
+            if (!srcMat) return; autoUpdateParams(); markSettingsChanged(); updateStatus("已還原至最佳推薦參數", "🔄", "success");
         });
 
         // ==========================================
