@@ -112,6 +112,7 @@
                     <div class="flex flex-wrap gap-2 mb-4">
                         <button id="btn-rotate-90" class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-3 py-2 rounded-lg transition text-xs font-medium border border-gray-300 disabled:opacity-50" disabled>旋轉 90°</button>
                         <button id="btn-rotate-180" class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-3 py-2 rounded-lg transition text-xs font-medium border border-gray-300 disabled:opacity-50" disabled>旋轉 180°</button>
+                        <button id="btn-next-candidate" class="bg-indigo-50 hover:bg-indigo-100 text-indigo-700 px-3 py-2 rounded-lg transition text-xs font-medium border border-indigo-200 disabled:opacity-50" disabled>換下一個候選框</button>
                         <button id="btn-reset-corners" class="bg-red-50 hover:bg-red-100 text-red-600 px-3 py-2 rounded-lg transition text-xs font-medium border border-red-200 disabled:opacity-50" disabled>全圖重置</button>
                     </div>
                 </div>
@@ -288,6 +289,8 @@
         let currentFileIndex = 0;  
         let processedResults = {}; 
         let savedCorners = {}; 
+        let candidateLists = {};   // 每張圖的偵測候選框清單
+        let candidateIdx = {};     // 目前採用第幾個候選
         let isModifiedSinceLastProcess = false; 
         let btnProcessMode = 'process'; // 'process' = 執行校正 / 'next' = 下一張
 
@@ -308,6 +311,7 @@
         const btnRotate90 = document.getElementById('btn-rotate-90');
         const btnRotate180 = document.getElementById('btn-rotate-180');
         const btnResetCorners = document.getElementById('btn-reset-corners');
+        const btnNextCandidate = document.getElementById('btn-next-candidate');
         
         const btnDownload = document.getElementById('btn-download');
         const btnPrint = document.getElementById('btn-print');
@@ -505,6 +509,8 @@
                         let detected = adobeScanStyleDetect(srcMat);
                         if (detected) {
                             corners = detected.corners;
+                            candidateLists[currentFileIndex] = JSON.parse(JSON.stringify(detected.alternatives || []));
+                            candidateIdx[currentFileIndex] = 0;
                             if (detected.confidence === 'high') {
                                 updateStatus(`[第 ${currentFileIndex+1} 張] 邊界辨識成功！`, "✨", "success");
                             } else if (detected.confidence === 'frame') {
@@ -528,6 +534,7 @@
                     btnRotate90.disabled = false;
                     btnRotate180.disabled = false;
                     btnResetCorners.disabled = false;
+                    updateCandidateButton();
                     btnResetParams.disabled = false;
                     removeShadowCheck.disabled = false;
                     blockSizeInput.disabled = false;
@@ -648,6 +655,27 @@
                 {x: insetW, y: h - insetH, id: 3}
             ];
         }
+
+        function updateCandidateButton() {
+            const list = candidateLists[currentFileIndex];
+            const n = list ? list.length : 0;
+            btnNextCandidate.disabled = !(srcMat && n > 1);
+            btnNextCandidate.textContent = n > 1 ? `換下一個候選框 (${(candidateIdx[currentFileIndex] || 0) + 1}/${n})` : '換下一個候選框';
+        }
+
+        btnNextCandidate.addEventListener('click', () => {
+            const list = candidateLists[currentFileIndex];
+            if (!srcMat || !list || list.length < 2) return;
+            const idx = ((candidateIdx[currentFileIndex] || 0) + 1) % list.length;
+            candidateIdx[currentFileIndex] = idx;
+            corners = JSON.parse(JSON.stringify(list[idx].corners));
+            autoUpdateParams();
+            renderEditor();
+            markSettingsChanged();
+            savedCorners[currentFileIndex] = JSON.parse(JSON.stringify(corners));
+            updateCandidateButton();
+            updateStatus(`候選框 ${idx + 1}/${list.length}（${list[idx].label}）— 不對可再按一次，或直接拖曳端點微調`, "🔁");
+        });
 
         btnResetCorners.addEventListener('click', () => {
             resetCornersToFullBoundary();
@@ -1192,7 +1220,26 @@
                     }
                 }
 
-                if (bestPts) return { corners: orderPts(bestPts), confidence: confidence, score: bestScore, side: sideDbg, debug: scored.slice(0, 8).map(s => ({ src: s.src, refined: s.refined, score: +s.score.toFixed(2), sup: +s.sup.toFixed(2), supMin: +s.supMin.toFixed(2), con: s.con === null ? null : Math.round(s.con), sat: Math.round(s.sat), area: +s.area.toFixed(2), q: s.q.map(p => [Math.round(p.x), Math.round(p.y)]) })) };
+                // ---- 候選清單：第一個是目前採用的框，其餘依分數排序、去除近似重複，最後附「整張畫面」 ----
+                let alternatives = [];
+                if (bestPts) {
+                    const tol = 0.04 * Math.max(src.cols, src.rows);
+                    const addAlt = (cs, label, score) => {
+                        const isDup = alternatives.some(a => a.corners.reduce((s, p, i) => s + Math.hypot(p.x - cs[i].x, p.y - cs[i].y), 0) / 4 < tol);
+                        if (!isDup) alternatives.push({ corners: cs, label: label, score: score });
+                    };
+                    addAlt(orderPts(bestPts), '目前最佳', bestScore);
+                    for (const s of scored) {
+                        if (alternatives.length >= 6) break;
+                        if (s.area < 0.1) continue;
+                        let q2 = expandForContent(feats, s.q).quad;
+                        addAlt(orderPts(q2.map(p => ({ x: p.x * ratio, y: p.y * ratio }))), '候選', s.score);
+                    }
+                    const ix = src.cols * 0.005, iy = src.rows * 0.005;
+                    addAlt(orderPts([{ x: ix, y: iy }, { x: src.cols - ix, y: iy }, { x: src.cols - ix, y: src.rows - iy }, { x: ix, y: src.rows - iy }]), '整張畫面', 0);
+                }
+
+                if (bestPts) return { corners: orderPts(bestPts), confidence: confidence, score: bestScore, alternatives: alternatives, side: sideDbg, debug: scored.slice(0, 8).map(s => ({ src: s.src, refined: s.refined, score: +s.score.toFixed(2), sup: +s.sup.toFixed(2), supMin: +s.supMin.toFixed(2), con: s.con === null ? null : Math.round(s.con), sat: Math.round(s.sat), area: +s.area.toFixed(2), q: s.q.map(p => [Math.round(p.x), Math.round(p.y)]) })) };
                 return null;
             } catch (e) {
                 console.error("智慧邊緣分析異常:", e); return null;
@@ -1615,14 +1662,21 @@
         function rotateImage(mode) {
             if (!srcMat) return;
             let dst = new cv.Mat();
+            let mapPt = null;
             if (mode === 90) {
                 cv.rotate(srcMat, dst, cv.ROTATE_90_CLOCKWISE);
                 let oldH = srcMat.rows;
-                corners = orderPts(corners.map(p => ({ x: oldH - p.y, y: p.x, id: p.id })));
+                mapPt = (p) => ({ x: oldH - p.y, y: p.x });
             } else if (mode === 180) {
                 cv.rotate(srcMat, dst, cv.ROTATE_180);
                 let oldW = srcMat.cols; let oldH = srcMat.rows;
-                corners = orderPts(corners.map(p => ({ x: oldW - p.x, y: oldH - p.y, id: p.id })));
+                mapPt = (p) => ({ x: oldW - p.x, y: oldH - p.y });
+            }
+            if (mapPt) {
+                corners = orderPts(corners.map(p => Object.assign(mapPt(p), { id: p.id })));
+                // 候選框清單跟著一起轉，旋轉後切換候選才不會錯位
+                const list = candidateLists[currentFileIndex];
+                if (list) list.forEach(c => { c.corners = orderPts(c.corners.map(p => mapPt(p))); });
             }
             srcMat.delete(); srcMat = dst;
             markSettingsChanged(); 
