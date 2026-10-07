@@ -939,6 +939,68 @@
             return isPlausibleQuad(out, f.w * f.h * 0.04) ? out : null;
         }
 
+        // 內容保護：邊緣外側仍是「紙」且緊鄰著文字(代表框切到內容)時，往外擴到出現空白邊界為止。
+        // 外側若已不是紙的亮度(背景/桌面)就不處理，避免把桌面紋理當成文字。
+        // 回傳 { quad, flagged }：flagged=true 代表仍有邊切在內容上、無法自動修正
+        function expandForContent(f, quad) {
+            const R = Math.max(14, Math.round(0.09 * Math.max(f.w, f.h)));
+            const BLANK = Math.max(10, Math.round(0.025 * Math.max(f.w, f.h)));   // 需要連續這麼多列空白才算「真正的邊界」(行距不算)
+            const cx = quad.reduce((s, p) => s + p.x, 0) / 4, cy = quad.reduce((s, p) => s + p.y, 0) / 4;
+            const N = 60;
+            let flagged = false, changed = false;
+            const lines = [], dbg = [];
+            const median = (arr) => { arr.sort((p, q) => p - q); return arr[arr.length >> 1]; };
+            for (let i = 0; i < 4; i++) {
+                let a = quad[i], b = quad[(i + 1) % 4];
+                let vx = b.x - a.x, vy = b.y - a.y, L = Math.hypot(vx, vy);
+                let nx = -vy / L, ny = vx / L;
+                if (((a.x + b.x) / 2 - cx) * nx + ((a.y + b.y) / 2 - cy) * ny < 0) { nx = -nx; ny = -ny; } // 指向外側
+                // 某偏移量(沿外法線)的「文字像素比例」與亮度中位數；比例過高(>0.6)視為邊緣線而非文字
+                const probe = (k) => {
+                    let ink = 0, vals = [];
+                    for (let s = 0; s < N; s++) {
+                        let u = 0.08 + 0.84 * s / (N - 1);
+                        let x = Math.round(a.x + vx * u + nx * k), y = Math.round(a.y + vy * u + ny * k);
+                        if (x < 0 || x >= f.w || y < 0 || y >= f.h) return null;
+                        vals.push(f.gray.data[y * f.w + x]);
+                        if (f.ink.data[y * f.w + x] > 0) ink++;
+                    }
+                    let r = ink / N;
+                    vals.sort((p, q) => p - q);   // 取第 75 百分位當「紙面亮度」，不受密集文字拉低
+                    return { r: r > 0.6 ? 0 : r, med: vals[Math.floor(vals.length * 0.75)] };
+                };
+                let inSum = 0, inN = 0, inMeds = [];
+                for (let k = -14; k <= -2; k++) { let v = probe(k); if (v) { inSum += v.r; inN++; inMeds.push(v.med); } }
+                let inDensity = inN ? inSum / inN : 0;
+                let paperLevel = inMeds.length ? median(inMeds) : 0;
+                const paperLike = (v) => v && Math.abs(v.med - paperLevel) <= 14;
+                let adj = 0;
+                for (let k = 0; k <= 8; k++) { let v = probe(k); if (paperLike(v) && v.r > adj) adj = v.r; }
+                let shift = 0;
+                if (inDensity >= 0.015 && adj >= 0.04) {
+                    let blank = 0, found = null, ended = false;
+                    for (let k = 0; k <= R; k++) {
+                        let v = probe(k);
+                        if (!v) { ended = true; break; }
+                        if (!paperLike(v)) { ended = true; break; }   // 紙已結束(背景開始)：邊緣本來就對，不處理
+                        if (v.r < 0.02) { blank++; if (blank >= BLANK) { found = k - BLANK + 1 + 3; break; } } else blank = 0;
+                    }
+                    if (found !== null) { shift = found; changed = true; }
+                    else if (!ended) { flagged = true; }               // 一路都是紙+文字，找不到空白邊界
+                }
+                dbg.push({ side: i, inD: +inDensity.toFixed(3), adj: +adj.toFixed(3), shift: shift });
+                lines.push({ x1: a.x + nx * shift, y1: a.y + ny * shift, x2: b.x + nx * shift, y2: b.y + ny * shift });
+            }
+            if (!changed) return { quad: quad, flagged: flagged, dbg: dbg };
+            let out = [];
+            for (let i = 0; i < 4; i++) {
+                let p = lineIntersection(lines[(i + 3) % 4], lines[i]);
+                if (!p || !isFinite(p.x) || !isFinite(p.y)) return { quad: quad, flagged: true, dbg: dbg };
+                out.push(p);
+            }
+            return isPlausibleQuad(out, f.w * f.h * 0.04) ? { quad: out, flagged: flagged, dbg: dbg } : { quad: quad, flagged: true, dbg: dbg };
+        }
+
         // 由輪廓得到四邊形：凸包 + 漸進放寬 approxPolyDP
         function quadFromContour(cnt) {
             let hull = new cv.Mat();
@@ -1010,7 +1072,11 @@
                 cv.Sobel(rawBlur, gx, cv.CV_32F, 1, 0, 3);
                 cv.Sobel(rawBlur, gy, cv.CV_32F, 0, 1, 3);
                 cv.magnitude(gx, gy, G);
-                const feats = { G, w, h, gray: rawGray, hsv };
+                // 文字/墨跡圖（局部自適應二值化），供「內容保護」判斷邊緣是否切到文字
+                const inkSrc = T(new cv.Mat()); cv.GaussianBlur(rawGray, inkSrc, new cv.Size(3, 3), 0, 0, cv.BORDER_DEFAULT);
+                const ink = T(new cv.Mat());
+                cv.adaptiveThreshold(inkSrc, ink, 255, cv.ADAPTIVE_THRESH_GAUSSIAN_C, cv.THRESH_BINARY_INV, 25, 12);
+                const feats = { G, w, h, gray: rawGray, hsv, ink };
 
                 // ---- 候選池 ----
                 const pool = [];
@@ -1087,7 +1153,7 @@
                 }
                 scored.sort((a, b) => b.score - a.score);
 
-                let bestPts = null, confidence = null, bestScore = 0;
+                let bestPts = null, confidence = null, bestScore = 0, sideDbg = null;
                 if (scored.length > 0) {
                     let best = scored[0];
                     bestScore = best.score;
@@ -1097,9 +1163,10 @@
                         bestPts = [{x:ix,y:iy},{x:w-ix,y:iy},{x:w-ix,y:h-iy},{x:ix,y:h-iy}].map(p => ({ x: p.x * ratio, y: p.y * ratio }));
                         confidence = 'frame';
                     } else {
-                        bestPts = best.q.map(p => ({ x: p.x * ratio, y: p.y * ratio }));
-                        // 信心：分數夠高且內外反差明確才算 high；否則誠實標示信心較低
-                        confidence = (best.score >= 0.55 && (best.con === null || best.con >= 12)) ? 'high' : 'low';
+                        let ex = expandForContent(feats, best.q); sideDbg = ex.dbg;
+                        bestPts = ex.quad.map(p => ({ x: p.x * ratio, y: p.y * ratio }));
+                        // 信心：分數夠高且內外反差明確、且沒有邊切在文字上，才算 high；否則誠實標示信心較低
+                        confidence = (best.score >= 0.55 && (best.con === null || best.con >= 12) && !ex.flagged) ? 'high' : 'low';
                     }
                 }
 
@@ -1125,7 +1192,7 @@
                     }
                 }
 
-                if (bestPts) return { corners: orderPts(bestPts), confidence: confidence, score: bestScore, debug: scored.slice(0, 8).map(s => ({ src: s.src, refined: s.refined, score: +s.score.toFixed(2), sup: +s.sup.toFixed(2), supMin: +s.supMin.toFixed(2), con: s.con === null ? null : Math.round(s.con), sat: Math.round(s.sat), area: +s.area.toFixed(2), q: s.q.map(p => [Math.round(p.x), Math.round(p.y)]) })) };
+                if (bestPts) return { corners: orderPts(bestPts), confidence: confidence, score: bestScore, side: sideDbg, debug: scored.slice(0, 8).map(s => ({ src: s.src, refined: s.refined, score: +s.score.toFixed(2), sup: +s.sup.toFixed(2), supMin: +s.supMin.toFixed(2), con: s.con === null ? null : Math.round(s.con), sat: Math.round(s.sat), area: +s.area.toFixed(2), q: s.q.map(p => [Math.round(p.x), Math.round(p.y)]) })) };
                 return null;
             } catch (e) {
                 console.error("智慧邊緣分析異常:", e); return null;
