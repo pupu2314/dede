@@ -1143,6 +1143,29 @@
                     arr.slice(0, 25).forEach(it => addCand(quadFromContour(it.c), 'nested'));
                 }
 
+                // 來源 C：「紙色」分割（低彩度 + 夠亮）。紙的邊緣陷在陰影/閃光造成的暗區、邊緣偵測失效時，
+                // 仍能整塊找到紙；橘色板夾、磚牆等高彩度背景會被排除
+                {
+                    const lo = T(new cv.Mat(h, w, hsv.type(), new cv.Scalar(0, 0, 70)));
+                    const hi = T(new cv.Mat(h, w, hsv.type(), new cv.Scalar(180, 70, 255)));
+                    const pm = T(new cv.Mat()); cv.inRange(hsv, lo, hi, pm);
+                    let kk = Math.round(0.03 * Math.max(w, h)); if (kk % 2 === 0) kk++;
+                    const kc = T(cv.getStructuringElement(cv.MORPH_RECT, new cv.Size(kk, kk)));
+                    const pm2 = T(new cv.Mat()); cv.morphologyEx(pm, pm2, cv.MORPH_CLOSE, kc);
+                    const ko = T(cv.getStructuringElement(cv.MORPH_RECT, new cv.Size(9, 9)));
+                    const pm3 = T(new cv.Mat()); cv.morphologyEx(pm2, pm3, cv.MORPH_OPEN, ko);
+                    const pc = T(new cv.MatVector()), ph = T(new cv.Mat());
+                    cv.findContours(pm3, pc, ph, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE);
+                    let pArr = [];
+                    for (let i = 0; i < pc.size(); i++) {
+                        let c = pc.get(i); T(c);
+                        let a = cv.contourArea(c);
+                        if (a >= w * h * 0.08) pArr.push({ c, a });
+                    }
+                    pArr.sort((p, q) => q.a - p.a);
+                    pArr.slice(0, 4).forEach(it => addCand(quadFromContour(it.c), 'color'));
+                }
+
                 // 來源 B：舊式法（白平衡 + Canny/自適應二值化聯集，僅最外層輪廓），當作額外候選
                 const balanced = T(grayWorldBalance(rgb));
                 const bGray = T(new cv.Mat()); cv.cvtColor(balanced, bGray, cv.COLOR_RGB2GRAY, 0);
