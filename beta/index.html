@@ -662,7 +662,7 @@
 
         @media (max-width: 767px) {
             .map-legend { max-width: 46vw; max-height: 200px; font-size: 11px; padding: 7px 9px; }
-            #map-wrapper .absolute.top-4 { font-size: 11px; padding: 6px 12px; max-width: 88vw; text-align: center; }
+            #map-label { font-size: 11px; padding: 5px 10px; }
         }
 
         @media (max-width: 480px) {
@@ -692,6 +692,11 @@
         #update-banner span { flex: 1 1 auto; }
         #update-banner button { flex: none; border: 0; border-radius: 10px; padding: 6px 12px; font-size: 14px; font-weight: 600; background: #fff; color: #17665c; cursor: pointer; white-space: nowrap; }
         #update-banner button.ghost { background: transparent; color: #fff; border: 1px solid rgba(255,255,255,.5); }
+    </style>
+    <style id="map-label-style">
+        #map-wrapper:not(.hidden) { display: flex; flex-direction: column; }
+        #map-wrapper .map-label { flex: none; padding: 6px 12px; text-align: center; font-size: 12px; font-weight: 500; color: #334155; background: #f8fafc; border-bottom: 1px solid #e2e8f0; }
+        #map-wrapper #map-container { flex: 1 1 auto; height: auto; min-height: 0; }
     </style>
 </head>
 <body class="text-slate-800 pb-16">
@@ -779,10 +784,8 @@
         <div id="results-container" class="results-grid"></div>
 
         <div id="map-wrapper" class="hidden w-full bg-white rounded-xl sm:rounded-2xl shadow-md border border-slate-200 overflow-hidden relative">
+            <div id="map-label" class="map-label">📍 顯示目前篩選的平交道 (僅含座標資料)</div>
             <div id="map-container" class="w-full"></div>
-            <div class="absolute top-4 left-1/2 transform -translate-x-1/2 bg-white/90 backdrop-blur px-4 py-2 rounded-full shadow-md border border-slate-200 text-xs text-slate-700 font-medium z-[1000] pointer-events-none">
-                📍 顯示目前篩選的平交道 (僅含座標資料)
-            </div>
             <div id="map-no-results" class="hidden absolute inset-0 z-[2000] bg-white/90 backdrop-blur-sm flex flex-col items-center justify-center">
                 <div class="text-5xl mb-4">🔍</div>
                 <p class="text-slate-700 text-xl font-bold">地圖上找不到符合條件的資訊</p>
