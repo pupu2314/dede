@@ -1146,8 +1146,20 @@
                 // 來源 C：「紙色」分割（低彩度 + 夠亮）。紙的邊緣陷在陰影/閃光造成的暗區、邊緣偵測失效時，
                 // 仍能整塊找到紙；橘色板夾、磚牆等高彩度背景會被排除
                 {
-                    const lo = T(new cv.Mat(h, w, hsv.type(), new cv.Scalar(0, 0, 70)));
-                    const hi = T(new cv.Mat(h, w, hsv.type(), new cv.Scalar(180, 70, 255)));
+                    // 門檻依照片自己的「紙面數值」調整：取最亮的 20% 像素當紙面，估計其亮度與彩度。
+                    // 正常亮度的照片，門檻維持 V>70、S<70；暗處/偏色嚴重的照片則放寬，避免紙面碎裂
+                    const vHist = new Array(256).fill(0); let vN = 0;
+                    for (let i = 2; i < hsv.data.length; i += 12) { vHist[hsv.data[i]]++; vN++; }
+                    let acc = 0, p80 = 255;
+                    for (let v = 0; v < 256; v++) { acc += vHist[v]; if (acc >= vN * 0.8) { p80 = v; break; } }
+                    const sHist = new Array(256).fill(0); let sN = 0;
+                    for (let i = 0; i < hsv.data.length; i += 12) { if (hsv.data[i + 2] >= p80) { sHist[hsv.data[i + 1]]++; sN++; } }
+                    acc = 0; let sMed = 0;
+                    for (let s = 0; s < 256; s++) { acc += sHist[s]; if (acc >= sN * 0.5) { sMed = s; break; } }
+                    const vMin = Math.max(25, Math.min(70, Math.round(0.7 * p80)));
+                    const sMax = Math.max(70, Math.min(110, sMed + 30));
+                    const lo = T(new cv.Mat(h, w, hsv.type(), new cv.Scalar(0, 0, vMin)));
+                    const hi = T(new cv.Mat(h, w, hsv.type(), new cv.Scalar(180, sMax, 255)));
                     const pm = T(new cv.Mat()); cv.inRange(hsv, lo, hi, pm);
                     let kk = Math.round(0.03 * Math.max(w, h)); if (kk % 2 === 0) kk++;
                     const kc = T(cv.getStructuringElement(cv.MORPH_RECT, new cv.Size(kk, kk)));
