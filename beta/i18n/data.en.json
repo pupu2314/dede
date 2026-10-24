@@ -1,0 +1,144 @@
+{
+  "_說明": "服務資料的英文翻譯，以 id 對應 services.json。缺少的項目或欄位會自動顯示中文。「月份優惠」標籤（例如「10月優惠」）由介面文字 promo.monthly 自動產生；其他自訂標籤可加在 promoLabels。",
+  "categories": {
+    "hair_removal": {
+      "name": "Men's Hair Removal",
+      "short": "Hair Removal"
+    },
+    "oil_massage": {
+      "name": "Men's Oil Massage",
+      "short": "Oil Massage"
+    },
+    "acupressure": {
+      "name": "Men's Acupressure",
+      "short": "Acupressure"
+    },
+    "fascia_knife": {
+      "name": "Men's Fascia Knife Body Sculpting",
+      "short": "Fascia Sculpting"
+    },
+    "spa": {
+      "name": "Men's SPA",
+      "short": "SPA"
+    }
+  },
+  "items": {
+    "private_full": {
+      "name": "Intimate Area Hair Removal (Full)",
+      "desc": "Includes pubic triangle, penis, scrotum, perineum, anus and groin"
+    },
+    "nose": {
+      "name": "Nose Hair"
+    },
+    "private_shape": {
+      "name": "Intimate Area Hair Removal (Partial / Shaping)"
+    },
+    "private_trim": {
+      "name": "Intimate Area Hair Trimming – Standard Painless Trim (Trim + Shower)"
+    },
+    "belly_lower": {
+      "name": "Pubic Triangle (below lower-abdomen hair, above the base)",
+      "desc": "Area from the lower abdomen to just above the penis"
+    },
+    "armpit": {
+      "name": "Underarm Hair"
+    },
+    "belly_upper": {
+      "name": "Upper Abdomen (above navel, below chest)"
+    },
+    "belly_middle": {
+      "name": "Lower Abdomen (below navel, above pubic hair)"
+    },
+    "arm_half": {
+      "name": "Half Arm",
+      "desc": "Upper arm or forearm (choose one)"
+    },
+    "arm_full": {
+      "name": "Full Arm",
+      "desc": "Upper arm and forearm"
+    },
+    "finger": {
+      "name": "Fingers"
+    },
+    "hand_back": {
+      "name": "Back of Hands"
+    },
+    "toe": {
+      "name": "Toes"
+    },
+    "foot_back": {
+      "name": "Tops of Feet"
+    },
+    "leg_calf": {
+      "name": "Lower Leg (Calves)"
+    },
+    "leg_thigh": {
+      "name": "Thighs"
+    },
+    "leg_full": {
+      "name": "Full Leg",
+      "desc": "Thighs and lower legs"
+    },
+    "nipple": {
+      "name": "Nipple Hair"
+    },
+    "chest": {
+      "name": "Chest Hair"
+    },
+    "private_area": {
+      "name": "Single-Area Hair Removal",
+      "desc": "Choose one: penis, scrotum, perineum, anus or groin"
+    },
+    "beard": {
+      "name": "Moustache & Chin Hair – Hot Wax"
+    },
+    "private_combo_part": {
+      "name": "Intimate Area – Any 2 Single Areas",
+      "desc": "Choose two: penis, scrotum, perineum, anus or groin"
+    },
+    "oil_massage_1hr": {
+      "name": "[Oil Massage] Energy Essential Oil Wellness Therapy / 1 hr",
+      "desc": "Includes Dragon Tendon massage (traditional men's intimate-area care)"
+    },
+    "oil_massage_1.5hr": {
+      "name": "[Oil Massage] Energy Essential Oil Wellness Therapy / 1.5 hrs",
+      "desc": "Includes Dragon Tendon massage (traditional men's intimate-area care)"
+    },
+    "acupressure_1hr": {
+      "name": "[Acupressure] Energy Wellness Therapy / 1 hr"
+    },
+    "acupressure_1.5hr": {
+      "name": "[Acupressure] Energy Wellness Therapy / 1.5 hrs"
+    },
+    "fascia_knife_1hr": {
+      "name": "Fascia Knife Body Sculpting – Qi Meridian Wellness Therapy / 1 hr"
+    },
+    "fascia_knife_1.5hr": {
+      "name": "Fascia Knife Body Sculpting – Qi Meridian Wellness Therapy / 1.5 hrs"
+    },
+    "spa_face": {
+      "name": "[Face] Renewal Oil Whitening & Resurfacing Mineral Mud Facial Treatment / 1 hr"
+    },
+    "spa_private": {
+      "name": "[Intimate Area] Renewal Oil Whitening & Resurfacing Mineral Mud Treatment – Buttocks & Intimate Area / 1 hr"
+    },
+    "spa_body": {
+      "name": "[Full Body] Renewal Oil Deep Body Wrap & Purifying Treatment / 1.5 hrs"
+    }
+  },
+  "combos": {
+    "combo_private_armpit": {
+      "name": "Full Intimate Area + Underarm Combo Deal",
+      "desc": "Includes pubic triangle, penis, scrotum, perineum, anus, groin and underarms"
+    },
+    "combo_face_clean": {
+      "name": "Facial Grooming Combo (Moustache/Chin + Nose Hair)",
+      "desc": "Includes moustache, chin and nose hair"
+    },
+    "combo_1786779000807": {
+      "name": "Full Intimate Area + Nipple Hair Combo Deal",
+      "desc": "Includes pubic triangle, penis, scrotum, perineum, anus, groin and nipples"
+    }
+  },
+  "promoLabels": {}
+}

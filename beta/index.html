@@ -1,0 +1,905 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>服務價目表 - DeDe 男士專屬美容美體中心</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+
+<style>
+    :root {
+        --brand: #245b78;
+        --brand-dark: #173f55;
+        --brand-soft: #eef6f9;
+        --brand-line: #d7e8ee;
+        --ink: #26343d;
+        --muted: #71808a;
+        --promo: #c83b3b;
+        --success: #17845b;
+        --surface: #ffffff;
+        --page: #f4f7f8;
+    }
+
+    html { scroll-behavior: smooth; }
+    body {
+        background:
+            radial-gradient(circle at 10% 0%, rgba(215,232,238,.65), transparent 28rem),
+            linear-gradient(180deg, #f4f8f9 0%, #eef3f5 100%);
+        color: var(--ink);
+    }
+
+    .ocean-gradient { background: transparent; }
+
+    .price-line-through {
+        text-decoration: line-through;
+        color: #a3adb3;
+        font-size: .82em;
+        font-weight: 500;
+    }
+    .promo-price { color: var(--promo); font-weight: 800; }
+
+    .scroll-offset { scroll-margin-top: 126px; }
+
+    #app {
+        max-width: 1220px;
+        box-shadow: 0 18px 60px rgba(28, 55, 68, .10);
+        border-left: 1px solid rgba(215,232,238,.8);
+        border-right: 1px solid rgba(215,232,238,.8);
+    }
+
+    .brand-header {
+        position: relative;
+        overflow: hidden;
+        padding: 2.6rem 1.25rem 2rem;
+        color: #fff;
+        text-align: center;
+        background:
+            radial-gradient(circle at 82% 15%, rgba(255,255,255,.15), transparent 12rem),
+            linear-gradient(135deg, #173f55 0%, #245b78 58%, #347d98 100%);
+    }
+    .brand-header::after {
+        content: "";
+        position: absolute;
+        width: 15rem;
+        height: 15rem;
+        right: -6rem;
+        bottom: -10rem;
+        border: 1px solid rgba(255,255,255,.15);
+        border-radius: 50%;
+        box-shadow: 0 0 0 2rem rgba(255,255,255,.035), 0 0 0 4rem rgba(255,255,255,.025);
+    }
+    .lang-switch {
+        position: absolute;
+        z-index: 2;
+        top: .6rem;
+        inset-inline-end: .8rem;
+        display: flex;
+        align-items: center;
+        gap: .3rem;
+        font-size: .9rem;
+    }
+    .lang-switch select {
+        appearance: none;
+        -webkit-appearance: none;
+        color: #fff;
+        background: rgba(255,255,255,.16);
+        border: 1px solid rgba(255,255,255,.4);
+        border-radius: 999px;
+        padding: .28rem .8rem;
+        font-size: .8rem;
+        font-weight: 700;
+        cursor: pointer;
+    }
+    .lang-switch select option { color: #173f55; background: #fff; }
+    .brand-name {
+        position: relative;
+        z-index: 1;
+        font-size: clamp(1.45rem, 3vw, 2rem);
+        font-weight: 800;
+        letter-spacing: .055em;
+    }
+    .brand-kicker {
+        position: relative;
+        z-index: 1;
+        margin-top: .45rem;
+        color: rgba(255,255,255,.78);
+        font-size: .74rem;
+        font-weight: 700;
+        letter-spacing: .22em;
+        text-transform: uppercase;
+    }
+    .brand-subtitle {
+        position: relative;
+        z-index: 1;
+        margin-top: .75rem;
+        color: #fff;
+        font-size: clamp(.92rem, 2vw, 1.05rem);
+        font-weight: 600;
+        letter-spacing: .12em;
+    }
+
+    .price-nav {
+        background: rgba(255,255,255,.94);
+        border-bottom: 1px solid #dfe8ec;
+        box-shadow: 0 7px 20px rgba(31,55,67,.07);
+    }
+
+    #quick-jump {
+        display: flex;
+        flex-wrap: nowrap;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: none;
+        gap: .55rem;
+        padding-bottom: 2px;
+    }
+    #quick-jump::-webkit-scrollbar { display: none; }
+    #quick-jump a {
+        flex-shrink: 0;
+        background: #fff !important;
+        color: #526a76 !important;
+        border: 1px solid #d6e4e9 !important;
+        border-radius: 999px !important;
+        padding: .38rem .82rem !important;
+        font-size: .78rem !important;
+        font-weight: 700 !important;
+        box-shadow: none !important;
+        transition: all .18s ease;
+    }
+    #quick-jump a:hover,
+    #quick-jump a:focus-visible {
+        color: var(--brand) !important;
+        background: var(--brand-soft) !important;
+        border-color: #b8d4df !important;
+        transform: translateY(-1px);
+    }
+    #quick-jump a.quick-jump-promo {
+        background: var(--promo) !important;
+        color: #fff !important;
+        border-color: var(--promo) !important;
+        font-weight: 800 !important;
+    }
+    #quick-jump a.quick-jump-promo:hover,
+    #quick-jump a.quick-jump-promo:focus-visible {
+        background: #a92f2f !important;
+        color: #fff !important;
+        border-color: #a92f2f !important;
+    }
+
+    .discount-switch {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        width: min(100%, 470px);
+        margin-inline: auto;
+        padding: 3px;
+        background: #eef2f4;
+        border: 1px solid #dfe7ea;
+        border-radius: 12px;
+        gap: 3px;
+    }
+    .tab-btn {
+        background: transparent !important;
+        color: #63727b !important;
+        border-radius: 9px !important;
+        box-shadow: none !important;
+        min-height: 34px;
+        transition: all .18s ease;
+    }
+    .tab-btn:hover { background: #fff !important; color: #304955 !important; }
+    .tab-btn.active {
+        background: var(--brand) !important;
+        color: #fff !important;
+        box-shadow: 0 3px 10px rgba(36,91,120,.22) !important;
+    }
+
+    .section-heading {
+        display: flex;
+        align-items: center;
+        gap: .65rem;
+        margin-bottom: 1.1rem;
+        padding-bottom: .65rem;
+        color: var(--brand-dark);
+        border-bottom: 1px solid var(--brand-line);
+        font-size: 1.12rem;
+        font-weight: 800;
+        letter-spacing: .02em;
+    }
+    .section-heading::after {
+        content: "";
+        width: 3rem;
+        height: 3px;
+        margin-left: auto;
+        background: #8bb8c8;
+        border-radius: 999px;
+    }
+
+    .promo-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 1rem;
+    }
+    .promo-card {
+        position: relative;
+        overflow: hidden;
+        min-height: 96px;
+        padding: 1rem 1.1rem;
+        background: #fff;
+        border: 1px solid #e0eaee;
+        border-radius: 15px;
+        box-shadow: 0 5px 18px rgba(35,60,72,.055);
+        transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease;
+    }
+    .promo-card:hover {
+        transform: translateY(-2px);
+        border-color: #c9dfe7;
+        box-shadow: 0 9px 24px rgba(35,60,72,.09);
+    }
+    .promo-ribbon {
+        position: absolute;
+        top: 0;
+        right: 0;
+        padding: .3rem .7rem;
+        background: var(--promo);
+        color: #fff;
+        border-radius: 0 0 0 10px;
+        font-size: .65rem;
+        font-weight: 800;
+    }
+
+    .points-card {
+        position: relative;
+        overflow: hidden;
+        padding: 1.1rem 1.2rem;
+        background: linear-gradient(135deg, #fffaf0 0%, #fff5df 100%);
+        border: 1px solid #f0dfb9;
+        border-radius: 15px;
+        box-shadow: 0 5px 18px rgba(89,70,29,.045);
+    }
+    .points-card .points-title { color: #7d5a1b; }
+    .points-card .points-note { color: #91784d; border-color: rgba(219,193,137,.45); }
+
+    .identity-card {
+        background: linear-gradient(135deg, #f1f7fa 0%, #edf4f8 100%) !important;
+        border-color: #cfe0e7 !important;
+        box-shadow: 0 5px 18px rgba(35,60,72,.045) !important;
+    }
+
+    .service-card {
+        height: 100%;
+        padding: 1rem;
+        background: #fff;
+        border: 1px solid #dfe9ed;
+        border-radius: 16px;
+        box-shadow: 0 6px 20px rgba(31,55,67,.055);
+    }
+    .service-title {
+        display: flex;
+        align-items: baseline;
+        gap: .55rem;
+        margin-bottom: .8rem;
+        padding-bottom: .7rem;
+        color: var(--brand-dark);
+        border-bottom: 1px solid #e5edf0;
+        font-size: 1.08rem;
+        font-weight: 800;
+    }
+    .service-title::before {
+        content: "";
+        width: 4px;
+        height: 1.2rem;
+        flex: 0 0 auto;
+        border-radius: 999px;
+        background: #4f91a9;
+    }
+
+    .service-row {
+        min-height: 54px;
+        padding: .62rem .55rem;
+        border-bottom: 1px solid #edf2f4;
+        border-radius: 9px;
+        transition: background .16s ease, box-shadow .16s ease;
+    }
+    .service-row:last-child { border-bottom-color: transparent; }
+    .service-row:hover {
+        background: #f7fafb;
+        box-shadow: inset 0 0 0 1px #edf2f4;
+    }
+    .service-name {
+        color: #31424b;
+        font-weight: 650;
+        line-height: 1.35;
+    }
+    .service-desc {
+        color: #87949b;
+        font-size: .77rem;
+        line-height: 1.45;
+    }
+    .service-price {
+        min-width: 84px;
+        text-align: right;
+        color: #26343d;
+        font-size: 1.02rem;
+        font-weight: 800;
+        line-height: 1.2;
+    }
+
+    .popular-badge {
+        display: inline-block;
+        margin-left: .35rem;
+        padding: .13rem .4rem;
+        vertical-align: middle;
+        background: #d97724;
+        color: #fff;
+        border-radius: 999px;
+        font-size: .58rem;
+        font-weight: 800;
+        letter-spacing: .03em;
+    }
+
+    #toast {
+        position: fixed;
+        bottom: 82px;
+        left: 50%;
+        transform: translateX(-50%) translateY(20px);
+        background: #203b4b;
+        color: #fff;
+        padding: 10px 22px;
+        border-radius: 999px;
+        font-size: .88rem;
+        font-weight: 650;
+        white-space: nowrap;
+        box-shadow: 0 7px 25px rgba(0,0,0,.22);
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity .25s ease, transform .25s ease;
+        z-index: 999;
+    }
+    #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+    .line-booking {
+        background: #06C755;
+        box-shadow: 0 6px 22px rgba(6,199,85,.28);
+    }
+
+    @media (max-width: 767px) {
+        #app { border: 0; box-shadow: none; }
+        .brand-header { padding: 2.5rem 1rem 1.45rem; }
+        .brand-kicker { letter-spacing: .15em; }
+        .price-nav { padding-top: .55rem; padding-bottom: .6rem; }
+        .discount-switch { width: 100%; }
+        .section-heading { font-size: 1.02rem; }
+        .promo-grid { grid-template-columns: 1fr; }
+        .service-card { padding: .82rem; border-radius: 14px; }
+        .service-row { padding: .6rem .42rem; }
+        .service-price { min-width: 78px; font-size: .98rem; }
+    }
+
+    @media (min-width: 768px) {
+        .content-shell { padding-left: 2.25rem !important; padding-right: 2.25rem !important; }
+    }
+</style>
+
+</head>
+<body class="ocean-gradient min-h-screen text-gray-800 pb-16">
+
+    <div class="w-full max-w-7xl mx-auto bg-white min-h-screen shadow-xl relative" id="app">
+
+        <!-- 頂部標題 -->
+        <header class="brand-header">
+            <div class="lang-switch">
+                <span aria-hidden="true">🌐</span>
+                <select id="lang-select" aria-label="Language / 語言"></select>
+            </div>
+            <div class="brand-name" data-i18n="brand.name">DeDe 男士專屬美容美體中心</div>
+            <div class="brand-kicker" data-i18n="brand.kicker">MEN'S BEAUTY &amp; BODY CARE</div>
+            <div class="brand-subtitle" id="page-subtitle">載入中...</div>
+        </header>
+
+        <!-- Sticky Nav -->
+        <div class="sticky top-0 z-40 price-nav backdrop-blur-sm px-4 py-2.5 w-full">
+            <!-- 快速跳轉（手機橫滑） -->
+            <div id="quick-jump" class="mb-2.5 px-0.5">
+                <!-- JS 生成 -->
+            </div>
+            <!-- 折扣切換 -->
+            <div class="discount-switch">
+                <button onclick="setDiscount('normal')"   id="tab-normal"   class="tab-btn active px-4 py-1.5 rounded-lg text-sm font-bold transition" data-i18n="tab.normal">一般原價</button>
+                <button onclick="setDiscount('student')"  id="tab-student"  class="tab-btn px-4 py-1.5 rounded-lg text-sm font-bold transition">學生 8 折</button>
+                <button onclick="setDiscount('birthday')" id="tab-birthday" class="tab-btn px-4 py-1.5 rounded-lg text-sm font-bold transition">壽星 5 折</button>
+            </div>
+        </div>
+
+        <div class="content-shell p-4 md:p-8 pb-16">
+
+            <!-- 載入中 -->
+            <div id="loading" class="text-center py-10 text-gray-500" data-i18n="loading">正在讀取最新優惠資訊...</div>
+
+            <!-- 讀取失敗 -->
+            <div id="error" class="hidden text-center py-16">
+                <div class="text-5xl mb-4">⚠️</div>
+                <p class="text-gray-600 font-medium" data-i18n="error.msg">無法讀取服務資料，請重新整理頁面。</p>
+                <button onclick="location.reload()" class="mt-4 px-5 py-2 bg-blue-600 text-white rounded-lg text-sm font-bold hover:bg-blue-700 transition" data-i18n="error.reload">重新整理</button>
+            </div>
+
+            <div id="content" class="hidden">
+
+                <!-- 優惠專區 -->
+                <section id="promo-section" class="scroll-offset mb-10">
+                    <h2 class="section-heading">
+                        <span class="mr-2" id="promo-header-icon">🔥</span>
+                        <span id="promo-header-text" data-i18n="promo.header.normal">本月活動與優惠</span>
+                    </h2>
+                    <div class="flex flex-col gap-4">
+
+                        <!-- 月促銷清單 -->
+                        <div id="promo-list" class="promo-grid hidden"></div>
+
+                        <!-- 專屬身份提示卡 -->
+                        <div id="special-discount-msg" class="hidden identity-card p-6 sm:p-8 rounded-xl border text-center">
+                            <div id="special-discount-icon" class="text-5xl mb-3">🎓</div>
+                            <h3 id="special-discount-title" class="text-xl sm:text-2xl font-bold text-blue-800 mb-2"></h3>
+                            <p  id="special-discount-desc"  class="text-sm sm:text-base text-blue-600 font-medium"></p>
+                        </div>
+
+                        <!-- 集點活動 -->
+                        <div class="points-card flex flex-col justify-center">
+                            <div class="absolute -right-4 -top-4 text-7xl opacity-20 select-none">🎁</div>
+                            <h3 class="points-title font-bold text-lg mb-2 flex items-center">
+                                <span class="mr-2">🎁</span><span data-i18n="points.title">會員集點活動</span>
+                            </h3>
+                            <div id="points-body" class="text-[#6e5528] leading-relaxed font-medium">
+                                消費滿 <strong class="text-red-500 text-lg mx-1">$1,500</strong> 即可集 1 點<br>
+                                集滿 10 點立即折抵 <strong class="text-red-500 text-lg mx-1">$500</strong> 元
+                            </div>
+                            <div class="points-note text-xs mt-4 pt-3 border-t" data-i18n="points.note">
+                                ※ 備註：折扣與集點額度皆以結帳「實付金額」計算
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 完整服務項目 -->
+                <section>
+                    <h2 class="section-heading">
+                        <span class="mr-2">📋</span><span data-i18n="menu.heading">完整服務項目</span>
+                    </h2>
+                    <div id="menu-list" class="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-8"></div>
+                </section>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast -->
+    <div id="toast"></div>
+
+    <!-- 懸浮預約按鈕 -->
+    <div class="fixed bottom-0 left-0 w-full z-50 p-4 pointer-events-none flex justify-center">
+        <a href="https://lin.ee/6fc6qGl" target="_blank"
+           class="line-booking pointer-events-auto text-white font-bold py-3 px-6 rounded-full transition transform hover:-translate-y-1 flex items-center justify-center w-full max-w-md">
+            <svg class="w-8 h-8 mr-2" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 320">
+                <rect fill="#ffffff" width="320" height="320" rx="72.14"/>
+                <path fill="#06c755" d="M266.66,144.92c0-47.74-47.86-86.58-106.69-86.58S53.28,97.18,53.28,144.92c0,42.8,38,78.65,89.22,85.42,3.48.75,8.21,2.29,9.4,5.26,1.08,2.7.71,6.93.35,9.65,0,0-1.25,7.53-1.52,9.13-.47,2.7-2.15,10.55,9.24,5.76s61.44-36.18,83.82-61.95h0C259.25,181.24,266.66,164,266.66,144.92Z"/>
+                <path fill="#ffffff" d="M231.16,172.49h-30a2,2,0,0,1-2-2v0h0V123.94h0v0a2,2,0,0,1,2-2h30a2,2,0,0,1,2,2v7.57a2,2,0,0,1-2,2H210.79v7.85h20.37a2,2,0,0,1,2,2V151a2,2,0,0,1-2,2H210.79v7.86h20.37a2,2,0,0,1,2,2v7.56A2,2,0,0,1,231.16,172.49Z"/>
+                <path fill="#ffffff" d="M120.29,172.49a2,2,0,0,0,2-2v-7.56a2,2,0,0,0-2-2H99.92v-37a2,2,0,0,0-2-2H90.32a2,2,0,0,0-2,2v46.53h0v0a2,2,0,0,0,2,2h30Z"/>
+                <rect fill="#ffffff" x="128.73" y="121.85" width="11.64" height="50.64" rx="2.04"/>
+                <path fill="#ffffff" d="M189.84,121.85h-7.56a2,2,0,0,0-2,2v27.66l-21.3-28.77a1.2,1.2,0,0,0-.17-.21v0l-.12-.12,0,0-.11-.09-.06,0-.11-.08-.06,0-.11-.06-.07,0-.11,0-.07,0-.12,0-.08,0-.12,0h-.08l-.11,0h-7.71a2,2,0,0,0-2,2v46.56a2,2,0,0,0,2,2h7.57a2,2,0,0,0,2-2V142.81l21.33,28.8a2,2,0,0,0,.52.52h0l.12.08.06,0,.1.05.1,0,.07,0,.14,0h0a2.42,2.42,0,0,0,.54.07h7.52a2,2,0,0,0,2-2V123.89A2,2,0,0,0,189.84,121.85Z"/>
+            </svg>
+            <span class="text-[15px] sm:text-base tracking-wide" data-i18n="booking.cta">本中心採預約制，立即透過 LINE 預約</span>
+        </a>
+    </div>
+
+    <!-- 共用工具函式 (優惠判斷、比價邏輯)，與 calculator.html 共用同一份 -->
+    <script src="utils.js"></script>
+    <script src="i18n.js"></script>
+    <script>
+        // ── 補充描述與熱門標記已併入 services.json (item.desc / item.popular，combo 亦同)，
+        //    可透過 services_editor.html 編輯，此處直接讀取即可，不再於此另外維護一份 ──
+
+        // ── 狀態 ──────────────────────────────────────────────────────────
+        let currentData        = null;
+        let itemsMap           = null; // id -> item，供 combo 計算原價、renderPromoList 共用
+        let currentDiscountType = 'normal';
+        let hasPromoItems       = false;
+
+        // ── 工具函式 ──────────────────────────────────────────────────────
+        // 多國語系：T=介面文字、esc=跳脫 HTML、fmt=金額（依語言顯示 $ 或 NT$）
+        const T   = (key, params) => I18n.t(key, params);
+        const esc = I18n.esc;
+        const fmt = (n) => I18n.money(n);
+
+        // 折扣率的文字參數：zhe=中文「折」數（8）、off=折扣百分比（20），一律由 utils.js 的 RULES 換算，不寫死
+        const rateParams = (type) => {
+            const info = window.DeDeUtils.identityInfo(type);
+            const r = info ? info.rate : 1;
+            return { zhe: Math.round(r * 100) / 10, off: Math.round((1 - r) * 100) };
+        };
+
+        // 分類的錨點與版面不再依賴中文名稱：優先用 services.json 裡分類的 id
+        // （編輯器新增的分類若還沒有 id，則退回舊的名稱判斷，確保不會壞）
+        const safeCatId = (cat) => cat.id
+            ? 'cat-' + String(cat.id).replace(/[^\w-]/g, '')
+            : 'cat-' + cat.name.replace(/\s+/g, '_').replace(/[^\w\u4e00-\u9fff-]/g, '');
+        const isWideCategory = (cat) =>
+            cat.wide === true || cat.id === 'hair_removal' || (!cat.id && cat.name.includes('除毛'));
+
+        // 判斷優惠是否生效 / 取較優價格，改用與 calculator.html 共用的同一份邏輯 (utils.js)，
+        // 避免顧客端與員工端的比價規則各自維護、日後跑掉。
+        const getBestPrice = window.DeDeUtils.getBestPrice;
+        const identityInfo = window.DeDeUtils.identityInfo;   // 折扣率集中在 utils.js 的 DeDeUtils.RULES
+        const identityRate = (type) => (identityInfo(type) || { rate: 1 }).rate;
+        const popularBadgeHtml = () => `<span class="popular-badge">${esc(T('badge.popular'))}</span>`;
+
+        // ── 預覽模式（僅供內部確認下個月優惠效果，網址帶 ?preview=YYYY-MM-DD 才會啟用）──
+        // 一般顧客瀏覽網址不會帶這個參數，畫面與行為完全不受影響。
+        const previewDateParam = new URLSearchParams(location.search).get('preview');
+        const previewDate = previewDateParam ? new Date(previewDateParam + 'T12:00:00') : null;
+        const isPreviewMode = previewDate instanceof Date && !isNaN(previewDate);
+
+        // 包裝一層，讓底下所有呼叫點不用一一手動帶入模擬日期
+        const getActivePromo = (promotions) =>
+            window.DeDeUtils.getActivePromotion(promotions, isPreviewMode ? previewDate : undefined);
+
+        // 內部提示列統一放進同一個固定在頂端的容器，預覽日期與草稿提示同時出現時才不會互相蓋住
+        function devBannerBox() {
+            let box = document.getElementById('dev-banners');
+            if (!box) {
+                box = document.createElement('div');
+                box.id = 'dev-banners';
+                box.style.cssText = 'position:sticky;top:0;z-index:9999;';
+                document.body.prepend(box);
+            }
+            return box;
+        }
+
+        if (isPreviewMode) {
+            const banner = document.createElement('div');
+            banner.style.cssText = 'background:#fd7e14;color:#fff;text-align:center;padding:10px 12px;font-weight:700;font-size:0.9em;';
+            const dateLabel = previewDate.toLocaleDateString('zh-TW', { year: 'numeric', month: 'long', day: 'numeric' });
+            banner.innerHTML = `🔍 預覽模式：模擬日期為 ${dateLabel}（僅供內部確認，顧客看到的畫面不會有此列）　`
+                + `<a href="${location.pathname}" style="color:#fff;text-decoration:underline;font-weight:800;">返回正常畫面</a>`;
+            devBannerBox().appendChild(banner);
+        }
+
+        // ── 草稿預覽（服務資料編輯器按「預覽」時，網址帶 ?draft=1）──
+        // 改用編輯器「目前暫存的內容」，而不是網站上的 services.json。一般顧客的網址不會帶這個參數。
+        const isDraftMode = new URLSearchParams(location.search).get('draft') === '1';
+        function readDraftPreview() {
+            try {
+                const o = JSON.parse(localStorage.getItem('dede_draft_preview') || 'null');
+                if (o && o.data && Array.isArray(o.data.categories)) return o;
+            } catch (e) { /* 讀不到就改用網站上的資料 */ }
+            return null;
+        }
+        function showDraftBanner(info) {
+            const banner = document.createElement('div');
+            const keepPreview = previewDateParam ? '?preview=' + encodeURIComponent(previewDateParam) : '';
+            if (info) {
+                const d = new Date(info.savedAt || Date.now());
+                const t = `${d.getMonth() + 1}/${d.getDate()} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+                banner.style.cssText = 'background:#6f42c1;color:#fff;text-align:center;padding:10px 12px;font-weight:700;font-size:0.9em;';
+                banner.innerHTML = `📝 草稿預覽：顯示的是服務資料編輯器目前的內容（${t} 暫存），<u>尚未發佈到網站</u>，顧客現在看到的仍是舊價格。　`
+                    + `<a href="${location.pathname}${location.search}" style="color:#fff;text-decoration:underline;font-weight:800;">重新讀取草稿</a>　`
+                    + `<a href="${location.pathname}${keepPreview}" style="color:#fff;text-decoration:underline;font-weight:800;">返回正式內容</a>`;
+            } else {
+                banner.style.cssText = 'background:#dc3545;color:#fff;text-align:center;padding:10px 12px;font-weight:700;font-size:0.9em;';
+                banner.innerHTML = '⚠️ 找不到草稿預覽資料，下方顯示的是網站上的正式內容。請回到服務資料編輯器重新按「預覽」。';
+            }
+            devBannerBox().prepend(banner);
+        }
+
+        // ── Toast ──────────────────────────────────────────────────────────
+        let toastTimer = null;
+        function showToast(msg) {
+            const el = document.getElementById('toast');
+            el.textContent = msg;
+            el.classList.add('show');
+            clearTimeout(toastTimer);
+            toastTimer = setTimeout(() => el.classList.remove('show'), 2800);
+        }
+
+        // ── 折扣切換 ──────────────────────────────────────────────────────
+        window.setDiscount = function(type) {
+            currentDiscountType = type;
+
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+            document.getElementById('tab-' + type).classList.add('active');
+
+            updatePromoSection(type);
+            renderMenu();
+
+            if (type === 'student')  showToast(T('toast.student',  rateParams('student')));
+            if (type === 'birthday') showToast(T('toast.birthday', rateParams('birthday')));
+            if (type === 'normal')   showToast(T('toast.normal'));
+        };
+
+        // ── 優惠區塊切換 ──────────────────────────────────────────────────
+        function updatePromoSection(type) {
+            const promoList  = document.getElementById('promo-list');
+            const specialMsg = document.getElementById('special-discount-msg');
+
+            // 重新計算促銷清單：身分折扣模式下，每個有限時優惠的項目/套餐
+            // 會顯示「身分折扣」與「限時優惠」兩者中較低的價格，
+            // 不再像過去那樣直接把整個促銷清單藏起來，避免顧客端跟員工端算出的價格對不起來。
+            renderPromoList();
+            if (hasPromoItems) promoList.classList.remove('hidden');
+            else promoList.classList.add('hidden');
+
+            if (type === 'normal') {
+                document.getElementById('promo-header-icon').textContent = '🔥';
+                document.getElementById('promo-header-text').textContent = T('promo.header.normal');
+                specialMsg.classList.add('hidden');
+            } else {
+                document.getElementById('promo-header-icon').textContent = '🎉';
+                document.getElementById('promo-header-text').textContent = T('promo.header.identity');
+                specialMsg.classList.remove('hidden');
+
+                const rp = rateParams(type);
+                const policyNote = T('identity.policy');
+                const cfg = type === 'student'
+                    ? { icon: '🎓', title: T('identity.student.title', rp),  desc: T('identity.student.desc',  { policy: policyNote }) }
+                    : { icon: '🎂', title: T('identity.birthday.title', rp), desc: T('identity.birthday.desc', { policy: policyNote }) };
+
+                document.getElementById('special-discount-icon').textContent  = cfg.icon;
+                document.getElementById('special-discount-title').textContent = cfg.title;
+                document.getElementById('special-discount-desc').textContent  = cfg.desc;
+            }
+        }
+
+        // ── 促銷清單渲染 (combo + 單項優惠) ─────────────────────────────────
+        // 抽成獨立函式，讓 init() 首次載入與 setDiscount() 切換身分時都能重新計算，
+        // 確保跟 renderMenu() 用的是同一套「取較低者」邏輯 (DeDeUtils.getBestPrice)。
+        function renderPromoList() {
+            const promoList = document.getElementById('promo-list');
+            promoList.innerHTML = '';
+            hasPromoItems = false;
+
+            const multiplier = identityRate(currentDiscountType);
+
+            const idRateInfo = identityInfo(currentDiscountType);
+            const identityBeatsLabel = idRateInfo
+                ? T('identity.beats', Object.assign({ label: T('identity.label.' + idRateInfo.key) }, rateParams(currentDiscountType)))
+                : '';
+
+            // Combo 優惠
+            (currentData.combos || []).forEach(combo => {
+                const activePromo = getActivePromo(combo.promotions);
+                if (!activePromo) return; // 這份清單只列「目前有設定限時優惠」的套餐；純身分折扣已反映在下方完整價目
+                hasPromoItems = true;
+                const originalPrice = combo.itemIds.reduce((sum, id) => {
+                    const item = itemsMap.get(id);
+                    return sum + (item ? item.price : 0);
+                }, 0);
+                const best = getBestPrice(originalPrice, multiplier, activePromo);
+                const label = best.usedIdentity ? identityBeatsLabel : I18n.promoLabel(activePromo.label);
+                promoList.innerHTML += createPromoHtml(I18n.nameOf('combos', combo), originalPrice, best.price, label, I18n.descOf('combos', combo) || null, !!combo.popular);
+            });
+
+            // 單項優惠
+            currentData.categories.forEach(cat => {
+                cat.items.forEach(item => {
+                    const activePromo = getActivePromo(item.promotions);
+                    if (!activePromo) return;
+                    hasPromoItems = true;
+                    const desc = I18n.descOf('items', item) || null;
+                    const best = getBestPrice(item.price, multiplier, activePromo);
+                    const label = best.usedIdentity ? identityBeatsLabel : I18n.promoLabel(activePromo.label);
+                    promoList.innerHTML += createPromoHtml(I18n.nameOf('items', item), item.price, best.price, label, desc, !!item.popular);
+                });
+            });
+        }
+
+        // ── 促銷卡 HTML（含省多少） ───────────────────────────────────────
+        function createPromoHtml(name, originalPrice, promoPrice, label, desc, isPopular) {
+            const saved = originalPrice - promoPrice;
+            const popularBadge = isPopular ? popularBadgeHtml() : '';
+            return `
+                <div class="promo-card flex flex-col sm:flex-row sm:justify-between sm:items-center">
+                    <div class="promo-ribbon">${esc(label)}</div>
+                    <div class="mt-2 sm:mt-0 pr-4 pl-1">
+                        <div class="font-semibold text-[#31424b]">${esc(name)}${popularBadge}</div>
+                        ${desc ? `<div class="text-[13px] text-[#87949b] mt-0.5">${esc(desc)}</div>` : ''}
+                    </div>
+                    <div class="mt-2 sm:mt-0 flex flex-col items-end gap-0.5 min-w-fit">
+                        <div class="flex items-center gap-1.5">
+                            <span class="price-line-through">${fmt(originalPrice)}</span>
+                            <span class="promo-price text-lg">${fmt(promoPrice)}</span>
+                        </div>
+                        <span class="text-xs text-emerald-600 font-semibold">${esc(T('promo.save', { amount: fmt(saved) }))}</span>
+                    </div>
+                </div>`;
+        }
+
+        // ── 渲染完整服務清單 ──────────────────────────────────────────────
+        function renderMenu() {
+            const container   = document.getElementById('menu-list');
+            container.innerHTML = '';
+
+            const multiplier = identityRate(currentDiscountType);
+            const isDiscount  = multiplier !== 1;
+
+            currentData.categories.forEach(cat => {
+                const isHairRemoval = isWideCategory(cat);
+                const catId         = safeCatId(cat);
+
+                // 外層格子：除毛跨兩欄
+                const wrapper = document.createElement('div');
+                wrapper.id        = catId;
+                wrapper.className = `scroll-offset${isHairRemoval ? ' lg:col-span-2' : ''}`;
+
+                // 卡片
+                const card = document.createElement('div');
+                card.className = 'service-card';
+
+                // 標題
+                card.innerHTML = `<h3 class="service-title">${esc(I18n.nameOf('categories', cat))}</h3>`;
+
+                // 項目清單（除毛用 grid 2欄，其餘 1欄）
+                const grid = document.createElement('div');
+                grid.className = isHairRemoval
+                    ? 'grid grid-cols-1 md:grid-cols-2 gap-x-6'
+                    : 'grid grid-cols-1';
+
+                cat.items.forEach(item => {
+                    const desc      = I18n.descOf('items', item);
+                    const basePrice = item.price;
+                    const activePromo = getActivePromo(item.promotions);
+
+                    // 計算顯示價格
+                    let priceHtml;
+                    if (isDiscount) {
+                        // 與 calculator.html 用同一套邏輯：身分折扣 vs 目前限時優惠，取較低者，
+                        // 避免顧客在網站上看到的價格跟員工用計算機開出的報價不一致。
+                        const best = getBestPrice(basePrice, multiplier, activePromo);
+                        const saved = basePrice - best.price;
+                        const priceColorClass = best.usedIdentity ? 'text-blue-600' : 'promo-price';
+                        priceHtml = `
+                            <div class="flex items-center gap-1.5">
+                                <span class="price-line-through">${fmt(basePrice)}</span>
+                                <span class="${priceColorClass} font-bold">${fmt(best.price)}</span>
+                            </div>` + (best.usedIdentity
+                                ? ''
+                                : `<span class="text-xs text-emerald-600 font-semibold text-right">${esc(T('promo.limitedSave', { amount: fmt(saved) }))}</span>`);
+                    } else {
+                        if (activePromo) {
+                            const saved = basePrice - activePromo.price;
+                            priceHtml = `
+                                <div class="flex items-center gap-1.5">
+                                    <span class="price-line-through">${fmt(basePrice)}</span>
+                                    <span class="promo-price">${fmt(activePromo.price)}</span>
+                                </div>
+                                <span class="text-xs text-emerald-600 font-semibold text-right">${esc(T('promo.save', { amount: fmt(saved) }))}</span>`;
+                        } else {
+                            priceHtml = `<span class="text-gray-700 font-medium">${fmt(basePrice)}</span>`;
+                        }
+                    }
+
+                    const isPopular = !!item.popular;
+                    const popularBadge = isPopular ? popularBadgeHtml() : '';
+
+                    const row = document.createElement('div');
+                    row.className = 'service-row';
+                    row.innerHTML = `
+                        <div class="flex justify-between items-start gap-2">
+                            <div class="min-w-0">
+                                <div class="service-name">${esc(I18n.nameOf('items', item))}${popularBadge}</div>
+                                ${desc ? `<div class="service-desc mt-0.5">${esc(desc)}</div>` : ''}
+                            </div>
+                            <div class="service-price flex flex-col items-end shrink-0 pt-0.5">${priceHtml}</div>
+                        </div>`;
+                    grid.appendChild(row);
+                });
+
+                card.appendChild(grid);
+                wrapper.appendChild(card);
+                container.appendChild(wrapper);
+            });
+        }
+
+        // ── 與語言相關的畫面（切換語言時整批重畫）─────────────────────────
+        function renderSubtitle() {
+            // 民國年月（預覽模式下顯示模擬日期，讓標題跟畫面上的優惠期間一致）
+            const now   = isPreviewMode ? previewDate : new Date();
+            const month = now.getMonth() + 1;
+            document.getElementById('page-subtitle').textContent = T('page.subtitle', {
+                roc: now.getFullYear() - 1911,          // 中文：民國年
+                year: now.getFullYear(),                // 其他語言：西元年
+                month,
+                monthName: I18n.monthName(month)
+            });
+        }
+
+        function renderStaticTexts() {
+            document.title = T('page.title');
+            renderSubtitle();
+            // 折扣切換按鈕（折數由 RULES 換算，語言檔只管措辭）
+            document.getElementById('tab-normal').textContent   = T('tab.normal');
+            document.getElementById('tab-student').textContent  = T('tab.student',  rateParams('student'));
+            document.getElementById('tab-birthday').textContent = T('tab.birthday', rateParams('birthday'));
+            // 集點活動：金額與點數取自 utils.js 的 RULES
+            const R = window.DeDeUtils.RULES;
+            const strong = (txt) => `<strong class="text-red-500 text-lg mx-1">${esc(txt)}</strong>`;
+            document.getElementById('points-body').innerHTML = I18n.tHtml('points.body', {
+                spend: strong(fmt(R.pointsPerSpend)),
+                redeemAt: R.redeemAt,
+                value: strong(fmt(R.redeemValue))
+            });
+        }
+
+        function renderQuickJump() {
+            const quickJump = document.getElementById('quick-jump');
+            quickJump.innerHTML = '';
+
+            // 置頂：本月活動與優惠（固定在最前面，方便快速回到優惠區）
+            const promoLink = document.createElement('a');
+            promoLink.href = '#promo-section';
+            promoLink.textContent = T('promo.quick');
+            promoLink.className = 'quick-jump-item quick-jump-promo';
+            quickJump.appendChild(promoLink);
+
+            currentData.categories.forEach(cat => {
+                const a = document.createElement('a');
+                a.href        = '#' + safeCatId(cat);
+                a.textContent = I18n.catShort(cat);
+                a.className   = 'quick-jump-item';
+                quickJump.appendChild(a);
+            });
+        }
+
+        // 重新畫出所有依語言而變的內容（不重新抓資料、不改目前選的折扣身分）
+        function renderAll() {
+            renderStaticTexts();
+            renderQuickJump();
+            updatePromoSection(currentDiscountType);   // 內含 renderPromoList，並更新優惠區標題／身分提示
+            renderMenu();
+        }
+
+        // ── 初始化 ────────────────────────────────────────────────────────
+        async function init() {
+            // 先載入語言（語言檔載入失敗不會擋住價目表，缺的字會退回中文）
+            await I18n.init();
+            I18n.buildSelect(document.getElementById('lang-select'));
+            I18n.onChange(() => { if (currentData) renderAll(); else renderStaticTexts(); });
+            renderStaticTexts();
+
+            let draftInfo = null;
+            if (isDraftMode) {
+                draftInfo = readDraftPreview();
+                if (draftInfo) currentData = draftInfo.data;
+                showDraftBanner(draftInfo);
+            }
+            try {
+                if (!draftInfo) {
+                    const res = await fetch('services.json');
+                    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                    currentData = await res.json();
+                }
+            } catch (err) {
+                console.error('services.json 載入失敗:', err);
+                document.getElementById('loading').classList.add('hidden');
+                document.getElementById('error').classList.remove('hidden');
+                return;
+            }
+
+            // 建立 itemsMap（供 combo 計算原價，renderPromoList 共用）
+            itemsMap = new Map();
+            currentData.categories.forEach(cat =>
+                cat.items.forEach(item => itemsMap.set(item.id, item))
+            );
+
+            renderQuickJump();
+
+            // 促銷清單 (combo + 單項優惠)
+            renderPromoList();
+            const promoList = document.getElementById('promo-list');
+            if (hasPromoItems) promoList.classList.remove('hidden');
+
+            renderMenu();
+
+            document.getElementById('loading').classList.add('hidden');
+            document.getElementById('content').classList.remove('hidden');
+        }
+
+        window.addEventListener('DOMContentLoaded', init);
+    </script>
+</body>
+</html>

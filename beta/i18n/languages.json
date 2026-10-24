@@ -1,0 +1,14 @@
+{
+  "_說明": "新增語言：1) 複製 ui.zh-TW.json 為 ui.<代碼>.json 並翻譯  2) 複製 data.en.json 為 data.<代碼>.json 並翻譯（可只翻一部分，缺的會顯示中文）  3) 在下方 languages 加一行。name 請用該語言自己的寫法。若是由右至左的語言（如阿拉伯文）加上 \"dir\": \"rtl\"。",
+  "default": "zh-TW",
+  "languages": [
+    {
+      "code": "zh-TW",
+      "name": "繁體中文"
+    },
+    {
+      "code": "en",
+      "name": "English"
+    }
+  ]
+}
