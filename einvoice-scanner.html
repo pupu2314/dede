@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<title>電子發票 QR Code 解譯</title>
+<style>
+:root{--bg:#e9eeee;--card:#fbfcfc;--ink:#14201f;--mute:#5b6b69;--line:#c5d0ce;--acc:#0f766e;--accInk:#fff;--warn:#7a4800;--warnBg:#fff1d6;--bad:#b3261e}
+@media (prefers-color-scheme:dark){:root{--bg:#0f1717;--card:#172221;--ink:#e4efed;--mute:#93a7a4;--line:#2b3d3b;--acc:#2dd4bf;--accInk:#04201c;--warn:#f3c677;--warnBg:#3a2c10;--bad:#ff8a80}}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.6 "Noto Sans TC","PingFang TC","Microsoft JhengHei",system-ui,sans-serif}
+main{max-width:640px;margin:0 auto;padding:20px 16px 56px}
+h1{font-size:1.5rem;margin:8px 0 4px;letter-spacing:.02em}
+h2{font-size:1.05rem;margin:0}
+.sub{margin:0 0 18px;color:var(--mute);font-size:.92rem}
+.actions{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.actions .wide{grid-column:1/-1}
+.btn,button{font:inherit;display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:48px;padding:8px 14px;border:1.5px solid var(--acc);border-radius:10px;background:transparent;color:var(--acc);cursor:pointer;text-align:center}
+.btn:focus-visible,button:focus-visible{outline:3px solid var(--acc);outline-offset:2px}
+.primary{background:var(--acc);color:var(--accInk)}
+.small{min-height:36px;padding:4px 10px;font-size:.9rem}
+.danger{border-color:var(--bad);color:var(--bad)}
+#stage{margin-top:14px;background:#000;border-radius:12px;overflow:hidden;position:relative}
+#video{display:block;width:100%;max-height:60vh;object-fit:cover;background:#000}
+#guide{position:absolute;inset:14% 6%;border:2px dashed rgba(255,255,255,.75);border-radius:10px;pointer-events:none}
+#stageBar{display:flex;gap:8px;padding:10px;background:var(--card)}
+#stageBar button{flex:1}
+#status{margin:14px 0;min-height:1.6em;color:var(--mute);font-size:.95rem}
+#status.err{color:var(--bad)}
+.receipt{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:18px 18px 8px;margin-top:6px}
+.rno{font:600 1.7rem/1.2 ui-monospace,"SF Mono",Menlo,Consolas,monospace;letter-spacing:.04em;margin:0}
+.rmeta{color:var(--mute);font-size:.9rem;margin:2px 0 12px}
+.sep{border:0;border-top:2px dashed var(--line);margin:12px 0}
+dl{display:grid;grid-template-columns:7.5em 1fr;gap:6px 10px;margin:0}
+dt{color:var(--mute)}
+dd{margin:0;word-break:break-all}
+.num{font-variant-numeric:tabular-nums}
+.total{font-size:1.35rem;font-weight:700}
+table{width:100%;border-collapse:collapse;font-size:.95rem}
+th,td{padding:6px 4px;border-bottom:1px solid var(--line);text-align:left}
+th:nth-child(n+2),td:nth-child(n+2){text-align:right}
+.warn{background:var(--warnBg);color:var(--warn);border-radius:8px;padding:8px 12px;margin:10px 0;font-size:.92rem}
+details{margin:10px 0}
+summary{cursor:pointer;color:var(--mute)}
+pre{white-space:pre-wrap;word-break:break-all;font:.8rem/1.5 ui-monospace,Menlo,Consolas,monospace;background:var(--bg);padding:10px;border-radius:6px;margin:6px 0}
+#history{margin-top:30px}
+.hhead{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-bottom:8px}
+.hbtns{display:flex;gap:8px}
+.row{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--line)}
+.row .info{flex:1;min-width:0}
+.row .t{font:600 .98rem ui-monospace,Menlo,Consolas,monospace}
+.row .d{color:var(--mute);font-size:.85rem}
+.empty{color:var(--mute);font-size:.92rem}
+@media (prefers-reduced-motion:reduce){*{scroll-behavior:auto!important}}
+</style>
+</head>
+<body>
+<main>
+  <h1>電子發票 QR Code 解譯</h1>
+  <p class="sub">掃描或上傳紙本電子發票，解出發票號碼、金額與品項。所有辨識都在你的裝置上完成，圖片不會上傳。</p>
+
+  <section class="actions" aria-label="輸入方式">
+    <button id="btnLive" class="primary wide" type="button">開啟相機掃描</button>
+    <label class="btn" for="fileCam">拍照<input id="fileCam" type="file" accept="image/*" capture="environment" hidden></label>
+    <label class="btn" for="fileAlbum">從相簿選取<input id="fileAlbum" type="file" accept="image/*" multiple hidden></label>
+  </section>
+
+  <section id="stage" hidden>
+    <video id="video" playsinline muted></video>
+    <div id="guide"></div>
+    <div id="stageBar">
+      <button id="btnTorch" type="button" class="small" hidden>手電筒</button>
+      <button id="btnStop" type="button" class="small">關閉相機</button>
+    </div>
+  </section>
+
+  <div id="status" role="status" aria-live="polite">把發票的兩個 QR Code 都放進畫面，或用拍照、相簿讀取。</div>
+  <section id="result" aria-live="polite"></section>
+
+  <section id="history">
+    <div class="hhead">
+      <h2>掃描紀錄</h2>
+      <div class="hbtns">
+        <button id="btnCsv" type="button" class="small">匯出 CSV</button>
+        <button id="btnClear" type="button" class="small danger">全部刪除</button>
+      </div>
+    </div>
+    <div id="hlist"></div>
+  </section>
+</main>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jsQR/1.4.0/jsQR.min.js"></script>
+<script>
+"use strict";
+
+//<parser>
+function pad(n){return String(n).padStart(2,"0");}
+function b64utf8(s){
+  try{
+    const b=atob(s);
+    return new TextDecoder("utf-8").decode(Uint8Array.from(b,c=>c.charCodeAt(0)));
+  }catch(e){return s;}
+}
+function redecode(it,enc){
+  if(enc==="0"&&it.bytes&&typeof TextDecoder!=="undefined"){
+    try{return new TextDecoder("big5").decode(new Uint8Array(it.bytes));}catch(e){}
+  }
+  return it.text;
+}
+function parseInvoice(L,R){
+  const w=[];
+  const raw=L.text;
+  const enc=(raw.length>77?raw.slice(78).split(":")[3]:"1")||"1";
+  const t=redecode(L,enc);
+  const inv={
+    no:t.slice(0,10),roc:t.slice(10,17),random:t.slice(17,21),
+    salesHex:t.slice(21,29),totalHex:t.slice(29,37),
+    buyer:t.slice(37,45),seller:t.slice(45,53),sign:t.slice(53,77),
+    enc:enc,items:[],hasRight:!!R,warnings:w,date:"",period:"",sales:NaN,total:NaN,
+    selfUse:"",declared:NaN,totalItems:NaN
+  };
+  if(!/^[A-Z]{2}\d{8}$/.test(inv.no))w.push("發票號碼格式不符（應為 2 碼英文加 8 碼數字）。");
+  const ry=+inv.roc.slice(0,3),m=+inv.roc.slice(3,5),d=+inv.roc.slice(5,7);
+  const dt=new Date(ry+1911,m-1,d);
+  if(/^\d{7}$/.test(inv.roc)&&dt.getMonth()===m-1&&dt.getDate()===d){
+    inv.date=(ry+1911)+"/"+pad(m)+"/"+pad(d);
+    const a=m%2?m:m-1;
+    inv.period="民國 "+ry+" 年 "+pad(a)+"-"+pad(a+1)+" 月";
+  }else{w.push("開立日期無法辨識。");}
+  if(/^[0-9A-Fa-f]{8}$/.test(inv.salesHex))inv.sales=parseInt(inv.salesHex,16);else w.push("銷售額欄位不是有效的 16 進位。");
+  if(/^[0-9A-Fa-f]{8}$/.test(inv.totalHex))inv.total=parseInt(inv.totalHex,16);else w.push("總計額欄位不是有效的 16 進位。");
+  if(!/^\d{8}$/.test(inv.seller))w.push("賣方統編格式不符。");
+  if(t.length<=77){
+    w.push("左側 QR 沒有品項資訊欄位。");
+    return inv;
+  }
+  const rest=t.slice(78).split(":");
+  inv.selfUse=(rest[0]||"").replace(/\*+/g,"");
+  inv.declared=parseInt(rest[1],10);
+  inv.totalItems=parseInt(rest[2],10);
+  let full=rest.slice(4).join(":");
+  if(R){
+    const rt=redecode(R,enc).replace(/^\*+/,"").replace(/^:/,"");
+    if(rt){full=full?(full.endsWith(":")?full:full+":")+rt:rt;}
+  }
+  const tk=full.split(":");
+  while(tk.length&&tk[tk.length-1]==="")tk.pop();
+  if(tk.length%3!==0)w.push("品項資料欄位數不完整，可能是 QR 沒掃全或資料含補充說明。");
+  for(let i=0;i+2<tk.length+0&&i<tk.length;i+=3){
+    let name=tk[i];
+    if(enc==="2")name=b64utf8(name);
+    inv.items.push({name:name,qty:tk[i+1],price:tk[i+2]});
+  }
+  if(R&&!isNaN(inv.declared)&&inv.items.length<inv.declared)w.push("QR 內品項 "+inv.items.length+" 筆，少於宣告的 "+inv.declared+" 筆。");
+  if(!isNaN(inv.totalItems)&&!isNaN(inv.declared)&&inv.declared<inv.totalItems)w.push("這張發票共 "+inv.totalItems+" 個品項，QR 只記載其中 "+inv.declared+" 筆，其餘請看紙本。");
+  return inv;
+}
+//</parser>
+
+const $=s=>document.querySelector(s);
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const money=n=>isNaN(n)?"—":n.toLocaleString("zh-TW");
+
+let session={left:null,right:null};
+let bd=null;
+if("BarcodeDetector" in window){try{bd=new BarcodeDetector({formats:["qr_code"]});}catch(e){bd=null;}}
+
+function setStatus(msg,err){const s=$("#status");s.textContent=msg;s.className=err?"err":"";}
+
+async function detect(cv){
+  const out=[];
+  if(bd){
+    try{(await bd.detect(cv)).forEach(x=>out.push({text:x.rawValue}));}catch(e){}
+  }
+  if(!out.length&&window.jsQR){
+    try{
+      const img=cv.getContext("2d",{willReadFrequently:true}).getImageData(0,0,cv.width,cv.height);
+      const r=jsQR(img.data,img.width,img.height,{inversionAttempts:"attemptBoth"});
+      if(r)out.push({text:r.data,bytes:Array.from(r.binaryData||[])});
+    }catch(e){}
+  }
+  return out;
+}
+
+function absorb(items){
+  let changed=false;
+  for(const it of items){
+    const t=it.text||"";
+    if(t.startsWith("**")){
+      if(!session.right||session.right.text!==t){session.right=it;changed=true;}
+    }else if(t.length>=77&&/^[A-Z]{2}\d{8}/.test(t)){
+      if(!session.left||session.left.text!==t){
+        if(session.left&&session.left.text.slice(0,10)!==t.slice(0,10))session.right=null;
+        session.left=it;changed=true;
+      }
+    }
+  }
+  return changed;
+}
+
+const REGIONS=[[0,0,1,1],[0,0,.6,1],[.4,0,1,1],[0,0,.5,1],[.5,0,1,1],[0,.25,.6,1],[.4,.25,1,1],[0,0,.6,.6],[.4,0,1,.6]];
+const work=document.createElement("canvas");
+
+async function scanSource(src,W,H,regions,maxSide,maxUp){
+  let changed=false;
+  const ctx=work.getContext("2d",{willReadFrequently:true});
+  for(const [x0,y0,x1,y1] of regions){
+    const sw=(x1-x0)*W,sh=(y1-y0)*H;
+    const k=Math.min(maxUp,maxSide/Math.max(sw,sh));
+    work.width=Math.max(1,Math.round(sw*k));
+    work.height=Math.max(1,Math.round(sh*k));
+    ctx.drawImage(src,x0*W,y0*H,sw,sh,0,0,work.width,work.height);
+    if(absorb(await detect(work)))changed=true;
+    if(session.left&&session.right)break;
+  }
+  return changed;
+}
+
+function loadImage(file){
+  return new Promise((ok,no)=>{
+    const u=URL.createObjectURL(file),im=new Image();
+    im.onload=()=>{URL.revokeObjectURL(u);ok(im);};
+    im.onerror=()=>{URL.revokeObjectURL(u);no(new Error("load"));};
+    im.src=u;
+  });
+}
+
+async function handleFiles(files){
+  if(!files||!files.length)return;
+  if(session.left&&session.right)session={left:null,right:null};
+  setStatus("辨識中…");
+  let changed=false;
+  for(const f of files){
+    try{
+      const im=await loadImage(f);
+      if(await scanSource(im,im.naturalWidth,im.naturalHeight,REGIONS,1600,2))changed=true;
+    }catch(e){setStatus("無法讀取這張圖片，請換一張再試。",true);return;}
+    if(session.left&&session.right)break;
+  }
+  if(changed)onUpdate();
+  if(!session.left)setStatus("找不到電子發票 QR Code。請讓兩個 QR 都完整入鏡、避開反光並對焦後再試。",true);
+  else if(!session.right)setStatus("只讀到左側 QR，品項明細暫缺。可再拍或選另一張含右側 QR 的照片補上。");
+  else setStatus("已取得左右兩個 QR Code。");
+}
+
+$("#fileCam").addEventListener("change",e=>{handleFiles(Array.from(e.target.files));e.target.value="";});
+$("#fileAlbum").addEventListener("change",e=>{handleFiles(Array.from(e.target.files));e.target.value="";});
+
+/* ---- 即時相機 ---- */
+let stream=null,track=null,running=false,torchOn=false;
+const video=$("#video");
+
+async function startLive(){
+  if(running)return;
+  if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){
+    setStatus("此瀏覽器或網址不支援相機。請使用 HTTPS 網址，或改用「拍照」「相簿」。",true);return;
+  }
+  if(session.left&&session.right)session={left:null,right:null};
+  try{
+    stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:"environment"},width:{ideal:1920},height:{ideal:1080}},audio:false});
+  }catch(e){
+    setStatus(e&&e.name==="NotAllowedError"?"沒有相機權限。請在瀏覽器設定允許相機，或改用「拍照」「相簿」。":"無法開啟相機，請改用「拍照」「相簿」。",true);
+    return;
+  }
+  video.srcObject=stream;
+  try{await video.play();}catch(e){}
+  track=stream.getVideoTracks()[0];
+  try{const c=track.getCapabilities?track.getCapabilities():{};$("#btnTorch").hidden=!c.torch;}catch(e){}
+  torchOn=false;running=true;$("#stage").hidden=false;
+  setStatus("對準發票，讓兩個 QR 都在框內。");
+  loop();
+}
+function stopLive(){
+  running=false;
+  if(stream)stream.getTracks().forEach(t=>t.stop());
+  stream=null;track=null;video.srcObject=null;$("#stage").hidden=true;
+}
+async function loop(){
+  let tick=0;
+  while(running){
+    if(video.readyState>=2&&video.videoWidth){
+      const regs=tick%2?[[0,0,1,1]]:[[0,0,.6,1],[.4,0,1,1]];
+      const changed=await scanSource(video,video.videoWidth,video.videoHeight,regs,1280,1);
+      if(changed){
+        onUpdate();
+        if(session.right){setStatus("已取得左右兩個 QR Code。");stopLive();break;}
+        setStatus("已讀到左側 QR，請讓右側 QR 也入鏡以取得品項。");
+      }
+    }
+    tick++;
+    await new Promise(r=>setTimeout(r,150));
+  }
+}
+$("#btnLive").addEventListener("click",startLive);
+$("#btnStop").addEventListener("click",()=>{stopLive();setStatus("相機已關閉。");});
+$("#btnTorch").addEventListener("click",async()=>{
+  torchOn=!torchOn;
+  try{await track.applyConstraints({advanced:[{torch:torchOn}]});}catch(e){torchOn=!torchOn;}
+});
+document.addEventListener("visibilitychange",()=>{if(document.hidden&&running)stopLive();});
+
+/* ---- 結果顯示 ---- */
+function onUpdate(){renderResult();pushHistory();}
+
+function renderResult(){
+  const el=$("#result");
+  if(!session.left){el.innerHTML="";return;}
+  const v=parseInvoice(session.left,session.right);
+  let h='<article class="receipt"><p class="rno">'+esc(v.no)+'</p>';
+  h+='<p class="rmeta">'+esc(v.period||"期別不明")+'</p><hr class="sep"><dl>';
+  h+='<dt>開立日期</dt><dd class="num">'+esc(v.date||"—")+'</dd>';
+  h+='<dt>隨機碼</dt><dd class="num">'+esc(v.random)+'</dd>';
+  h+='<dt>賣方統編</dt><dd class="num">'+esc(v.seller)+'</dd>';
+  h+='<dt>買方統編</dt><dd class="num">'+(v.buyer==="00000000"?"未載明":esc(v.buyer))+'</dd>';
+  h+='<dt>銷售額</dt><dd class="num">$'+money(v.sales)+'</dd>';
+  h+='<dt>總計</dt><dd class="num total">$'+money(v.total)+'</dd></dl><hr class="sep">';
+  if(v.items.length){
+    h+='<table><thead><tr><th>品名</th><th>數量</th><th>單價</th></tr></thead><tbody>';
+    for(const it of v.items)h+='<tr><td>'+esc(it.name)+'</td><td class="num">'+esc(it.qty)+'</td><td class="num">'+esc(it.price)+'</td></tr>';
+    h+='</tbody></table>';
+  }else{
+    h+='<p class="empty">'+(v.hasRight?"QR 內沒有可解析的品項。":"尚未讀到右側 QR，品項明細暫缺。")+'</p>';
+  }
+  for(const w of v.warnings)h+='<div class="warn">'+esc(w)+'</div>';
+  h+='<details><summary>原始 QR 內容與驗證資訊</summary>';
+  h+='<p class="rmeta">加密驗證資訊</p><pre>'+esc(v.sign)+'</pre>';
+  h+='<p class="rmeta">左側 QR</p><pre>'+esc(session.left.text)+'</pre>';
+  if(session.right)h+='<p class="rmeta">右側 QR</p><pre>'+esc(session.right.text)+'</pre>';
+  h+='</details>';
+  h+='<p><button id="btnReset" type="button" class="small">清除，重新掃描</button></p></article>';
+  el.innerHTML=h;
+  $("#btnReset").addEventListener("click",()=>{session={left:null,right:null};renderResult();setStatus("把發票的兩個 QR Code 都放進畫面，或用拍照、相簿讀取。");});
+}
+
+/* ---- 紀錄 ---- */
+const KEY="einvoice_history_v1";
+function loadH(){try{return JSON.parse(localStorage.getItem(KEY)||"[]");}catch(e){return[];}}
+function saveH(a){try{localStorage.setItem(KEY,JSON.stringify(a));}catch(e){}}
+function pushHistory(){
+  if(!session.left)return;
+  const a=loadH(),l=session.left.text,r=session.right?session.right.text:"";
+  const i=a.findIndex(x=>x.left===l);
+  if(i>=0){if(r)a[i].right=r;}else a.unshift({ts:Date.now(),left:l,right:r});
+  saveH(a.slice(0,200));
+  renderHistory();
+}
+function renderHistory(){
+  const a=loadH(),el=$("#hlist");
+  if(!a.length){el.innerHTML='<p class="empty">還沒有紀錄。掃描成功的發票會存在這個瀏覽器裡。</p>';return;}
+  el.innerHTML=a.map((x,i)=>{
+    const v=parseInvoice({text:x.left},x.right?{text:x.right}:null);
+    return '<div class="row"><div class="info"><div class="t">'+esc(v.no)+'</div><div class="d">'+esc(v.date||"—")+'　$'+money(v.total)+'　賣方 '+esc(v.seller)+'</div></div>'+
+      '<button type="button" class="small" data-v="'+i+'">檢視</button><button type="button" class="small danger" data-d="'+i+'">刪除</button></div>';
+  }).join("");
+}
+$("#hlist").addEventListener("click",e=>{
+  const b=e.target.closest("button");if(!b)return;
+  const a=loadH();
+  if(b.dataset.v!==undefined){
+    const x=a[+b.dataset.v];if(!x)return;
+    session={left:{text:x.left},right:x.right?{text:x.right}:null};
+    renderResult();$("#result").scrollIntoView({behavior:"smooth"});
+  }else if(b.dataset.d!==undefined){
+    a.splice(+b.dataset.d,1);saveH(a);renderHistory();
+  }
+});
+$("#btnClear").addEventListener("click",()=>{
+  if(loadH().length&&confirm("確定刪除全部掃描紀錄？"))
+  {saveH([]);renderHistory();}
+});
+$("#btnCsv").addEventListener("click",()=>{
+  const a=loadH();
+  if(!a.length){setStatus("沒有可匯出的紀錄。",true);return;}
+  const q=s=>'"'+String(s).replace(/"/g,'""')+'"';
+  const rows=[["發票號碼","開立日期","隨機碼","銷售額","總計","買方統編","賣方統編","品項"].map(q).join(",")];
+  for(const x of a){
+    const v=parseInvoice({text:x.left},x.right?{text:x.right}:null);
+    rows.push([v.no,v.date,v.random,v.sales,v.total,v.buyer,v.seller,
+      v.items.map(i=>i.name+" x"+i.qty+" @"+i.price).join("；")].map(q).join(","));
+  }
+  const blob=new Blob(["\ufeff"+rows.join("\r\n")],{type:"text/csv;charset=utf-8"});
+  const u=URL.createObjectURL(blob),link=document.createElement("a");
+  link.href=u;link.download="einvoice_history.csv";document.body.appendChild(link);link.click();link.remove();
+  setTimeout(()=>URL.revokeObjectURL(u),2000);
+});
+
+renderHistory();
+</script>
+</body>
+</html>
