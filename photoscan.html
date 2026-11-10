@@ -974,7 +974,7 @@
         // 回傳 { quad, flagged }：flagged=true 代表仍有邊切在內容上、無法自動修正
         function expandForContent(f, quad) {
             const R = Math.max(14, Math.round(0.09 * Math.max(f.w, f.h)));
-            const BLANK = Math.max(10, Math.round(0.025 * Math.max(f.w, f.h)));   // 需要連續這麼多列空白才算「真正的邊界」(行距不算)
+            const BLANK = Math.max(10, Math.round(0.0225 * Math.max(f.w, f.h)));   // 需要連續這麼多列空白才算「真正的邊界」(行距不算)
             const cx = quad.reduce((s, p) => s + p.x, 0) / 4, cy = quad.reduce((s, p) => s + p.y, 0) / 4;
             const N = 60;
             let flagged = false, changed = false;
@@ -1019,7 +1019,7 @@
                         if (!paperLike(v)) { ended = true; break; }   // 紙已結束(背景開始)：邊緣本來就對，不處理
                         if (v.r >= 0.04) contentSeen = true;
                         lastValid = k;
-                        if (v.r < 0.02) { blank++; if (blank >= BLANK) { found = k - BLANK + 1 + 3; break; } } else blank = 0;
+                        if (v.r < 0.025) { blank++; if (blank >= BLANK) { found = k - BLANK + 1 + 3; break; } } else blank = 0;   // 容許紙面雜訊
                     }
                     if (found !== null) { shift = found; changed = true; }
                     else if (!ended) { flagged = true; }               // 一路都是紙+文字，找不到空白邊界
