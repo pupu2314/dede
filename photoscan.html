@@ -272,7 +272,7 @@
     <!-- 列印專用容器 -->
     <div id="print-area"></div>
 
-    <script async src="https://docs.opencv.org/4.8.0/opencv.js" onload="onOpenCvReady()"></script>
+    <script async src="https://docs.opencv.org/4.13.0/opencv.js" onload="onOpenCvReady()"></script>
 
     <script>
         // ==========================================
@@ -447,11 +447,20 @@
         });
 
         function onOpenCvReady() {
-            cv['onRuntimeInitialized'] = () => {
+            const onReady = () => {
                 updateStatus("影像引擎準備就緒", "✅", "success");
                 uploadInput.disabled = false;
                 updateCollageUI(); 
             };
+            if (cv instanceof Promise) {
+                // 部分 opencv.js 建置的 cv 是 Promise，需先解開
+                cv.then((m) => { cv = m; onReady(); });
+            } else if (cv.Mat) {
+                // 已初始化完成
+                onReady();
+            } else {
+                cv['onRuntimeInitialized'] = onReady;
+            }
         }
 
         blockSizeInput.addEventListener('input', (e) => { blockSizeVal.textContent = e.target.value; if (srcMat) markSettingsChanged(); });
