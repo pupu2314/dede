@@ -1109,7 +1109,7 @@
                 for (let k = -14; k <= -2; k++) { let v = probe(k); if (v) { inSum += v.r; inN++; inMeds.push(v.med); } }
                 let inDensity = inN ? inSum / inN : 0;
                 let paperLevel = inMeds.length ? median(inMeds) : 0;
-                const paperLike = (v) => v && Math.abs(v.med - paperLevel) <= 30;
+                const paperLike = (v) => v && (Math.abs(v.med - paperLevel) <= 30 || (v.r >= 0.2 && v.med < paperLevel && paperLevel - v.med <= 75));   // 文字很密時亮度百分位會被墨跡拉低，放寬
                 let adj = 0;
                 for (let k = 0; k <= 8; k++) { let v = probe(k); if (paperLike(v) && v.r > adj) adj = v.r; }
                 let shift = 0;
